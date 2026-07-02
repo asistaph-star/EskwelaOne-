@@ -6,184 +6,12 @@ import {
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Pin
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS } from '../shared/data/calendarData';
-
-
-// ── Draggable, Resizable, and Minimizable Card Wrapper ──
-function DraggableCard({ 
-  id, 
-  title, 
-  children, 
-  style, 
-  onCut 
-}: { 
-  id: string; 
-  title: string; 
-  children: React.ReactNode; 
-  style?: React.CSSProperties;
-  onCut?: (id: string) => void;
-}) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [pos, setPos] = React.useState({ x: 0, y: 0 });
-  const [size, setSize] = React.useState<{ width?: number; height?: number }>({});
-  const [dragging, setDragging] = React.useState(false);
-  const [rel, setRel] = React.useState({ x: 0, y: 0 });
-  const [minimized, setMinimized] = React.useState(false);
-
-  function handleMouseDown(e: React.MouseEvent) {
-    const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("select") || target.closest("svg") || target.closest(".no-drag") || target.closest(".resize-handle")) {
-      return; // let click actions pass through
-    }
-    if (e.button !== 0) return;
-    setDragging(true);
-    setRel({
-      x: e.pageX - pos.x,
-      y: e.pageY - pos.y
-    });
-    e.preventDefault();
-  }
-
-  React.useEffect(() => {
-    if (!dragging) return;
-    function handleMouseMove(e: MouseEvent) {
-      setPos({
-        x: e.pageX - rel.x,
-        y: e.pageY - rel.y
-      });
-    }
-    function handleMouseUp() {
-      setDragging(false);
-    }
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragging, rel]);
-
-  function handleResizeMouseDown(e: React.MouseEvent) {
-    e.stopPropagation();
-    e.preventDefault();
-    const startWidth = ref.current?.offsetWidth || 300;
-    const startHeight = ref.current?.offsetHeight || 200;
-    const startX = e.clientX;
-    const startY = e.clientY;
-    
-    function onMouseMove(moveEvent: MouseEvent) {
-      setSize({
-        width: Math.max(260, startWidth + (moveEvent.clientX - startX)),
-        height: Math.max(120, startHeight + (moveEvent.clientY - startY))
-      });
-    }
-    
-    function onMouseUp() {
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    }
-    
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  }
-
-  return (
-    <div 
-      ref={ref}
-      onMouseDown={handleMouseDown}
-      style={{ 
-        ...style, 
-        position: "relative", 
-        left: pos.x, 
-        top: pos.y, 
-        width: size.width ? size.width : style?.width,
-        height: minimized ? "auto" : (size.height ? size.height : style?.height),
-        cursor: dragging ? "grabbing" : "grab",
-        zIndex: dragging ? 1000 : 1,
-        userSelect: "none",
-        transition: dragging ? "none" : "transform 0.15s, box-shadow 0.15s",
-        boxShadow: dragging ? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" : "none",
-        display: "flex",
-        flexDirection: "column"
-      }}
-    >
-      {/* Control bar */}
-      <div 
-        className="no-drag"
-        style={{ 
-          position: "absolute", 
-          top: 8, 
-          right: 8, 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 6, 
-          zIndex: 10,
-          background: "rgba(255,255,255,0.85)",
-          padding: "2px 6px",
-          borderRadius: 4,
-          backdropFilter: "blur(4px)"
-        }}
-      >
-        <button 
-          onClick={() => setMinimized(!minimized)} 
-          title={minimized ? "Restore Widget Content" : "Minimize Widget Content"}
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9, color: C.t3, display: "flex", alignItems: "center", padding: 2, fontWeight: 700 }}
-        >
-          {minimized ? "＋" : "－"}
-        </button>
-        <button 
-          onClick={() => onCut && onCut(id)} 
-          title="Cut (Hide Widget)"
-          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 9, color: C.red, display: "flex", alignItems: "center", padding: 2, fontWeight: 700 }}
-        >
-          ✕
-        </button>
-      </div>
-
-      <div style={{ flex: (size.height || style?.height) ? 1 : "initial", display: minimized ? "none" : "flex", flexDirection: "column", height: (size.height || style?.height) ? "100%" : "auto" }}>
-        {children}
-      </div>
-
-      {minimized && (
-        <div style={{ background: C.m50, padding: "14px 18px", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, fontSize: 12, fontWeight: 700, color: C.t2 }}>
-          {title} (Minimized)
-        </div>
-      )}
-
-      {/* Resize Handle */}
-      {!minimized && (
-        <div 
-          className="resize-handle"
-          onMouseDown={handleResizeMouseDown}
-          style={{ 
-            position: "absolute", 
-            bottom: 0, 
-            right: 0, 
-            width: 14, 
-            height: 14, 
-            cursor: "nwse-resize", 
-            zIndex: 11,
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "flex-end",
-            padding: 3,
-            boxSizing: "border-box"
-          }}
-        >
-          <svg width="8" height="8" viewBox="0 0 8 8">
-            <line x1="6" y1="0" x2="0" y2="6" stroke={C.t3} strokeWidth="1.2" />
-            <line x1="8" y1="2" x2="2" y2="8" stroke={C.t3} strokeWidth="1.2" />
-          </svg>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<
@@ -191,15 +19,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-
-  // Custom positioning & cut widgets states
-  const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
-  function handleCut(id: string) {
-    setHiddenWidgets(prev => [...prev, id]);
-  }
-  function handleRestore(id: string) {
-    setHiddenWidgets(prev => prev.filter(w => w !== id));
-  }
 
   // Document Requests States
   const [docType, setDocType] = useState("Official Report Card Copy (SF9)");
@@ -541,43 +360,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     Juan Miguel! <span style={{ fontSize: 24 }}>👋</span>
                   </h1>
                   <div style={{ fontSize: 12, color: C.t3 }}>Here's what's happening today.</div>
-                  
-                  {/* Restore cut widgets dock bar */}
-                  {hiddenWidgets.length > 0 && (
-                    <div className="no-drag" style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 10, color: C.t3, fontWeight: 700 }}>Restore Hidden Panels:</span>
-                      {hiddenWidgets.map(id => {
-                        const name = id === "schedule" ? "Schedule" :
-                                     id === "assignments" ? "Assignments" :
-                                     id === "grades" ? "Grades" :
-                                     id === "calendar" ? "Calendar" : "Announcements";
-                        return (
-                          <button 
-                            key={id} 
-                            onClick={() => handleRestore(id)}
-                            style={{ 
-                              display: "flex", 
-                              alignItems: "center", 
-                              gap: 4, 
-                              background: C.m50, 
-                              border: `1.5px solid ${C.borderMed}`, 
-                              borderRadius: 4, 
-                              padding: "3px 8px", 
-                              fontSize: 9.5, 
-                              fontWeight: 700, 
-                              color: C.m700, 
-                              cursor: "pointer",
-                              transition: "all 0.1s"
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = C.m100; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = C.m50; }}
-                          >
-                            ＋ {name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
 
                 {/* Floating ID Card block */}
@@ -644,17 +426,14 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* 3-Column main content grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20, alignItems: "start" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20 }}>
                 {/* Column 1: Today's Schedule */}
-                {!hiddenWidgets.includes("schedule") && (
-                  <DraggableCard id="schedule" title="Today's Schedule" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
                     <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View Full Schedule</button>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, position: "relative" }}>
-                    <div style={{ position: "absolute", left: 54, top: 8, bottom: 8, width: 2, background: C.borderMed }} />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
                     {[
                       { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4" },
                       { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed" },
@@ -662,22 +441,16 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
                       { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
                     ].map((slot, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: 16, alignItems: "center", position: "relative", zIndex: 1 }}>
-                        <span style={{ width: 46, fontSize: 10, fontWeight: 700, color: C.t3 }}>{slot.time}</span>
-                        <div style={{ width: 10, height: 10, borderRadius: 5, background: slot.status === "In Progress" ? "#f97316" : C.m700, border: "2px solid #fff", flexShrink: 0 }} />
+                      <div key={idx} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        <span style={{ width: 56, fontSize: 10.5, fontWeight: 700, color: C.t2, paddingTop: 2 }}>{slot.time}</span>
                         <div style={{ 
                           flex: 1, 
-                          background: slot.status === "In Progress" ? "#fffbf7" : "#fff",
-                          border: `1px solid ${slot.status === "In Progress" ? "#ffedd5" : C.borderMed}`,
-                          borderLeft: `4px solid ${slot.status === "In Progress" ? "#f97316" : C.border}`,
-                          borderRadius: 4, 
-                          padding: "8px 12px",
                           display: "flex",
                           justifyContent: "space-between",
-                          alignItems: "center"
+                          alignItems: "flex-start"
                         }}>
                           <div>
-                            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{slot.title}</div>
+                            <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
                             <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
                           </div>
                           <span style={{ 
@@ -692,15 +465,11 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("calendar")} style={{ alignSelf: "center", padding: "6px 24px", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Schedule</button>
-                  </div>
-                </DraggableCard>
-                )}
+                  <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Full Schedule</button>
+                </div>
 
                 {/* Column 2: Upcoming Assignments */}
-                {!hiddenWidgets.includes("assignments") && (
-                  <DraggableCard id="assignments" title="Upcoming Assignments" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
                     <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
@@ -735,133 +504,101 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("assignments")} style={{ alignSelf: "center", padding: "6px 24px", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
-                  </div>
-                </DraggableCard>
-                )}
+                  <button onClick={() => setTab("assignments")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
+                </div>
 
                 {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {/* Grades Summary */}
-                  {!hiddenWidgets.includes("grades") && (
-                    <DraggableCard id="grades" title="Grades Summary" onCut={handleCut}>
-                      <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
-                          <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Grades</button>
+                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
+                      <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Grades</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                        <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                          <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                            <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                              <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
-                            </div>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
-                            <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
-                          </div>
-                          
-                          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                            {[
-                              { s: "Mathematics", g: 90 },
-                              { s: "English", g: 85 },
-                              { s: "Science", g: 88 },
-                              { s: "Filipino", g: 87 },
-                              { s: "Araling Panlipunan", g: 89 },
-                              { s: "PE & Health", g: 92 },
-                              { s: "TLE", g: 86 }
-                            ].map((sub, idx) => (
-                              <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
-                                <span style={{ color: C.t2 }}>{sub.s}</span>
-                                <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
+                        <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
                       </div>
-                    </DraggableCard>
-                  )}
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {[
+                          { s: "Mathematics", g: 90 },
+                          { s: "English", g: 85 },
+                          { s: "Science", g: 88 },
+                          { s: "Filipino", g: 87 },
+                          { s: "Araling Panlipunan", g: 89 },
+                          { s: "PE & Health", g: 92 },
+                          { s: "TLE", g: 86 }
+                        ].map((sub, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
+                            <span style={{ color: C.t2 }}>{sub.s}</span>
+                            <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Academic Calendar Widget */}
-                  {!hiddenWidgets.includes("calendar") && (
-                    <DraggableCard id="calendar" title="Academic Calendar" onCut={handleCut}>
-                      <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Academic Calendar</span>
-                          <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Calendar</button>
+                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Academic Calendar</span>
+                      <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Calendar</button>
+                    </div>
+                    <div style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>June 10, 2025</span>
+                      <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 6 }}>Tuesday</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {[
+                        { m: "JUN", d: "14", title: "Quarter 4 - Progress Check", time: "8:00 AM - 12:00 PM" },
+                        { m: "JUN", d: "20", title: "School Foundation Day", time: "No Classes" }
+                      ].map((ev, idx) => (
+                        <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                          <div style={{ width: 36, height: 36, background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 7, fontWeight: 800, color: C.m700 }}>{ev.m}</span>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: C.m700, lineHeight: 1 }}>{ev.d}</span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
+                            <div style={{ fontSize: 9, color: C.t3, marginTop: 2 }}>{ev.time}</div>
+                          </div>
                         </div>
-                        <div style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>June 10, 2025</span>
-                          <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 6 }}>Tuesday</span>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                          {[
-                            { m: "JUN", d: "14", title: "Quarter 4 - Progress Check", time: "8:00 AM - 12:00 PM" },
-                            { m: "JUN", d: "20", title: "School Foundation Day", time: "No Classes" }
-                          ].map((ev, idx) => (
-                            <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                              <div style={{ width: 36, height: 36, background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                <span style={{ fontSize: 7, fontWeight: 800, color: C.m700 }}>{ev.m}</span>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: C.m700, lineHeight: 1 }}>{ev.d}</span>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
-                                <div style={{ fontSize: 9, color: C.t3, marginTop: 2 }}>{ev.time}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <button onClick={() => setTab("calendar")} style={{ alignSelf: "center", padding: "6px 24px", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
-                      </div>
-                    </DraggableCard>
-                  )}
+                      ))}
+                    </div>
+                    <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
+                  </div>
                 </div>
               </div>
 
               {/* Announcements Section */}
-              {!hiddenWidgets.includes("announcements") && (
-                <DraggableCard id="announcements" title="Announcements" onCut={handleCut}>
-                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Announcements</span>
                   <button onClick={() => alert("All announcements can be viewed in detail.")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {[
                     { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025.", date: "June 8, 2025 · Principal's Office" },
                     { title: "Library Orientation", desc: "All students are required to attend the library orientation this June 12.", date: "June 7, 2025 · Library Department" }
-                  ].map((ann, idx, arr) => (
-                    <div key={idx} style={{ 
-                      display: "flex", 
-                      alignItems: "center", 
-                      gap: 14, 
-                      padding: "10px 0", 
-                      borderBottom: idx < arr.length - 1 ? `1px solid ${C.border}` : "none", 
-                      position: "relative" 
-                    }}>
-                      <div style={{ 
-                        width: 32, 
-                        height: 32, 
-                        borderRadius: 16, 
-                        background: "#fef2f2", 
-                        border: "1px solid #fee2e2", 
-                        display: "flex", 
-                        alignItems: "center", 
-                        justifyContent: "center", 
-                        flexShrink: 0 
-                      }}>
-                        <Pin size={13} color={C.m700} style={{ transform: "rotate(45deg)" }} />
+                  ].map((ann, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", border: `1px solid ${C.borderMed}`, borderRadius: 6, position: "relative" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                        <Bell size={13} color={C.m700} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 0, paddingRight: 20 }}>
-                        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
-                        <div style={{ fontSize: 12, color: C.t2, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ann.desc}</div>
-                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 3 }}>{ann.date}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
+                        <p style={{ fontSize: 10.5, color: C.t2, margin: "4px 0", lineHeight: 1.4 }}>{ann.desc}</p>
+                        <span style={{ fontSize: 9, color: C.t3 }}>{ann.date}</span>
                       </div>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: C.t3, position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", userSelect: "none" }}>&rsaquo;</span>
                     </div>
                   ))}
                 </div>
-                </div>
-              </DraggableCard>
-              )}
+              </div>
 
             </div>
           )}
