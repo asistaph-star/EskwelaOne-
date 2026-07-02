@@ -39,17 +39,18 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
 
   return (
     <div style={{ width: collapsed ? 70 : 260, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
-      {/* School building photo watermark */}
+      {/* School campus building — decorative background */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 300,
         backgroundImage: "url(/school_silhouette.png)",
-        backgroundSize: "cover", backgroundPosition: "top center",
-        opacity: 0.07, pointerEvents: "none", zIndex: 0
+        backgroundSize: "110% auto", backgroundPosition: "center bottom",
+        backgroundRepeat: "no-repeat",
+        opacity: 0.06, mixBlendMode: "screen",
+        pointerEvents: "none", zIndex: 0
       }} />
-      {/* Gradient fade overlay */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
-        background: `linear-gradient(to bottom, ${C.m900} 0%, transparent 60%, transparent 100%)`,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 300,
+        background: `linear-gradient(to bottom, ${C.m900} 0%, ${C.m900}ee 25%, transparent 70%, ${C.m900}88 100%)`,
         pointerEvents: "none", zIndex: 0
       }} />
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12 }}>
