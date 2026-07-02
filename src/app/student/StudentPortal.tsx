@@ -504,7 +504,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("assignments")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
+                  <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View All Assignments</button>
                 </div>
 
                 {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
@@ -570,7 +570,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
+                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Full Calendar</button>
                   </div>
                 </div>
               </div>
