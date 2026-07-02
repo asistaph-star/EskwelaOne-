@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
@@ -418,40 +418,73 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* Top Row: Welcome greeting & Digital ID floating card */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 13, color: C.t3, fontWeight: 500 }}>Good Morning,</div>
-                  <h1 style={{ fontSize: 32, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif", margin: "4px 0 6px 0", display: "flex", alignItems: "center", gap: 8 }}>
-                    Juan Miguel! <span style={{ fontSize: 24 }}>👋</span>
-                  </h1>
-                  <div style={{ fontSize: 12, color: C.t3 }}>Here's what's happening today.</div>
+              {/* School Brand Banner Header */}
+              <div style={{
+                background: "linear-gradient(135deg, #581c1c 0%, #300c0c 100%)",
+                border: `1.5px solid ${C.borderMed}`,
+                borderRadius: 12,
+                padding: "20px 24px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                color: "#fff",
+                position: "relative",
+                overflow: "hidden",
+                boxShadow: "0 4px 20px rgba(88, 28, 28, 0.08)"
+              }}>
+                {/* Left side: School Brand Info */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ 
+                    width: 48, 
+                    height: 48, 
+                    borderRadius: 8, 
+                    background: "rgba(255,255,255,0.06)", 
+                    border: "1px solid rgba(255,255,255,0.15)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}>
+                    <School size={24} color={C.gold} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 8, color: "rgba(255,255,255,0.6)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                      Republic of the Philippines · Department of Education
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Fraunces', serif", margin: "4px 0 2px 0", letterSpacing: "-0.01em" }}>
+                      Sindalan National High School
+                    </div>
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+                      Sindalan, City of San Fernando, Pampanga · Division of San Fernando City
+                    </div>
+                  </div>
                 </div>
 
-                {/* Floating ID Card block */}
+                {/* Right side: Student Profile Badge (Left is pic, Right is name) */}
                 <div style={{ 
                   display: "flex", 
                   alignItems: "center", 
-                  gap: 16, 
-                  background: "#fff", 
-                  border: `1.5px solid ${C.borderMed}`, 
-                  borderRadius: 12, 
+                  gap: 14, 
+                  background: "rgba(255, 255, 255, 0.06)", 
+                  border: "1px solid rgba(255, 255, 255, 0.12)", 
+                  borderRadius: 10, 
                   padding: "12px 18px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+                  minWidth: 260
                 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", background: C.m50, flexShrink: 0 }}>
+                  {/* Picture (Left) */}
+                  <div style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)", flexShrink: 0 }}>
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
-                  <div>
-                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "2px 8px", fontSize: 11, marginBottom: 6 }}>
-                      <span style={{ color: C.t3, fontWeight: 600 }}>Student ID</span>
-                      <span style={{ color: C.t1, fontWeight: 700 }}>2022-10045</span>
-                      <span style={{ color: C.t3, fontWeight: 600 }}>LRN</span>
-                      <span style={{ color: C.t1, fontWeight: 700 }}>100001</span>
+                  
+                  {/* Name and info (Right) */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 8, color: C.gold, fontWeight: 800, letterSpacing: "0.08em" }}>GOOD MORNING</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Juan Miguel Santos</div>
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.6)" }}>Grade 10 - Pilot Section</div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                      <span style={{ fontSize: 7.5, fontWeight: 700, background: "rgba(255,255,255,0.12)", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>LRN: 100001</span>
+                      <span style={{ fontSize: 7.5, fontWeight: 700, background: "rgba(212,163,89,0.15)", color: C.gold, padding: "1px 5px", borderRadius: 4, border: `0.5px solid rgba(212,163,89,0.3)` }}>Active Student</span>
                     </div>
-                    <button onClick={() => alert("Digital QR Code active and validated.")} style={{ display: "flex", alignItems: "center", gap: 5, background: "transparent", border: `1px solid ${C.borderMed}`, padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>
-                      <QrCode size={11} /> My QR Code
-                    </button>
                   </div>
                 </div>
               </div>
