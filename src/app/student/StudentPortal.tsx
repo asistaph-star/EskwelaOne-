@@ -644,10 +644,10 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* 3-Column main content grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20, alignItems: "start" }}>
                 {/* Column 1: Today's Schedule */}
                 {!hiddenWidgets.includes("schedule") && (
-                  <DraggableCard id="schedule" title="Today's Schedule" onCut={handleCut} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                  <DraggableCard id="schedule" title="Today's Schedule" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
                   <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
@@ -699,7 +699,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
                 {/* Column 2: Upcoming Assignments */}
                 {!hiddenWidgets.includes("assignments") && (
-                  <DraggableCard id="assignments" title="Upcoming Assignments" onCut={handleCut} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                  <DraggableCard id="assignments" title="Upcoming Assignments" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
                   <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
