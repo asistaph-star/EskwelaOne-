@@ -391,13 +391,12 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* KPI metrics strip */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                 {[
                   { label: "Attendance Rate", val: "95.4%", sub: "▲ 2% from last month", icon: CheckCircle, color: C.green, bg: "#f0fdf4" },
                   { label: "Current GPA", val: "88.0", sub: "Above Passing", icon: Award, color: C.gold, bg: "#fefbeb" },
                   { label: "Assignments Due", val: "2", sub: "Due Today", icon: ClipboardList, color: C.red, bg: "#fef2f2" },
                   { label: "Today's Classes", val: "4 Classes", sub: "Next: Math (9:00 AM)", icon: Clock, color: C.blue, bg: "#eff6ff" },
-                  { label: "Achievements", val: "5 Badges", sub: "View all achievements", icon: Award, color: "#8b5cf6", bg: "#f5f3ff" },
                   { label: "Needs Attention", val: "2 Items", sub: "View details >", icon: AlertTriangle, color: "#f97316", bg: "#fff7ed" }
                 ].map((kpi, idx) => {
                   const Icon = kpi.icon;
