@@ -13,6 +13,42 @@ import { StatBox } from '../shared/components/StatBox';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS } from '../shared/data/calendarData';
 
+const STUDENT_NAV_GROUPS = [
+  {
+    title: "General",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "profile", label: "My Profile", icon: User },
+      { id: "calendar", label: "My Schedule", icon: Calendar }
+    ]
+  },
+  {
+    title: "Academics",
+    items: [
+      { id: "academics", label: "Grades", icon: BookOpen },
+      { id: "attendance", label: "Attendance", icon: Calendar },
+      { id: "assignments", label: "Assignments", icon: ClipboardList },
+      { id: "resources", label: "Subjects", icon: FileText },
+      { id: "behavior", label: "Achievement", icon: Award }
+    ]
+  },
+  {
+    title: "Communication",
+    items: [
+      { id: "announcements", label: "Announcements", icon: Bell },
+      { id: "messages", label: "Messages", icon: MessageSquare }
+    ]
+  },
+  {
+    title: "Utility",
+    items: [
+      { id: "requests", label: "Documents", icon: FolderOpen },
+      { id: "calendar_alt", label: "Calendar", icon: Calendar },
+      { id: "settings", label: "Settings", icon: Settings }
+    ]
+  }
+];
+
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<
     "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar"
@@ -134,86 +170,89 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* Flat Navigation list matching the mockup */}
-        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
-          {[
-            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-            { id: "profile", label: "My Profile", icon: User },
-            { id: "calendar", label: "My Schedule", icon: Calendar },
-            { id: "academics", label: "Grades", icon: BookOpen },
-            { id: "attendance", label: "Attendance", icon: Calendar },
-            { id: "assignments", label: "Assignments", icon: ClipboardList },
-            { id: "resources", label: "Subjects", icon: FileText },
-            { id: "announcements", label: "Announcements", icon: Bell },
-            { id: "messages", label: "Messages", icon: MessageSquare },
-            { id: "requests", label: "Documents", icon: FolderOpen },
-            { id: "calendar_alt", label: "Calendar", icon: Calendar },
-            { id: "behavior", label: "Achievement", icon: Award },
-            { id: "settings", label: "Settings", icon: Settings },
-          ].map((item) => {
-            const Icon = item.icon;
-            
-            // Map tab highlight correctly
-            const isDashboard = item.id === "dashboard" && tab === "dashboard";
-            const isProfile = item.id === "profile" && tab === "settings";
-            const isSchedule = item.id === "calendar" && tab === "calendar";
-            const isGrades = item.id === "academics" && tab === "academics";
-            const isAttendance = item.id === "attendance" && tab === "attendance";
-            const isAssignments = item.id === "assignments" && tab === "assignments";
-            const isSubjects = item.id === "resources" && tab === "resources";
-            const isAnnouncements = item.id === "announcements" && tab === "dashboard";
-            const isMessages = item.id === "messages" && tab === "dashboard";
-            const isDocuments = item.id === "requests" && tab === "requests";
-            const isCalendarAlt = item.id === "calendar_alt" && tab === "calendar";
-            const isAchievement = item.id === "behavior" && tab === "behavior";
-            const isSettings = item.id === "settings" && tab === "settings";
+        {/* Navigation list with categories */}
+        <div style={{ flex: 1, padding: "12px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+          {STUDENT_NAV_GROUPS.map((group, groupIdx) => (
+            <div key={groupIdx} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Category Header */}
+              <div style={{ 
+                fontSize: 9, 
+                fontWeight: 700, 
+                color: "rgba(255,255,255,0.4)", 
+                textTransform: "uppercase", 
+                letterSpacing: "0.08em", 
+                padding: "4px 14px",
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
+              }}>
+                {group.title}
+              </div>
 
-            const act = isDashboard || isProfile || isSchedule || isGrades || isAttendance || isAssignments || isSubjects || isAnnouncements || isMessages || isDocuments || isCalendarAlt || isAchievement || isSettings;
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                
+                // Map tab highlight correctly
+                const isDashboard = item.id === "dashboard" && tab === "dashboard";
+                const isProfile = item.id === "profile" && tab === "settings";
+                const isSchedule = item.id === "calendar" && tab === "calendar";
+                const isGrades = item.id === "academics" && tab === "academics";
+                const isAttendance = item.id === "attendance" && tab === "attendance";
+                const isAssignments = item.id === "assignments" && tab === "assignments";
+                const isSubjects = item.id === "resources" && tab === "resources";
+                const isAnnouncements = item.id === "announcements" && tab === "dashboard";
+                const isMessages = item.id === "messages" && tab === "dashboard";
+                const isDocuments = item.id === "requests" && tab === "requests";
+                const isCalendarAlt = item.id === "calendar_alt" && tab === "calendar";
+                const isAchievement = item.id === "behavior" && tab === "behavior";
+                const isSettings = item.id === "settings" && tab === "settings";
 
-            const clickHandler = () => {
-              if (item.id === "dashboard") setTab("dashboard");
-              else if (item.id === "profile") setTab("settings");
-              else if (item.id === "calendar" || item.id === "calendar_alt") setTab("calendar");
-              else if (item.id === "academics") setTab("academics");
-              else if (item.id === "attendance") setTab("attendance");
-              else if (item.id === "assignments") setTab("assignments");
-              else if (item.id === "resources") setTab("resources");
-              else if (item.id === "announcements") { setTab("dashboard"); alert("Announcements list resides at the bottom of the overview dashboard."); }
-              else if (item.id === "messages") { alert("Direct messages are integrated in your notification alerts tray."); }
-              else if (item.id === "requests") setTab("requests");
-              else if (item.id === "behavior") setTab("behavior");
-              else if (item.id === "settings") setTab("settings");
-            };
+                const act = isDashboard || isProfile || isSchedule || isGrades || isAttendance || isAssignments || isSubjects || isAnnouncements || isMessages || isDocuments || isCalendarAlt || isAchievement || isSettings;
 
-            return (
-              <button
-                key={item.id}
-                onClick={clickHandler}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: 4,
-                  background: act ? C.m800 : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: act ? "#fff" : "rgba(255,255,255,0.65)",
-                  fontSize: 12,
-                  fontWeight: act ? 700 : 400,
-                  textAlign: "left",
-                  transition: "all 0.12s",
-                  boxSizing: "border-box"
-                }}
-                onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
-              >
-                <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+                const clickHandler = () => {
+                  if (item.id === "dashboard") setTab("dashboard");
+                  else if (item.id === "profile") setTab("settings");
+                  else if (item.id === "calendar" || item.id === "calendar_alt") setTab("calendar");
+                  else if (item.id === "academics") setTab("academics");
+                  else if (item.id === "attendance") setTab("attendance");
+                  else if (item.id === "assignments") setTab("assignments");
+                  else if (item.id === "resources") setTab("resources");
+                  else if (item.id === "announcements") { setTab("dashboard"); alert("Announcements list resides at the bottom of the overview dashboard."); }
+                  else if (item.id === "messages") { alert("Direct messages are integrated in your notification alerts tray."); }
+                  else if (item.id === "requests") setTab("requests");
+                  else if (item.id === "behavior") setTab("behavior");
+                  else if (item.id === "settings") setTab("settings");
+                };
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={clickHandler}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "8px 14px",
+                      borderRadius: 4,
+                      background: act ? C.m800 : "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: act ? "#fff" : "rgba(255,255,255,0.65)",
+                      fontSize: 12,
+                      fontWeight: act ? 700 : 400,
+                      textAlign: "left",
+                      transition: "all 0.12s",
+                      boxSizing: "border-box"
+                    }}
+                    onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                    onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Sidebar Footer matching the mockup */}
