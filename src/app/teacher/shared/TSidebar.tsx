@@ -6,17 +6,25 @@ import {
   Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings
 } from 'lucide-react';
 
-const T_NAV = [
-  { id:"dashboard",          label:"Dashboard",         icon:LayoutDashboard },
-  { id:"calendar",           label:"Calendar",          icon:Calendar },
-  { id:"classroom",          label:"Classroom Hub",     icon:Users },
-  { id:"grades-direct",      label:"Grades",            icon:FileText },
-  { id:"attendance-direct",  label:"Attendance",        icon:Users },
-  { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
-  { id:"templates",          label:"Template Hub",      icon:BookMarked },
-  { id:"tools",              label:"Tools",             icon:Wrench },
-  { id:"ai-tools",           label:"AI Quick Tools",    icon:Sparkles },
-  { id:"pro-dev",            label:"Prof. Development", icon:GraduationCap },
+const T_NAV_GROUPS = [
+  { category: "Overview", items: [
+    { id:"dashboard",          label:"Dashboard",         icon:LayoutDashboard },
+    { id:"calendar",           label:"Calendar",          icon:Calendar },
+  ]},
+  { category: "Teaching", items: [
+    { id:"classroom",          label:"Classroom Hub",     icon:Users },
+    { id:"grades-direct",      label:"Grades",            icon:FileText },
+    { id:"attendance-direct",  label:"Attendance",        icon:Users },
+  ]},
+  { category: "Records", items: [
+    { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
+    { id:"templates",          label:"Template Hub",      icon:BookMarked },
+  ]},
+  { category: "Tools & Growth", items: [
+    { id:"tools",              label:"Tools",             icon:Wrench },
+    { id:"ai-tools",           label:"AI Quick Tools",    icon:Sparkles },
+    { id:"pro-dev",            label:"Prof. Development", icon:GraduationCap },
+  ]},
 ];
 
 export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
@@ -53,24 +61,33 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         )}
       </div>
 
-      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-        {T_NAV.map(item => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
-          return (
-            <button key={item.id} onClick={() => onNav(item.id as TScreen)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, padding: "10px 14px",
-                borderRadius: 4, background: isActive ? C.m700 : "transparent", border: "none", color: isActive ? "#fff" : "rgba(255,255,255,0.65)",
-                cursor: "pointer", textAlign: "left", transition: "all 0.15s"
-              }}
-              onMouseEnter={e => { if(!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-              onMouseLeave={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}>
-              <Icon size={16} color={isActive ? '#fff' : 'rgba(255,255,255,0.65)'} />
-              {!collapsed && <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>}
-            </button>
-          );
-        })}
+      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+        {T_NAV_GROUPS.map(group => (
+          <div key={group.category} style={{ marginBottom: 8 }}>
+            {!collapsed && (
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
+                {group.category}
+              </div>
+            )}
+            {group.items.map(item => {
+              const Icon = item.icon;
+              const isActive = active === item.id;
+              return (
+                <button key={item.id} onClick={() => onNav(item.id as TScreen)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, padding: "9px 14px",
+                    borderRadius: 4, background: isActive ? C.m700 : "transparent", border: "none", color: isActive ? "#fff" : "rgba(255,255,255,0.65)",
+                    cursor: "pointer", textAlign: "left", transition: "all 0.15s", boxSizing: "border-box"
+                  }}
+                  onMouseEnter={e => { if(!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                  <Icon size={16} color={isActive ? '#fff' : 'rgba(255,255,255,0.65)'} />
+                  {!collapsed && <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}` }}>

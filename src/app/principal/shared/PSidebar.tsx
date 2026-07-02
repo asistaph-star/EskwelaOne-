@@ -6,16 +6,25 @@ import {
   FileSpreadsheet, BookMarked, Settings, HelpCircle, LogOut, ChevronDown
 } from 'lucide-react';
 
-export const P_NAV: { id: PScreen; label: string; icon: React.ElementType }[] = [
-  { id: "p-dashboard",  label: "Dashboard Overview", icon: LayoutDashboard },
-  { id: "p-monitoring", label: "Real-Time Monitoring", icon: Monitor },
-  { id: "p-analytics",  label: "Academic Analytics",  icon: BarChart2 },
-  { id: "p-teachers",   label: "Teacher Management",  icon: Users },
-  { id: "p-welfare",    label: "Student Welfare",     icon: AlertCircle },
-  { id: "p-inventory",  label: "Inventory",           icon: Package },
-  { id: "p-reports",    label: "Reports",             icon: FileSpreadsheet },
-  { id: "p-templates",  label: "Forms & Records",     icon: BookMarked },
+const P_NAV_GROUPS = [
+  { category: "Overview", items: [
+    { id: "p-dashboard" as PScreen,  label: "Dashboard Overview", icon: LayoutDashboard },
+    { id: "p-monitoring" as PScreen, label: "Real-Time Monitoring", icon: Monitor },
+  ]},
+  { category: "Administration", items: [
+    { id: "p-analytics" as PScreen,  label: "Academic Analytics",  icon: BarChart2 },
+    { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
+    { id: "p-welfare" as PScreen,    label: "Student Welfare",     icon: AlertCircle },
+  ]},
+  { category: "Operations", items: [
+    { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
+    { id: "p-reports" as PScreen,    label: "Reports",             icon: FileSpreadsheet },
+    { id: "p-templates" as PScreen,  label: "Forms & Records",     icon: BookMarked },
+  ]},
 ];
+
+// Flat export for external consumers
+export const P_NAV = P_NAV_GROUPS.flatMap(g => g.items);
 export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
   active: PScreen;
   onNav: (s: PScreen) => void;
@@ -51,25 +60,34 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
         )}
       </div>
 
-      {/* Nav List */}
-      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-        {P_NAV.map(item => {
-          const Icon = item.icon;
-          const isActive = active === item.id;
-          return (
-            <button key={item.id} onClick={() => onNav(item.id)}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, padding: "10px 14px",
-                borderRadius: 4, background: isActive ? C.m700 : "transparent", border: "none", color: isActive ? "#fff" : "rgba(255,255,255,0.65)",
-                cursor: "pointer", textAlign: "left", transition: "all 0.15s"
-              }}
-              onMouseEnter={e => { if(!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-              onMouseLeave={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}>
-              <Icon size={16} color={isActive ? '#fff' : 'rgba(255,255,255,0.65)'} />
-              {!collapsed && <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>}
-            </button>
-          );
-        })}
+      {/* Nav List — grouped by category */}
+      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+        {P_NAV_GROUPS.map(group => (
+          <div key={group.category} style={{ marginBottom: 8 }}>
+            {!collapsed && (
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
+                {group.category}
+              </div>
+            )}
+            {group.items.map(item => {
+              const Icon = item.icon;
+              const isActive = active === item.id;
+              return (
+                <button key={item.id} onClick={() => onNav(item.id)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, padding: "9px 14px",
+                    borderRadius: 4, background: isActive ? C.m700 : "transparent", border: "none", color: isActive ? "#fff" : "rgba(255,255,255,0.65)",
+                    cursor: "pointer", textAlign: "left", transition: "all 0.15s", boxSizing: "border-box"
+                  }}
+                  onMouseEnter={e => { if(!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                  onMouseLeave={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                  <Icon size={16} color={isActive ? '#fff' : 'rgba(255,255,255,0.65)'} />
+                  {!collapsed && <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* User Info & Footer buttons */}

@@ -132,48 +132,66 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* Navigation list */}
-        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Navigation list — grouped by category */}
+        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
           {[
-            { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
-            { id: "academics", label: "Academic Records", icon: BookOpen },
-            { id: "attendance", label: "Attendance Record", icon: Calendar },
-            { id: "assignments", label: "Assignments & To-Dos", icon: ClipboardList },
-            { id: "requests", label: "Document Requests", icon: FileSpreadsheet },
-            { id: "resources", label: "Lesson Resources", icon: FileText },
-            { id: "behavior", label: "Behavior & Awards", icon: Shield },
-            { id: "clinic", label: "Medical & Clinic Log", icon: Heart },
-            { id: "settings", label: "Profile Settings", icon: Settings },
-          ].map((item) => {
-            const Icon = item.icon;
-            const act = tab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id as any)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 14px",
-                  borderRadius: 4,
-                  background: act ? C.m800 : "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: act ? "#fff" : "rgba(255,255,255,0.65)",
-                  fontSize: 12,
-                  fontWeight: act ? 700 : 400,
-                  textAlign: "left",
-                  transition: "all 0.12s"
-                }}
-                onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
-              >
-                <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+            { category: "Overview", items: [
+              { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
+            ]},
+            { category: "Academics", items: [
+              { id: "academics", label: "Academic Records", icon: BookOpen },
+              { id: "attendance", label: "Attendance Record", icon: Calendar },
+              { id: "assignments", label: "Assignments & To-Dos", icon: ClipboardList },
+              { id: "resources", label: "Lesson Resources", icon: FileText },
+            ]},
+            { category: "School Life", items: [
+              { id: "behavior", label: "Behavior & Awards", icon: Shield },
+              { id: "clinic", label: "Medical & Clinic Log", icon: Heart },
+              { id: "requests", label: "Document Requests", icon: FileSpreadsheet },
+            ]},
+            { category: "Account", items: [
+              { id: "settings", label: "Profile Settings", icon: Settings },
+            ]},
+          ].map((group) => (
+            <div key={group.category} style={{ marginBottom: 8 }}>
+              {/* Category label */}
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
+                {group.category}
+              </div>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const act = tab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setTab(item.id as any)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      width: "100%",
+                      padding: "9px 14px",
+                      borderRadius: 4,
+                      background: act ? C.m800 : "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: act ? "#fff" : "rgba(255,255,255,0.65)",
+                      fontSize: 12,
+                      fontWeight: act ? 700 : 400,
+                      textAlign: "left",
+                      transition: "all 0.12s",
+                      boxSizing: "border-box"
+                    }}
+                    onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                    onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Sidebar Footer with toggled dropdown */}
