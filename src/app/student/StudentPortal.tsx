@@ -419,43 +419,42 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* School Brand Banner Header */}
+              {/* Clean Student Brand Header Banner */}
               <div style={{
-                background: "linear-gradient(135deg, #581c1c 0%, #300c0c 100%)",
+                background: "#fff",
                 border: `1.5px solid ${C.borderMed}`,
-                borderRadius: 12,
-                padding: "20px 24px",
+                borderLeft: `4px solid ${C.m700}`,
+                borderRadius: 8,
+                padding: "16px 20px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                color: "#fff",
-                position: "relative",
-                overflow: "hidden",
-                boxShadow: "0 4px 20px rgba(88, 28, 28, 0.08)"
+                color: C.t1,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
               }}>
                 {/* Left side: School Brand Info */}
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ 
-                    width: 48, 
-                    height: 48, 
-                    borderRadius: 8, 
-                    background: "rgba(255,255,255,0.06)", 
-                    border: "1px solid rgba(255,255,255,0.15)", 
+                    width: 40, 
+                    height: 40, 
+                    borderRadius: 6, 
+                    background: C.m50, 
+                    border: `1.5px solid rgba(139, 30, 30, 0.15)`, 
                     display: "flex", 
                     alignItems: "center", 
                     justifyContent: "center",
                     flexShrink: 0
                   }}>
-                    <School size={24} color={C.gold} />
+                    <School size={20} color={C.m700} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 8, color: "rgba(255,255,255,0.6)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    <div style={{ fontSize: 8, color: C.t3, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
                       Republic of the Philippines · Department of Education
                     </div>
-                    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Fraunces', serif", margin: "4px 0 2px 0", letterSpacing: "-0.01em" }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif", margin: "2px 0" }}>
                       Sindalan National High School
                     </div>
-                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+                    <div style={{ fontSize: 9, color: C.t3, fontWeight: 500 }}>
                       Sindalan, City of San Fernando, Pampanga · Division of San Fernando City
                     </div>
                   </div>
@@ -465,45 +464,45 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 <div style={{ 
                   display: "flex", 
                   alignItems: "center", 
-                  gap: 14, 
-                  background: "rgba(255, 255, 255, 0.06)", 
-                  border: "1px solid rgba(255, 255, 255, 0.12)", 
-                  borderRadius: 10, 
-                  padding: "12px 18px",
-                  minWidth: 260
+                  gap: 12, 
+                  background: C.paper, 
+                  border: `1px solid ${C.borderMed}`, 
+                  borderRadius: 8, 
+                  padding: "10px 14px",
+                  minWidth: 240
                 }}>
                   {/* Picture (Left) */}
-                  <div style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", border: "2px solid rgba(255,255,255,0.2)", flexShrink: 0 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 19, overflow: "hidden", border: `1.5px solid ${C.borderMed}`, flexShrink: 0 }}>
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
                   
                   {/* Name and info (Right) */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <div style={{ fontSize: 8, color: C.gold, fontWeight: 800, letterSpacing: "0.08em" }}>GOOD MORNING</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Juan Miguel Santos</div>
-                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.6)" }}>Grade 10 - Pilot Section</div>
-                    <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
-                      <span style={{ fontSize: 7.5, fontWeight: 700, background: "rgba(255,255,255,0.12)", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>LRN: 100001</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    <div style={{ fontSize: 8, color: C.m700, fontWeight: 800, letterSpacing: "0.08em" }}>WELCOME BACK</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
+                    <div style={{ fontSize: 8.5, color: C.t2 }}>Grade 10 - Pilot Section</div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                      <span style={{ fontSize: 7, fontWeight: 700, background: "rgba(0,0,0,0.05)", color: C.t2, padding: "1px 4px", borderRadius: 3 }}>LRN: 100001</span>
                       <button 
                         onClick={() => setShowQRModal(true)}
                         style={{ 
                           display: "flex", 
                           alignItems: "center", 
-                          gap: 3, 
-                          fontSize: 7.5, 
+                          gap: 2, 
+                          fontSize: 7, 
                           fontWeight: 700, 
-                          background: "rgba(212,163,89,0.2)", 
-                          color: C.gold, 
-                          padding: "1px 6px", 
-                          borderRadius: 4, 
-                          border: `0.5px solid rgba(212,163,89,0.4)`,
+                          background: "rgba(139, 30, 30, 0.08)", 
+                          color: C.m700, 
+                          padding: "1px 5px", 
+                          borderRadius: 3, 
+                          border: `0.5px solid rgba(139, 30, 30, 0.15)`,
                           cursor: "pointer",
                           transition: "all 0.12s"
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(212,163,89,0.3)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(212,163,89,0.2)"}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(139, 30, 30, 0.12)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(139, 30, 30, 0.08)"}
                       >
-                        <QrCode size={9} /> Show QR ID
+                        <QrCode size={8} /> Show QR
                       </button>
                     </div>
                   </div>
