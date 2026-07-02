@@ -49,6 +49,20 @@ const STUDENT_NAV_GROUPS = [
   }
 ];
 
+const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
+  dashboard: { title: "Student Portal", sub: "Overview & Quick Actions" },
+  academics: { title: "Grades & Performance", sub: "Scholastic History & Grades" },
+  attendance: { title: "Gate Attendance", sub: "Daily Logs & excuse submissions" },
+  assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
+  resources: { title: "My Subjects", sub: "Academic Courses & Syllabus" },
+  announcements: { title: "Announcements", sub: "School Bulletin Board" },
+  messages: { title: "Messages", sub: "Direct Communications" },
+  requests: { title: "Document Requests", sub: "Administrative Services" },
+  calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
+  behavior: { title: "Achievements", sub: "Honors & Recognitions" },
+  settings: { title: "Account Settings", sub: "Profile & Security Configuration" }
+};
+
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<
     "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar" | "announcements" | "messages"
@@ -287,26 +301,39 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         {/* Top Header Band */}
         <div style={{
           background: "#fff",
-          borderBottom: `1.5px solid ${C.borderMed}`,
+          borderBottom: `2px solid ${C.m700}`,
           padding: "0 28px",
-          height: 54,
+          height: 56,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           flexShrink: 0
         }}>
-          {/* Hamburger + search bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+          {/* Hamburger + Dynamic Page Title/Subtitle */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <Menu size={16} color={C.t3} style={{ cursor: "pointer" }} />
-            <div style={{ display: "flex", alignItems: "center", position: "relative", width: 340 }}>
+            <div>
+              <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>
+                {STUDENT_TAB_METADATA[tab]?.title || "Student Portal"}
+              </h1>
+              <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>
+                {STUDENT_TAB_METADATA[tab]?.sub || "OVERVIEW"}
+              </div>
+            </div>
+          </div>
+          
+          {/* Right Area: Search, Theme sun, Notification Bell & Profile dropdown */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {/* Search bar mockup */}
+            <div style={{ display: "flex", alignItems: "center", position: "relative", width: 280 }}>
               <Search size={13} color={C.t3} style={{ position: "absolute", left: 10 }} />
               <input 
                 type="text" 
-                placeholder="Search for subjects, assignments, announcements..." 
+                placeholder="Search..." 
                 style={{
                   width: "100%",
-                  padding: "7px 12px 7px 30px",
-                  fontSize: 11.5,
+                  padding: "6px 12px 6px 30px",
+                  fontSize: 11,
                   color: C.t1,
                   background: C.m50,
                   border: "1.5px solid " + C.borderMed,
@@ -323,62 +350,62 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   e.currentTarget.style.background = C.m50;
                 }}
               />
-              <span style={{ position: "absolute", right: 10, fontSize: 9.5, color: C.t3, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "2px 5px", fontWeight: 600 }}>Ctrl + K</span>
             </div>
-          </div>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* Theme Sun button */}
-            <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
-            </button>
 
-            {/* Notification Bell */}
-            <div style={{ position: "relative" }}>
-              <button 
-                onClick={() => setNotifOpen(true)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 32,
-                  height: 32,
-                  position: "relative"
-                }}
-              >
-                <Bell size={18} color={C.t2} />
-                <div style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
-                  background: C.red,
-                  color: "#fff",
-                  fontSize: 8,
-                  fontWeight: 700,
-                  borderRadius: 10,
-                  width: 14,
-                  height: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1.5px solid #fff"
-                }}>3</div>
+            {/* Action buttons and Profile */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              {/* Theme Sun button */}
+              <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
               </button>
-            </div>
 
-            {/* User Profile display */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100 }}>
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {/* Notification Bell */}
+              <div style={{ position: "relative" }}>
+                <button 
+                  onClick={() => setNotifOpen(true)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 32,
+                    height: 32,
+                    position: "relative"
+                  }}
+                >
+                  <Bell size={18} color={C.t2} />
+                  <div style={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    background: C.red,
+                    color: "#fff",
+                    fontSize: 8,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    width: 14,
+                    height: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1.5px solid #fff"
+                  }}>3</div>
+                </button>
               </div>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
-                <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>Grade 10 - Pilot Section</div>
+
+              {/* User Profile display */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100 }}>
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
+                  <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>Grade 10 - Pilot Section</div>
+                </div>
+                <ChevronDown size={12} color={C.t3} />
               </div>
-              <ChevronDown size={12} color={C.t3} />
             </div>
 
           </div>
