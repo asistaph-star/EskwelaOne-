@@ -5,7 +5,8 @@ import {
   LogOut, BookOpen, Calendar, Award, BookMarked, Printer, Download,
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
-  Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight
+  Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
@@ -117,110 +118,126 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           <div style={{
             width: 34, height: 34, borderRadius: 8,
             background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
-            border: "1.5px solid rgba(200, 134, 10, 0.45)",
+            border: "1.5px solid rgba(200, 134, 10, 0.5)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
           }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>E1</span>
+            <BookMarked size={18} color={C.gold} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              EskwelaOne<span style={{ color: C.gold, marginLeft: 1 }}>+</span>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "0.06em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+              ESKWELAONE
             </div>
-            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan NHS
+            <div style={{ fontSize: 8, color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.13em", marginTop: 2 }}>
+              STUDENT PORTAL
             </div>
           </div>
         </div>
 
-        {/* Navigation list — grouped by category */}
+        {/* Flat Navigation list matching the mockup */}
         <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
           {[
-            { category: "Overview", items: [
-              { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
-              { id: "calendar", label: "Calendar & Schedule", icon: Calendar },
-            ]},
-            { category: "Academics", items: [
-              { id: "academics", label: "Academic Records", icon: BookOpen },
-              { id: "attendance", label: "Attendance Record", icon: Calendar },
-              { id: "assignments", label: "Assignments & To-Dos", icon: ClipboardList },
-              { id: "resources", label: "Lesson Resources", icon: FileText },
-            ]},
-            { category: "School Life", items: [
-              { id: "behavior", label: "Behavior & Awards", icon: Shield },
-              { id: "clinic", label: "Medical & Clinic Log", icon: Heart },
-              { id: "requests", label: "Document Requests", icon: FileSpreadsheet },
-            ]},
-            { category: "Account", items: [
-              { id: "settings", label: "Profile Settings", icon: Settings },
-            ]},
-          ].map((group) => (
-            <div key={group.category} style={{ marginBottom: 8 }}>
-              {/* Category label */}
-              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
-                {group.category}
-              </div>
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const act = tab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setTab(item.id as any)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      width: "100%",
-                      padding: "9px 14px",
-                      borderRadius: 4,
-                      background: act ? C.m800 : "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: act ? "#fff" : "rgba(255,255,255,0.65)",
-                      fontSize: 12,
-                      fontWeight: act ? 700 : 400,
-                      textAlign: "left",
-                      transition: "all 0.12s",
-                      boxSizing: "border-box"
-                    }}
-                    onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                    onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { id: "profile", label: "My Profile", icon: User },
+            { id: "calendar", label: "My Schedule", icon: Calendar },
+            { id: "academics", label: "Grades", icon: BookOpen },
+            { id: "attendance", label: "Attendance", icon: Calendar },
+            { id: "assignments", label: "Assignments", icon: ClipboardList },
+            { id: "resources", label: "Subjects", icon: FileText },
+            { id: "announcements", label: "Announcements", icon: Bell },
+            { id: "messages", label: "Messages", icon: MessageSquare },
+            { id: "requests", label: "Documents", icon: FolderOpen },
+            { id: "calendar_alt", label: "Calendar", icon: Calendar },
+            { id: "behavior", label: "Achievement", icon: Award },
+            { id: "settings", label: "Settings", icon: Settings },
+          ].map((item) => {
+            const Icon = item.icon;
+            
+            // Map tab highlight correctly
+            const isDashboard = item.id === "dashboard" && tab === "dashboard";
+            const isProfile = item.id === "profile" && tab === "settings";
+            const isSchedule = item.id === "calendar" && tab === "calendar";
+            const isGrades = item.id === "academics" && tab === "academics";
+            const isAttendance = item.id === "attendance" && tab === "attendance";
+            const isAssignments = item.id === "assignments" && tab === "assignments";
+            const isSubjects = item.id === "resources" && tab === "resources";
+            const isAnnouncements = item.id === "announcements" && tab === "dashboard";
+            const isMessages = item.id === "messages" && tab === "dashboard";
+            const isDocuments = item.id === "requests" && tab === "requests";
+            const isCalendarAlt = item.id === "calendar_alt" && tab === "calendar";
+            const isAchievement = item.id === "behavior" && tab === "behavior";
+            const isSettings = item.id === "settings" && tab === "settings";
+
+            const act = isDashboard || isProfile || isSchedule || isGrades || isAttendance || isAssignments || isSubjects || isAnnouncements || isMessages || isDocuments || isCalendarAlt || isAchievement || isSettings;
+
+            const clickHandler = () => {
+              if (item.id === "dashboard") setTab("dashboard");
+              else if (item.id === "profile") setTab("settings");
+              else if (item.id === "calendar" || item.id === "calendar_alt") setTab("calendar");
+              else if (item.id === "academics") setTab("academics");
+              else if (item.id === "attendance") setTab("attendance");
+              else if (item.id === "assignments") setTab("assignments");
+              else if (item.id === "resources") setTab("resources");
+              else if (item.id === "announcements") { setTab("dashboard"); alert("Announcements list resides at the bottom of the overview dashboard."); }
+              else if (item.id === "messages") { alert("Direct messages are integrated in your notification alerts tray."); }
+              else if (item.id === "requests") setTab("requests");
+              else if (item.id === "behavior") setTab("behavior");
+              else if (item.id === "settings") setTab("settings");
+            };
+
+            return (
+              <button
+                key={item.id}
+                onClick={clickHandler}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: 4,
+                  background: act ? C.m800 : "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: act ? "#fff" : "rgba(255,255,255,0.65)",
+                  fontSize: 12,
+                  fontWeight: act ? 700 : 400,
+                  textAlign: "left",
+                  transition: "all 0.12s",
+                  boxSizing: "border-box"
+                }}
+                onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
+              >
+                <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Sidebar Footer with toggled dropdown */}
-        <div style={{ padding: "14px 16px", borderTop: `1px solid ${C.borderHeavy}`, position: "relative" }}>
-          {profileOpen && (
-            <div style={{ position: "absolute", bottom: "100%", left: 16, right: 16, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 0", marginBottom: 8, boxShadow: "0 -4px 16px rgba(0,0,0,0.15)", zIndex: 100 }}>
-              <button onClick={() => setTab("settings")} style={{ width: "100%", background: "none", border: "none", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", color: C.t1, fontWeight: 600 }}>Settings</button>
-              <button onClick={() => alert("Help and tutorials can be accessed via adviser consultation.")} style={{ width: "100%", background: "none", border: "none", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", color: C.t1, fontWeight: 600 }}>Tutorials</button>
-              <button onClick={() => alert("Submit student feedback in the guidance office.")} style={{ width: "100%", background: "none", border: "none", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", color: C.t1, fontWeight: 600 }}>Help & Feedback</button>
-              <div style={{ height: 1, background: C.border, margin: "6px 0" }} />
-              <button onClick={onLogout} style={{ width: "100%", background: "none", border: "none", padding: "8px 16px", fontSize: 11, textAlign: "left", cursor: "pointer", color: C.red, fontWeight: 700 }}>Log Out</button>
-            </div>
-          )}
-          <div 
-            onClick={() => setProfileOpen(!profileOpen)}
-            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "6px 8px", borderRadius: 4 }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        {/* Sidebar Footer matching the mockup */}
+        <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.borderHeavy}` }}>
+          <button 
+            onClick={onLogout}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 10, 
+              background: "transparent", 
+              border: "none", 
+              color: "rgba(255,255,255,0.65)", 
+              fontSize: 12, 
+              fontWeight: 500, 
+              cursor: "pointer",
+              padding: 0,
+              width: "100%"
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = C.gold}
+            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.65)"}
           >
-            <div style={{ width: 28, height: 28, borderRadius: 20, background: C.m600, border: `1.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: C.gold }}>SJ</span>
-            </div>
-            <div style={{ flex: 1, overflow: "hidden" }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Santos, Juan Miguel</div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Grade 10 · Student</div>
-            </div>
-          </div>
+            <LogOut size={16} /> Log Out
+          </button>
         </div>
 
       </div>
@@ -239,78 +256,65 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           justifyContent: "space-between",
           flexShrink: 0
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-            {tab === "dashboard" ? "Dashboard Overview" :
-             tab === "calendar" ? "Calendar & Schedule" :
-             tab === "academics" ? "Academic Records" :
-             tab === "attendance" ? "Attendance Record" :
-             tab === "assignments" ? "Assignments & To-Dos" :
-             tab === "requests" ? "Document Requests" :
-             tab === "resources" ? "Lesson Resources" :
-             tab === "behavior" ? "Behavior & Awards" :
-             tab === "clinic" ? "Medical & Clinic Log" :
-             "Profile Settings"}
-          </div>
-          
-          {/* Modern Top Search Bar */}
-          <div style={{ display: "flex", alignItems: "center", position: "relative", width: 260, marginLeft: 24, marginRight: "auto" }}>
-            <Search size={13} color={C.t3} style={{ position: "absolute", left: 10 }} />
-            <input 
-              type="text" 
-              placeholder="Search records, assignments..." 
-              style={{
-                width: "100%",
-                padding: "6px 12px 6px 30px",
-                fontSize: 11,
-                color: C.t1,
-                background: C.m50,
-                border: "1.5px solid " + C.borderMed,
-                borderRadius: 4,
-                outline: "none",
-                transition: "all 0.15s"
-              }}
-              onFocus={e => {
-                e.currentTarget.style.borderColor = C.m700;
-                e.currentTarget.style.background = "#fff";
-              }}
-              onBlur={e => {
-                e.currentTarget.style.borderColor = C.borderMed;
-                e.currentTarget.style.background = C.m50;
-              }}
-            />
+          {/* Hamburger + search bar */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+            <Menu size={16} color={C.t3} style={{ cursor: "pointer" }} />
+            <div style={{ display: "flex", alignItems: "center", position: "relative", width: 340 }}>
+              <Search size={13} color={C.t3} style={{ position: "absolute", left: 10 }} />
+              <input 
+                type="text" 
+                placeholder="Search for subjects, assignments, announcements..." 
+                style={{
+                  width: "100%",
+                  padding: "7px 12px 7px 30px",
+                  fontSize: 11.5,
+                  color: C.t1,
+                  background: C.m50,
+                  border: "1.5px solid " + C.borderMed,
+                  borderRadius: 20,
+                  outline: "none",
+                  transition: "all 0.15s"
+                }}
+                onFocus={e => {
+                  e.currentTarget.style.borderColor = C.m700;
+                  e.currentTarget.style.background = "#fff";
+                }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = C.borderMed;
+                  e.currentTarget.style.background = C.m50;
+                }}
+              />
+              <span style={{ position: "absolute", right: 10, fontSize: 9.5, color: C.t3, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "2px 5px", fontWeight: 600 }}>Ctrl + K</span>
+            </div>
           </div>
           
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* Live Notification Bell */}
+            {/* Theme Sun button */}
+            <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+              <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
+            </button>
+
+            {/* Notification Bell */}
             <div style={{ position: "relative" }}>
               <button 
                 onClick={() => setNotifOpen(true)}
                 style={{
-                  background: C.m50,
-                  border: `1.5px solid ${C.borderMed}`,
+                  background: "transparent",
+                  border: "none",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   width: 32,
                   height: 32,
-                  borderRadius: 16,
-                  transition: "all 0.15s"
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = C.m100;
-                  e.currentTarget.style.borderColor = C.m700;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = C.m50;
-                  e.currentTarget.style.borderColor = C.borderMed;
+                  position: "relative"
                 }}
               >
-                <Bell size={16} color={C.m700} />
+                <Bell size={18} color={C.t2} />
                 <div style={{
                   position: "absolute",
-                  top: -2,
-                  right: -2,
+                  top: 2,
+                  right: 2,
                   background: C.red,
                   color: "#fff",
                   fontSize: 8,
@@ -325,7 +329,18 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 }}>3</div>
               </button>
             </div>
-            
+
+            {/* User Profile display */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100 }}>
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
+                <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>Grade 10 - Pilot Section</div>
+              </div>
+              <ChevronDown size={12} color={C.t3} />
+            </div>
 
           </div>
         </div>
