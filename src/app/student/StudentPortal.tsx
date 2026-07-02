@@ -69,6 +69,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Document Requests States
   const [docType, setDocType] = useState("Official Report Card Copy (SF9)");
@@ -481,9 +482,29 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <div style={{ fontSize: 8, color: C.gold, fontWeight: 800, letterSpacing: "0.08em" }}>GOOD MORNING</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Juan Miguel Santos</div>
                     <div style={{ fontSize: 9, color: "rgba(255,255,255,0.6)" }}>Grade 10 - Pilot Section</div>
-                    <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                    <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
                       <span style={{ fontSize: 7.5, fontWeight: 700, background: "rgba(255,255,255,0.12)", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>LRN: 100001</span>
-                      <span style={{ fontSize: 7.5, fontWeight: 700, background: "rgba(212,163,89,0.15)", color: C.gold, padding: "1px 5px", borderRadius: 4, border: `0.5px solid rgba(212,163,89,0.3)` }}>Active Student</span>
+                      <button 
+                        onClick={() => setShowQRModal(true)}
+                        style={{ 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: 3, 
+                          fontSize: 7.5, 
+                          fontWeight: 700, 
+                          background: "rgba(212,163,89,0.2)", 
+                          color: C.gold, 
+                          padding: "1px 6px", 
+                          borderRadius: 4, 
+                          border: `0.5px solid rgba(212,163,89,0.4)`,
+                          cursor: "pointer",
+                          transition: "all 0.12s"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(212,163,89,0.3)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(212,163,89,0.2)"}
+                      >
+                        <QrCode size={9} /> Show QR ID
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1613,6 +1634,103 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. DIGITAL QR ID CARD MODAL */}
+      {showQRModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.6)",
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: 12,
+            width: 320,
+            padding: 24,
+            border: `1.5px solid ${C.borderMed}`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            position: "relative"
+          }}>
+            <button 
+              onClick={() => setShowQRModal(false)}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                background: "none",
+                border: "none",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+                color: C.t3
+              }}
+            >
+              ✕
+            </button>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.m700, fontFamily: "'Fraunces', serif" }}>Digital Student ID Card</div>
+            
+            {/* Student ID Card Layout */}
+            <div style={{
+              width: "100%",
+              background: "linear-gradient(135deg, #581c1c 0%, #300c0c 100%)",
+              borderRadius: 8,
+              padding: 16,
+              color: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              boxSizing: "border-box"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 8 }}>
+                <School size={16} color={C.gold} />
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.05em" }}>SINDALAN NHS</span>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.2)" }}>
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700 }}>Juan Miguel Santos</div>
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Grade 10 - Pilot Section</div>
+                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)" }}>LRN: 100001</div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code Graphic */}
+            <div style={{ 
+              width: 140, 
+              height: 140, 
+              border: `1.5px solid ${C.borderMed}`, 
+              borderRadius: 8, 
+              padding: 8, 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center",
+              background: "#fff",
+              position: "relative"
+            }}>
+              {/* Custom SVG QR Code for absolute beauty */}
+              <svg width="120" height="120" viewBox="0 0 29 29" style={{ shapeRendering: "crispEdges" }}>
+                <path d="M0 0h7v7H0zm1 1v5h5V1zm8 0h1v1H9zm1 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h3v1h-3zm4 0h1v1h-1zm1 0h3v1h-3zm-11 1h1v1H9zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm1 0h1v1h-1zm-10 1h2v1h-2zm3 0h1v1h-1zm1 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm-12 1h1v1H9zm3 0h1v1h-1zm2 0h1v1h-1zm1 0h2v1h-2zm5 0h1v1h-1zm1 0h1v1h-1zm-21 1v1h5v-1zm8 0h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm3 0h2v1h-2zm-12 1h1v1H9zm2 0h1v1h-1zm4 0h1v1h-1zm1 0h1v1h-1zm4 0h1v1h-1zm-11 1h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm1 0h2v1h-2zm4 0h1v1h-1zm1 0h2v1h-2zm-22 2h7v7H0zm1 1v5h5v-5zm11 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-11 1h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zm3 0h2v1h-2zm-8 1h2v1h-2zm3 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm3 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm2 0h2v1h-2zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zM22 0h7v7h-7zm1 1v5h5V1zm-1 8h1v1h-1zm3 0h2v1h-2zm4 0h1v1h-1zm-6 1h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zM0 22h7v7H0zm1 1v5h5v-5zM22 22h7v7h-7zm1 1v5h5v-5z" fill="#000" />
+              </svg>
+            </div>
+            
+            <div style={{ fontSize: 9.5, color: C.t3, textAlign: "center" }}>
+              Scan at school gate terminal for quick attendance validation.
             </div>
           </div>
         </div>
