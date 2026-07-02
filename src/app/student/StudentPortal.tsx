@@ -348,116 +348,265 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         {/* Inner Content Area */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
 
-          {/* 1. OVERVIEW & DIGITAL QR ID */}
+          {/* 1. MOCKUP STUDENT DASHBOARD */}
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* Official school header block */}
-              <div style={{ background: C.m800, borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ background: `linear-gradient(90deg, ${C.m900} 0%, ${C.m800} 50%, ${C.m700} 100%)`, padding: "18px 24px 14px", display: "flex", alignItems: "center", gap: 18 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(200,134,10,0.18)", border: `1.5px solid rgba(200,134,10,0.45)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <BookMarked size={22} color={C.gold} />
+              {/* Top Row: Welcome greeting & Digital ID floating card */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: C.t3, fontWeight: 500 }}>Good Morning,</div>
+                  <h1 style={{ fontSize: 32, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif", margin: "4px 0 6px 0", display: "flex", alignItems: "center", gap: 8 }}>
+                    Juan Miguel! <span style={{ fontSize: 24 }}>👋</span>
+                  </h1>
+                  <div style={{ fontSize: 12, color: C.t3 }}>Here's what's happening today.</div>
+                </div>
+
+                {/* Floating ID Card block */}
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 16, 
+                  background: "#fff", 
+                  border: `1.5px solid ${C.borderMed}`, 
+                  borderRadius: 12, 
+                  padding: "12px 18px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+                }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", background: C.m50, flexShrink: 0 }}>
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Republic of the Philippines · Department of Education</div>
-                    <div style={{ color: "#fff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", lineHeight: 1.2 }}>Sindalan National High School</div>
-                    <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 4 }}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, letterSpacing: "0.06em" }}>GOOD DAY</div>
-                    <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Juan Miguel Santos</div>
-                    <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2, marginBottom: 6 }}>Tuesday, June 10, 2025 &middot; Week 3, Q1</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
-                      <span style={{ background: "rgba(234,179,8,0.15)", color: "#FDE047", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(234,179,8,0.3)" }}>
-                        Grade 10
-                      </span>
-                      <span style={{ background: "rgba(59,130,246,0.15)", color: "#93C5FD", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(59,130,246,0.3)" }}>
-                        Pilot Section
-                      </span>
+                  <div>
+                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: "2px 8px", fontSize: 11, marginBottom: 6 }}>
+                      <span style={{ color: C.t3, fontWeight: 600 }}>Student ID</span>
+                      <span style={{ color: C.t1, fontWeight: 700 }}>2022-10045</span>
+                      <span style={{ color: C.t3, fontWeight: 600 }}>LRN</span>
+                      <span style={{ color: C.t1, fontWeight: 700 }}>100001</span>
                     </div>
+                    <button onClick={() => alert("Digital QR Code active and validated.")} style={{ display: "flex", alignItems: "center", gap: 5, background: "transparent", border: `1px solid ${C.borderMed}`, padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>
+                      <QrCode size={11} /> My QR Code
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* 6-Stat Strip */}
+              {/* KPI metrics strip */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
-                <StatBox label="Attendance Rate" value="95.4%" sub="18 present · 1 absent" accent={C.green} />
-                <StatBox label="General Average" value="87.0" sub="First 3 quarters" accent={C.gold} />
-                <StatBox label="Pending Tasks" value="3" sub="Homework & projects" accent={C.amber} />
-                <StatBox label="Class Ranking" value="4th" sub="out of 38 students" accent={C.blue} />
-                <StatBox label="Today's Schedule" value="4" sub="classes scheduled" accent={C.m700} />
-                <StatBox label="Health Alerts" value="1" sub="Physical checkup set" accent={C.purple} />
+                {[
+                  { label: "Attendance Rate", val: "95.4%", sub: "▲ 2% from last month", icon: CheckCircle, color: C.green, bg: "#f0fdf4" },
+                  { label: "Current GPA", val: "88.0", sub: "Above Passing", icon: Award, color: C.gold, bg: "#fefbeb" },
+                  { label: "Assignments Due", val: "2", sub: "Due Today", icon: ClipboardList, color: C.red, bg: "#fef2f2" },
+                  { label: "Today's Classes", val: "4 Classes", sub: "Next: Math (9:00 AM)", icon: Clock, color: C.blue, bg: "#eff6ff" },
+                  { label: "Achievements", val: "5 Badges", sub: "View all achievements", icon: Award, color: "#8b5cf6", bg: "#f5f3ff" },
+                  { label: "Needs Attention", val: "2 Items", sub: "View details >", icon: AlertTriangle, color: "#f97316", bg: "#fff7ed" }
+                ].map((kpi, idx) => {
+                  const Icon = kpi.icon;
+                  return (
+                    <div key={idx} style={{ 
+                      background: "#fff", 
+                      border: `1.5px solid ${C.borderMed}`, 
+                      borderRadius: 8, 
+                      padding: "12px 14px", 
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.01)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ width: 22, height: 22, borderRadius: 12, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Icon size={12} color={kpi.color} />
+                        </div>
+                        <span style={{ fontSize: 9.5, fontWeight: 600, color: C.t3 }}>{kpi.label}</span>
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>{kpi.val}</div>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: kpi.color }}>{kpi.sub}</div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Main split grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, alignItems: "start" }}>
-                {/* Digital school ID & QR code */}
-                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", textAlign: "center" }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.m700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Digital Student ID Card</div>
-                  <div style={{ background: C.m900, borderRadius: 6, padding: "16px 12px", color: "#fff", marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.03em" }}>SINDALAN NATIONAL HS</div>
-                    <div style={{ fontSize: 7, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>Learner ID Card · SY 2025-2026</div>
-                    <div style={{ margin: "16px 0", display: "flex", justifyContent: "center" }}>
-                      <div style={{ width: 68, height: 68, borderRadius: 50, background: C.m600, border: `2.5px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <span style={{ fontSize: 20, fontWeight: 800, color: C.gold }}>SJ</span>
+              {/* 3-Column main content grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20 }}>
+                {/* Column 1: Today's Schedule */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
+                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View Full Schedule</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, position: "relative" }}>
+                    <div style={{ position: "absolute", left: 54, top: 8, bottom: 8, width: 2, background: C.borderMed }} />
+                    {[
+                      { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4" },
+                      { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed" },
+                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper },
+                      { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
+                      { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
+                    ].map((slot, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: 16, alignItems: "center", position: "relative", zIndex: 1 }}>
+                        <span style={{ width: 46, fontSize: 10, fontWeight: 700, color: C.t3 }}>{slot.time}</span>
+                        <div style={{ width: 10, height: 10, borderRadius: 5, background: slot.status === "In Progress" ? "#f97316" : C.m700, border: "2px solid #fff", flexShrink: 0 }} />
+                        <div style={{ 
+                          flex: 1, 
+                          background: slot.status === "In Progress" ? "#fffbf7" : "#fff",
+                          border: `1px solid ${slot.status === "In Progress" ? "#ffedd5" : C.borderMed}`,
+                          borderLeft: `4px solid ${slot.status === "In Progress" ? "#f97316" : C.border}`,
+                          borderRadius: 4, 
+                          padding: "8px 12px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center"
+                        }}>
+                          <div>
+                            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{slot.title}</div>
+                            <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                          </div>
+                          <span style={{ 
+                            fontSize: 9, 
+                            fontWeight: 700, 
+                            color: slot.color, 
+                            background: slot.bg, 
+                            padding: "2px 6px", 
+                            borderRadius: 4 
+                          }}>{slot.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Schedule</button>
+                </div>
+
+                {/* Column 2: Upcoming Assignments */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
+                    <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+                    {[
+                      { title: "Science Lab Report", desc: "Science · Ms. Ana R. Soriano", due: "Due Today", time: "11:59 PM", color: C.red },
+                      { title: "Math Problem Set #8", desc: "Mathematics · Mr. Carlo D. Reyes", due: "Due Tomorrow", time: "11:59 PM", color: "#f97316" },
+                      { title: "English Essay", desc: "English · Ms. Liza M. Bautista", due: "Due Jun 14", time: "11:59 PM", color: C.t3 },
+                      { title: "Filipino Reflection Paper", desc: "Filipino · Mr. Jose P. Dela Cruz", due: "Due Jun 16", time: "11:59 PM", color: C.t3 }
+                    ].map((ass, idx) => (
+                      <div key={idx} style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 12, 
+                        padding: 10, 
+                        border: `1px solid ${C.borderMed}`, 
+                        borderRadius: 6,
+                        background: "#fff"
+                      }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 4, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <ClipboardList size={14} color={C.m700} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ass.title}</div>
+                          <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{ass.desc}</div>
+                        </div>
+                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: ass.color }}>{ass.due}</div>
+                          <div style={{ fontSize: 8.5, color: C.t3, marginTop: 1 }}>{ass.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setTab("assignments")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
+                </div>
+
+                {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {/* Grades Summary */}
+                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
+                      <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Grades</button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                        <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                          <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
+                        </div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
+                        <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
+                      </div>
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {[
+                          { s: "Mathematics", g: 90 },
+                          { s: "English", g: 85 },
+                          { s: "Science", g: 88 },
+                          { s: "Filipino", g: 87 },
+                          { s: "Araling Panlipunan", g: 89 },
+                          { s: "PE & Health", g: 92 },
+                          { s: "TLE", g: 86 }
+                        ].map((sub, idx) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
+                            <span style={{ color: C.t2 }}>{sub.s}</span>
+                            <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>JUAN MIGUEL SANTOS</div>
-                    <div style={{ fontSize: 9, color: C.gold, fontWeight: 600, marginTop: 3 }}>Grade 10 — Pilot (JHS)</div>
                   </div>
-                  
-                  {/* Simulated QR barcode */}
-                  <div style={{ border: `1px solid ${C.borderMed}`, padding: 14, display: "inline-block", background: C.paper, borderRadius: 4, marginBottom: 12 }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
-                      <QrCode size={100} color={C.t1} />
-                      <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono',monospace", color: C.t3, marginTop: 4 }}>ID: 2022-10045</span>
-                    </div>
-                  </div>
-                  
-                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, textAlign: "left" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: C.t3 }}>EMERGENCY CONTACT</div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.t1, marginTop: 3 }}>Maribel Santos (Mother)</div>
-                    <div style={{ fontSize: 10.5, fontFamily: "'JetBrains Mono',monospace", color: C.t2, marginTop: 1 }}>0917-123-4567</div>
-                  </div>
-                </div>
 
-                {/* Profile specs & metrics */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 20, boxShadow: "0 2px 4px rgba(0,0,0,0.01)" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", marginBottom: 16 }}>Student Profile Overview</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 24px" }}>
+                  {/* Academic Calendar Widget */}
+                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Academic Calendar</span>
+                      <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Calendar</button>
+                    </div>
+                    <div style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>June 10, 2025</span>
+                      <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 6 }}>Tuesday</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {[
-                        { l: "Full Name", v: "Santos, Juan Miguel" },
-                        { l: "Student Number", v: "2022-10045" },
-                        { l: "LRN", v: "100001" },
-                        { l: "Grade Level & Section", v: "Grade 10 — Pilot" },
-                        { l: "Class Adviser", v: "Ms. Ana R. Soriano" },
-                        { l: "Enrollment Status", v: "✓ Officially Enrolled" },
-                      ].map((field) => (
-                        <div key={field.l} style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", display: "block" }}>{field.l}</span>
-                          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.t1, marginTop: 2, display: "block" }}>{field.v}</span>
+                        { m: "JUN", d: "14", title: "Quarter 4 - Progress Check", time: "8:00 AM - 12:00 PM" },
+                        { m: "JUN", d: "20", title: "School Foundation Day", time: "No Classes" }
+                      ].map((ev, idx) => (
+                        <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                          <div style={{ width: 36, height: 36, background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ fontSize: 7, fontWeight: 800, color: C.m700 }}>{ev.m}</span>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: C.m700, lineHeight: 1 }}>{ev.d}</span>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
+                            <div style={{ fontSize: 9, color: C.t3, marginTop: 2 }}>{ev.time}</div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Statistics counter strip */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                    <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderLeft: `4px solid ${C.green}`, borderRadius: 4, padding: "16px 20px" }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Attendance Rate</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: C.green, fontFamily: "'Plus Jakarta Sans',sans-serif", marginTop: 4 }}>95.4%</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>18 present · 1 absent · 2 late today</div>
-                    </div>
-                    <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 4, padding: "16px 20px" }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em" }}>General Average</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: C.gold, fontFamily: "'Plus Jakarta Sans',sans-serif", marginTop: 4 }}>{genAvg}.0</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Status: <strong style={{ color: C.green }}>PASSED (Q1-Q3)</strong></div>
-                    </div>
+                    <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
                   </div>
                 </div>
-
               </div>
+
+              {/* Announcements Section */}
+              <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Announcements</span>
+                  <button onClick={() => alert("All announcements can be viewed in detail.")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[
+                    { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025.", date: "June 8, 2025 · Principal's Office" },
+                    { title: "Library Orientation", desc: "All students are required to attend the library orientation this June 12.", date: "June 7, 2025 · Library Department" }
+                  ].map((ann, idx) => (
+                    <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", border: `1px solid ${C.borderMed}`, borderRadius: 6, position: "relative" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                        <Bell size={13} color={C.m700} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
+                        <p style={{ fontSize: 10.5, color: C.t2, margin: "4px 0", lineHeight: 1.4 }}>{ann.desc}</p>
+                        <span style={{ fontSize: 9, color: C.t3 }}>{ann.date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
 
