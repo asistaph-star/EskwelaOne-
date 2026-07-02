@@ -433,39 +433,75 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
                     <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View Full Schedule</button>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14, flex: 1 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                     {[
-                      { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4" },
-                      { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed" },
-                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper },
-                      { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
-                      { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
-                    ].map((slot, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-                        <span style={{ width: 56, fontSize: 10.5, fontWeight: 700, color: C.t2, paddingTop: 2 }}>{slot.time}</span>
-                        <div style={{ 
-                          flex: 1, 
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "flex-start"
+                      { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4", icon: Activity },
+                      { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed", icon: ClipboardList },
+                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper, icon: BookOpen },
+                      { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper, icon: FileText },
+                      { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper, icon: BookMarked }
+                    ].map((slot, idx) => {
+                      const Icon = slot.icon;
+                      return (
+                        <div key={idx} style={{ 
+                          display: "flex", 
+                          gap: 12, 
+                          alignItems: "center",
+                          padding: "8px 12px",
+                          background: slot.status === "In Progress" ? "rgba(139,30,30,0.03)" : "transparent",
+                          borderLeft: `3px solid ${slot.status === "In Progress" ? C.m700 : slot.status === "Completed" ? C.green : C.border}`,
+                          borderRadius: "0 6px 6px 0",
+                          transition: "all 0.15s"
                         }}>
-                          <div>
-                            <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
-                            <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                          <span style={{ width: 56, fontSize: 10.5, fontWeight: 700, color: C.t2 }}>{slot.time}</span>
+                          <div style={{ width: 28, height: 28, borderRadius: 14, background: slot.status === "In Progress" ? "rgba(139,30,30,0.08)" : C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Icon size={13} color={slot.status === "In Progress" ? C.m700 : C.t2} />
                           </div>
-                          <span style={{ 
-                            fontSize: 9, 
-                            fontWeight: 700, 
-                            color: slot.color, 
-                            background: slot.bg, 
-                            padding: "2px 6px", 
-                            borderRadius: 4 
-                          }}>{slot.status}</span>
+                          <div style={{ 
+                            flex: 1, 
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginLeft: 4
+                          }}>
+                            <div>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
+                              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                            </div>
+                            <span style={{ 
+                              fontSize: 9, 
+                              fontWeight: 700, 
+                              color: slot.color, 
+                              background: slot.bg, 
+                              padding: "2px 6px", 
+                              borderRadius: 4 
+                            }}>{slot.status}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                  <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Full Schedule</button>
+                  <button onClick={() => setTab("calendar")} style={{ 
+                    alignSelf: "center",
+                    padding: "6px 16px",
+                    background: C.m50,
+                    border: `1px solid ${C.borderMed}`,
+                    borderRadius: 20,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.m700,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 8
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
+                  >
+                    View Full Schedule &rarr;
+                  </button>
                 </div>
 
                 {/* Column 2: Upcoming Assignments */}
@@ -504,7 +540,27 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View All Assignments</button>
+                  <button onClick={() => setTab("assignments")} style={{ 
+                    alignSelf: "center",
+                    padding: "6px 16px",
+                    background: C.m50,
+                    border: `1px solid ${C.borderMed}`,
+                    borderRadius: 20,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: C.m700,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 8
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
+                  >
+                    View All Assignments &rarr;
+                  </button>
                 </div>
 
                 {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
@@ -570,7 +626,27 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", fontSize: 11.5, fontWeight: 700, color: C.m700, cursor: "pointer", margin: "8px auto 0", display: "inline-block", transition: "all 0.15s" }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Full Calendar</button>
+                    <button onClick={() => setTab("calendar")} style={{ 
+                      alignSelf: "center",
+                      padding: "6px 16px",
+                      background: C.m50,
+                      border: `1px solid ${C.borderMed}`,
+                      borderRadius: 20,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: C.m700,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 8
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
+                    >
+                      View Full Calendar &rarr;
+                    </button>
                   </div>
                 </div>
               </div>
