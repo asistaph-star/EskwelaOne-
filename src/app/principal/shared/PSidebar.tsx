@@ -37,7 +37,14 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
   const initials = "RS";
 
   return (
-    <div style={{ width: collapsed ? 70 : 260, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s" }}>
+    <div style={{ width: collapsed ? 70 : 260, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
+      {/* School building silhouette watermark */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 220,
+        backgroundImage: "url(/school_silhouette.png)",
+        backgroundSize: "cover", backgroundPosition: "bottom center",
+        opacity: 0.04, pointerEvents: "none", zIndex: 0
+      }} />
       {/* Sidebar Brand Logo */}
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12 }}>
         <div style={{
