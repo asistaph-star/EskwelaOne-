@@ -15,11 +15,10 @@ import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS } from '../shared/data/ca
 
 const STUDENT_NAV_GROUPS = [
   {
-    title: "General",
+    title: "Overview",
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { id: "profile", label: "My Profile", icon: User },
-      { id: "calendar", label: "My Schedule", icon: Calendar }
+      { id: "calendar", label: "Calendar", icon: Calendar }
     ]
   },
   {
@@ -28,8 +27,7 @@ const STUDENT_NAV_GROUPS = [
       { id: "academics", label: "Grades", icon: BookOpen },
       { id: "attendance", label: "Attendance", icon: Calendar },
       { id: "assignments", label: "Assignments", icon: ClipboardList },
-      { id: "resources", label: "Subjects", icon: FileText },
-      { id: "behavior", label: "Achievement", icon: Award }
+      { id: "resources", label: "Subjects", icon: FileText }
     ]
   },
   {
@@ -40,11 +38,10 @@ const STUDENT_NAV_GROUPS = [
     ]
   },
   {
-    title: "Utility",
+    title: "Services",
     items: [
       { id: "requests", label: "Documents", icon: FolderOpen },
-      { id: "calendar_alt", label: "Calendar", icon: Calendar },
-      { id: "settings", label: "Settings", icon: Settings }
+      { id: "behavior", label: "Achievement", icon: Award }
     ]
   }
 ];
@@ -164,105 +161,60 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
         
-        {/* Brand Header */}
+        {/* Brand Header — matches teacher sidebar exactly */}
         <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8,
             background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
-            border: "1.5px solid rgba(200, 134, 10, 0.5)",
+            border: "1.5px solid rgba(200, 134, 10, 0.45)",
             display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
           }}>
-            <BookMarked size={18} color={C.gold} strokeWidth={2.5} />
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.02em" }}>E1</span>
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "0.06em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              ESKWELAONE
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+              EskwelaOne<span style={{ color: C.gold, marginLeft: 1 }}>+</span>
             </div>
-            <div style={{ fontSize: 8, color: C.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.13em", marginTop: 2 }}>
-              STUDENT PORTAL
+            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
+              Sindalan NHS
             </div>
           </div>
         </div>
 
-        {/* Navigation list with categories */}
-        <div style={{ flex: 1, padding: "12px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+        {/* Navigation list with categories — matches teacher sidebar */}
+        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
           {STUDENT_NAV_GROUPS.map((group, groupIdx) => (
-            <div key={groupIdx} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Category Header */}
-              <div style={{ 
-                fontSize: 9, 
-                fontWeight: 700, 
-                color: "rgba(255,255,255,0.4)", 
-                textTransform: "uppercase", 
-                letterSpacing: "0.08em", 
-                padding: "4px 14px",
-                fontFamily: "'Plus Jakarta Sans', sans-serif"
-              }}>
+            <div key={groupIdx} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
                 {group.title}
               </div>
-
               {group.items.map((item) => {
                 const Icon = item.icon;
-                
-                // Map tab highlight correctly
-                const isDashboard = item.id === "dashboard" && tab === "dashboard";
-                const isProfile = item.id === "profile" && tab === "settings";
-                const isSchedule = item.id === "calendar" && tab === "calendar";
-                const isGrades = item.id === "academics" && tab === "academics";
-                const isAttendance = item.id === "attendance" && tab === "attendance";
-                const isAssignments = item.id === "assignments" && tab === "assignments";
-                const isSubjects = item.id === "resources" && tab === "resources";
-                const isAnnouncements = item.id === "announcements" && tab === "announcements";
-                const isMessages = item.id === "messages" && tab === "messages";
-                const isDocuments = item.id === "requests" && tab === "requests";
-                const isCalendarAlt = item.id === "calendar_alt" && tab === "calendar";
-                const isAchievement = item.id === "behavior" && tab === "behavior";
-                const isSettings = item.id === "settings" && tab === "settings";
-
-                const act = isDashboard || isProfile || isSchedule || isGrades || isAttendance || isAssignments || isSubjects || isAnnouncements || isMessages || isDocuments || isCalendarAlt || isAchievement || isSettings;
-
-                const clickHandler = () => {
-                  if (item.id === "dashboard") setTab("dashboard");
-                  else if (item.id === "profile") setTab("settings");
-                  else if (item.id === "calendar" || item.id === "calendar_alt") setTab("calendar");
-                  else if (item.id === "academics") setTab("academics");
-                  else if (item.id === "attendance") setTab("attendance");
-                  else if (item.id === "assignments") setTab("assignments");
-                  else if (item.id === "resources") setTab("resources");
-                  else if (item.id === "announcements") setTab("announcements");
-                  else if (item.id === "messages") setTab("messages");
-                  else if (item.id === "requests") setTab("requests");
-                  else if (item.id === "behavior") setTab("behavior");
-                  else if (item.id === "settings") setTab("settings");
+                const tabMap: Record<string, string> = {
+                  dashboard: "dashboard", calendar: "calendar", academics: "academics",
+                  attendance: "attendance", assignments: "assignments", resources: "resources",
+                  announcements: "announcements", messages: "messages", requests: "requests",
+                  behavior: "behavior"
                 };
+                const mappedTab = tabMap[item.id] || item.id;
+                const isActive = tab === mappedTab;
 
                 return (
                   <button
                     key={item.id}
-                    onClick={clickHandler}
+                    onClick={() => setTab(mappedTab as any)}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      width: "100%",
-                      padding: "8px 14px",
-                      borderRadius: 4,
-                      background: act ? C.m800 : "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: act ? "#fff" : "rgba(255,255,255,0.65)",
-                      fontSize: 12,
-                      fontWeight: act ? 700 : 400,
-                      textAlign: "left",
-                      transition: "all 0.12s",
-                      boxSizing: "border-box"
+                      width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "9px 14px",
+                      borderRadius: 4, background: isActive ? C.m700 : "transparent", border: "none",
+                      color: isActive ? "#fff" : "rgba(255,255,255,0.65)",
+                      cursor: "pointer", textAlign: "left", transition: "all 0.15s", boxSizing: "border-box"
                     }}
-                    onMouseEnter={e => { if(!act) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
-                    onMouseLeave={e => { if(!act) e.currentTarget.style.background = "transparent"; }}
+                    onMouseEnter={e => { if(!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                    onMouseLeave={e => { if(!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <Icon size={16} color={act ? C.gold : "rgba(255,255,255,0.65)"} />
-                    <span>{item.label}</span>
+                    <Icon size={16} color={isActive ? '#fff' : 'rgba(255,255,255,0.65)'} />
+                    <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400 }}>{item.label}</span>
                   </button>
                 );
               })}
@@ -270,28 +222,56 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
-        {/* Sidebar Footer matching the mockup */}
-        <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.borderHeavy}` }}>
-          <button 
-            onClick={onLogout}
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 10, 
-              background: "transparent", 
-              border: "none", 
-              color: "rgba(255,255,255,0.65)", 
-              fontSize: 12, 
-              fontWeight: 500, 
-              cursor: "pointer",
-              padding: 0,
-              width: "100%"
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = C.gold}
-            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.65)"}
+        {/* Bottom Profile Popup — matches teacher sidebar exactly */}
+        <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}` }}>
+          <div 
+            onClick={() => setProfileOpen(!profileOpen)}
+            style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px", borderBottom: profileOpen ? `1px solid ${C.borderHeavy}` : "none", cursor: "pointer", borderRadius: 4, transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
           >
-            <LogOut size={16} /> Log Out
-          </button>
+            <div style={{ width: 32, height: 32, borderRadius: 16, background: C.m700, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 700 }}>
+              JS
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Juan Miguel Santos</div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Grade 10 - Pilot Section</div>
+            </div>
+            <ChevronDown size={14} style={{ color: "rgba(255,255,255,0.4)", transform: profileOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+          </div>
+
+          {profileOpen && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8, padding: "4px", background: "rgba(0,0,0,0.15)", borderRadius: 4 }}>
+              <button onClick={() => { setTab("settings"); setProfileOpen(false); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Settings size={13} />
+                <span style={{ fontSize: 11 }}>Settings</span>
+              </button>
+              <button onClick={() => { setProfileOpen(false); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <BookMarked size={13} />
+                <span style={{ fontSize: 11 }}>Tutorials</span>
+              </button>
+              <button onClick={() => { setProfileOpen(false); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Heart size={13} />
+                <span style={{ fontSize: 11 }}>Help & Feedback</span>
+              </button>
+              <button onClick={onLogout}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <LogOut size={13} color="#f87171" />
+                <span style={{ fontSize: 11, color: "#f87171" }}>Logout</span>
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
