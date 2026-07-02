@@ -454,9 +454,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     {[
                       { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4" },
                       { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed" },
-                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper },
-                      { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
-                      { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
+                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper }
                     ].map((slot, idx) => (
                       <div key={idx} style={{ 
                         display: "flex", 
@@ -475,7 +473,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          borderBottom: idx < 4 ? `1px dashed ${C.borderMed}` : "none"
+                          borderBottom: idx < 2 ? `1px dashed ${C.borderMed}` : "none"
                         }}>
                           <div>
                             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{slot.title}</div>
@@ -518,15 +516,14 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     {[
                       { title: "Science Lab Report", desc: "Science · Ms. Ana R. Soriano", due: "Due Today", time: "11:59 PM", color: C.red },
                       { title: "Math Problem Set #8", desc: "Mathematics · Mr. Carlo D. Reyes", due: "Due Tomorrow", time: "11:59 PM", color: "#f97316" },
-                      { title: "English Essay", desc: "English · Ms. Liza M. Bautista", due: "Due Jun 14", time: "11:59 PM", color: C.t3 },
-                      { title: "Filipino Reflection Paper", desc: "Filipino · Mr. Jose P. Dela Cruz", due: "Due Jun 16", time: "11:59 PM", color: C.t3 }
+                      { title: "English Essay", desc: "English · Ms. Liza M. Bautista", due: "Due Jun 14", time: "11:59 PM", color: C.t3 }
                     ].map((ass, idx) => (
                       <div key={idx} style={{ 
                         display: "flex", 
                         alignItems: "center", 
                         gap: 12, 
                         padding: "8px 0",
-                        borderBottom: idx < 3 ? `1px dashed ${C.borderMed}` : "none"
+                        borderBottom: idx < 2 ? `1px dashed ${C.borderMed}` : "none"
                       }}>
                         <div style={{ width: 30, height: 30, borderRadius: 4, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <ClipboardList size={14} color={C.m700} />
