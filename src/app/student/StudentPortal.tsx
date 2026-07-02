@@ -454,7 +454,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     {[
                       { time: "8:00 AM", title: "Physical Education and Health", room: "Gymnasium", status: "Completed", color: C.green, bg: "#f0fdf4" },
                       { time: "9:00 AM", title: "Mathematics", room: "Room 204", status: "In Progress", color: "#f97316", bg: "#fff7ed" },
-                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper }
+                      { time: "10:30 AM", title: "English", room: "Room 105", status: "Upcoming", color: C.t3, bg: C.paper },
+                      { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
+                      { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
                     ].map((slot, idx) => (
                       <div key={idx} style={{ 
                         display: "flex", 
@@ -473,7 +475,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          borderBottom: idx < 2 ? `1px dashed ${C.borderMed}` : "none"
+                          borderBottom: idx < 4 ? `1px dashed ${C.borderMed}` : "none"
                         }}>
                           <div>
                             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{slot.title}</div>
@@ -516,14 +518,15 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     {[
                       { title: "Science Lab Report", desc: "Science · Ms. Ana R. Soriano", due: "Due Today", time: "11:59 PM", color: C.red },
                       { title: "Math Problem Set #8", desc: "Mathematics · Mr. Carlo D. Reyes", due: "Due Tomorrow", time: "11:59 PM", color: "#f97316" },
-                      { title: "English Essay", desc: "English · Ms. Liza M. Bautista", due: "Due Jun 14", time: "11:59 PM", color: C.t3 }
+                      { title: "English Essay", desc: "English · Ms. Liza M. Bautista", due: "Due Jun 14", time: "11:59 PM", color: C.t3 },
+                      { title: "Filipino Reflection Paper", desc: "Filipino · Mr. Jose P. Dela Cruz", due: "Due Jun 16", time: "11:59 PM", color: C.t3 }
                     ].map((ass, idx) => (
                       <div key={idx} style={{ 
                         display: "flex", 
                         alignItems: "center", 
                         gap: 12, 
                         padding: "8px 0",
-                        borderBottom: idx < 2 ? `1px dashed ${C.borderMed}` : "none"
+                        borderBottom: idx < 3 ? `1px dashed ${C.borderMed}` : "none"
                       }}>
                         <div style={{ width: 30, height: 30, borderRadius: 4, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <ClipboardList size={14} color={C.m700} />
@@ -560,17 +563,17 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
                     <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Grades</button>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, justifyContent: "center" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 12, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1, justifyContent: "center" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 16, alignItems: "center" }}>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                        <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                          <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
+                        <div style={{ width: 90, height: 45, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                          <div style={{ width: 80, height: 80, borderRadius: 40, border: "8px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -40 }} />
                         </div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
-                        <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
+                        <div style={{ fontSize: 8.5, fontWeight: 700, color: C.green }}>Above Passing</div>
                       </div>
                       
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                         {[
                           { s: "Mathematics", g: 90 },
                           { s: "English", g: 85 },
@@ -580,15 +583,21 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                           { s: "PE & Health", g: 92 },
                           { s: "TLE", g: 86 }
                         ].map((sub, idx) => (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
-                            <span style={{ color: C.t2 }}>{sub.s}</span>
+                          <div key={idx} style={{ 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            fontSize: 10, 
+                            borderBottom: idx < 6 ? `1px dashed ${C.borderMed}` : "none", 
+                            paddingBottom: 2 
+                          }}>
+                            <span style={{ color: C.t2, fontWeight: 500 }}>{sub.s}</span>
                             <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
                           </div>
                         ))}
-                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
                 {/* 4. Announcements (Row 2, Col 1 & 2 span) */}
                 <div style={{ 
