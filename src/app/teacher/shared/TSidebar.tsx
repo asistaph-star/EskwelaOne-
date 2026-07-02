@@ -39,12 +39,18 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
 
   return (
     <div style={{ width: collapsed ? 70 : 260, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
-      {/* School building silhouette watermark */}
+      {/* School building photo watermark */}
       <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 220,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
         backgroundImage: "url(/school_silhouette.png)",
-        backgroundSize: "cover", backgroundPosition: "bottom center",
-        opacity: 0.04, pointerEvents: "none", zIndex: 0
+        backgroundSize: "cover", backgroundPosition: "top center",
+        opacity: 0.07, pointerEvents: "none", zIndex: 0
+      }} />
+      {/* Gradient fade overlay */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
+        background: `linear-gradient(to bottom, ${C.m900} 0%, transparent 60%, transparent 100%)`,
+        pointerEvents: "none", zIndex: 0
       }} />
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12 }}>
         <div style={{

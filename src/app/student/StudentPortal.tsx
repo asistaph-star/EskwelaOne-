@@ -160,12 +160,18 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     <div style={{ minHeight: "100vh", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
-        {/* School building silhouette watermark */}
+        {/* School building photo watermark */}
         <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: 220,
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
           backgroundImage: "url(/school_silhouette.png)",
-          backgroundSize: "cover", backgroundPosition: "bottom center",
-          opacity: 0.04, pointerEvents: "none", zIndex: 0
+          backgroundSize: "cover", backgroundPosition: "top center",
+          opacity: 0.07, pointerEvents: "none", zIndex: 0
+        }} />
+        {/* Gradient fade overlay on top of the photo */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 280,
+          background: `linear-gradient(to bottom, ${C.m900} 0%, transparent 60%, transparent 100%)`,
+          pointerEvents: "none", zIndex: 0
         }} />
         
         {/* Brand Header — matches teacher sidebar exactly */}
