@@ -198,8 +198,8 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 const isAttendance = item.id === "attendance" && tab === "attendance";
                 const isAssignments = item.id === "assignments" && tab === "assignments";
                 const isSubjects = item.id === "resources" && tab === "resources";
-                const isAnnouncements = item.id === "announcements" && tab === "dashboard";
-                const isMessages = item.id === "messages" && tab === "dashboard";
+                const isAnnouncements = item.id === "announcements" && tab === "announcements";
+                const isMessages = item.id === "messages" && tab === "messages";
                 const isDocuments = item.id === "requests" && tab === "requests";
                 const isCalendarAlt = item.id === "calendar_alt" && tab === "calendar";
                 const isAchievement = item.id === "behavior" && tab === "behavior";
@@ -215,8 +215,8 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   else if (item.id === "attendance") setTab("attendance");
                   else if (item.id === "assignments") setTab("assignments");
                   else if (item.id === "resources") setTab("resources");
-                  else if (item.id === "announcements") { setTab("dashboard"); alert("Announcements list resides at the bottom of the overview dashboard."); }
-                  else if (item.id === "messages") { alert("Direct messages are integrated in your notification alerts tray."); }
+                  else if (item.id === "announcements") setTab("announcements");
+                  else if (item.id === "messages") setTab("messages");
                   else if (item.id === "requests") setTab("requests");
                   else if (item.id === "behavior") setTab("behavior");
                   else if (item.id === "settings") setTab("settings");
