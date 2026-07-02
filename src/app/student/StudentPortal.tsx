@@ -466,26 +466,13 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                               <div style={{ width: 28, height: 28, borderRadius: 14, background: slot.status === "In Progress" ? "rgba(139,30,30,0.08)" : C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                 <Icon size={13} color={slot.status === "In Progress" ? C.m700 : C.t2} />
                               </div>
-                              <div style={{ 
-                                flex: 1, 
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                marginLeft: 4
-                              }}>
-                                <div>
-                                  <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
-                                  <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
-                                </div>
-                                <span style={{ 
-                                  fontSize: 9, 
-                                  fontWeight: 700, 
-                                  color: slot.color, 
-                                  background: slot.bg, 
-                                  padding: "2px 6px", 
-                                  borderRadius: 4 
-                                }}>{slot.status}</span>
-                              </div>
+                            <div style={{ 
+                              flex: 1, 
+                              marginLeft: 4
+                            }}>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
+                              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                            </div>
                             </div>
                           );
                         })}
