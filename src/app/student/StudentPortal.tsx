@@ -145,7 +145,7 @@ function DraggableCard({
         </button>
       </div>
 
-      <div style={{ flex: 1, display: minimized ? "none" : "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ flex: (size.height || style?.height) ? 1 : "initial", display: minimized ? "none" : "flex", flexDirection: "column", height: (size.height || style?.height) ? "100%" : "auto" }}>
         {children}
       </div>
 
@@ -646,7 +646,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20 }}>
                 {/* Column 1: Today's Schedule */}
                 {!hiddenWidgets.includes("schedule") && (
-                  <DraggableCard id="schedule" title="Today's Schedule" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
+                  <DraggableCard id="schedule" title="Today's Schedule" onCut={handleCut} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                   <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
@@ -698,7 +698,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
                 {/* Column 2: Upcoming Assignments */}
                 {!hiddenWidgets.includes("assignments") && (
-                  <DraggableCard id="assignments" title="Upcoming Assignments" onCut={handleCut} style={{ display: "flex", flexDirection: "column" }}>
+                  <DraggableCard id="assignments" title="Upcoming Assignments" onCut={handleCut} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                   <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14, height: "100%", boxSizing: "border-box" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
