@@ -51,7 +51,7 @@ const STUDENT_NAV_GROUPS = [
 
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<
-    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar"
+    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar" | "announcements" | "messages"
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -739,6 +739,110 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
               </div>
 
+            </div>
+          )}
+
+          {/* ANNOUNCEMENTS SCREEN */}
+          {tab === "announcements" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>School Announcements</h1>
+                  <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Stay updated with the latest news, notices, and events.</div>
+                </div>
+              </div>
+
+              <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                {[
+                  { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025. All student requirements must be submitted to their respective teachers.", date: "June 8, 2025 · Principal's Office", category: "Academic" },
+                  { title: "Library Orientation Schedule", desc: "All Grade 10 students are required to attend the library orientation this June 12. Please proceed to the library media center during your designated class hours.", date: "June 7, 2025 · Library Department", category: "General" },
+                  { title: "School Foundation Day Celebrations", desc: "Our 45th School Foundation Day celebration will take place on June 20, 2025. There will be no classes, but attendance is required for cultural activities and sports matches.", date: "June 5, 2025 · Student Council", category: "Events" }
+                ].map((ann, idx) => (
+                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 20px", border: `1px solid ${C.borderMed}`, borderRadius: 6 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 16, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Megaphone size={14} color={C.m700} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
+                        <span style={{ fontSize: 9.5, padding: "2px 8px", background: ann.category === "Academic" ? "#fff2f2" : ann.category === "Events" ? "#fffbeb" : "#f0fdf4", color: ann.category === "Academic" ? C.red : ann.category === "Events" ? C.gold : C.green, borderRadius: 10, fontWeight: 700 }}>{ann.category}</span>
+                      </div>
+                      <p style={{ fontSize: 11.5, color: C.t2, margin: "6px 0", lineHeight: 1.5 }}>{ann.desc}</p>
+                      <span style={{ fontSize: 9.5, color: C.t3 }}>{ann.date}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MESSAGES SCREEN */}
+          {tab === "messages" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Messages & Communications</h1>
+                  <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Direct messaging channels with your class advisers and teachers.</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 20, height: 500, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden" }}>
+                
+                {/* Inbox list */}
+                <div style={{ borderRight: `1px solid ${C.borderMed}`, display: "flex", flexDirection: "column" }}>
+                  <div style={{ padding: 14, borderBottom: `1px solid ${C.borderMed}`, display: "flex", alignItems: "center", gap: 8, background: C.paper }}>
+                    <Search size={12} color={C.t3} />
+                    <input type="text" placeholder="Search chats..." style={{ background: "none", border: "none", fontSize: 11.5, outline: "none", width: "100%" }} />
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {[
+                      { name: "Ms. Ana R. Soriano", role: "Class Adviser / Science", msg: "Please submit your laboratory report by 5PM.", time: "9:42 AM", unread: true },
+                      { name: "Mr. Carlo D. Reyes", role: "Mathematics Teacher", msg: "The problem set #8 is now uploaded.", time: "Yesterday", unread: false },
+                      { name: "Ms. Liza M. Bautista", role: "English Teacher", msg: "Excellent work on your final essay proposal!", time: "June 6", unread: false }
+                    ].map((chat, idx) => (
+                      <div key={idx} style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: idx === 0 ? "rgba(139,30,30,0.03)" : "#fff", display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: C.m700, fontSize: 10.5 }}>{chat.name.charAt(4)}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chat.name}</div>
+                            <span style={{ fontSize: 8.5, color: C.t3 }}>{chat.time}</span>
+                          </div>
+                          <div style={{ fontSize: 9.5, color: C.t3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{chat.msg}</div>
+                        </div>
+                        {chat.unread && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.m700 }} />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chat space */}
+                <div style={{ display: "flex", flexDirection: "column", background: C.paper }}>
+                  {/* Chat header */}
+                  <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Ms. Ana R. Soriano</div>
+                      <div style={{ fontSize: 9.5, color: C.t3, marginTop: 1 }}>Active 10m ago · Class Adviser</div>
+                    </div>
+                  </div>
+                  {/* Messages list */}
+                  <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+                    <div style={{ alignSelf: "flex-start", maxWidth: "70%", background: "#fff", padding: "10px 14px", borderRadius: "0px 10px 10px 10px", fontSize: 11, color: C.t1, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                      Good morning, Miguel. Don't forget to upload your science project today.
+                    </div>
+                    <div style={{ alignSelf: "flex-end", maxWidth: "70%", background: C.m700, color: "#fff", padding: "10px 14px", borderRadius: "10px 10px 0px 10px", fontSize: 11, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                      Yes, Ms. Soriano! I've already finished the report card checks and uploaded it. Thank you!
+                    </div>
+                    <div style={{ alignSelf: "flex-start", maxWidth: "70%", background: "#fff", padding: "10px 14px", borderRadius: "0px 10px 10px 10px", fontSize: 11, color: C.t1, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                      Wonderful. I will review it shortly. Have a great day!
+                    </div>
+                  </div>
+                  {/* Input form */}
+                  <div style={{ padding: "12px 18px", borderTop: `1px solid ${C.borderMed}`, background: "#fff", display: "flex", gap: 10, alignItems: "center" }}>
+                    <input type="text" placeholder="Type a message here..." style={{ flex: 1, padding: "8px 14px", background: C.paper, border: "none", borderRadius: 20, fontSize: 11.5, outline: "none" }} />
+                    <button style={{ background: C.m700, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Send</button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
