@@ -30,26 +30,12 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
   return (
     <div style={{ 
       minHeight: "100vh", 
+      width: "100vw",
       display: "flex", 
       fontFamily: "'Inter',sans-serif",
       background: "linear-gradient(135deg, #3D0808 0%, #1A0202 100%)",
-      padding: 16,
-      boxSizing: "border-box",
-      alignItems: "center",
-      justifyContent: "center"
+      overflow: "hidden"
     }}>
-      <div style={{ 
-        width: "100%",
-        maxWidth: 1200,
-        height: "calc(100vh - 32px)",
-        minHeight: 650,
-        background: "rgba(61, 8, 8, 0.4)",
-        borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.1)",
-        overflow: "hidden",
-        display: "flex",
-        boxShadow: "0 24px 64px rgba(0,0,0,0.4)"
-      }}>
         {/* Left Side: Photo & Brand Panel (60% width) */}
         <div style={{ 
           flex: "0 0 58%", 
@@ -438,7 +424,6 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
             </div>
           </div>
         </div>
-      </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
     </div>
   );
