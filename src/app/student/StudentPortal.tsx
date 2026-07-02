@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
@@ -427,11 +427,15 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
               {/* 3-Column main content grid */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 340px", gap: 20 }}>
-                {/* Column 1: Today's Schedule */}
+                
+                {/* 1. Today's Schedule */}
                 <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
-                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View Full Schedule</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Calendar size={16} color={C.m700} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Today's Schedule</span>
+                    </div>
+                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Full Schedule</button>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                     {[
@@ -483,32 +487,33 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <button onClick={() => setTab("calendar")} style={{ 
                     alignSelf: "center",
-                    padding: "6px 16px",
-                    background: C.m50,
-                    border: `1px solid ${C.borderMed}`,
-                    borderRadius: 20,
-                    fontSize: 11,
+                    padding: "7px 24px",
+                    background: "#fff",
+                    border: `1.5px solid rgba(139, 30, 30, 0.15)`,
+                    borderRadius: 6,
+                    fontSize: 10.5,
                     fontWeight: 700,
                     color: C.m700,
                     cursor: "pointer",
                     transition: "all 0.15s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    marginTop: 8
+                    display: "block",
+                    margin: "12px auto 0"
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.m700; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "rgba(139, 30, 30, 0.15)"; }}
                   >
-                    View Full Schedule &rarr;
+                    View Full Schedule
                   </button>
                 </div>
 
-                {/* Column 2: Upcoming Assignments */}
+                {/* 2. Upcoming Assignments */}
                 <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
-                    <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ClipboardList size={16} color={C.m700} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Upcoming Assignments</span>
+                    </div>
+                    <button onClick={() => setTab("assignments")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View All</button>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
                     {[
@@ -542,138 +547,141 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
                   <button onClick={() => setTab("assignments")} style={{ 
                     alignSelf: "center",
-                    padding: "6px 16px",
-                    background: C.m50,
-                    border: `1px solid ${C.borderMed}`,
-                    borderRadius: 20,
-                    fontSize: 11,
+                    padding: "7px 24px",
+                    background: "#fff",
+                    border: `1.5px solid rgba(139, 30, 30, 0.15)`,
+                    borderRadius: 6,
+                    fontSize: 10.5,
                     fontWeight: 700,
                     color: C.m700,
                     cursor: "pointer",
                     transition: "all 0.15s",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    marginTop: 8
+                    display: "block",
+                    margin: "12px auto 0"
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.m700; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "rgba(139, 30, 30, 0.15)"; }}
                   >
-                    View All Assignments &rarr;
+                    View All Assignments
                   </button>
                 </div>
 
-                {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Grades Summary */}
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                {/* 3. Grades Summary */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Award size={16} color={C.m700} />
                       <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
-                      <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Grades</button>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                        <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                          <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
-                        <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
-                      </div>
-                      
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        {[
-                          { s: "Mathematics", g: 90 },
-                          { s: "English", g: 85 },
-                          { s: "Science", g: 88 },
-                          { s: "Filipino", g: 87 },
-                          { s: "Araling Panlipunan", g: 89 },
-                          { s: "PE & Health", g: 92 },
-                          { s: "TLE", g: 86 }
-                        ].map((sub, idx) => (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
-                            <span style={{ color: C.t2 }}>{sub.s}</span>
-                            <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Grades</button>
                   </div>
-
-                  {/* Academic Calendar Widget */}
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Academic Calendar</span>
-                      <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>View Calendar</button>
+                  <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                      <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+                        <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
+                      <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
                     </div>
-                    <div style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>June 10, 2025</span>
-                      <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 6 }}>Tuesday</span>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                       {[
-                        { m: "JUN", d: "14", title: "Quarter 4 - Progress Check", time: "8:00 AM - 12:00 PM" },
-                        { m: "JUN", d: "20", title: "School Foundation Day", time: "No Classes" }
-                      ].map((ev, idx) => (
-                        <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                          <div style={{ width: 36, height: 36, background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <span style={{ fontSize: 7, fontWeight: 800, color: C.m700 }}>{ev.m}</span>
-                            <span style={{ fontSize: 11, fontWeight: 800, color: C.m700, lineHeight: 1 }}>{ev.d}</span>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
-                            <div style={{ fontSize: 9, color: C.t3, marginTop: 2 }}>{ev.time}</div>
-                          </div>
+                        { s: "Mathematics", g: 90 },
+                        { s: "English", g: 85 },
+                        { s: "Science", g: 88 },
+                        { s: "Filipino", g: 87 },
+                        { s: "Araling Panlipunan", g: 89 },
+                        { s: "PE & Health", g: 92 },
+                        { s: "TLE", g: 86 }
+                      ].map((sub, idx) => (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
+                          <span style={{ color: C.t2 }}>{sub.s}</span>
+                          <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => setTab("calendar")} style={{ 
-                      alignSelf: "center",
-                      padding: "6px 16px",
-                      background: C.m50,
-                      border: `1px solid ${C.borderMed}`,
-                      borderRadius: 20,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: C.m700,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 8
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = C.m100; e.currentTarget.style.borderColor = C.m700; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.borderMed; }}
-                    >
-                      View Full Calendar &rarr;
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Announcements Section */}
-              <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Announcements</span>
-                  <button onClick={() => alert("All announcements can be viewed in detail.")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>View All</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {[
-                    { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025.", date: "June 8, 2025 · Principal's Office" },
-                    { title: "Library Orientation", desc: "All students are required to attend the library orientation this June 12.", date: "June 7, 2025 · Library Department" }
-                  ].map((ann, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", border: `1px solid ${C.borderMed}`, borderRadius: 6, position: "relative" }}>
-                      <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                        <Bell size={13} color={C.m700} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
-                        <p style={{ fontSize: 10.5, color: C.t2, margin: "4px 0", lineHeight: 1.4 }}>{ann.desc}</p>
-                        <span style={{ fontSize: 9, color: C.t3 }}>{ann.date}</span>
-                      </div>
+                {/* 4. Announcements Section (Spans 2 columns) */}
+                <div style={{ gridColumn: "span 2", background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Megaphone size={16} color={C.m700} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Announcements</span>
                     </div>
-                  ))}
+                    <button onClick={() => alert("All announcements can be viewed in detail.")} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View All</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {[
+                      { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025.", date: "June 8, 2025 · Principal's Office" },
+                      { title: "Library Orientation", desc: "All students are required to attend the library orientation this June 12.", date: "June 7, 2025 · Library Department" }
+                    ].map((ann, idx) => (
+                      <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 14px", border: `1px solid ${C.borderMed}`, borderRadius: 6, position: "relative" }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                          <Bell size={13} color={C.m700} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
+                          <p style={{ fontSize: 10.5, color: C.t2, margin: "4px 0", lineHeight: 1.4 }}>{ann.desc}</p>
+                          <span style={{ fontSize: 9, color: C.t3 }}>{ann.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* 5. Academic Calendar Widget */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Calendar size={16} color={C.m700} />
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Academic Calendar</span>
+                    </div>
+                    <button onClick={() => setTab("calendar")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Calendar</button>
+                  </div>
+                  <div style={{ borderBottom: `0.5px solid ${C.border}`, paddingBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>June 10, 2025</span>
+                    <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 6 }}>Tuesday</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {[
+                      { m: "JUN", d: "14", title: "Quarter 4 - Progress Check", time: "8:00 AM - 12:00 PM" },
+                      { m: "JUN", d: "20", title: "School Foundation Day", time: "No Classes" }
+                    ].map((ev, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <div style={{ width: 36, height: 36, background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 6, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ fontSize: 7, fontWeight: 800, color: C.m700 }}>{ev.m}</span>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: C.m700, lineHeight: 1 }}>{ev.d}</span>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
+                          <div style={{ fontSize: 9, color: C.t3, marginTop: 2 }}>{ev.time}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setTab("calendar")} style={{ 
+                    alignSelf: "center",
+                    padding: "7px 24px",
+                    background: "#fff",
+                    border: `1.5px solid rgba(139, 30, 30, 0.15)`,
+                    borderRadius: 6,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: C.m700,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "block",
+                    margin: "12px auto 0"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.m700; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "rgba(139, 30, 30, 0.15)"; }}
+                  >
+                    View Full Calendar
+                  </button>
+                </div>
+
               </div>
 
             </div>
