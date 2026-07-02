@@ -426,7 +426,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
                {/* 3-Column main content grid */}
-              <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
+              <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
                 {/* Left Side: Schedule, Assignments, and Announcements */}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 20 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
