@@ -603,7 +603,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 {/* Right Area: Stacked Column for Grades and Academic Calendar */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
                   
                   {/* 3. Grades Summary */}
                   <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -643,7 +643,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
 
                   {/* 5. Academic Calendar Widget */}
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ flex: 1, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Calendar size={16} color={C.m700} />
@@ -684,7 +684,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       cursor: "pointer",
                       transition: "all 0.15s",
                       display: "block",
-                      margin: "12px auto 0"
+                      margin: "auto auto 0"
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.m700; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = "rgba(139, 30, 30, 0.15)"; }}
