@@ -467,10 +467,27 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                               </div>
                             <div style={{ 
                               flex: 1, 
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
                               marginLeft: 4
                             }}>
-                              <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
-                              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                              <div>
+                                <div style={{ fontSize: 11.5, fontWeight: 700, color: slot.status === "In Progress" ? C.m800 : C.t1 }}>{slot.title}</div>
+                                <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2 }}>{slot.room}</div>
+                              </div>
+                              <span style={{ 
+                                fontSize: 9.5, 
+                                fontWeight: 700, 
+                                color: slot.status === "Completed" ? C.green : slot.status === "In Progress" ? "#f97316" : C.t3,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 3
+                              }}>
+                                {slot.status === "Completed" && "✓ "}
+                                {slot.status === "In Progress" && "● "}
+                                {slot.status}
+                              </span>
                             </div>
                             </div>
                           );
