@@ -423,6 +423,8 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     </div>
                   );
                 })}
+              </div>
+
                {/* 3-Column main content grid */}
               <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
                 {/* Left Side: Schedule, Assignments, and Announcements */}
@@ -626,8 +628,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
               </div>
-            </div>
-
             </div>
           )}
 
