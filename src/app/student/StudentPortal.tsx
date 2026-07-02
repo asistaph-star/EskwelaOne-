@@ -419,90 +419,32 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* Clean Student Brand Header Banner */}
-              <div style={{
-                background: "#fff",
-                border: `1.5px solid ${C.borderMed}`,
-                borderLeft: `4px solid ${C.m700}`,
-                borderRadius: 8,
-                padding: "16px 20px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                color: C.t1,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-              }}>
-                {/* Left side: School Brand Info */}
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ 
-                    width: 40, 
-                    height: 40, 
-                    borderRadius: 6, 
-                    background: C.m50, 
-                    border: `1.5px solid rgba(139, 30, 30, 0.15)`, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "center",
-                    flexShrink: 0
-                  }}>
-                    <School size={20} color={C.m700} />
+              {/* Official header block — same design as teacher dashboard */}
+              <div style={{ background: C.m800, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ background: `linear-gradient(90deg, ${C.m900} 0%, ${C.m800} 50%, ${C.m700} 100%)`, padding: "18px 24px 14px", display: "flex", alignItems: "center", gap: 18 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(200,134,10,0.18)", border: "1.5px solid rgba(200,134,10,0.45)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <School size={22} color={C.gold} />
                   </div>
-                  <div>
-                    <div style={{ fontSize: 8, color: C.t3, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                      Republic of the Philippines · Department of Education
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif", margin: "2px 0" }}>
-                      Sindalan National High School
-                    </div>
-                    <div style={{ fontSize: 9, color: C.t3, fontWeight: 500 }}>
-                      Sindalan, City of San Fernando, Pampanga · Division of San Fernando City
-                    </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Republic of the Philippines · Department of Education</div>
+                    <div style={{ color: "#fff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", lineHeight: 1.2 }}>Sindalan National High School</div>
+                    <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 4 }}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City</div>
                   </div>
-                </div>
-
-                {/* Right side: Student Profile Badge (Left is pic, Right is name) */}
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 12, 
-                  background: C.paper, 
-                  border: `1px solid ${C.borderMed}`, 
-                  borderRadius: 8, 
-                  padding: "10px 14px",
-                  minWidth: 240
-                }}>
-                  {/* Picture (Left) */}
-                  <div style={{ width: 38, height: 38, borderRadius: 19, overflow: "hidden", border: `1.5px solid ${C.borderMed}`, flexShrink: 0 }}>
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </div>
-                  
-                  {/* Name and info (Right) */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    <div style={{ fontSize: 8, color: C.m700, fontWeight: 800, letterSpacing: "0.08em" }}>WELCOME BACK</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
-                    <div style={{ fontSize: 8.5, color: C.t2 }}>Grade 10 - Pilot Section</div>
-                    <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
-                      <span style={{ fontSize: 7, fontWeight: 700, background: "rgba(0,0,0,0.05)", color: C.t2, padding: "1px 4px", borderRadius: 3 }}>LRN: 100001</span>
-                      <button 
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, letterSpacing: "0.06em" }}>GOOD MORNING</div>
+                    <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Juan Miguel Santos</div>
+                    <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2, marginBottom: 6 }}>Tuesday, June 10, 2025 &middot; Week 3, Q1</div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+                      <span style={{ background: "rgba(234,179,8,0.15)", color: "#FDE047", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(234,179,8,0.3)" }}>
+                        Grade 10 - Pilot
+                      </span>
+                      <button
                         onClick={() => setShowQRModal(true)}
-                        style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          gap: 2, 
-                          fontSize: 7, 
-                          fontWeight: 700, 
-                          background: "rgba(139, 30, 30, 0.08)", 
-                          color: C.m700, 
-                          padding: "1px 5px", 
-                          borderRadius: 3, 
-                          border: `0.5px solid rgba(139, 30, 30, 0.15)`,
-                          cursor: "pointer",
-                          transition: "all 0.12s"
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(139, 30, 30, 0.12)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(139, 30, 30, 0.08)"}
+                        style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(59,130,246,0.15)", color: "#93C5FD", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(59,130,246,0.3)", cursor: "pointer", transition: "all 0.12s", fontSize: 10 }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.25)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "rgba(59,130,246,0.15)"}
                       >
-                        <QrCode size={8} /> Show QR
+                        <QrCode size={10} /> Show QR ID
                       </button>
                     </div>
                   </div>
