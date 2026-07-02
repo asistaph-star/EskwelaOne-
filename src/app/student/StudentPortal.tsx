@@ -442,19 +442,24 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       { time: "1:00 PM", title: "Science", room: "Laboratory 1", status: "Upcoming", color: C.t3, bg: C.paper },
                       { time: "2:30 PM", title: "Filipino", room: "Room 201", status: "Upcoming", color: C.t3, bg: C.paper }
                     ].map((slot, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: 16, alignItems: "center", position: "relative", zIndex: 1 }}>
+                      <div key={idx} style={{ 
+                        display: "flex", 
+                        gap: 16, 
+                        alignItems: "center", 
+                        position: "relative", 
+                        zIndex: 1,
+                        paddingLeft: slot.status === "In Progress" ? 4 : 8,
+                        borderLeft: slot.status === "In Progress" ? `3px solid ${C.m700}` : "none"
+                      }}>
                         <span style={{ width: 46, fontSize: 10, fontWeight: 700, color: C.t3 }}>{slot.time}</span>
-                        <div style={{ width: 10, height: 10, borderRadius: 5, background: slot.status === "In Progress" ? "#f97316" : C.m700, border: "2px solid #fff", flexShrink: 0 }} />
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: slot.status === "In Progress" ? C.m700 : "#d1d5db", border: "2px solid #fff", flexShrink: 0 }} />
                         <div style={{ 
                           flex: 1, 
-                          background: slot.status === "In Progress" ? "#fffbf7" : "#fff",
-                          border: `1px solid ${slot.status === "In Progress" ? "#ffedd5" : C.borderMed}`,
-                          borderLeft: `4px solid ${slot.status === "In Progress" ? "#f97316" : C.border}`,
-                          borderRadius: 4, 
-                          padding: "8px 12px",
+                          padding: "8px 0",
                           display: "flex",
                           justifyContent: "space-between",
-                          alignItems: "center"
+                          alignItems: "center",
+                          borderBottom: idx < 4 ? `1px dashed ${C.borderMed}` : "none"
                         }}>
                           <div>
                             <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{slot.title}</div>
@@ -472,7 +477,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Schedule</button>
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+                    <button onClick={() => setTab("calendar")} style={{ padding: "6px 20px", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Schedule</button>
+                  </div>
                 </div>
 
                 {/* Column 2: Upcoming Assignments */}
@@ -492,12 +499,10 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                         display: "flex", 
                         alignItems: "center", 
                         gap: 12, 
-                        padding: 10, 
-                        border: `1px solid ${C.borderMed}`, 
-                        borderRadius: 6,
-                        background: "#fff"
+                        padding: "8px 0",
+                        borderBottom: idx < 3 ? `1px dashed ${C.borderMed}` : "none"
                       }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 4, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 4, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <ClipboardList size={14} color={C.m700} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -511,7 +516,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setTab("assignments")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+                    <button onClick={() => setTab("assignments")} style={{ padding: "6px 20px", background: "transparent", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View All Assignments</button>
+                  </div>
                 </div>
 
                 {/* Column 3: Stacked Widgets (Grades Summary & Academic Calendar) */}
@@ -577,7 +584,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => setTab("calendar")} style={{ width: "100%", padding: "7px 0", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
+                      <button onClick={() => setTab("calendar")} style={{ padding: "6px 20px", background: "transparent", border: `1px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: C.m700, cursor: "pointer", transition: "all 0.15s" }}>View Full Calendar</button>
+                    </div>
                   </div>
                 </div>
               </div>
