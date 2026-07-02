@@ -3,7 +3,7 @@ import { PScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, AlertCircle, Package,
-  FileSpreadsheet, BookMarked, Settings, HelpCircle, LogOut, ChevronDown
+  FileSpreadsheet, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar
 } from 'lucide-react';
 
 const P_NAV_GROUPS = [
@@ -15,6 +15,7 @@ const P_NAV_GROUPS = [
     { id: "p-analytics" as PScreen,  label: "Academic Analytics",  icon: BarChart2 },
     { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
     { id: "p-welfare" as PScreen,    label: "Student Welfare",     icon: AlertCircle },
+    { id: "p-events" as PScreen,     label: "School Events",       icon: Calendar },
   ]},
   { category: "Operations", items: [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },

@@ -13,6 +13,7 @@ import { PWelfare } from './welfare/PWelfare';
 import { PInventory } from './inventory/PInventory';
 import { PReports } from './reports/PReports';
 import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
+import { PEventsScreen } from './events/PEventsScreen';
 import { X } from 'lucide-react';
 
 export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
@@ -26,6 +27,7 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-welfare":  "Student Welfare",     "p-inventory": "Inventory",
     "p-reports":  "Reports",             "p-templates": "Template Hub",
+    "p-events":   "School Events",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
 
@@ -59,6 +61,7 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-inventory"  && <PInventory   />}
           {screen==="p-reports"    && <PReports     />}
           {screen==="p-templates"  && <TemplateHubScreen />}
+          {screen==="p-events"     && <PEventsScreen />}
           {(screen==="p-settings"||screen==="p-help") && (
             <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, background:C.paper }}>
               <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>{TITLES[screen]}</div>

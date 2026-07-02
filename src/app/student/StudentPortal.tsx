@@ -5,15 +5,16 @@ import {
   LogOut, BookOpen, Calendar, Award, BookMarked, Printer, Download,
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
-  Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search
+  Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS } from '../shared/data/calendarData';
 
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<
-    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings"
+    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar"
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -137,6 +138,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           {[
             { category: "Overview", items: [
               { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
+              { id: "calendar", label: "Calendar & Schedule", icon: Calendar },
             ]},
             { category: "Academics", items: [
               { id: "academics", label: "Academic Records", icon: BookOpen },
@@ -239,6 +241,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
             {tab === "dashboard" ? "Dashboard Overview" :
+             tab === "calendar" ? "Calendar & Schedule" :
              tab === "academics" ? "Academic Records" :
              tab === "attendance" ? "Attendance Record" :
              tab === "assignments" ? "Assignments & To-Dos" :
@@ -921,7 +924,139 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* 9. SETTINGS PAGE */}
+                    {/* School Calendar & Class Schedule Tab */}
+          {tab === "calendar" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>
+              {/* Left: Weekly Timetable */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ padding: "12px 16px", borderBottom: `0.5px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Weekly Class Timetable (Grade 10 - Pilot)</div>
+                    <span style={{ fontSize: 10, color: C.t3 }}>Homeroom Adviser: Ms. Soriano</span>
+                  </div>
+                  <div style={{ padding: 16, overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                      <thead>
+                        <tr style={{ borderBottom: `1px solid ${C.borderMed}` }}>
+                          <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10.5, color: C.t3, textTransform: "uppercase" }}>Time</th>
+                          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => (
+                            <th key={day} style={{ textAlign: "left", padding: "8px 10px", fontSize: 10.5, color: C.t3, textTransform: "uppercase" }}>{day}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...Array(7)].map((_, pIdx) => {
+                          const timeSlot = CLASS_SCHEDULE.Monday[pIdx]?.time || "";
+                          return (
+                            <tr key={pIdx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                              <td style={{ padding: "10px 10px", fontSize: 11, fontWeight: 700, color: C.t2, whiteSpace: "nowrap" }}>{timeSlot}</td>
+                              {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => {
+                                const period = CLASS_SCHEDULE[day][pIdx];
+                                if (!period) return <td key={day} style={{ padding: "10px 10px" }} />;
+                                const color = SUBJECT_COLORS[period.subject] || C.m700;
+                                return (
+                                  <td key={day} style={{ padding: "6px 8px" }}>
+                                    <div style={{ background: color + "10", borderLeft: `3px solid ${color}`, padding: "6px 8px", borderRadius: 3 }}>
+                                      <div style={{ fontSize: 11.5, fontWeight: 700, color: color }}>{period.subject}</div>
+                                      <div style={{ fontSize: 9.5, color: C.t2, marginTop: 2 }}>{period.room}</div>
+                                      <div style={{ fontSize: 8.5, color: C.t3 }}>{period.teacher}</div>
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Monthly Calendar Preview */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ background: C.m800, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <button style={{ width: 24, height: 24, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={12} color="#fff" /></button>
+                    <span style={{ color: "#fff", fontSize: 12, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>June 2025</span>
+                    <button style={{ width: 24, height: 24, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={12} color="#fff" /></button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.borderMed}`, textAlign: "center" }}>
+                    {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                      <div key={i} style={{ padding: "6px 2px", fontSize: 9, fontWeight: 700, color: C.t3 }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", background: "#fcfdfd" }}>
+                    {[...Array(35)].map((_, idx) => {
+                      const r = Math.floor(idx / 7);
+                      const col = idx % 7;
+                      const day = r * 7 + col - 1;
+                      const valid = day >= 1 && day <= 30;
+                      const dayStr = `2025-06-${String(day).padStart(2, "0")}`;
+                      const dayEvents = SCHOOL_EVENTS.filter(e => e.date === dayStr && (e.audience === "all" || e.audience === "students"));
+                      const isToday = day === 10;
+
+                      return (
+                        <div key={idx} style={{ 
+                          minHeight: 48, 
+                          padding: 4, 
+                          borderRight: `0.5px solid ${C.border}`, 
+                          borderBottom: `0.5px solid ${C.border}`,
+                          background: isToday ? C.m50 : "#fff",
+                          boxSizing: "border-box"
+                        }}>
+                          {valid && (
+                            <>
+                              <div style={{ fontSize: 9.5, fontWeight: isToday ? 700 : 400, color: isToday ? C.m700 : col >= 5 ? C.t3 : C.t2 }}>{day}</div>
+                              {dayEvents.map(ev => (
+                                <div key={ev.id} title={ev.title} style={{ 
+                                  fontSize: 7.5, 
+                                  fontWeight: 700, 
+                                  color: "#fff", 
+                                  background: ev.color, 
+                                  borderRadius: 2, 
+                                  padding: "1px 3px", 
+                                  marginTop: 2, 
+                                  lineHeight: 1.2,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 2
+                                }}>
+                                  <Lock size={6} /> {ev.title}
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* School Events list for Students */}
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>School Events (🔒 Locked)</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                    {SCHOOL_EVENTS.filter(e => e.audience === "all" || e.audience === "students").map(ev => (
+                      <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ width: 3, height: 24, background: ev.color, borderRadius: 1.5, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                           <div style={{ fontSize: 10.5, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.title}</div>
+                           <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>{ev.date}</div>
+                        </div>
+                        <Lock size={10} color={C.t3} style={{ flexShrink: 0 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+{/* 9. SETTINGS PAGE */}
           {tab === "settings" && (
             <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
               {/* Profile card change */}
