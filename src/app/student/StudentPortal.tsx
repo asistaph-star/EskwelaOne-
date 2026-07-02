@@ -37,7 +37,7 @@ function DraggableCard({
 
   function handleMouseDown(e: React.MouseEvent) {
     const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("select") || target.closest("svg") || target.closest(".no-drag")) {
+    if (target.closest("button") || target.closest("a") || target.closest("input") || target.closest("select") || target.closest("svg") || target.closest(".no-drag") || target.closest(".resize-handle")) {
       return; // let click actions pass through
     }
     if (e.button !== 0) return;
@@ -158,6 +158,7 @@ function DraggableCard({
       {/* Resize Handle */}
       {!minimized && (
         <div 
+          className="resize-handle"
           onMouseDown={handleResizeMouseDown}
           style={{ 
             position: "absolute", 
