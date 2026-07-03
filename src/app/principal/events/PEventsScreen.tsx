@@ -7,7 +7,7 @@ function formatTimeDisplay(timeStr?: string) {
   if (!timeStr) return "";
   let [h, m] = timeStr.split(":");
   let hr = parseInt(h);
-  let ampm = hr >= 12 ? "p" : "a";
+  let ampm = hr >= 12 ? " PM" : " AM";
   hr = hr % 12 || 12;
   return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
 }
