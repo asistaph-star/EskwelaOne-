@@ -122,20 +122,18 @@ export function PEventsScreen() {
                             style={{ 
                               display: "flex", 
                               flexDirection: "column",
-                              padding: "4px 8px", 
-                              borderRadius: 4, 
-                              background: ev.color + "15",
-                              borderLeft: `3px solid ${ev.color}`,
+                              padding: "5px 6px", 
+                              borderRadius: 6, 
+                              background: ev.color + "12",
                               transition: "background 0.2s",
-                              boxShadow: "0 1px 2px rgba(0,0,0,0.03)"
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "25"}
-                            onMouseLeave={e => e.currentTarget.style.background = ev.color + "15"}
+                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "20"}
+                            onMouseLeave={e => e.currentTarget.style.background = ev.color + "12"}
                           >
-                            <div style={{ fontSize: 9.5, color: C.t1, fontWeight: 700, lineHeight: 1.2 }}>
+                            <div style={{ fontSize: 9.5, color: ev.color, fontWeight: 800, lineHeight: 1.2, filter: "brightness(0.75)" }}>
                               {ev.title}
                             </div>
-                            <div style={{ fontSize: 8.5, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.7)" }}>{fullTime}</div>
+                            {fullTime && <div style={{ fontSize: 8, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.9)", opacity: 0.85 }}>{fullTime}</div>}
                           </div>
                         );
                       })}
