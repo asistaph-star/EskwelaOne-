@@ -91,6 +91,7 @@ import { CalendarScreen } from "./teacher/calendar/CalendarScreen";
 import { TemplateHubScreen } from "./teacher/templates/TemplateHubScreen";
 import { StubScreen } from "./shared/components/StubScreen";
 import { StudentDetailOverlay } from "./shared/components/StudentDetailOverlay";
+import { NotificationDropdown } from "./shared/components/NotificationDropdown";
 
 // 3. Main Routing App Shell Orchestrator
 export default function App() {
@@ -99,6 +100,7 @@ export default function App() {
   const [classId, setClassId] = useState<number | null>(null);
   const [gradeCard, setGradeCard] = useState<GradeCardInfo | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const { isMobile, isTablet } = useLayout();
   const logout = () => { setRole(null); setScreen("dashboard"); };
@@ -209,14 +211,11 @@ export default function App() {
 
               {/* Action buttons and Profile */}
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                {/* Theme Sun button */}
-                <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                  <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
-                </button>
 
                 {/* Notification Bell */}
                 <div style={{ position: "relative" }}>
                   <button 
+                    onClick={() => setNotifOpen(true)}
                     style={{
                       background: "transparent",
                       border: "none",
@@ -247,6 +246,7 @@ export default function App() {
                       border: "1.5px solid #fff"
                     }}>5</div>
                   </button>
+                  <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
                 </div>
 
                 {/* User Profile display */}

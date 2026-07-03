@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Bell, ChevronDown } from 'lucide-react';
 import { C } from '../../shared/constants/tokens';
 import { ROLE_USER } from '../../App';
+import { NotificationDropdown } from '../../shared/components/NotificationDropdown';
 
 export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { title:string; sub?:string; onMenu?:()=>void; onLogout?:()=>void; onSettings?:()=>void }) {
+  const [notifOpen, setNotifOpen] = useState(false);
+
   return (
     <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
       <div style={{ display:"flex", alignItems:"center", gap:14 }}>
@@ -51,14 +54,11 @@ export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { titl
 
           {/* Action buttons and Profile */}
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            {/* Theme Sun button */}
-            <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
-            </button>
 
             {/* Notification Bell */}
             <div style={{ position: "relative" }}>
               <button 
+                onClick={() => setNotifOpen(true)}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -89,6 +89,7 @@ export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { titl
                   border: "1.5px solid #fff"
                 }}>8</div>
               </button>
+              <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
             {/* User Profile display */}

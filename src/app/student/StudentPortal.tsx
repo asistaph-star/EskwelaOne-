@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../shared/constants/tokens';
 import { StudentReportCard } from './components/StudentReportCard';
+import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import {
   LogOut, BookOpen, Calendar, Award, BookMarked, Printer, Download,
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
@@ -344,9 +345,14 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
             {/* Action buttons and Profile */}
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              {/* Theme Sun button */}
-              <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
-                <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
+
+              {/* ID Card Button */}
+              <button 
+                onClick={() => setShowQRModal(true)}
+                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32 }}
+                title="View Digital ID Card"
+              >
+                <QrCode size={18} color={C.t2} />
               </button>
 
               {/* Notification Bell */}
@@ -383,6 +389,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     border: "1.5px solid #fff"
                   }}>3</div>
                 </button>
+                <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
 
               {/* User Profile display */}
