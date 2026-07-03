@@ -60,18 +60,20 @@ export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { titl
               <button 
                 onClick={() => setNotifOpen(true)}
                 style={{
-                  background: "transparent",
+                  background: notifOpen ? C.m50 : "transparent",
                   border: "none",
+                  borderRadius: 16,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   width: 32,
                   height: 32,
-                  position: "relative"
+                  position: "relative",
+                  transition: "background 0.2s"
                 }}
               >
-                <Bell size={18} color={C.t2} />
+                <Bell size={18} color={notifOpen ? C.m700 : C.t2} />
                 <div style={{
                   position: "absolute",
                   top: 2,
