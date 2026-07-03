@@ -1,6 +1,6 @@
 
 
-export type Role = "Admin" | "Teacher" | "Principal" | "Student" | "Parent" | "Registrar";
+export type Role = "Admin" | "Teacher" | "Student" | "Parent" | "Registrar";
 
 export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"

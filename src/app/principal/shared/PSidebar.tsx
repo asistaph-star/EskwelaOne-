@@ -33,7 +33,7 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
   collapsed?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const user = { name: "Dr. Roberto Santos", sub: "School Principal" };
+  const user = { name: "Dr. Roberto Santos", sub: "School Administrator" };
   const initials = "RS";
 
   return (

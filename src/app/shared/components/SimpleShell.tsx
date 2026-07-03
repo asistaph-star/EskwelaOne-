@@ -4,7 +4,6 @@ import { C } from '../constants/tokens';
 import { Stamp } from './Stamp';
 export function SimpleShell({ role, onLogout }: { role:Role, onLogout:()=>void }) {
   const user = {
-    Admin: { initials: "AD", name: "System Administrator", sub: "IT Operations & Database Control" },
     Parent: { initials: "PA", name: "Parent Portal", sub: "Student academic progress monitoring" },
     Registrar: { initials: "RE", name: "Registrar Office", sub: "Learner Permanent Records (SF10) Management" }
   }[role as any] || { initials: "ST", name: "User", sub: "" };

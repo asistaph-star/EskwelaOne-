@@ -16,11 +16,11 @@ import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
 import { X } from 'lucide-react';
 
-export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
+export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<PScreen>("p-dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isMobile, isTablet }  = useLayout();
-  const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for principal */
+  const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for admin */
 
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
@@ -83,5 +83,3 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
     </div>
   );
 }
-
-/* ─── Other role stubs ──────────────────────────────────────── */

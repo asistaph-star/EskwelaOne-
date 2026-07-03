@@ -172,7 +172,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
             <div style={{ fontSize: 12, color: C.t1, lineHeight: 1.7 }}>
               <p style={{ margin: "0 0 10px 0" }}>
-                Good morning, Principal. Today's attendance is <strong>94.2%</strong>, which is <strong>1.3% higher</strong> than yesterday. One teacher is absent. Four students require immediate intervention. There are two behavior incidents requiring review. No emergency clinic cases have been reported.
+                Good morning, Admin. Today's attendance is <strong>94.2%</strong>, which is <strong>1.3% higher</strong> than yesterday. One teacher is absent. Four students require immediate intervention. There are two behavior incidents requiring review. No emergency clinic cases have been reported.
               </p>
               <div style={{ background: C.goldLight + "30", border: `1px solid ${C.gold}20`, borderRadius: 4, padding: "10px 14px", marginTop: 10 }}>
                 <strong style={{ color: C.gold, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: 6 }}>Recommended Actions:</strong>
