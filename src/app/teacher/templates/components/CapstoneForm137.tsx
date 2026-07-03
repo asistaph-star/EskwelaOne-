@@ -166,7 +166,7 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
                   <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
                   <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "right", fontWeight: "bold", paddingRight: 16, borderLeft: "none" }}>General Average</td>
+                    <td colSpan={5} style={{ textAlign: "center", fontWeight: "bold", borderLeft: "none" }}>General Average</td>
                     <td></td>
                     <td style={{ borderRight: "none" }}></td>
                   </tr>
