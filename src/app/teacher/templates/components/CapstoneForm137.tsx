@@ -50,19 +50,19 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
       <div className="sf10-doc">
         {/* Header */}
         <div style={{ position: "relative", marginBottom: 12 }}>
-          <div style={{ position: "absolute", top: 0, left: 0, fontWeight: "bold", fontSize: 12 }}>SF10-JHS</div>
+          <div style={{ position: "absolute", top: 0, left: 0, fontSize: 11 }}>SF10-JHS</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-            <div style={{ width: 80 }}>
-              <div style={{ width:60, height:60, borderRadius:"50%", border:"1px solid #000", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9 }}>Logo</div>
+            <div style={{ width: 100, display: "flex", justifyContent: "center" }}>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Department_of_Education_%28DepEd%29_Seal.svg/240px-Department_of_Education_%28DepEd%29_Seal.svg.png" alt="Kagawaran ng Edukasyon" style={{ width: 70, height: 70, objectFit: "contain" }} />
             </div>
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontSize: 10 }}>Republic of the Philippines</div>
-              <div style={{ fontSize: 10 }}>Department of Education</div>
-              <div style={{ fontSize: 13, fontWeight: "bold", marginTop: 4 }}>Learner Permanent Record for Junior High School (SF10-JHS)</div>
-              <div style={{ fontStyle: "italic", fontSize: 9 }}>(Formerly Form 137)</div>
+              <div style={{ fontSize: 11 }}>Republic of the Philippines</div>
+              <div style={{ fontSize: 11 }}>Department of Education</div>
+              <div style={{ fontSize: 14, fontWeight: "bold", marginTop: 8, marginBottom: 2 }}>Learner Permanent Record for Junior High School (SF10-JHS)</div>
+              <div style={{ fontStyle: "italic", fontSize: 10 }}>(Formerly Form 137)</div>
             </div>
-            <div style={{ width: 80, display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
-              <div style={{ fontSize: 24, fontWeight: "bold" }}>DepED</div>
+            <div style={{ width: 120, display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Department_of_Education_%28DepEd%29.svg/320px-Department_of_Education_%28DepEd%29.svg.png" alt="DepEd" style={{ width: 120, objectFit: "contain" }} />
             </div>
           </div>
         </div>
