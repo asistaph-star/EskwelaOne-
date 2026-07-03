@@ -1525,93 +1525,131 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         <div style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0, 0, 0, 0.6)",
+          background: "rgba(0, 0, 0, 0.65)",
           zIndex: 1000,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backdropFilter: "blur(4px)"
+          backdropFilter: "blur(6px)",
+          animation: "fadeIn 0.2s ease-out"
         }}>
-          <div style={{
-            background: "#fff",
-            borderRadius: 12,
-            width: 320,
-            padding: 24,
-            border: `1.5px solid ${C.borderMed}`,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 16,
-            boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-            position: "relative"
-          }}>
+          <div style={{ position: "relative", width: 340 }}>
+            {/* Close button outside the card */}
             <button 
               onClick={() => setShowQRModal(false)}
               style={{
                 position: "absolute",
-                top: 12,
-                right: 12,
-                background: "none",
+                top: -40,
+                right: 0,
+                background: "rgba(255,255,255,0.2)",
                 border: "none",
+                width: 32,
+                height: 32,
+                borderRadius: 16,
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",
-                color: C.t3
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background 0.2s"
               }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
             >
               ✕
             </button>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.m700, fontFamily: "'Fraunces', serif" }}>Digital Student ID Card</div>
-            
-            {/* Student ID Card Layout */}
+
+            {/* Premium ID Card Design */}
             <div style={{
               width: "100%",
-              background: "linear-gradient(135deg, #581c1c 0%, #300c0c 100%)",
-              borderRadius: 8,
-              padding: 16,
-              color: "#fff",
+              background: "#fff",
+              borderRadius: 20,
+              overflow: "hidden",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.1)",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
-              boxSizing: "border-box"
+              position: "relative",
+              animation: "popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 8 }}>
-                <School size={16} color={C.gold} />
-                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.05em" }}>SINDALAN NHS</span>
-              </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 22, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.2)" }}>
-                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <style>{`
+                @keyframes popIn {
+                  0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+                  100% { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                @keyframes fadeIn {
+                  0% { opacity: 0; }
+                  100% { opacity: 1; }
+                }
+              `}</style>
+              
+              {/* Lanyard hole punch */}
+              <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", width: 50, height: 8, borderRadius: 4, background: "rgba(0,0,0,0.15)", borderTop: "1px solid rgba(0,0,0,0.1)", borderBottom: "1px solid rgba(255,255,255,0.2)", zIndex: 10 }} />
+              
+              {/* Top Banner & Profile */}
+              <div style={{ 
+                background: `linear-gradient(135deg, ${C.m800} 0%, ${C.m600} 100%)`, 
+                padding: "40px 24px 24px", 
+                color: "#fff", 
+                display: "flex", 
+                flexDirection: "column", 
+                alignItems: "center", 
+                textAlign: "center",
+                position: "relative"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
+                  <School size={16} color={C.gold} />
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>SINDALAN NHS</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700 }}>Juan Miguel Santos</div>
-                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)", marginTop: 2 }}>Grade 10 - Pilot Section</div>
-                  <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.6)" }}>LRN: 100001</div>
+                
+                <div style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid #fff", overflow: "hidden", marginBottom: 16, boxShadow: "0 8px 16px rgba(0,0,0,0.2)" }}>
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face" alt="Student Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
+                
+                <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Fraunces', serif" }}>Juan Miguel Santos</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.8)", marginTop: 6, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 700 }}>Digital Student ID</div>
               </div>
-            </div>
+              
+              {/* Bottom Info & QR */}
+              <div style={{ padding: "24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, background: "#fafafa" }}>
+                
+                {/* Stats Row */}
+                <div style={{ display: "flex", width: "100%", justifyContent: "space-between", borderBottom: `1px dashed ${C.borderMed}`, paddingBottom: 16 }}>
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Grade & Section</div>
+                    <div style={{ fontSize: 13, color: C.t1, fontWeight: 800, marginTop: 4 }}>10 - Pilot</div>
+                  </div>
+                  <div style={{ width: 1, background: C.borderMed }} />
+                  <div style={{ textAlign: "center", flex: 1 }}>
+                    <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Learner Ref No.</div>
+                    <div style={{ fontSize: 13, color: C.t1, fontWeight: 800, marginTop: 4, fontFamily: "monospace" }}>100001</div>
+                  </div>
+                </div>
 
-            {/* QR Code Graphic */}
-            <div style={{ 
-              width: 140, 
-              height: 140, 
-              border: `1.5px solid ${C.borderMed}`, 
-              borderRadius: 8, 
-              padding: 8, 
-              display: "flex", 
-              alignItems: "center", 
-              justifyContent: "center",
-              background: "#fff",
-              position: "relative"
-            }}>
-              {/* Custom SVG QR Code for absolute beauty */}
-              <svg width="120" height="120" viewBox="0 0 29 29" style={{ shapeRendering: "crispEdges" }}>
-                <path d="M0 0h7v7H0zm1 1v5h5V1zm8 0h1v1H9zm1 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h3v1h-3zm4 0h1v1h-1zm1 0h3v1h-3zm-11 1h1v1H9zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm1 0h1v1h-1zm-10 1h2v1h-2zm3 0h1v1h-1zm1 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm-12 1h1v1H9zm3 0h1v1h-1zm2 0h1v1h-1zm1 0h2v1h-2zm5 0h1v1h-1zm1 0h1v1h-1zm-21 1v1h5v-1zm8 0h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm3 0h2v1h-2zm-12 1h1v1H9zm2 0h1v1h-1zm4 0h1v1h-1zm1 0h1v1h-1zm4 0h1v1h-1zm-11 1h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm1 0h2v1h-2zm4 0h1v1h-1zm1 0h2v1h-2zm-22 2h7v7H0zm1 1v5h5v-5zm11 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-11 1h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zm3 0h2v1h-2zm-8 1h2v1h-2zm3 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm3 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm2 0h2v1h-2zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zM22 0h7v7h-7zm1 1v5h5V1zm-1 8h1v1h-1zm3 0h2v1h-2zm4 0h1v1h-1zm-6 1h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zM0 22h7v7H0zm1 1v5h5v-5zM22 22h7v7h-7zm1 1v5h5v-5z" fill="#000" />
-              </svg>
-            </div>
-            
-            <div style={{ fontSize: 9.5, color: C.t3, textAlign: "center" }}>
-              Scan at school gate terminal for quick attendance validation.
+                {/* QR Code Graphic */}
+                <div style={{ 
+                  width: 150, 
+                  height: 150, 
+                  background: "#fff",
+                  borderRadius: 12, 
+                  padding: 10, 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                  border: `1px solid ${C.borderLight}`
+                }}>
+                  {/* Custom SVG QR Code for absolute beauty */}
+                  <svg width="100%" height="100%" viewBox="0 0 29 29" style={{ shapeRendering: "crispEdges" }}>
+                    <path d="M0 0h7v7H0zm1 1v5h5V1zm8 0h1v1H9zm1 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h3v1h-3zm4 0h1v1h-1zm1 0h3v1h-3zm-11 1h1v1H9zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm1 0h1v1h-1zm-10 1h2v1h-2zm3 0h1v1h-1zm1 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm-12 1h1v1H9zm3 0h1v1h-1zm2 0h1v1h-1zm1 0h2v1h-2zm5 0h1v1h-1zm1 0h1v1h-1zm-21 1v1h5v-1zm8 0h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm3 0h2v1h-2zm-12 1h1v1H9zm2 0h1v1h-1zm4 0h1v1h-1zm1 0h1v1h-1zm4 0h1v1h-1zm-11 1h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm1 0h2v1h-2zm4 0h1v1h-1zm1 0h2v1h-2zm-22 2h7v7H0zm1 1v5h5v-5zm11 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-11 1h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zm3 0h2v1h-2zm-8 1h2v1h-2zm3 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm3 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm2 0h2v1h-2zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zM22 0h7v7h-7zm1 1v5h5V1zm-1 8h1v1h-1zm3 0h2v1h-2zm4 0h1v1h-1zm-6 1h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zM0 22h7v7H0zm1 1v5h5v-5zM22 22h7v7h-7zm1 1v5h5v-5z" fill="#000" />
+                  </svg>
+                </div>
+                
+                <div style={{ fontSize: 10, color: C.t3, textAlign: "center", lineHeight: 1.5 }}>
+                  This acts as your official digital ID.<br/>Scan at school gate terminal for validation.
+                </div>
+              </div>
             </div>
           </div>
         </div>
