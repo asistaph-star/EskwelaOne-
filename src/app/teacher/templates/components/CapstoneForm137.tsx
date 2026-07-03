@@ -51,7 +51,7 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, position: "relative" }}>
           <div style={{ width:70 }}>
             {/* Kagawaran ng Edukasyon Logo Placeholder */}
-            <div style={{ width:60, height:60, border:\`1px solid #000\`, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, textAlign:"center" }}>Logo</div>
+            <div style={{ width:60, height:60, border:"1px solid #000", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:8, textAlign:"center" }}>Logo</div>
           </div>
           <div className="text-center" style={{ flex: 1 }}>
             <div style={{ fontSize: 9 }}>Republic of the Philippines</div>
