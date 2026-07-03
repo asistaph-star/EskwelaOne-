@@ -53,7 +53,9 @@ export function CalendarScreen() {
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>School events (🔒) are set by admin. Your personal events are editable.</div>
         </div>
         <button onClick={() => { setShowForm(true); setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" }); }}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.background = C.m800}
+          onMouseLeave={e => e.currentTarget.style.background = C.m700}
         >
           <Plus size={14} /> Add Personal Event
         </button>
@@ -231,7 +233,7 @@ export function CalendarScreen() {
             
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, gap: 12 }}>
               <button onClick={() => setShowForm(false)} style={{ padding: "10px 16px", background: "none", color: C.t2, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-              <button onClick={handleAddPersonal} style={{ padding: "10px 20px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={handleAddPersonal} style={{ padding: "10px 20px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background=C.m800} onMouseLeave={e=>e.currentTarget.style.background=C.m700}>
                 <Save size={14} /> Save Event
               </button>
             </div>
