@@ -52,3 +52,5 @@ Thumbs.db
 .gemini/
 .agents/
 .system_generated/
+
+.vercel

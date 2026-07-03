@@ -192,8 +192,8 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
             <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.02em" }}>E1</span>
           </div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              EskwelaOne<span style={{ color: C.gold, marginLeft: 1 }}>+</span>
+            <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
               Sindalan NHS

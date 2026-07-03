@@ -39,8 +39,10 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
             <BookMarked size={18} color={C.gold} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ color: "#fff", fontSize: 15, fontWeight: 800, letterSpacing: "0.06em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>ESKWELAONE</div>
-            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>UNIVERSITY PORTAL</div>
+            <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+              EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+            </div>
+            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>SINDALAN NATIONAL HIGH SCHOOL</div>
           </div>
         </div>
 
