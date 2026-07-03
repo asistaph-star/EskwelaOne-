@@ -48,32 +48,6 @@ export function CalendarScreen() {
         </button>
       </div>
 
-      {/* Add personal event form */}
-      {showForm && (
-        <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 20, marginBottom: 20, boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>New Personal Event</div>
-            <button onClick={() => setShowForm(false)} style={{ background: "none", border: "none", cursor: "pointer", color: C.t3 }}><X size={16} /></button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 4 }}>Title</label>
-              <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Parent Conference"
-                style={{ width: "100%", boxSizing: "border-box", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 12, outline: "none" }} />
-            </div>
-            <div>
-              <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 4 }}>Date</label>
-              <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                style={{ width: "100%", boxSizing: "border-box", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 12, outline: "none" }} />
-            </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-            <button onClick={handleAddPersonal} style={{ padding: "7px 16px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-              <Save size={12} /> Save
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Calendar Grid */}
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", marginBottom: 24, boxShadow: "0 4px 20px rgba(139,30,30,0.05)" }}>
@@ -181,6 +155,44 @@ export function CalendarScreen() {
           );
         })}
       </div>
+      {/* Form Modal */}
+      {showForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <style>{`
+            @keyframes slideUp {
+              0% { opacity: 0; transform: translateY(20px) scale(0.95); }
+              100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+          `}</style>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 480, boxShadow: "0 10px 40px rgba(0,0,0,0.2)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>New Personal Event</div>
+              <button onClick={() => setShowForm(false)} style={{ background: C.m50, border: "none", borderRadius: 16, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"} onMouseLeave={e=>e.currentTarget.style.background=C.m50}><X size={16} /></button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Title</label>
+                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Parent Conference"
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", transition: "border-color 0.2s" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+              </div>
+              
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Date</label>
+                <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+              </div>
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, gap: 12 }}>
+              <button onClick={() => setShowForm(false)} style={{ padding: "10px 16px", background: "none", color: C.t2, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button onClick={handleAddPersonal} style={{ padding: "10px 20px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <Save size={14} /> Save Event
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
