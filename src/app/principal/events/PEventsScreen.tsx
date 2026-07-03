@@ -112,6 +112,8 @@ export function PEventsScreen() {
                           return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
                         };
                         const timeStr = formatTime(ev.time || "");
+                        const endStr = formatTime(ev.endTime || "");
+                        const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "";
 
                         return (
                           <div 
@@ -119,20 +121,21 @@ export function PEventsScreen() {
                             onClick={(e) => { e.stopPropagation(); handleEdit(ev); }}
                             style={{ 
                               display: "flex", 
-                              alignItems: "flex-start", 
-                              gap: 6, 
-                              padding: "4px 6px", 
+                              flexDirection: "column",
+                              padding: "4px 8px", 
                               borderRadius: 4, 
+                              background: ev.color + "15",
+                              borderLeft: `3px solid ${ev.color}`,
                               transition: "background 0.2s",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.03)"
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "15"}
-                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "25"}
+                            onMouseLeave={e => e.currentTarget.style.background = ev.color + "15"}
                           >
-                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: ev.color, flexShrink: 0, marginTop: 4 }} />
-                            <div style={{ fontSize: 10, color: C.t1, lineHeight: 1.3, fontWeight: 600 }}>
-                              {timeStr && <span style={{ color: C.t2, fontWeight: 700, marginRight: 4 }}>{timeStr}</span>}
+                            <div style={{ fontSize: 9.5, color: C.t1, fontWeight: 700, lineHeight: 1.2 }}>
                               {ev.title}
                             </div>
+                            {fullTime && <div style={{ fontSize: 8.5, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.7)" }}>{fullTime}</div>}
                           </div>
                         );
                       })}
