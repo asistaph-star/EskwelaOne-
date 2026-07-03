@@ -41,14 +41,32 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
         </div>
       </div>
 
-      {/* 6-stat strip */}
+      {/* KPI metrics strip */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:10, marginBottom:20 }}>
-        <StatBox label="Assigned Sections" value="3"    sub="Gr. 8, 9, 10"         accent={C.m700} />
-        <StatBox label="Total Students"    value="107"  sub="across all sections"   accent={C.m700} />
-        <StatBox label="Today's Schedule"  value="4"    sub="classes today"         accent={C.blue} />
-        <StatBox label="Pending Grades"    value="12"   sub="items to encode"       accent={C.amber} />
-        <StatBox label="Attendance Status" value="94.2%"sub="schoolwide today"      accent={C.green} />
-        <StatBox label="Upcoming"          value="5"    sub="events this week"      accent={C.purple} />
+        {[
+          { label: "Assigned Sections", val: "3", sub: "Gr. 8, 9, 10", icon: Users, color: C.m700, bg: C.m50 },
+          { label: "Total Students",    val: "107", sub: "Across all sections", icon: Users, color: C.m700, bg: C.m50 },
+          { label: "Today's Schedule",  val: "4 Classes", sub: "Classes today", icon: CalendarCheck, color: C.blue, bg: "#eff6ff" },
+          { label: "Pending Grades",    val: "12 Items", sub: "Items to encode", icon: AlertCircle, color: "#f59e0b", bg: "#fefbeb" },
+          { label: "Attendance Status", val: "94.2%", sub: "Schoolwide today", icon: BarChart2, color: C.green, bg: "#f0fdf4" },
+          { label: "Upcoming Events",   val: "5", sub: "Events this week", icon: Bell, color: C.purple, bg: "#faf5ff" }
+        ].map((kpi, idx) => {
+          const Icon = kpi.icon;
+          return (
+            <div key={idx} style={{ background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "16px", display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon size={14} color={kpi.color} />
+                </div>
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", lineHeight: 1.2 }}>{kpi.label}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{kpi.val}</div>
+                <div style={{ fontSize: 10, color: kpi.color, fontWeight: 600, marginTop: 4 }}>{kpi.sub}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Main grid */}
@@ -61,37 +79,40 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
               Classroom Hub <ArrowRight size={11} />
             </button>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:18 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:18 }}>
             {MY_CLASSES.map(cls => (
               <button key={cls.id} onClick={()=>onClassClick(cls.id)}
-                style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, overflow:"hidden", cursor:"pointer", textAlign:"left", transition:"box-shadow 0.15s" }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 4px 16px rgba(139,30,30,0.14)`;}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-                {/* Card header band */}
-                <div style={{ background:cls.imgHue, padding:"12px 16px 10px", position:"relative", overflow:"hidden" }}>
-                  <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.25)" }} />
-                  <div style={{ position:"relative" }}>
-                    <Stamp label={`Grade ${cls.grade}`} color="#fff" bg="rgba(255,255,255,0.2)" />
-                    <div style={{ color:"#fff", fontSize:20, fontWeight:800, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1, marginTop:6 }}>{cls.section}</div>
+                style={{ background:"#fff", border:`1.5px solid ${C.border}`, borderRadius:8, overflow:"hidden", cursor:"pointer", textAlign:"left", transition:"all 0.15s", padding: 18, display: "flex", flexDirection: "column", gap: 14 }}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.m500; (e.currentTarget as HTMLElement).style.boxShadow=`0 4px 16px rgba(139,30,30,0.06)`;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.border; (e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+                
+                {/* Header Section */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.m700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>{cls.subject}</div>
+                    <div style={{ color:C.t1, fontSize:20, fontWeight:800, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{cls.section}</div>
                   </div>
+                  <Stamp label={`Gr. ${cls.grade}`} color={C.m800} bg={C.m50} />
                 </div>
-                {/* Card body — ledger fields */}
-                <div style={{ padding:"12px 16px" }}>
-                  <div style={{ fontSize:12, fontWeight:600, color:C.t1, marginBottom:8 }}>{cls.subject}</div>
-                  {[["Students",`${cls.students} enrolled`],["Semester",cls.semester],["Adviser",cls.adviser?"✓ Class Adviser":"Subject Only"]].map(([l,v]) => (
-                    <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"4px 0", borderBottom:`0.5px solid ${C.border}` }}>
-                      <span style={{ fontSize:10, color:C.t3, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.07em" }}>{l}</span>
-                      <span style={{ fontSize:11, color:cls.adviser&&l==="Adviser"?C.green:C.t1, fontWeight:500 }}>{v}</span>
+                
+                {/* Ledger fields */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}` }}>
+                  {[["Enrolled",`${cls.students}`],["Term",cls.semester],["Role",cls.adviser?"Class Adviser":"Subject Only"]].map(([l,v]) => (
+                    <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems: "center" }}>
+                      <span style={{ fontSize:9.5, color:C.t3, fontWeight:600 }}>{l}</span>
+                      <span style={{ fontSize:10, color:cls.adviser&&l==="Role"?C.m700:C.t1, fontWeight:700 }}>{v}</span>
                     </div>
                   ))}
-                  <div style={{ marginTop:10 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                      <span style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.07em" }}>Completion</span>
-                      <span style={{ fontSize:10, color:C.m700, fontFamily:"'JetBrains Mono',monospace", fontWeight:600 }}>{cls.completion}%</span>
-                    </div>
-                    <div style={{ height:3, background:C.m100, borderRadius:2 }}>
-                      <div style={{ height:"100%", width:`${cls.completion}%`, background:C.m700, borderRadius:2 }} />
-                    </div>
+                </div>
+                
+                {/* Progress Bar */}
+                <div style={{ marginTop: "auto" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                    <span style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight: 700 }}>Completion</span>
+                    <span style={{ fontSize:10, color:C.m700, fontFamily:"'JetBrains Mono',monospace", fontWeight:700 }}>{cls.completion}%</span>
+                  </div>
+                  <div style={{ height:4, background:C.m100, borderRadius:2, overflow: "hidden" }}>
+                    <div style={{ height:"100%", width:`${cls.completion}%`, background:C.m700, borderRadius:2 }} />
                   </div>
                 </div>
               </button>
