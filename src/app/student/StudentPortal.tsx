@@ -1619,10 +1619,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
                   border: `1px solid ${C.borderLight}`
                 }}>
-                  {/* Custom SVG QR Code for absolute beauty */}
-                  <svg width="100%" height="100%" viewBox="0 0 29 29" style={{ shapeRendering: "crispEdges" }}>
-                    <path d="M0 0h7v7H0zm1 1v5h5V1zm8 0h1v1H9zm1 0h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h3v1h-3zm4 0h1v1h-1zm1 0h3v1h-3zm-11 1h1v1H9zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm2 0h1v2h-1zm1 0h1v1h-1zm-10 1h2v1h-2zm3 0h1v1h-1zm1 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm-12 1h1v1H9zm3 0h1v1h-1zm2 0h1v1h-1zm1 0h2v1h-2zm5 0h1v1h-1zm1 0h1v1h-1zm-21 1v1h5v-1zm8 0h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm3 0h2v1h-2zm-12 1h1v1H9zm2 0h1v1h-1zm4 0h1v1h-1zm1 0h1v1h-1zm4 0h1v1h-1zm-11 1h1v1H9zm3 0h1v1h-1zm1 0h1v1h-1zm1 0h2v1h-2zm4 0h1v1h-1zm1 0h2v1h-2zm-22 2h7v7H0zm1 1v5h5v-5zm11 0h2v1h-2zm4 0h1v1h-1zm1 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-11 1h1v1h-1zm1 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zm3 0h2v1h-2zm-8 1h2v1h-2zm3 0h1v1h-1zm2 0h2v1h-2zm3 0h1v1h-1zm1 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm3 0h2v1h-2zm2 0h1v1h-1zm2 0h1v1h-1zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h2v1h-2zm2 0h2v1h-2zm-9 1h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm1 0h1v1h-1zM22 0h7v7h-7zm1 1v5h5V1zm-1 8h1v1h-1zm3 0h2v1h-2zm4 0h1v1h-1zm-6 1h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zM0 22h7v7H0zm1 1v5h5v-5zM22 22h7v7h-7zm1 1v5h5v-5z" fill="#000" />
-                  </svg>
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=EskwelaOne-Student-100001" alt="QR Code" style={{ width: "100%", height: "100%", display: "block" }} />
                 </div>
                 
                 <div style={{ fontSize: 10, color: C.t3, textAlign: "center", lineHeight: 1.5 }}>
