@@ -7,7 +7,7 @@ export function PEventsScreen() {
   const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", type: "academic" as CalendarEvent["type"], audience: "all" as CalendarEvent["audience"] });
+  const [form, setForm] = useState({ title: "", date: "", time: "", type: "academic" as CalendarEvent["type"], audience: "all" as CalendarEvent["audience"] });
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -15,21 +15,21 @@ export function PEventsScreen() {
     if (!form.title || !form.date) return;
     const cfg = EVENT_TYPE_CONFIG[form.type];
     if (editId) {
-      setEvents(ev => ev.map(e => e.id === editId ? { ...e, title: form.title, date: form.date, type: form.type, audience: form.audience, color: cfg.color } : e));
+      setEvents(ev => ev.map(e => e.id === editId ? { ...e, title: form.title, date: form.date, time: form.time, type: form.type, audience: form.audience, color: cfg.color } : e));
       setEditId(null);
     } else {
       const newEvent: CalendarEvent = {
-        id: `se-${Date.now()}`, title: form.title, date: form.date, type: form.type,
+        id: `se-${Date.now()}`, title: form.title, date: form.date, time: form.time, type: form.type,
         color: cfg.color, locked: true, audience: form.audience,
       };
       setEvents(ev => [...ev, newEvent]);
     }
-    setForm({ title: "", date: "", type: "academic", audience: "all" });
+    setForm({ title: "", date: "", time: "", type: "academic", audience: "all" });
     setShowForm(false);
   }
 
   function handleEdit(ev: CalendarEvent) {
-    setForm({ title: ev.title, date: ev.date, type: ev.type, audience: ev.audience || "all" });
+    setForm({ title: ev.title, date: ev.date, time: ev.time || "", type: ev.type, audience: ev.audience || "all" });
     setEditId(ev.id);
     setShowForm(true);
   }
@@ -38,7 +38,10 @@ export function PEventsScreen() {
     setEvents(ev => ev.filter(e => e.id !== id));
   }
 
-  const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = [...events].sort((a, b) => {
+    if (a.date === b.date) return (a.time || "").localeCompare(b.time || "");
+    return a.date.localeCompare(b.date);
+  });
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: 28, background: C.paper, position: "relative" }}>
@@ -47,7 +50,7 @@ export function PEventsScreen() {
           <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>School Events Manager</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Create and manage school-wide events. Click any date on the calendar to add an event.</div>
         </div>
-        <button onClick={() => { setShowForm(true); setEditId(null); setForm({ title: "", date: "", type: "academic", audience: "all" }); }}
+        <button onClick={() => { setShowForm(true); setEditId(null); setForm({ title: "", date: "", time: "", type: "academic", audience: "all" }); }}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
           onMouseEnter={e => e.currentTarget.style.background = C.m800}
           onMouseLeave={e => e.currentTarget.style.background = C.m700}
@@ -78,7 +81,7 @@ export function PEventsScreen() {
                   key={`${r}-${col}`} 
                   onClick={() => {
                     if (valid) {
-                      setForm({ title: "", date: dayStr, type: "academic", audience: "all" });
+                      setForm({ title: "", date: dayStr, time: "", type: "academic", audience: "all" });
                       setEditId(null);
                       setShowForm(true);
                     }
@@ -133,7 +136,7 @@ export function PEventsScreen() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
-                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>{ev.date} · {cfg.label} · {ev.audience === "all" ? "Everyone" : ev.audience === "teachers" ? "Teachers Only" : "Students Only"}</div>
+                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>{ev.date} {ev.time ? `· ${ev.time} ` : ""}· {cfg.label} · {ev.audience === "all" ? "Everyone" : ev.audience === "teachers" ? "Teachers Only" : "Students Only"}</div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => handleEdit(ev)} style={{ width: 32, height: 32, borderRadius: 6, background: C.m50, border: `1px solid ${C.borderMed}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"} onMouseLeave={e=>e.currentTarget.style.background=C.m50}>
@@ -157,7 +160,7 @@ export function PEventsScreen() {
               100% { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 460, boxShadow: "0 10px 40px rgba(0,0,0,0.2)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 480, boxShadow: "0 10px 40px rgba(0,0,0,0.2)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>{editId ? "Edit Event" : "New School Event"}</div>
               <button onClick={() => { setShowForm(false); setEditId(null); }} style={{ background: C.m50, border: "none", borderRadius: 16, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"} onMouseLeave={e=>e.currentTarget.style.background=C.m50}><X size={16} /></button>
@@ -177,6 +180,14 @@ export function PEventsScreen() {
                     style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
                 </div>
                 <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Time <span style={{color: C.t3, fontWeight: 400}}>(Optional)</span></label>
+                  <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                </div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
                   <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Type</label>
                   <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })}
                     style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
@@ -186,16 +197,15 @@ export function PEventsScreen() {
                     <option value="exam">Exam</option>
                   </select>
                 </div>
-              </div>
-              
-              <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Audience</label>
-                <select value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value as any })}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
-                  <option value="all">Everyone (Teachers & Students)</option>
-                  <option value="teachers">Teachers Only</option>
-                  <option value="students">Students Only</option>
-                </select>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Audience</label>
+                  <select value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value as any })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
+                    <option value="all">Everyone</option>
+                    <option value="teachers">Teachers Only</option>
+                    <option value="students">Students Only</option>
+                  </select>
+                </div>
               </div>
             </div>
             
