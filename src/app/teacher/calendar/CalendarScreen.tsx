@@ -94,12 +94,19 @@ export function CalendarScreen() {
               const dayEvents = allEvents.filter(e => e.date === dayStr);
               return (
                 <div key={`${r}-${col}`} 
+                  onClick={() => {
+                    if (valid) {
+                      setForm({ title: "", date: dayStr });
+                      setShowForm(true);
+                    }
+                  }}
                   style={{ 
                     minHeight: 100, 
                     padding: "6px 6px", 
                     borderRight: `1px solid ${C.border}`, 
                     borderBottom: `1px solid ${C.border}`, 
                     background: valid ? "#fff" : "#fafafa",
+                    cursor: valid ? "pointer" : "default",
                     transition: "background 0.15s"
                   }}
                   onMouseEnter={e => { if(valid) e.currentTarget.style.background = "#f4f4f4"; }}
@@ -113,7 +120,9 @@ export function CalendarScreen() {
                         const endStr = formatTimeDisplay(ev.endTime);
                         const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "All day";
                         return (
-                          <div key={ev.id} style={{ display: "flex", flexDirection: "column", padding: "5px 6px", borderRadius: 6, background: ev.color + "12", transition: "background 0.2s" }}
+                          <div key={ev.id} 
+                            onClick={(e) => { e.stopPropagation(); alert(`Event: ${ev.title}\nDate: ${ev.date}${fullTime ? `\nTime: ${fullTime}` : ''}`); }}
+                            style={{ display: "flex", flexDirection: "column", padding: "5px 6px", borderRadius: 6, background: ev.color + "12", transition: "background 0.2s", cursor: "pointer" }}
                             onMouseEnter={e => e.currentTarget.style.background = ev.color + "20"}
                             onMouseLeave={e => e.currentTarget.style.background = ev.color + "12"}>
                             <div style={{ fontSize: 9.5, color: ev.color, fontWeight: 800, lineHeight: 1.2, filter: "brightness(0.75)", display: "flex", alignItems: "center", gap: 3 }}>

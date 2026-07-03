@@ -62,6 +62,15 @@ const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
 };
 
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
+  function formatTimeDisplay(timeStr?: string) {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hr = parseInt(h);
+    let ampm = hr >= 12 ? " PM" : " AM";
+    hr = hr % 12 || 12;
+    return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
+  }
+
   const [tab, setTab] = useState<
     "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar" | "announcements" | "messages"
   >("dashboard");
@@ -1416,26 +1425,40 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                           {valid && (
                             <>
                               <div style={{ fontSize: 9.5, fontWeight: isToday ? 700 : 400, color: isToday ? C.m700 : col >= 5 ? C.t3 : C.t2 }}>{day}</div>
-                              {dayEvents.map(ev => (
-                                <div key={ev.id} title={ev.title} style={{ 
-                                  fontSize: 7.5, 
-                                  fontWeight: 700, 
-                                  color: "#fff", 
-                                  background: ev.color, 
-                                  borderRadius: 2, 
-                                  padding: "1px 3px", 
-                                  marginTop: 2, 
-                                  lineHeight: 1.2,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 2
-                                }}>
-                                  <Lock size={6} /> {ev.title}
-                                </div>
-                              ))}
+                              {dayEvents.map(ev => {
+                                const timeStr = formatTimeDisplay(ev.time);
+                                const endStr = formatTimeDisplay(ev.endTime);
+                                const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "All day";
+                                return (
+                                  <div key={ev.id} title={ev.title} 
+                                    onClick={(e) => { e.stopPropagation(); alert(`Event: ${ev.title}\nDate: ${ev.date}${fullTime ? `\nTime: ${fullTime}` : ''}`); }}
+                                    style={{ 
+                                      fontSize: 7.5, 
+                                      fontWeight: 700, 
+                                      color: ev.color, 
+                                      background: ev.color + "12", 
+                                      borderRadius: 4, 
+                                      padding: "2px 4px", 
+                                      marginTop: 2, 
+                                      lineHeight: 1.2,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      cursor: "pointer",
+                                      transition: "background 0.2s"
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = ev.color + "20"}
+                                    onMouseLeave={e => e.currentTarget.style.background = ev.color + "12"}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 2, filter: "brightness(0.75)", fontWeight: 800 }}>
+                                      <Lock size={6} /> {ev.title}
+                                    </div>
+                                    {fullTime && <div style={{ fontSize: 6.5, color: ev.color, marginTop: 1, filter: "brightness(0.9)", opacity: 0.85 }}>{fullTime}</div>}
+                                  </div>
+                                );
+                              })}
                             </>
                           )}
                         </div>
