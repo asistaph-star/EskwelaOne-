@@ -393,18 +393,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 </button>
                 <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
               </div>
-
-              {/* User Profile display */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100 }}>
-                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face" alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>Juan Miguel Santos</div>
-                  <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>Grade 10 - Pilot Section</div>
-                </div>
-                <ChevronDown size={12} color={C.t3} />
-              </div>
             </div>
 
           </div>

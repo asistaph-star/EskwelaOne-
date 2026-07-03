@@ -250,18 +250,6 @@ export default function App() {
                   </button>
                   <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
                 </div>
-
-                {/* User Profile display */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.m700 }}>
-                    {ROLE_USER.Teacher.initials}
-                  </div>
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ROLE_USER.Teacher.name}</div>
-                    <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>{ROLE_USER.Teacher.sub}</div>
-                  </div>
-                  <ChevronDown size={12} color={C.t3} />
-                </div>
               </div>
             </div>
           )}
