@@ -3,7 +3,9 @@ import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { P_WELFARE } from '../../shared/constants/seedData';
 import { Stamp } from '../../shared/components/Stamp';
+import { useAppContext } from '../../shared/AppContext';
 export function PWelfare() {
+  const { clinicReferrals, resolveClinicReferral, behaviorLogs } = useAppContext();
   return (
     <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
@@ -49,10 +51,10 @@ export function PWelfare() {
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
           <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <span style={{ fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Clinic Visits</span>
-            <span style={{ fontSize:12, fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:C.teal }}>6 today · 18 this week</span>
+            <span style={{ fontSize:12, fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:C.teal }}>{clinicReferrals.length} referrals</span>
           </div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><PTableHeader cols={["Student","Date","Reason","Returned"]} /></thead>
+            <thead><PTableHeader cols={["Student","Referred By","Date","Reason","Status","Action"]} /></thead>
             <tbody>
               {[["Reyes, Carlo J.","Jun 10 9:14","Headache","Yes"],["Mendoza, Lea G.","Jun 10 10:02","Stomach ache","No"],["Santos, Juan M.","Jun 9 2:30","Cuts (PE)","Yes"],["Torres, Bea A.","Jun 8 11:20","Fever","No"]].map(([n,d,r,ret],i)=>(
                 <tr key={n} style={{ borderBottom:i<3?`0.5px solid ${C.border}`:"none" }}>

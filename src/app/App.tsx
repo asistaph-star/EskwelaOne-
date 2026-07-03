@@ -51,14 +51,28 @@ export const UPCOMING = [
 ];
 
 export const STUDENTS_GR8 = [
-  { id: 1, lrn: "200001", surname: "Aguilar", first: "Liza Marie", gender: "F", avg: 88.4, att: "Good Standing", status: "Passed" },
-  { id: 2, lrn: "200002", surname: "Bondoc", first: "Ramon Jr.", gender: "M", avg: 74.2, att: "At Risk", status: "Failed" },
+  { id: 1, lrn: "200001", surname: "Aguilar", first: "Liza Marie", gender: "F", avg: 88.1, att: "Good Standing", status: "Passed" },
+  { id: 2, lrn: "200002", surname: "Bondoc", first: "Ramon Jr.", gender: "M", avg: 76.8, att: "At Risk", status: "At Risk" },
   { id: 3, lrn: "200003", surname: "Cruz", first: "Trisha Ann", gender: "F", avg: 93.1, att: "Good Standing", status: "Passed" },
-  { id: 4, lrn: "200004", surname: "Delos Reyes", first: "Daniel", gender: "M", avg: 81.7, att: "Good Standing", status: "Passed" },
-  { id: 5, lrn: "200005", surname: "Espino", first: "Hannah Grace", gender: "F", avg: 68.5, att: "Poor", status: "Failed" },
+  { id: 4, lrn: "200004", surname: "Delos Reyes", first: "Daniel", gender: "M", avg: 89.0, att: "Good Standing", status: "Passed" },
+  { id: 5, lrn: "200005", surname: "Espino", first: "Hannah Grace", gender: "F", avg: 68.5, att: "Poor", status: "Failing" },
   { id: 6, lrn: "200006", surname: "Ferrer", first: "Joshua", gender: "M", avg: 90.3, att: "Good Standing", status: "Passed" },
-  { id: 7, lrn: "200007", surname: "Gomez", first: "Angelica", gender: "F", avg: 77.8, att: "Good Standing", status: "Passed" },
-  { id: 8, lrn: "200008", surname: "Hernandez", first: "Mark Ryan", gender: "M", avg: 71.0, att: "At Risk", status: "Failed" },
+  { id: 7, lrn: "200007", surname: "Gomez", first: "Angelica", gender: "F", avg: 91.2, att: "Good Standing", status: "Passed" },
+  { id: 8, lrn: "200008", surname: "Hernandez", first: "Mark Ryan", gender: "M", avg: 71.0, att: "At Risk", status: "Failing" },
+];
+
+export const STUDENTS_GR9 = [
+  { id: 9, lrn: "200009", surname: "Mendoza", first: "Kevin", gender: "M", avg: 77.5, att: "At Risk", status: "At Risk" },
+  { id: 10, lrn: "200010", surname: "Tolentino", first: "Bianca", gender: "F", avg: 85.0, att: "Good Standing", status: "Passed" },
+  { id: 11, lrn: "200011", surname: "Bautista", first: "Paulo", gender: "M", avg: 69.2, att: "Poor", status: "Failing" },
+  { id: 12, lrn: "200012", surname: "Navarro", first: "Chloe", gender: "F", avg: 91.5, att: "Good Standing", status: "Passed" },
+];
+
+export const STUDENTS_GR10 = [
+  { id: 13, lrn: "200013", surname: "Garcia", first: "Ana Kristine", gender: "F", avg: 95.2, att: "Good Standing", status: "Passed" },
+  { id: 14, lrn: "200014", surname: "Santos", first: "Juan Miguel", gender: "M", avg: 89.5, att: "Good Standing", status: "Passed" },
+  { id: 15, lrn: "200015", surname: "Ocampo", first: "Renz Adrian", gender: "M", avg: 75.2, att: "At Risk", status: "At Risk" },
+  { id: 16, lrn: "200016", surname: "Rivera", first: "Miguel", gender: "M", avg: 68.0, att: "Poor", status: "Failing" },
 ];
 
 export const GRADEBOOK = [
@@ -70,6 +84,20 @@ export const GRADEBOOK = [
   { name: "Ferrer, Joshua", ww: [90, 92, 88, 94, 91], pt: [92, 95, 90], qa: 90 },
   { name: "Gomez, Angelica", ww: [76, 78, 75, 80, 78], pt: [80, 82, 78], qa: 78 },
   { name: "Hernandez, Mark Ryan", ww: [68, 70, 65, 72, 70], pt: [72, 74, 68], qa: 70 },
+];
+
+export const GRADEBOOK_GR9 = [
+  { name: "Mendoza, Kevin", ww: [70, 72, 68, 74, 73], pt: [75, 73, 71], qa: 72 },
+  { name: "Tolentino, Bianca", ww: [82, 85, 80, 86, 84], pt: [85, 88, 83], qa: 85 },
+  { name: "Bautista, Paulo", ww: [62, 65, 58, 70, 64], pt: [68, 70, 60], qa: 65 },
+  { name: "Navarro, Chloe", ww: [90, 92, 88, 94, 91], pt: [92, 95, 90], qa: 90 },
+];
+
+export const GRADEBOOK_GR10 = [
+  { name: "Garcia, Ana Kristine", ww: [94, 96, 93, 97, 95], pt: [97, 98, 95], qa: 96 },
+  { name: "Santos, Juan Miguel", ww: [88, 90, 86, 92, 89], pt: [91, 94, 88], qa: 90 },
+  { name: "Ocampo, Renz Adrian", ww: [70, 72, 68, 74, 73], pt: [75, 73, 71], qa: 72 },
+  { name: "Rivera, Miguel", ww: [62, 65, 58, 70, 64], pt: [68, 70, 60], qa: 65 },
 ];
 
 // 2. Import Modular Screen Components
@@ -89,6 +117,7 @@ import { AIToolsScreen } from "./teacher/ai-tools/AIToolsScreen";
 import { ProDevScreen } from "./teacher/pro-dev/ProDevScreen";
 import { CalendarScreen } from "./teacher/calendar/CalendarScreen";
 import { TemplateHubScreen } from "./teacher/templates/TemplateHubScreen";
+import { TInboxScreen } from "./teacher/messages/TInboxScreen";
 import { StubScreen } from "./shared/components/StubScreen";
 import { StudentDetailOverlay } from "./shared/components/StudentDetailOverlay";
 import { NotificationDropdown } from "./shared/components/NotificationDropdown";
@@ -119,6 +148,7 @@ export default function App() {
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
     calendar: { title: "Calendar & Schedule" },
     templates: { title: "Forms & Records", sub: "School Document Templates" },
+    messages: { title: "Teacher Inbox", sub: "Direct communications" },
     tutorials: { title: "System Tutorials", sub: "Self-paced training & user guides" },
     tools: { title: "System Utilities", sub: "Calculators & formatting tools" },
     help: { title: "Help & Feedback", sub: "Contact IT operations support" },
@@ -268,6 +298,7 @@ export default function App() {
           {screen === "pro-dev" && <ProDevScreen />}
           {screen === "calendar" && <CalendarScreen />}
           {screen === "templates" && <TemplateHubScreen />}
+          {screen === "messages" && <TInboxScreen />}
           {(screen === "tutorials" || screen === "tools" || screen === "help" || screen === "settings") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />
           )}
@@ -276,7 +307,7 @@ export default function App() {
 
       {/* Slide-out Student Profile / Grades Drawer */}
       {gradeCard && (
-        <StudentDetailOverlay student={{ id: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.id || 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.avg || 85, status: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.status || 'Passed', lrn: '100001', grade: gradeCard.grade, section: gradeCard.section, adviser: 'Ana R. Soriano', gender: 'male' }} onClose={() => setGradeCard(null)} />
+        <StudentDetailOverlay student={{ id: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.id || 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.avg || 85, status: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.status || 'Passed', lrn: '100001', grade: gradeCard.grade, section: gradeCard.section, adviser: 'Ana R. Soriano', gender: 'male' }} onClose={() => setGradeCard(null)} />
       )}
     </div>
   );

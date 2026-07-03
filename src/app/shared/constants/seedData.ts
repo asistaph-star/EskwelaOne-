@@ -3,13 +3,26 @@ import { QKey, QData } from '../types';
 export const SECTION_GRADES: Record<string, {id:number,surname:string,first:string,subject:string,avg:number,status:string}[]> = {
   "Rizal (Gr.8)": [
     {id:1, surname:"Aguilar",      first:"Liza Marie",   subject:"Mathematics 8",  avg:88.1, status:"Passed"},
-    {id:5, surname:"Espino",       first:"Hannah Grace",  subject:"Mathematics 8",  avg:68.5, status:"Failing"},
-    {id:2, surname:"Bondoc",       first:"Ramon Jr.",     subject:"Mathematics 8",  avg:73.8, status:"At Risk"},
-    {id:8, surname:"Hernandez",    first:"Mark Ryan",     subject:"Mathematics 8",  avg:71.0, status:"Failing"},
-    {id:5, surname:"Espino",       first:"Hannah Grace",  subject:"Science 8",      avg:72.1, status:"At Risk"},
-    {id:3, surname:"Cruz",         first:"Trisha Ann",    subject:"Mathematics 8",  avg:93.1, status:"Passed"},
-    {id:6, surname:"Ferrer",       first:"Joshua",        subject:"Mathematics 8",  avg:90.3, status:"Passed"},
+    {id:2, surname:"Bondoc",       first:"Ramon Jr.",    subject:"Mathematics 8",  avg:76.8, status:"At Risk"},
+    {id:3, surname:"Cruz",         first:"Trisha Ann",   subject:"Mathematics 8",  avg:93.1, status:"Passed"},
+    {id:4, surname:"Delos Reyes",  first:"Daniel",       subject:"Mathematics 8",  avg:89.0, status:"Passed"},
+    {id:5, surname:"Espino",       first:"Hannah Grace", subject:"Mathematics 8",  avg:68.5, status:"Failing"},
+    {id:6, surname:"Ferrer",       first:"Joshua",       subject:"Mathematics 8",  avg:90.3, status:"Passed"},
+    {id:7, surname:"Gomez",        first:"Angelica",     subject:"Mathematics 8",  avg:91.2, status:"Passed"},
+    {id:8, surname:"Hernandez",    first:"Mark Ryan",    subject:"Mathematics 8",  avg:71.0, status:"Failing"},
   ],
+  "Einstein (Gr.9)": [
+    {id:9,  surname:"Mendoza",      first:"Kevin",        subject:"Science 9",      avg:77.5, status:"At Risk"},
+    {id:10, surname:"Tolentino",    first:"Bianca",       subject:"Science 9",      avg:85.0, status:"Passed"},
+    {id:11, surname:"Bautista",     first:"Paulo",        subject:"Science 9",      avg:69.2, status:"Failing"},
+    {id:12, surname:"Navarro",      first:"Chloe",        subject:"Science 9",      avg:91.5, status:"Passed"},
+  ],
+  "Pilot (Gr.10)": [
+    {id:13, surname:"Garcia",       first:"Ana Kristine", subject:"Filipino 10",    avg:95.2, status:"Passed"},
+    {id:14, surname:"Santos",       first:"Juan Miguel",  subject:"Filipino 10",    avg:89.5, status:"Passed"},
+    {id:15, surname:"Ocampo",       first:"Renz Adrian",  subject:"Filipino 10",    avg:75.2, status:"At Risk"},
+    {id:16, surname:"Rivera",       first:"Miguel",       subject:"Filipino 10",    avg:68.0, status:"Failing"},
+  ]
 };
 
 export const Q_SEED: Record<QKey, QData> = {

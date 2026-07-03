@@ -58,7 +58,7 @@ export function TemplateHubScreen() {
         <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
           <button onClick={()=>setViewing(null)}
             style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:4, cursor:"pointer" }}>
-            <ChevronLeft size={13}/> Back to Template Hub
+            <ChevronLeft size={13}/> Back to Forms and Records
           </button>
           <div style={{ width:1, height:22, background:C.borderMed }} />
           <div style={{ flex:1 }}>
@@ -94,7 +94,7 @@ export function TemplateHubScreen() {
       <div style={{ maxWidth:700, margin:"0 auto", padding:40 }}>
         {/* Header */}
         <div style={{ marginBottom:32 }}>
-          <div style={{ fontSize:20, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:6 }}>Template Hub</div>
+          <div style={{ fontSize:20, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:6 }}>Forms and Records</div>
           <div style={{ fontSize:13, color:C.t3 }}>Select a document template to view the official DepEd form for a student.</div>
         </div>
 

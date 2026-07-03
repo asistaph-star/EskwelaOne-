@@ -3,13 +3,14 @@ import { TScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Calendar, Users, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings
+  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare
 } from 'lucide-react';
 
 const T_NAV_GROUPS = [
   { category: "Overview", items: [
     { id:"dashboard",          label:"Dashboard",         icon:LayoutDashboard },
     { id:"calendar",           label:"Calendar",          icon:Calendar },
+    { id:"messages",           label:"Messages",          icon:MessageSquare },
   ]},
   { category: "Teaching", items: [
     { id:"classroom",          label:"Classroom Hub",     icon:Users },
@@ -18,11 +19,11 @@ const T_NAV_GROUPS = [
   ]},
   { category: "Records", items: [
     { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
-    { id:"templates",          label:"Template Hub",      icon:BookMarked },
+    { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
   { category: "Tools & Growth", items: [
     { id:"tools",              label:"Tools",             icon:Wrench },
-    { id:"ai-tools",           label:"AI Quick Tools",    icon:Sparkles },
+    { id:"ai-tools",           label:"AI Insights & Reports",    icon:Sparkles },
     { id:"pro-dev",            label:"Prof. Development", icon:GraduationCap },
   ]},
 ];

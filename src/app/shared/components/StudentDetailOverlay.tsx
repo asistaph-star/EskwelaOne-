@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { C } from '../constants/tokens';
 import { X, BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight } from 'lucide-react';
-import { StudentReportCard } from '../../student/components/StudentReportCard';
+import { StudentReportCard, getDynamicGrades } from '../../student/components/StudentReportCard';
 import { Stamp } from './Stamp';
-import { RC_SUBJECTS } from '../constants/seedData';
+
 export function StudentDetailOverlay({ student, onClose }: { student:{id:number,surname:string,first:string,avg:number,status:string}, onClose:()=>void }) {
   const [showCard, setShowCard] = useState(false);
-  const atRisk = student.status==="At Risk";
-  const subjectGrades = RC_SUBJECTS.map(sg=>({
+  const atRisk = student.status==="At Risk" || student.status==="Failing";
+  
+  const dynamicSubs = getDynamicGrades(student.surname, student.avg);
+  const subjectGrades = dynamicSubs.map(sg=>({
     name:sg.short, full:sg.name, avg: Math.round((sg.q1+sg.q2+sg.q3)/3*10)/10,
   }));
 
@@ -28,7 +30,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
                 <button onClick={onClose} style={{ width:26, height:26, borderRadius:3, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={14}/></button>
               </div>
             </div>
-            <StudentReportCard student={{ surname:student.surname, first:student.first, lrn:`20000${student.id}`, grade:8, section:"Rizal", adviser:"Ana R. Soriano", gender:"male" }} />
+            <StudentReportCard student={{ surname:student.surname, first:student.first, lrn:`20000${student.id}`, grade:8, section:"Rizal", adviser:"Ana R. Soriano", gender:"male", avg:student.avg }} />
           </>
         ) : (
           <>
@@ -91,5 +93,3 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
     </div>
   );
 }
-
-/* ─── SCREEN 3 — Classroom Hub ──────────────────────────────── */

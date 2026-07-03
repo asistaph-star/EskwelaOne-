@@ -7,7 +7,9 @@ import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { ATT_DATES, ATT_STATUS_SEED, QR_LOG } from '../../shared/constants/seedData';
 import { STUDENTS_GR8 } from '../../App';
+import { useAppContext } from '../../shared/AppContext';
 export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
+  const { gateAttendance } = useAppContext();
   const [sub, setSub] = useState<AttSub>("daily");
 
   /* per-student per-date status — starts from seed */
@@ -175,7 +177,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
       {/* ══════════════════════════════════════════ 2. QR ATTENDANCE RECORDS */}
       {sub==="qr" && (
         <DocPanel title="QR Attendance Records — June 10, 2025" icon={QrCode}
-          action={<span style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>{QR_LOG.length} scans today</span>}>
+          action={<span style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>{gateAttendance.length} scans today</span>}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background:C.paper, border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
               <Search size={12} color={C.t3} />
@@ -216,7 +218,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
             </tbody>
           </table>
           <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:11, color:C.t3 }}>{QR_LOG.length} scan entries · June 10, 2025</span>
+            <span style={{ fontSize:11, color:C.t3 }}>{gateAttendance.length} scan entries today</span>
             <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"5px 12px", cursor:"pointer" }}>
               <Download size={12}/> Export log
             </button>

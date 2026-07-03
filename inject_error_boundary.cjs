@@ -1,7 +1,10 @@
-  import { createRoot } from "react-dom/client";
-  import App from "./app/App.tsx";
-  import { AppProvider } from "./app/shared/AppContext.tsx";
+const fs = require('fs');
+const path = require('path');
 
+const mainPath = path.join(__dirname, 'src', 'main.tsx');
+let mainContent = fs.readFileSync(mainPath, 'utf8');
+
+const errorBoundaryCode = `
 import React, { Component, ErrorInfo, ReactNode } from "react";
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null, info: ErrorInfo | null}> {
   constructor(props: {children: ReactNode}) {
@@ -27,13 +30,26 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
     return this.props.children;
   }
 }
+`;
 
-  import "./styles/index.css";
-
-  createRoot(document.getElementById("root")!).render(
-    <ErrorBoundary>
-    <AppProvider>
-      <App />
-    </AppProvider>
-    </ErrorBoundary>
+if (!mainContent.includes('ErrorBoundary')) {
+  mainContent = mainContent.replace(
+    'import { AppProvider } from "./app/shared/AppContext.tsx";',
+    'import { AppProvider } from "./app/shared/AppContext.tsx";\n' + errorBoundaryCode
   );
+
+  mainContent = mainContent.replace(
+    '<AppProvider>',
+    '<ErrorBoundary>\n    <AppProvider>'
+  );
+
+  mainContent = mainContent.replace(
+    '</AppProvider>',
+    '</AppProvider>\n    </ErrorBoundary>'
+  );
+
+  fs.writeFileSync(mainPath, mainContent, 'utf8');
+  console.log('Injected ErrorBoundary!');
+} else {
+  console.log('ErrorBoundary already exists.');
+}

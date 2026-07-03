@@ -13,7 +13,7 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
   );
 }
 
-const RC_SUBJECTS = [
+export const RC_SUBJECTS = [
   { name:"Filipino",                      short:"Filipino",  q1:85, q2:88, q3:86 },
   { name:"English",                       short:"English",   q1:88, q2:90, q3:87 },
   { name:"Mathematics",                   short:"Math",      q1:74, q2:78, q3:71 },
@@ -24,20 +24,37 @@ const RC_SUBJECTS = [
   { name:"Edukasyon sa Pagpapakatao",     short:"EsP",       q1:95, q2:96, q3:94 },
 ];
 
-interface RCStudent {
+export interface RCStudent {
   surname: string; first: string; lrn: string;
   grade: number; section: string; adviser: string;
   gender: string;
+  avg?: number;
 }
 
-/* ─── Student Report Card (Form 138 style) ───────────────────── */
-export function StudentReportCard({ student, compact=false }: { student: RCStudent, compact?:boolean }) {
-  const subs = RC_SUBJECTS;
+export function getDynamicGrades(surname: string, targetAvg: number) {
+  return RC_SUBJECTS.map((s, i) => {
+    const diff = (s.short === "Math" || s.short === "Science") ? -2 : (s.short === "MAPEH" || s.short === "EsP") ? +2 : 0;
+    const rand = (surname.charCodeAt(0) + i * 7) % 7 - 3;
+    const q1 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + rand)));
+    const q2 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + (rand * -1) % 4)));
+    const q3 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + (rand + 1) % 4)));
+    return { ...s, q1, q2, q3 };
+  });
+}
+
+export function StudentReportCard({ student, statuses, compact=false }: { student: RCStudent, statuses?: {q1: string, q2: string, q3: string}, compact?:boolean }) {
+  const subs = student.avg ? getDynamicGrades(student.surname, student.avg) : RC_SUBJECTS;
   function fa(sg:{q1:number,q2:number,q3:number}) { return Math.round((sg.q1+sg.q2+sg.q3)/3*10)/10; }
 
+  const q1Pub = statuses ? statuses.q1 === "Published" : true;
+  const q2Pub = statuses ? statuses.q2 === "Published" : true;
+  const q3Pub = statuses ? statuses.q3 === "Published" : true;
+
   const genAvg = Math.round(subs.reduce((s,sg)=>s+fa(sg),0)/subs.length*10)/10;
-  const allPassed = subs.every(sg=>fa(sg)>=75);
-  /* no trend chart — spec explicitly excludes it */
+  const failedCount = subs.filter(sg=>fa(sg)<75).length;
+  const finalRemark = genAvg >= 75 ? (failedCount === 0 ? "PROMOTED" : "CONDITIONAL") : "RETAINED";
+  const finalColor = genAvg >= 75 ? (failedCount === 0 ? C.m900 : "#fff") : "#fff";
+  const finalBg = genAvg >= 75 ? (failedCount === 0 ? C.gold : C.amber) : C.red;
 
   return (
     <div style={{ background:"#fff", fontFamily:"'Inter',sans-serif" }}>
@@ -108,20 +125,24 @@ export function StudentReportCard({ student, compact=false }: { student: RCStude
                     <td style={{ padding:"9px 16px" }}>
                       <div style={{ fontSize:12, fontWeight:600, color:C.t1 }}>{sg.name}</div>
                     </td>
-                    {[sg.q1,sg.q2,sg.q3].map((g,j)=>(
+                    {[
+                      { val: sg.q1, pub: q1Pub },
+                      { val: sg.q2, pub: q2Pub },
+                      { val: sg.q3, pub: q3Pub }
+                    ].map((item,j)=>(
                       <td key={j} style={{ textAlign:"center", padding:"9px 4px", borderLeft:`0.5px solid ${C.border}` }}>
-                        <span style={gradeColor(g)}>{g}</span>
+                        <span style={item.pub ? gradeColor(item.val) : {color: C.t3}}>{item.pub ? item.val : "—"}</span>
                       </td>
                     ))}
                     {/* Final average — slightly emphasized */}
                     <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`1px solid ${C.borderMed}`, background:passed?"#fff":C.redBg }}>
                       <span style={{ fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:avg<75?C.red:avg>=90?C.green:C.t1 }}>
-                        {avg.toFixed(1)}
+                        {(q1Pub && q2Pub && q3Pub) ? avg.toFixed(1) : "—"}
                       </span>
                     </td>
                     {/* Remarks stamp */}
                     <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`0.5px solid ${C.border}` }}>
-                      <Stamp label={passed?"PASSED":"FAILED"} color={passed?"#fff":C.red} bg={passed?C.green:C.redBg} />
+                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={passed?"PASSED":"FAILED"} color={passed?"#fff":C.red} bg={passed?C.green:C.redBg} /> : <span style={{color: C.t3, fontSize: 10}}>—</span>}
                     </td>
                   </tr>
                 );
@@ -133,12 +154,12 @@ export function StudentReportCard({ student, compact=false }: { student: RCStude
                   <span style={{ fontSize:12, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif", textTransform:"uppercase", letterSpacing:"0.06em" }}>General Average</span>
                 </td>
                 {[
-                  Math.round(subs.reduce((s,sg)=>s+sg.q1,0)/subs.length*10)/10,
-                  Math.round(subs.reduce((s,sg)=>s+sg.q2,0)/subs.length*10)/10,
-                  Math.round(subs.reduce((s,sg)=>s+sg.q3,0)/subs.length*10)/10,
+                  q1Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q1,0)/subs.length*10)/10).toFixed(1) : "—",
+                  q2Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q2,0)/subs.length*10)/10).toFixed(1) : "—",
+                  q3Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q3,0)/subs.length*10)/10).toFixed(1) : "—",
                 ].map((avg,j)=>(
                   <td key={j} style={{ textAlign:"center", padding:"11px 4px", borderLeft:`0.5px solid rgba(255,255,255,0.15)` }}>
-                    <span style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.7)", fontFamily:"'JetBrains Mono',monospace" }}>{avg.toFixed(1)}</span>
+                    <span style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.7)", fontFamily:"'JetBrains Mono',monospace" }}>{avg}</span>
                   </td>
                 ))}
                 {/* The big General Average stamp */}
@@ -146,11 +167,11 @@ export function StudentReportCard({ student, compact=false }: { student: RCStude
                   <div style={{ display:"flex", alignItems:"center", gap:10, justifyContent:"center" }}>
                     <div style={{ textAlign:"center" }}>
                       <div style={{ fontSize:9, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:2 }}>Final</div>
-                      <div style={{ fontSize:26, fontWeight:800, color:allPassed?C.gold:"#f87171", fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{genAvg.toFixed(1)}</div>
+                      <div style={{ fontSize:26, fontWeight:800, color:genAvg>=75?C.gold:"#f87171", fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{(q1Pub && q2Pub && q3Pub) ? genAvg.toFixed(1) : "—"}</div>
                     </div>
                     <div style={{ width:1, height:32, background:"rgba(255,255,255,0.15)" }}/>
                     <div>
-                      <Stamp label={allPassed?"PROMOTED":"RETAINED"} color={allPassed?C.m900:"#fff"} bg={allPassed?C.gold:C.red} />
+                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={finalRemark} color={finalColor} bg={finalBg} /> : <span style={{color: "rgba(255,255,255,0.3)", fontSize: 10}}>—</span>}
                     </div>
                   </div>
                 </td>
@@ -180,5 +201,3 @@ export function StudentReportCard({ student, compact=false }: { student: RCStude
     </div>
   );
 }
-
-/* ─── Student Portal ────────────────────────────────────────── */

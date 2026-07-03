@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { P_GATE_LOG } from '../../shared/constants/seedData';
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { P_TEACHERS, P_WELFARE } from '../../shared/constants/seedData';
+import { useAppContext } from '../../shared/AppContext';
 import { Stamp } from '../../shared/components/Stamp';
 import { Users, LogOut, Clock } from 'lucide-react';
 
 export function PMonitoring() {
+  const [chartView, setChartView] = useState("Weekly");
+  const { gateAttendance } = useAppContext();
   return (
     <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
       {/* Redesigned Gate Cards Grid */}
@@ -56,6 +59,81 @@ export function PMonitoring() {
         })}
       </div>
 
+      {/* Comprehensive Attendance Analytics */}
+      <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "16px 20px", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Attendance Analytics</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["Daily", "Weekly", "Monthly", "By Grade", "By Section"].map(v => (
+              <button key={v} onClick={() => setChartView(v)} style={{ 
+                fontSize: 10, fontWeight: chartView === v ? 700 : 500, 
+                color: chartView === v ? "#fff" : C.t2, 
+                background: chartView === v ? C.m700 : "#fff", 
+                border: chartView === v ? `1px solid ${C.m700}` : `1px solid ${C.borderMed}`, 
+                borderRadius: 4, padding: "4px 10px", cursor: "pointer" 
+              }}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ height: 200, width: "100%" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {chartView === "Weekly" ? (
+              <LineChart data={[
+                { day: "Mon", rate: 92.1 }, { day: "Tue", rate: 93.5 }, { day: "Wed", rate: 91.8 }, { day: "Thu", rate: 92.9 }, { day: "Fri", rate: 94.2 }
+              ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />
+                <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} tickFormatter={val => `${val}%`} />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Attendance Rate"]} />
+                <Line type="monotone" dataKey="rate" stroke={C.green} strokeWidth={3} dot={{ r: 4, fill: C.green, strokeWidth: 2, stroke: "#fff" }} />
+              </LineChart>
+            ) : chartView === "Monthly" ? (
+              <LineChart data={[
+                { month: "Aug", rate: 91.2 }, { month: "Sep", rate: 94.1 }, { month: "Oct", rate: 93.5 }, { month: "Nov", rate: 95.0 }, { month: "Dec", rate: 96.2 }
+              ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />
+                <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} tickFormatter={val => `${val}%`} />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Attendance Rate"]} />
+                <Line type="monotone" dataKey="rate" stroke={C.blue} strokeWidth={3} dot={{ r: 4, fill: C.blue, strokeWidth: 2, stroke: "#fff" }} />
+              </LineChart>
+            ) : chartView === "Daily" ? (
+              <LineChart data={[
+                { hour: "6:00 AM", rate: 20.1 }, { hour: "6:30 AM", rate: 65.4 }, { hour: "7:00 AM", rate: 88.2 }, { hour: "7:30 AM", rate: 94.2 }, { hour: "8:00 AM", rate: 94.2 }
+              ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="hour" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />
+                <YAxis domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} tickFormatter={val => `${val}%`} />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Arrival % of Population"]} />
+                <Line type="monotone" dataKey="rate" stroke={C.teal} strokeWidth={3} dot={{ r: 4, fill: C.teal, strokeWidth: 2, stroke: "#fff" }} />
+              </LineChart>
+            ) : chartView === "By Grade" ? (
+              <BarChart data={[
+                { grade: "Grade 7", rate: 92.5 }, { grade: "Grade 8", rate: 89.4 }, { grade: "Grade 9", rate: 91.1 }, { grade: "Grade 10", rate: 95.8 }
+              ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="grade" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />
+                <YAxis domain={[80, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} tickFormatter={val => `${val}%`} />
+                <Tooltip cursor={{ fill: C.m50 }} contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Attendance Rate"]} />
+                <Bar dataKey="rate" fill={C.m700} radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            ) : (
+              <BarChart data={[
+                { section: "10-Pilot", rate: 98.5 }, { section: "10-Einstein", rate: 96.1 }, { section: "9-Newton", rate: 89.2 }, { section: "8-Rizal", rate: 92.4 }, { section: "7-Makulay", rate: 93.1 }
+              ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="section" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />
+                <YAxis domain={[80, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} tickFormatter={val => `${val}%`} />
+                <Tooltip cursor={{ fill: C.m50 }} contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Attendance Rate"]} />
+                <Bar dataKey="rate" fill={C.gold} radius={[4, 4, 0, 0]} barSize={30} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
         {/* Gate log */}
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
@@ -66,17 +144,32 @@ export function PMonitoring() {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><PTableHeader cols={["Student","Grade & Section","Time","Direction"]} /></thead>
             <tbody>
-              {P_GATE_LOG.map((g,i)=>(
+              <tr style={{ borderBottom:`0.5px solid ${C.border}`, background: C.goldLight+"30" }}>
+                <td style={{ padding:"9px 14px", fontSize:12, fontWeight:700, color:C.m700 }}>Santos, Maria (Teacher)</td>
+                <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Faculty</td>
+                <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>8:03 AM</td>
+                <td style={{ padding:"9px 14px" }}>
+                  <Stamp label="In" color={C.green} bg={C.greenBg} />
+                </td>
+              </tr>
+              <tr style={{ borderBottom:`0.5px solid ${C.border}`, background: C.goldLight+"30" }}>
+                <td style={{ padding:"9px 14px", fontSize:12, fontWeight:700, color:C.m700 }}>Dela Cruz, Anna (Teacher)</td>
+                <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Faculty</td>
+                <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>8:55 AM</td>
+                <td style={{ padding:"9px 14px" }}>
+                  <Stamp label="Out" color={C.blue} bg={C.blueBg} />
+                </td>
+              </tr>
+              {gateAttendance.map((g,i)=>(
                 <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}` }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
-                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{g.name}</td>
-                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{g.section}</td>
+                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{g.studentName}</td>
+                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Grade 10 - Rizal</td>
                   <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>{g.time}</td>
                   <td style={{ padding:"9px 14px" }}>
                     <div style={{ display:"flex", gap:5 }}>
-                      <Stamp label={g.dir} color={g.dir==="In"?C.green:C.blue} bg={g.dir==="In"?C.greenBg:C.blueBg} />
-                      {(g as any).late && <Stamp label="LATE" color={C.amber} bg={C.amberBg} />}
+                      <Stamp label="In" color={C.green} bg={C.greenBg} />
                     </div>
                   </td>
                 </tr>
@@ -92,12 +185,12 @@ export function PMonitoring() {
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead><PTableHeader cols={["Student","Section","Time","Min Late"]} /></thead>
               <tbody>
-                {P_GATE_LOG.filter((g:any)=>g.late).map((g,i)=>(
+                {gateAttendance.filter(g => g.time > "7:30 AM").map((g,i)=>(
                   <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}` }}>
-                    <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.amber }}>{g.name}</td>
-                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{g.section}</td>
+                    <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.amber }}>{g.studentName}</td>
+                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Grade 10 - Rizal</td>
                     <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>{g.time}</td>
-                    <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:C.amber }}>+{Math.floor(Math.random()*10+5)}m</td>
+                    <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", fontWeight:700, color:C.amber }}>+10m</td>
                   </tr>
                 ))}
               </tbody>

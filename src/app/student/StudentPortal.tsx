@@ -7,12 +7,13 @@ import {
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles
 } from 'lucide-react';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS } from '../shared/data/calendarData';
+import { useAppContext } from '../shared/AppContext';
 
 const STUDENT_NAV_GROUPS = [
   {
@@ -71,6 +72,11 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
   }
 
+  const { gradesStatus, behaviorLogs, announcements, messages, addMessage, excuseLetters, addExcuseLetter } = useAppContext();
+  const q1Status = gradesStatus["Gr10Rizal-Q1"] || "Draft";
+  const q2Status = gradesStatus["Gr10Rizal-Q2"] || "Draft";
+  const q3Status = gradesStatus["Gr10Rizal-Q3"] || "Draft";
+
   const [tab, setTab] = useState<
     "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar" | "announcements" | "messages"
   >("dashboard");
@@ -97,15 +103,13 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   // Excuse Letter States
   const [excuseText, setExcuseText] = useState("");
   const [excuseFile, setExcuseFile] = useState<string|null>(null);
-  const [excuseLog, setExcuseLog] = useState([
-    { date: "June 7, 2025", reason: "High Fever / Flu", file: "medical_certificate.pdf", status: "Approved" }
-  ]);
-
-  // Settings States
-  const [oldPass, setOldPass] = useState("");
+  const [notes, setNotes] = useState("");
   const [newPass, setNewPass] = useState("");
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [activeConvId, setActiveConvId] = useState("t-ana");
+  const [aiBuddyOpen, setAiBuddyOpen] = useState(false);
 
   // Core Data
   const SUBS = [
@@ -149,13 +153,18 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
       alert("Please provide a reason.");
       return;
     }
-    const newLog = {
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      reason: excuseText,
-      file: excuseFile || "written_excuse.pdf",
-      status: "Pending Review"
-    };
-    setExcuseLog([newLog, ...excuseLog]);
+    
+    addExcuseLetter({
+      id: "exc-" + Date.now(),
+      studentName: "Juan Dela Cruz",
+      section: "Grade 10 - Rizal",
+      dates: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      filename: excuseFile || "written_excuse.pdf",
+      submittedDate: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      status: "Pending Review",
+      reason: excuseText
+    });
+    
     setExcuseText("");
     setExcuseFile(null);
     alert("Excuse letter submitted to adviser!");
@@ -408,7 +417,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {/* Inner Content Area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 100px 28px" }}>
 
           {/* 1. MOCKUP STUDENT DASHBOARD */}
           {tab === "dashboard" && (
@@ -430,6 +439,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Juan Miguel Santos</div>
                     <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2, marginBottom: 6 }}>Tuesday, June 10, 2025 &middot; Week 3, Q1</div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
+                      <span style={{ background: "rgba(255,255,255,0.1)", color: "#fff", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(255,255,255,0.2)" }}>
+                        ID: 1092-4819
+                      </span>
                       <span style={{ background: "rgba(234,179,8,0.15)", color: "#FDE047", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(234,179,8,0.3)" }}>
                         Grade 10 - Pilot
                       </span>
@@ -457,7 +469,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 ].map((kpi, idx) => {
                   const Icon = kpi.icon;
                   return (
-                    <div key={idx} style={{ 
+                    <div key={idx} className="hover-zoom" style={{ 
                       background: "#fff", 
                       border: `1.5px solid ${C.borderMed}`, 
                       borderRadius: 8, 
@@ -489,7 +501,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   {/* Row 1: Schedule and Assignments side-by-side */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                     {/* 1. Today's Schedule */}
-                    <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div className="hover-zoom" style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <Calendar size={16} color={C.m700} />
@@ -571,7 +583,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* 2. Upcoming Assignments */}
-                    <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div className="hover-zoom" style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <ClipboardList size={16} color={C.m700} />
@@ -632,7 +644,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
 
                   {/* Row 2: Announcements spans the full width of the left section */}
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="hover-zoom" style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Megaphone size={16} color={C.m700} />
@@ -665,7 +677,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
                   
                   {/* 3. Grades Summary */}
-                  <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="hover-zoom" style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Award size={16} color={C.m700} />
@@ -702,7 +714,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   </div>
 
                   {/* 5. Academic Calendar Widget */}
-                  <div style={{ flex: 1, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div className="hover-zoom" style={{ flex: 1, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Calendar size={16} color={C.m700} />
@@ -770,11 +782,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-                {[
-                  { title: "Quarter 4 Progress Check", desc: "Please be informed that the Q4 Progress Check will be on June 14, 2025. All student requirements must be submitted to their respective teachers.", date: "June 8, 2025 · Principal's Office", category: "Academic" },
-                  { title: "Library Orientation Schedule", desc: "All Grade 10 students are required to attend the library orientation this June 12. Please proceed to the library media center during your designated class hours.", date: "June 7, 2025 · Library Department", category: "General" },
-                  { title: "School Foundation Day Celebrations", desc: "Our 45th School Foundation Day celebration will take place on June 20, 2025. There will be no classes, but attendance is required for cultural activities and sports matches.", date: "June 5, 2025 · Student Council", category: "Events" }
-                ].map((ann, idx) => (
+                {announcements.map((ann, idx) => (
                   <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "16px 20px", border: `1px solid ${C.borderMed}`, borderRadius: 6 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 16, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <Megaphone size={14} color={C.m700} />
@@ -782,13 +790,16 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{ann.title}</div>
-                        <span style={{ fontSize: 9.5, padding: "2px 8px", background: ann.category === "Academic" ? "#fff2f2" : ann.category === "Events" ? "#fffbeb" : "#f0fdf4", color: ann.category === "Academic" ? C.red : ann.category === "Events" ? C.gold : C.green, borderRadius: 10, fontWeight: 700 }}>{ann.category}</span>
+                        <span style={{ fontSize: 9.5, padding: "2px 8px", background: "#f0fdf4", color: C.green, borderRadius: 10, fontWeight: 700 }}>Announcement</span>
                       </div>
-                      <p style={{ fontSize: 11.5, color: C.t2, margin: "6px 0", lineHeight: 1.5 }}>{ann.desc}</p>
-                      <span style={{ fontSize: 9.5, color: C.t3 }}>{ann.date}</span>
+                      <p style={{ fontSize: 11.5, color: C.t2, margin: "6px 0", lineHeight: 1.5 }}>{ann.body}</p>
+                      <span style={{ fontSize: 9.5, color: C.t3 }}>{ann.timestamp} &middot; {ann.author}</span>
                     </div>
                   </div>
                 ))}
+                {announcements.length === 0 && (
+                  <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>No new announcements.</div>
+                )}
               </div>
             </div>
           )}
@@ -812,52 +823,71 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     <input type="text" placeholder="Search chats..." style={{ background: "none", border: "none", fontSize: 11.5, outline: "none", width: "100%" }} />
                   </div>
                   <div style={{ flex: 1, overflowY: "auto" }}>
-                    {[
-                      { name: "Ms. Ana R. Soriano", role: "Class Adviser / Science", msg: "Please submit your laboratory report by 5PM.", time: "9:42 AM", unread: true },
-                      { name: "Mr. Carlo D. Reyes", role: "Mathematics Teacher", msg: "The problem set #8 is now uploaded.", time: "Yesterday", unread: false },
-                      { name: "Ms. Liza M. Bautista", role: "English Teacher", msg: "Excellent work on your final essay proposal!", time: "June 6", unread: false }
-                    ].map((chat, idx) => (
-                      <div key={idx} style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: idx === 0 ? "rgba(139,30,30,0.03)" : "#fff", display: "flex", gap: 10, alignItems: "center" }}>
-                        <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: C.m700, fontSize: 10.5 }}>{chat.name.charAt(4)}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{chat.name}</div>
-                            <span style={{ fontSize: 8.5, color: C.t3 }}>{chat.time}</span>
+                    {Array.from(new Set(messages.map(m => m.senderId === "s-juan" ? m.receiverId : m.senderId))).map((cid) => {
+                      const lastMsg = messages.filter(m => m.senderId === cid || m.receiverId === cid).pop();
+                      const name = lastMsg?.senderId === cid ? lastMsg.senderName : lastMsg?.receiverName;
+                      const isUnread = lastMsg && !lastMsg.read && lastMsg.receiverId === "s-juan";
+                      return (
+                        <div key={cid} onClick={() => setActiveConvId(cid)} style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: activeConvId === cid ? "rgba(139,30,30,0.03)" : "#fff", display: "flex", gap: 10, alignItems: "center" }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: C.m700, fontSize: 10.5 }}>{name?.charAt(0) || "T"}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+                              <span style={{ fontSize: 8.5, color: C.t3 }}>{lastMsg?.timestamp}</span>
+                            </div>
+                            <div style={{ fontSize: 9.5, color: isUnread ? C.t1 : C.t3, fontWeight: isUnread ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{lastMsg?.senderId === "s-juan" ? "You: " : ""}{lastMsg?.content}</div>
                           </div>
-                          <div style={{ fontSize: 9.5, color: C.t3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{chat.msg}</div>
+                          {isUnread && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.m700 }} />}
                         </div>
-                        {chat.unread && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.m700 }} />}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
                 {/* Chat space */}
                 <div style={{ display: "flex", flexDirection: "column", background: C.paper }}>
-                  {/* Chat header */}
-                  <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Ms. Ana R. Soriano</div>
-                      <div style={{ fontSize: 9.5, color: C.t3, marginTop: 1 }}>Active 10m ago · Class Adviser</div>
-                    </div>
-                  </div>
-                  {/* Messages list */}
-                  <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
-                    <div style={{ alignSelf: "flex-start", maxWidth: "70%", background: "#fff", padding: "10px 14px", borderRadius: "0px 10px 10px 10px", fontSize: 11, color: C.t1, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                      Good morning, Miguel. Don't forget to upload your science project today.
-                    </div>
-                    <div style={{ alignSelf: "flex-end", maxWidth: "70%", background: C.m700, color: "#fff", padding: "10px 14px", borderRadius: "10px 10px 0px 10px", fontSize: 11, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                      Yes, Ms. Soriano! I've already finished the report card checks and uploaded it. Thank you!
-                    </div>
-                    <div style={{ alignSelf: "flex-start", maxWidth: "70%", background: "#fff", padding: "10px 14px", borderRadius: "0px 10px 10px 10px", fontSize: 11, color: C.t1, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                      Wonderful. I will review it shortly. Have a great day!
-                    </div>
-                  </div>
-                  {/* Input form */}
-                  <div style={{ padding: "12px 18px", borderTop: `1px solid ${C.borderMed}`, background: "#fff", display: "flex", gap: 10, alignItems: "center" }}>
-                    <input type="text" placeholder="Type a message here..." style={{ flex: 1, padding: "8px 14px", background: C.paper, border: "none", borderRadius: 20, fontSize: 11.5, outline: "none" }} />
-                    <button style={{ background: C.m700, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Send</button>
-                  </div>
+                  {activeConvId ? (
+                    <>
+                      <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
+                            {messages.find(m => m.senderId === activeConvId)?.senderName || messages.find(m => m.receiverId === activeConvId)?.receiverName || "Teacher"}
+                          </div>
+                          <div style={{ fontSize: 9.5, color: C.t3, marginTop: 1 }}>Active 10m ago</div>
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+                        {messages.filter(m => (m.senderId === "s-juan" && m.receiverId === activeConvId) || (m.senderId === activeConvId && m.receiverId === "s-juan")).map((msg, idx) => {
+                          const isMe = msg.senderId === "s-juan";
+                          return (
+                            <div key={idx} style={{ alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "70%", background: isMe ? C.m700 : "#fff", color: isMe ? "#fff" : C.t1, padding: "10px 14px", borderRadius: isMe ? "10px 10px 0px 10px" : "0px 10px 10px 10px", fontSize: 11, border: isMe ? "none" : `1px solid ${C.borderMed}`, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
+                              {msg.content}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        if(!replyText.trim()) return;
+                        addMessage({
+                          id: "m-"+Date.now(),
+                          senderId: "s-juan",
+                          senderName: "Juan Dela Cruz",
+                          receiverId: activeConvId,
+                          receiverName: messages.find(m => m.senderId === activeConvId)?.senderName || messages.find(m => m.receiverId === activeConvId)?.receiverName || "Teacher",
+                          content: replyText,
+                          timestamp: "Just now",
+                          read: false
+                        });
+                        setReplyText("");
+                      }} style={{ padding: "12px 18px", borderTop: `1px solid ${C.borderMed}`, background: "#fff", display: "flex", gap: 10, alignItems: "center" }}>
+                        <input type="text" value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type a message here..." style={{ flex: 1, padding: "8px 14px", background: C.paper, border: "none", borderRadius: 20, fontSize: 11.5, outline: "none" }} />
+                        <button type="submit" style={{ background: C.m700, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Send</button>
+                      </form>
+                    </>
+                  ) : (
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: C.t3, fontSize: 12 }}>Select a conversation</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -878,7 +908,10 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* Standard DepEd Report Card widget */}
-              <StudentReportCard student={{ surname: "Santos", first: "Juan Miguel", lrn: "100001", grade: 10, section: "Pilot", adviser: "Ana R. Soriano", gender: "male" }} />
+              <StudentReportCard 
+                student={{ surname: "Dela Cruz", first: "Juan", lrn: "100001", grade: 10, section: "Rizal", adviser: "Ana R. Soriano", gender: "male" }} 
+                statuses={{ q1: q1Status, q2: q2Status, q3: q3Status }}
+              />
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 {/* Visual Grade Trend line chart per year level */}
@@ -917,6 +950,29 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                     </div>
                   </div>
                 </div>
+                
+                {/* Quiz Grades Details */}
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4, gridColumn: "span 2" }}>
+                  <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Recent Quiz Performance</div>
+                  <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    {[
+                      { s: "Mathematics", q: "Quiz 1: Algebra", score: "18/20", pct: 90 },
+                      { s: "Science", q: "Quiz 2: Physics", score: "24/25", pct: 96 },
+                      { s: "English", q: "Pop Quiz: Grammar", score: "9/10", pct: 90 },
+                      { s: "Filipino", q: "Quiz 3: El Filibusterismo", score: "15/15", pct: 100 }
+                    ].map((qz, idx) => (
+                      <div key={idx} style={{ display: "flex", flexDirection: "column", gap: 6, paddingBottom: 10, borderBottom: `1px dashed ${C.borderMed}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{qz.s} &middot; <span style={{ color: C.t2, fontWeight: 600 }}>{qz.q}</span></span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: C.m700 }}>{qz.score}</span>
+                        </div>
+                        <div style={{ width: "100%", height: 6, background: C.borderMed, borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: `${qz.pct}%`, height: "100%", background: C.m700, borderRadius: 3 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -928,6 +984,25 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               
               {/* Left Column: Logs & Excuse Letter Form */}
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                
+                {/* Visual Attendance Trend line chart */}
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4, padding: "16px 20px" }}>
+                   <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 12 }}>Attendance Trend (Current Quarter)</div>
+                   <div style={{ height: 160 }}>
+                     <ResponsiveContainer width="100%" height="100%">
+                       <LineChart data={[
+                         { week: "Week 1", rate: 100 }, { week: "Week 2", rate: 95 }, { week: "Week 3", rate: 80 }, { week: "Week 4", rate: 90 }, { week: "Week 5", rate: 98 }
+                       ]} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                         <XAxis dataKey="week" stroke={C.t3} fontSize={10} tickLine={false} axisLine={false} />
+                         <YAxis domain={[0, 100]} stroke={C.t3} fontSize={10} tickLine={false} axisLine={false} tickFormatter={val => `${val}%`} />
+                         <Tooltip contentStyle={{ fontSize: 11, borderRadius: 4 }} formatter={(val: number) => [`${val}%`, "Attendance Rate"]} />
+                         <Line type="monotone" dataKey="rate" stroke={C.green} strokeWidth={2.5} activeDot={{ r: 6 }} dot={{ r: 4, stroke: C.green, strokeWidth: 2, fill: "#fff" }} />
+                       </LineChart>
+                     </ResponsiveContainer>
+                   </div>
+                </div>
+
                 <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
                   <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Gate Attendance Logs</div>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -1048,13 +1123,13 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 {/* Submitted excuse letters history */}
                 <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Excuse Letter Log</div>
-                  {excuseLog.map((log, i) => (
-                    <div key={i} style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  {excuseLetters.map((log, i) => (
+                    <div key={log.id} style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
-                        <div style={{ fontSize: 11.5, fontWeight: 600, color: C.t1 }}>{log.reason}</div>
-                        <div style={{ fontSize: 10, color: C.t3, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><Paperclip size={10}/> {log.file} &middot; {log.date}</div>
+                        <div style={{ fontSize: 11.5, fontWeight: 600, color: C.t1 }}>{log.reason || "Absence Excuse"}</div>
+                        <div style={{ fontSize: 10, color: C.t3, display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><Paperclip size={10}/> {log.filename} &middot; {log.submittedDate}</div>
                       </div>
-                      <Stamp label={log.status} color={log.status === "Approved" ? C.green : C.amber} bg={log.status === "Approved" ? C.greenBg : C.amberBg} />
+                      <Stamp label={log.status} color={log.status === "Approved" ? C.green : log.status === "Rejected" ? C.red : C.amber} bg={log.status === "Approved" ? C.greenBg : log.status === "Rejected" ? C.redBg : C.amberBg} />
                     </div>
                   ))}
                 </div>
@@ -1233,6 +1308,31 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Student Behavior & Guidance Log</div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Privately logged incident records and counseling history.</div>
+              </div>
+
+              {/* Disciplinary Records */}
+              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
+                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", display: "flex", justifyContent: "space-between" }}>
+                  <span>Disciplinary & Incident Records</span>
+                  <span style={{ fontSize:10, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").length} records</span>
+                </div>
+                {behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").length === 0 ? (
+                  <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>No behavioral incidents logged. Keep up the good work!</div>
+                ) : (
+                  behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").map((log, idx, arr) => (
+                    <div key={log.id} style={{ padding: "12px 14px", borderBottom: idx < arr.length - 1 ? `0.5px solid ${C.border}` : "none", background: C.paper }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.amber }}>{log.type}</div>
+                        <span style={{ fontSize: 10, color: C.t3, fontFamily: "'JetBrains Mono',monospace" }}>{log.date}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: C.t2, marginBottom: 8 }}>{log.note}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 10, color: C.t3 }}>Logged by: {log.teacher || log.section}</span>
+                        <Stamp label={log.status} color={log.status==="Resolved"?C.green:C.amber} bg={log.status==="Resolved"?C.greenBg:C.amberBg} />
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Achievements & honors list */}
@@ -1543,6 +1643,57 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
 
 
+      {/* AI ACADEMIC BUDDY */}
+      <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 900, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+        {aiBuddyOpen && (
+          <div style={{ width: 320, background: "#fff", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", border: `1px solid ${C.m700}`, overflow: "hidden", animation: "popIn 0.2s ease-out" }}>
+            <div style={{ background: "#fff", borderBottom: `1px solid ${C.borderMed}`, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 4, background: C.green }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.m800 }}>AI Support</div>
+                  <div style={{ fontSize: 10, color: C.green }}>Online</div>
+                </div>
+              </div>
+              <button onClick={() => setAiBuddyOpen(false)} style={{ background: "none", border: "none", color: C.t3, cursor: "pointer" }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12, maxHeight: 300, overflowY: "auto", background: C.paper }}>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ background: "#f3f4f6", padding: "10px 14px", borderRadius: "10px 10px 10px 0", fontSize: 11.5, color: C.t1, lineHeight: 1.4, maxWidth: "85%" }}>
+                  Hi Miguel! I noticed you are struggling with Mathematics (74 Avg). Would you like to review Quadratic Functions?
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignSelf: "flex-end", maxWidth: "85%" }}>
+                <div style={{ background: "#6366f1", padding: "10px 14px", borderRadius: "10px 10px 0 10px", fontSize: 11.5, color: "#fff", lineHeight: 1.4 }}>
+                  Yes, please give me a summary.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ background: "#f3f4f6", padding: "10px 14px", borderRadius: "10px 10px 10px 0", fontSize: 11.5, color: C.t1, lineHeight: 1.4, maxWidth: "85%" }}>
+                  A quadratic function is a polynomial function with one or more variables in which the highest-degree term is of the second degree. The standard form is: <b>f(x) = ax² + bx + c</b>. Try this practice quiz: <a href="#" style={{ color: "#6366f1", fontWeight: 700 }}>Quadratic Functions Quiz</a>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: 12, borderTop: `1px solid ${C.borderMed}`, background: "#fff", display: "flex", gap: 8 }}>
+              <input type="text" placeholder="Type your message..." style={{ flex: 1, padding: "8px 12px", borderRadius: 4, border: `1px solid ${C.borderMed}`, background: "#fff", fontSize: 11, outline: "none" }} />
+              <button style={{ background: "#6366f1", border: "none", color: "#fff", width: 36, height: 36, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Send size={16} /></button>
+            </div>
+            <div style={{ padding: "8px 12px", background: "#fff", borderTop: `1px solid ${C.borderMed}`, textAlign: "center", fontSize: 9, color: C.t3 }}>
+              Powered by Asyntai
+            </div>
+          </div>
+        )}
+        <button 
+          onClick={() => setAiBuddyOpen(!aiBuddyOpen)}
+          style={{ padding: "0 20px", height: 48, borderRadius: 24, background: C.m700, border: "none", color: "#fff", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 6px 16px rgba(139,30,30,0.3)", cursor: "pointer", transition: "transform 0.15s" }}
+          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
+          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+        >
+          <Sparkles size={18} color="#fff" />
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.02em" }}>AI Assistant</span>
+        </button>
+      </div>
+
       {/* 4. DIGITAL QR ID CARD MODAL */}
       {showQRModal && (
         <div 
@@ -1640,7 +1791,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   alignItems: "center", 
                   justifyContent: "center",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
-                  border: `1px solid ${C.borderLight}`
+                  border: `1px solid ${C.border}`
                 }}>
                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=EskwelaOne-Student-100001" alt="QR Code" style={{ width: "100%", height: "100%", display: "block" }} />
                 </div>

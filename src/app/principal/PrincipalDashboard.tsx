@@ -12,6 +12,7 @@ import { PTeachers } from './teachers/PTeachers';
 import { PWelfare } from './welfare/PWelfare';
 import { PInventory } from './inventory/PInventory';
 import { PReports } from './reports/PReports';
+import { PInboxScreen } from './messages/PInboxScreen';
 import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
 import { X } from 'lucide-react';
@@ -26,8 +27,8 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-welfare":  "Student Welfare",     "p-inventory": "Inventory",
-    "p-reports":  "Reports",             "p-templates": "Template Hub",
-    "p-events":   "School Events",
+    "p-reports":  "Reports",             "p-templates": "Forms & Records",
+    "p-events":   "School Events",       "p-messages":  "Messages & Communications",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
 
@@ -62,6 +63,7 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-reports"    && <PReports     />}
           {screen==="p-templates"  && <TemplateHubScreen />}
           {screen==="p-events"     && <PEventsScreen />}
+          {screen==="p-messages"   && <PInboxScreen />}
           {(screen==="p-settings"||screen==="p-help") && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>

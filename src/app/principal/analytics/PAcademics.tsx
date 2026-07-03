@@ -4,11 +4,46 @@ import { ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis, Cartesia
 import { PTableHeader } from '../shared/PTableHeader';
 import { Stamp } from '../../shared/components/Stamp';
 import { Sparkles } from 'lucide-react';
+import { useAppContext } from '../../shared/AppContext';
+
 export function PAcademics() {
   const [aiDone, setAiDone] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  
+  const { gradesStatus, setGradeStatus } = useAppContext();
+  const pendingApprovals = Object.entries(gradesStatus).filter(([k, v]) => v === "Submitted");
+
   return (
     <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
+      {/* Pending Grade Approvals Queue */}
+      <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
+        <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.m800, fontFamily:"'Fraunces',serif", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>Pending Grade Approvals ({pendingApprovals.length})</span>
+          {pendingApprovals.length > 0 && <Stamp label="Action Required" bg={C.amberBg} color={C.amber} />}
+        </div>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><PTableHeader cols={["Section", "Quarter", "Status", "Actions"]} /></thead>
+          <tbody>
+            {pendingApprovals.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No pending grade submissions.</td></tr>
+            ) : pendingApprovals.map(([key]) => {
+              const [gradeSec, q] = key.split("-");
+              return (
+                <tr key={key} style={{ borderBottom:`0.5px solid ${C.border}` }}>
+                  <td style={{ padding:"10px 16px", fontSize:12, fontWeight:600, color:C.t1 }}>{gradeSec}</td>
+                  <td style={{ padding:"10px 16px", fontSize:12, color:C.t2 }}>{q}</td>
+                  <td style={{ padding:"10px 16px" }}><Stamp label="Submitted for Review" bg={C.amberBg} color={C.amber} /></td>
+                  <td style={{ padding:"10px 16px", display: "flex", gap: 8 }}>
+                    <button onClick={() => setGradeStatus(key, "Published")} style={{ background: C.green, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Publish</button>
+                    <button onClick={() => setGradeStatus(key, "Returned")} style={{ background: C.red, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Return for Revision</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* Grade averages */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
         <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Average by Grade Level</div>
@@ -21,6 +56,7 @@ export function PAcademics() {
           ))}
         </div>
       </div>
+      
       {/* Q1 vs Q2 vs Q3 trend table */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
         <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Performance Trends (Q1 / Q2 / Q3)</div>
@@ -94,6 +130,38 @@ export function PAcademics() {
           </table>
         </div>
       </div>
+
+      {/* Top 10 Performers (School-Wide) */}
+      <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
+        <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Top 10 Performers (School-Wide)</div>
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+          <thead><PTableHeader cols={["Rank","Student Name","Grade & Section","General Average"]} /></thead>
+          <tbody>
+            {[
+              ["1", "Valdez, Sophia", "10-Pilot", "98.2"],
+              ["2", "Mendoza, Gabriel", "10-Pilot", "97.8"],
+              ["3", "Bautista, Chloe", "9-Newton", "97.5"],
+              ["4", "Reyes, Miguel", "8-Rizal", "97.1"],
+              ["5", "Fernandez, Julia", "10-Einstein", "96.9"],
+              ["6", "Aquino, Liam", "7-Makulay", "96.5"],
+              ["7", "Cruz, Trisha Ann", "10-Pilot", "96.2"],
+              ["8", "Garcia, Ethan", "9-Galileo", "95.8"],
+              ["9", "Torres, Isabella", "8-Bonifacio", "95.7"],
+              ["10", "Gomez, Lucas", "7-Matapat", "95.5"]
+            ].map(([rank, name, sec, avg], i)=>(
+              <tr key={rank} style={{ borderBottom:i<9?`0.5px solid ${C.border}`:"none" }}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
+                <td style={{ padding:"9px 16px", fontSize:12, fontWeight:800, color:C.m700 }}>#{rank}</td>
+                <td style={{ padding:"9px 16px", fontSize:12, fontWeight:700, color:C.t1 }}>{name}</td>
+                <td style={{ padding:"9px 16px", fontSize:11, color:C.t3 }}>{sec}</td>
+                <td style={{ padding:"9px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:800, color:C.green }}>{avg}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       {/* AI Summary */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderLeft:`3px solid ${C.gold}`, padding:"14px 18px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:10 }}>
@@ -110,5 +178,3 @@ export function PAcademics() {
     </div>
   );
 }
-
-/* ══ SCREEN 4 — Teacher Management ══ */

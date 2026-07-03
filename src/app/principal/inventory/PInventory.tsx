@@ -36,7 +36,7 @@ export function PInventory() {
       </div>
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><PTableHeader cols={["Item","Category","Qty","Condition","Location","Status"]} /></thead>
+          <thead><PTableHeader cols={["Item","Category","Qty","Condition","Location"]} /></thead>
           <tbody>
             {shown.map((item,i)=>(
               <tr key={item.item} style={{ borderBottom:i<shown.length-1?`0.5px solid ${C.border}`:"none" }}
@@ -47,7 +47,6 @@ export function PInventory() {
                 <td style={{ padding:"10px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{item.qty}</td>
                 <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{item.cond}</td>
                 <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{item.loc}</td>
-                <td style={{ padding:"10px 14px" }}><Stamp label={item.status} color={item.status==="Good"?C.green:item.status==="Repair"?C.amber:item.status==="Borrowed"?C.blue:C.red} bg={item.status==="Good"?C.greenBg:item.status==="Repair"?C.amberBg:item.status==="Borrowed"?C.blueBg:C.redBg} /></td>
               </tr>
             ))}
           </tbody>
@@ -56,5 +55,3 @@ export function PInventory() {
     </div>
   );
 }
-
-/* ══ SCREEN 7 — Reports ══ */

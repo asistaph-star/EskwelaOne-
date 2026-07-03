@@ -7,6 +7,8 @@ import { GradebookFullScreen } from '../grades/GradebookFullScreen';
 import { Stamp } from '../../shared/components/Stamp';
 import { gradeColor } from '../../shared/utils/helpers';
 import { RC_SUBJECTS } from '../../shared/constants/seedData';
+import { useAppContext } from '../../shared/AppContext';
+import { Plus } from 'lucide-react';
 const CLINIC_DATA = [
   { id:"200001", name:"Aguilar, Liza Marie",  section:"Gr. 8 Rizal",    date:"Jun 10 · 9:14 AM",  complaint:"Headache, dizziness",       action:"Rest given, paracetamol",      by:"Nurse Reyes", status:"Discharged", excused:true  },
   { id:"200005", name:"Espino, Hannah Grace", section:"Gr. 8 Rizal",    date:"Jun 10 · 10:02 AM", complaint:"Stomach ache",              action:"Rest, warm compress",          by:"Nurse Reyes", status:"Monitoring", excused:false },
@@ -145,6 +147,24 @@ function AttendanceDirectScreen() {
 
 /* ─── ClinicVisitsScreen ─────────────────────────────────── */
 export function ClinicVisitsScreen() {
+  const { clinicReferrals, addClinicReferral } = useAppContext();
+  const [showModal, setShowModal] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [reason, setReason] = useState("");
+  const submitReferral = () => {
+    if(!studentName || !reason) return;
+    addClinicReferral({
+      id: "ref-" + Date.now(),
+      studentName,
+      teacherName: "Ana R. Soriano",
+      reason,
+      timestamp: "Just now",
+      status: "Pending"
+    });
+    setShowModal(false);
+    setStudentName("");
+    setReason("");
+  };
   const [section, setSection] = useState("All sections");
   const [search, setSearch] = useState("");
   const filtered = CLINIC_DATA.filter(r=>{
@@ -175,6 +195,9 @@ export function ClinicVisitsScreen() {
         </div>
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
           <Stamp label="Read-only — clinic records are managed by the school nurse" color={C.teal} bg={C.tealBg} />
+          <button onClick={() => setShowModal(true)} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"6px 12px", cursor:"pointer" }}>
+            <Plus size={12}/> New Referral
+          </button>
         </div>
       </div>
 
@@ -191,7 +214,7 @@ export function ClinicVisitsScreen() {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                {["Student","Section","Date & Time","Complaint / Reason","Action Taken","Nurse","Status","Excused"].map(h=>(
+                {["Student","Referred By","Date & Time","Reason","Status"].map(h=>(
                   <th key={h} style={{ textAlign:"left", padding:"8px 12px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", whiteSpace:"nowrap" }}>{h}</th>
                 ))}
               </tr>
