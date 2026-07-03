@@ -6,6 +6,7 @@ export interface CalendarEvent {
   title: string;
   date: string;          // "YYYY-MM-DD"
   time?: string;         // e.g. "08:00 AM" or "14:30"
+  endTime?: string;      // e.g. "10:00 AM" or "16:00"
   type: "academic" | "meeting" | "holiday" | "exam" | "personal";
   color: string;
   locked: boolean;        // true = school event (Principal-set), false = personal

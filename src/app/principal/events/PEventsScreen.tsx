@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { SCHOOL_EVENTS, CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
-import { Plus, Trash2, Edit2, Calendar, Lock, ChevronLeft, ChevronRight, X, Save } from 'lucide-react';
+import { Plus, Trash2, Edit2, Calendar, Lock, ChevronLeft, ChevronRight, X, Save, Clock } from 'lucide-react';
 
 export function PEventsScreen() {
   const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", date: "", time: "", type: "academic" as CalendarEvent["type"], audience: "all" as CalendarEvent["audience"] });
+  const [form, setForm] = useState({ title: "", date: "", time: "", endTime: "", type: "academic" as CalendarEvent["type"], audience: "all" as CalendarEvent["audience"] });
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -15,21 +15,21 @@ export function PEventsScreen() {
     if (!form.title || !form.date) return;
     const cfg = EVENT_TYPE_CONFIG[form.type];
     if (editId) {
-      setEvents(ev => ev.map(e => e.id === editId ? { ...e, title: form.title, date: form.date, time: form.time, type: form.type, audience: form.audience, color: cfg.color } : e));
+      setEvents(ev => ev.map(e => e.id === editId ? { ...e, title: form.title, date: form.date, time: form.time, endTime: form.endTime, type: form.type, audience: form.audience, color: cfg.color } : e));
       setEditId(null);
     } else {
       const newEvent: CalendarEvent = {
-        id: `se-${Date.now()}`, title: form.title, date: form.date, time: form.time, type: form.type,
+        id: `se-${Date.now()}`, title: form.title, date: form.date, time: form.time, endTime: form.endTime, type: form.type,
         color: cfg.color, locked: true, audience: form.audience,
       };
       setEvents(ev => [...ev, newEvent]);
     }
-    setForm({ title: "", date: "", time: "", type: "academic", audience: "all" });
+    setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "all" });
     setShowForm(false);
   }
 
   function handleEdit(ev: CalendarEvent) {
-    setForm({ title: ev.title, date: ev.date, time: ev.time || "", type: ev.type, audience: ev.audience || "all" });
+    setForm({ title: ev.title, date: ev.date, time: ev.time || "", endTime: ev.endTime || "", type: ev.type, audience: ev.audience || "all" });
     setEditId(ev.id);
     setShowForm(true);
   }
@@ -50,7 +50,7 @@ export function PEventsScreen() {
           <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>School Events Manager</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Create and manage school-wide events. Click any date on the calendar to add an event.</div>
         </div>
-        <button onClick={() => { setShowForm(true); setEditId(null); setForm({ title: "", date: "", time: "", type: "academic", audience: "all" }); }}
+        <button onClick={() => { setShowForm(true); setEditId(null); setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "all" }); }}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
           onMouseEnter={e => e.currentTarget.style.background = C.m800}
           onMouseLeave={e => e.currentTarget.style.background = C.m700}
@@ -81,13 +81,13 @@ export function PEventsScreen() {
                   key={`${r}-${col}`} 
                   onClick={() => {
                     if (valid) {
-                      setForm({ title: "", date: dayStr, time: "", type: "academic", audience: "all" });
+                      setForm({ title: "", date: dayStr, time: "", endTime: "", type: "academic", audience: "all" });
                       setEditId(null);
                       setShowForm(true);
                     }
                   }}
                   style={{ 
-                    minHeight: 85, 
+                    minHeight: 100, 
                     padding: "6px 6px", 
                     borderRight: `1px solid ${C.borderLight}`, 
                     borderBottom: `1px solid ${C.borderLight}`, 
@@ -99,19 +99,43 @@ export function PEventsScreen() {
                   onMouseLeave={e => { if(valid) e.currentTarget.style.background = "#fff"; }}
                 >
                   {valid && <>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: col >= 5 ? C.t3 : C.t1, marginBottom: 4, padding: "2px 4px" }}>{day}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      {dayEvents.map(ev => (
-                        <div 
-                          key={ev.id} 
-                          onClick={(e) => { e.stopPropagation(); handleEdit(ev); }}
-                          style={{ fontSize: 9, fontWeight: 600, color: "#fff", background: ev.color, borderRadius: 4, padding: "3px 6px", lineHeight: 1.3, display: "flex", alignItems: "center", gap: 4, boxShadow: "0 1px 3px rgba(0,0,0,0.1)", transition: "opacity 0.2s" }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = "0.85"}
-                          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                        >
-                          <Lock size={8} /> {ev.title.length > 14 ? ev.title.slice(0, 14) + "…" : ev.title}
-                        </div>
-                      ))}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: col >= 5 ? C.t3 : C.t1, marginBottom: 8, padding: "2px 4px" }}>{day}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {dayEvents.map(ev => {
+                        // Formatting time for display, e.g., "08:00 AM" -> "8am"
+                        const formatTime = (t: string) => {
+                          if (!t) return "";
+                          let [h, m] = t.split(":");
+                          let hr = parseInt(h);
+                          let ampm = hr >= 12 ? "p" : "a";
+                          hr = hr % 12 || 12;
+                          return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
+                        };
+                        const timeStr = formatTime(ev.time || "");
+
+                        return (
+                          <div 
+                            key={ev.id} 
+                            onClick={(e) => { e.stopPropagation(); handleEdit(ev); }}
+                            style={{ 
+                              display: "flex", 
+                              alignItems: "flex-start", 
+                              gap: 6, 
+                              padding: "4px 6px", 
+                              borderRadius: 4, 
+                              transition: "background 0.2s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "15"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: ev.color, flexShrink: 0, marginTop: 4 }} />
+                            <div style={{ fontSize: 10, color: C.t1, lineHeight: 1.3, fontWeight: 600 }}>
+                              {timeStr && <span style={{ color: C.t2, fontWeight: 700, marginRight: 4 }}>{timeStr}</span>}
+                              {ev.title}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </>}
                 </div>
@@ -128,6 +152,13 @@ export function PEventsScreen() {
         </div>
         {sorted.map(ev => {
           const cfg = EVENT_TYPE_CONFIG[ev.type];
+          
+          let timeDisplay = "";
+          if (ev.time) {
+            timeDisplay = ev.time;
+            if (ev.endTime) timeDisplay += ` - ${ev.endTime}`;
+          }
+
           return (
             <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: `1px solid ${C.borderLight}` }}>
               <div style={{ width: 4, height: 36, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
@@ -136,7 +167,12 @@ export function PEventsScreen() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
-                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>{ev.date} {ev.time ? `· ${ev.time} ` : ""}· {cfg.label} · {ev.audience === "all" ? "Everyone" : ev.audience === "teachers" ? "Teachers Only" : "Students Only"}</div>
+                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>
+                  <span style={{ fontWeight: 600, color: C.t2 }}>{ev.date}</span>
+                  {timeDisplay ? <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}><Clock size={10} style={{ display: "inline", marginBottom: -1, marginRight: 3 }} />{timeDisplay}</span> : null}
+                  <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}>{cfg.label}</span>
+                  <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}>{ev.audience === "all" ? "Everyone" : ev.audience === "teachers" ? "Teachers Only" : "Students Only"}</span>
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => handleEdit(ev)} style={{ width: 32, height: 32, borderRadius: 6, background: C.m50, border: `1px solid ${C.borderMed}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"} onMouseLeave={e=>e.currentTarget.style.background=C.m50}>
@@ -173,15 +209,20 @@ export function PEventsScreen() {
                   style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", transition: "border-color 0.2s" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
               </div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 16 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Date</label>
                   <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
                     style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Time <span style={{color: C.t3, fontWeight: 400}}>(Optional)</span></label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Start Time</label>
                   <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>End Time</label>
+                  <input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })}
                     style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
                 </div>
               </div>
