@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, Search, Bell, ChevronDown, BookMarked } from "lucide-react";
 import { Role, TScreen, GradeCardInfo } from "./shared/types";
 import { C } from "./shared/constants/tokens";
 
@@ -161,18 +161,108 @@ export default function App() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar navigation band */}
-        <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
-          {isMobile && (
-            <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: C.m700 }}>
-              <span style={{ fontSize: 18 }}>☰</span>
-            </button>
-          )}
-          <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>
-              {classId && screen === "classroom" ? `Classroom: Gr. ${MY_CLASSES.find(c => c.id === classId)?.grade} - ${MY_CLASSES.find(c => c.id === classId)?.section}` : bar.title}
-            </h1>
-            {bar.sub && <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>{bar.sub}</div>}
+        <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {isMobile && (
+              <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: C.m700 }}>
+                <span style={{ fontSize: 18 }}>☰</span>
+              </button>
+            )}
+            <div>
+              <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
+                {classId && screen === "classroom" ? `Classroom: Gr. ${MY_CLASSES.find(c => c.id === classId)?.grade} - ${MY_CLASSES.find(c => c.id === classId)?.section}` : bar.title}
+              </h1>
+              {bar.sub && <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>{bar.sub}</div>}
+            </div>
           </div>
+          
+          {/* Right Area: Search, Theme sun, Notification Bell & Profile dropdown */}
+          {!isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              {/* Search bar mockup */}
+              <div style={{ display: "flex", alignItems: "center", position: "relative", width: 220 }}>
+                <Search size={13} color={C.t3} style={{ position: "absolute", left: 10 }} />
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  style={{
+                    width: "100%",
+                    padding: "6px 12px 6px 30px",
+                    fontSize: 11,
+                    color: C.t1,
+                    background: C.m50,
+                    border: "1.5px solid " + C.borderMed,
+                    borderRadius: 20,
+                    outline: "none",
+                    transition: "all 0.15s"
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = C.m700;
+                    e.currentTarget.style.background = "#fff";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = C.borderMed;
+                    e.currentTarget.style.background = C.m50;
+                  }}
+                />
+              </div>
+
+              {/* Action buttons and Profile */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                {/* Theme Sun button */}
+                <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${C.t2}` }} />
+                </button>
+
+                {/* Notification Bell */}
+                <div style={{ position: "relative" }}>
+                  <button 
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 32,
+                      height: 32,
+                      position: "relative"
+                    }}
+                  >
+                    <Bell size={18} color={C.t2} />
+                    <div style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      background: C.red,
+                      color: "#fff",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      width: 14,
+                      height: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1.5px solid #fff"
+                    }}>5</div>
+                  </button>
+                </div>
+
+                {/* User Profile display */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, borderLeft: `1px solid ${C.borderMed}`, paddingLeft: 16 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 16, overflow: "hidden", background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: C.m700 }}>
+                    {ROLE_USER.Teacher.initials}
+                  </div>
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{ROLE_USER.Teacher.name}</div>
+                    <div style={{ fontSize: 9, color: C.t3, marginTop: 1 }}>{ROLE_USER.Teacher.sub}</div>
+                  </div>
+                  <ChevronDown size={12} color={C.t3} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dynamic page router */}
