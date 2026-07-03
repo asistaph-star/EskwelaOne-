@@ -4,6 +4,15 @@ import { SCHOOL_EVENTS, TEACHER_PERSONAL_EVENTS, CalendarEvent, EVENT_TYPE_CONFI
 import { Calendar, ChevronLeft, ChevronRight, Lock, Plus, X, Save, Trash2 } from 'lucide-react';
 
 export function CalendarScreen() {
+  function formatTimeDisplay(timeStr?: string) {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hr = parseInt(h);
+    let ampm = hr >= 12 ? " PM" : " AM";
+    hr = hr % 12 || 12;
+    return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
+  }
+
   const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([...TEACHER_PERSONAL_EVENTS]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", date: "" });
@@ -67,13 +76,13 @@ export function CalendarScreen() {
       )}
 
       {/* Calendar Grid */}
-      <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
-        <div style={{ background: C.m800, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={14} color="#fff" /></button>
-          <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>June 2025</span>
-          <button style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={14} color="#fff" /></button>
+      <div style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden", marginBottom: 24, boxShadow: "0 4px 20px rgba(139,30,30,0.05)" }}>
+        <div style={{ background: "#fafafa", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}` }}>
+          <button style={{ width: 28, height: 28, borderRadius: 4, background: "#fff", border: `1px solid ${C.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={14} color={C.t2} /></button>
+          <span style={{ color: C.t1, fontSize: 14, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>June 2025</span>
+          <button style={{ width: 28, height: 28, borderRadius: 4, background: "#fff", border: `1px solid ${C.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={14} color={C.t2} /></button>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.borderMed}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.border}` }}>
           {days.map(d => <div key={d} style={{ textAlign: "center", padding: "8px 4px", fontSize: 10, fontWeight: 700, color: C.t3, letterSpacing: "0.07em", textTransform: "uppercase", borderRight: `0.5px solid ${C.border}` }}>{d}</div>)}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
@@ -83,17 +92,39 @@ export function CalendarScreen() {
               const valid = day >= 1 && day <= 30;
               const dayStr = `2025-06-${String(day).padStart(2, "0")}`;
               const dayEvents = allEvents.filter(e => e.date === dayStr);
-              const isToday = day === 10;
               return (
-                <div key={`${r}-${col}`} style={{ minHeight: 72, padding: "6px 6px", borderRight: `0.5px solid ${C.border}`, borderBottom: `0.5px solid ${C.border}`, background: isToday ? C.m50 : "#fff" }}>
+                <div key={`${r}-${col}`} 
+                  style={{ 
+                    minHeight: 100, 
+                    padding: "6px 6px", 
+                    borderRight: `1px solid ${C.border}`, 
+                    borderBottom: `1px solid ${C.border}`, 
+                    background: valid ? "#fff" : "#fafafa",
+                    transition: "background 0.15s"
+                  }}
+                  onMouseEnter={e => { if(valid) e.currentTarget.style.background = "#f4f4f4"; }}
+                  onMouseLeave={e => { if(valid) e.currentTarget.style.background = "#fff"; }}
+                >
                   {valid && <>
-                    <div style={{ fontSize: 11, fontWeight: isToday ? 700 : 400, color: isToday ? C.m700 : col >= 5 ? C.t3 : C.t2, marginBottom: 3 }}>{day}</div>
-                    {dayEvents.map(ev => (
-                      <div key={ev.id} style={{ fontSize: 8.5, fontWeight: 600, color: "#fff", background: ev.color, borderRadius: 3, padding: "2px 5px", marginBottom: 2, lineHeight: 1.3, display: "flex", alignItems: "center", gap: 3 }}>
-                        {ev.locked && <Lock size={7} />}
-                        {ev.title.length > 14 ? ev.title.slice(0, 14) + "…" : ev.title}
-                      </div>
-                    ))}
+                    <div style={{ fontSize: 12, fontWeight: 700, color: col >= 5 ? C.t3 : C.t1, marginBottom: 8, padding: "2px 4px" }}>{day}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {dayEvents.map(ev => {
+                        const timeStr = formatTimeDisplay(ev.time);
+                        const endStr = formatTimeDisplay(ev.endTime);
+                        const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "All day";
+                        return (
+                          <div key={ev.id} style={{ display: "flex", flexDirection: "column", padding: "5px 6px", borderRadius: 6, background: ev.color + "12", transition: "background 0.2s" }}
+                            onMouseEnter={e => e.currentTarget.style.background = ev.color + "20"}
+                            onMouseLeave={e => e.currentTarget.style.background = ev.color + "12"}>
+                            <div style={{ fontSize: 9.5, color: ev.color, fontWeight: 800, lineHeight: 1.2, filter: "brightness(0.75)", display: "flex", alignItems: "center", gap: 3 }}>
+                              {ev.locked && <Lock size={8} />}
+                              {ev.title}
+                            </div>
+                            {fullTime && <div style={{ fontSize: 8, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.9)", opacity: 0.85 }}>{fullTime}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </>}
                 </div>
               );
