@@ -162,16 +162,11 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
         {/* School campus building — decorative background */}
         <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: 300,
-          backgroundImage: "url(/school_silhouette.png)",
-          backgroundSize: "110% auto", backgroundPosition: "center bottom",
+          position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
+          backgroundImage: "url(/school_bg.jpg)",
+          backgroundSize: "cover", backgroundPosition: "bottom center",
           backgroundRepeat: "no-repeat",
-          opacity: 0.06, mixBlendMode: "screen",
-          pointerEvents: "none", zIndex: 0
-        }} />
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: 300,
-          background: `linear-gradient(to bottom, ${C.m900} 0%, ${C.m900}ee 25%, transparent 70%, ${C.m900}88 100%)`,
+          opacity: 0.08, mixBlendMode: "overlay",
           pointerEvents: "none", zIndex: 0
         }} />
         
