@@ -166,12 +166,12 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           backgroundImage: "url(/school_bg.jpg)",
           backgroundSize: "cover", backgroundPosition: "bottom center",
           backgroundRepeat: "no-repeat",
-          opacity: 0.08, mixBlendMode: "overlay",
+          opacity: 0.45,
           pointerEvents: "none", zIndex: 0
         }} />
         
         {/* Brand Header — matches teacher sidebar exactly */}
-        <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8,
             background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
@@ -192,7 +192,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {/* Navigation list with categories — matches teacher sidebar */}
-        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+        <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", position: "relative", zIndex: 1 }}>
           {STUDENT_NAV_GROUPS.map((group, groupIdx) => (
             <div key={groupIdx} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.12em", padding: "8px 14px 4px", userSelect: "none" }}>
@@ -232,7 +232,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {/* Bottom Profile Popup — matches teacher sidebar exactly */}
-        <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}` }}>
+        <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}`, position: "relative", zIndex: 1 }}>
           <div 
             onClick={() => setProfileOpen(!profileOpen)}
             style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px", borderBottom: profileOpen ? `1px solid ${C.borderHeavy}` : "none", cursor: "pointer", borderRadius: 4, transition: "background 0.15s" }}
@@ -250,7 +250,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           </div>
 
           {profileOpen && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8, padding: "4px", background: "rgba(0,0,0,0.15)", borderRadius: 4 }}>
+            <div style={{ position: "absolute", bottom: "100%", left: 8, right: 8, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4, padding: "6px", background: C.m800, borderRadius: 6, border: `1px solid ${C.borderHeavy}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.3)", zIndex: 10 }}>
               <button onClick={() => { setTab("settings"); setProfileOpen(false); }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}

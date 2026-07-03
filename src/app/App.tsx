@@ -120,6 +120,7 @@ export default function App() {
     tutorials: { title: "System Tutorials", sub: "Self-paced training & user guides" },
     tools: { title: "System Utilities", sub: "Calculators & formatting tools" },
     help: { title: "Help & Feedback", sub: "Contact IT operations support" },
+    settings: { title: "Account Settings", sub: "Profile & Security Configuration" },
   };
 
   // Login role check
@@ -187,7 +188,7 @@ export default function App() {
           {screen === "pro-dev" && <ProDevScreen />}
           {screen === "calendar" && <CalendarScreen />}
           {screen === "templates" && <TemplateHubScreen />}
-          {(screen === "tutorials" || screen === "tools" || screen === "help") && (
+          {(screen === "tutorials" || screen === "tools" || screen === "help" || screen === "settings") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />
           )}
         </div>

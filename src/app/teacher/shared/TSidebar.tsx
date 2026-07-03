@@ -45,10 +45,10 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         backgroundImage: "url(/school_bg.jpg)",
         backgroundSize: "cover", backgroundPosition: "bottom center",
         backgroundRepeat: "no-repeat",
-        opacity: 0.08, mixBlendMode: "overlay",
+        opacity: 0.45,
         pointerEvents: "none", zIndex: 0
       }} />
-      <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12 }}>
+      <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, position: "relative", zIndex: 1 }}>
         <div style={{
           width: 34, height: 34, borderRadius: 8,
           background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
@@ -70,7 +70,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         )}
       </div>
 
-      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
+      <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", position: "relative", zIndex: 1 }}>
         {T_NAV_GROUPS.map(group => (
           <div key={group.category} style={{ marginBottom: 8 }}>
             {!collapsed && (
@@ -99,7 +99,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         ))}
       </div>
 
-      <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}` }}>
+      <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}`, position: "relative", zIndex: 1 }}>
         {!collapsed && (
           <div 
             onClick={() => setShowMenu(!showMenu)}
@@ -130,8 +130,8 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         )}
 
         {showMenu && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8, padding: "4px", background: "rgba(0,0,0,0.15)", borderRadius: 4 }}>
-            <button onClick={() => { onNav('tutorials' as TScreen); setShowMenu(false); }}
+          <div style={{ position: "absolute", bottom: "100%", left: 8, right: 8, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4, padding: "6px", background: C.m800, borderRadius: 6, border: `1px solid ${C.borderHeavy}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.3)", zIndex: 10 }}>
+            <button onClick={() => { onNav('settings' as TScreen); setShowMenu(false); }}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
