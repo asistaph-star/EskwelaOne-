@@ -15,16 +15,27 @@ export function CalendarScreen() {
 
   const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([...TEACHER_PERSONAL_EVENTS]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: "", date: "" });
+  const [form, setForm] = useState<{ title: string, date: string, time: string, endTime: string, type: CalendarEvent["type"], audience: CalendarEvent["audience"] }>({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
 
   const allEvents = [...SCHOOL_EVENTS.filter(e => e.audience === "all" || e.audience === "teachers"), ...personalEvents];
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   function handleAddPersonal() {
     if (!form.title || !form.date) return;
-    const ev: CalendarEvent = { id: `tp-${Date.now()}`, title: form.title, date: form.date, type: "personal", color: "#0ea5e9", locked: false };
+    const colors: Record<string, string> = { academic: "#15803d", meeting: "#1e40af", holiday: "#b91c1c", exam: "#9333ea", personal: "#0ea5e9" };
+    const ev: CalendarEvent = { 
+      id: `tp-${Date.now()}`, 
+      title: form.title, 
+      date: form.date, 
+      time: form.time,
+      endTime: form.endTime,
+      type: form.type, 
+      color: colors[form.type] || "#0ea5e9", 
+      locked: form.audience === "students" || form.audience === "all",
+      audience: form.audience
+    };
     setPersonalEvents(p => [...p, ev]);
-    setForm({ title: "", date: "" });
+    setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
     setShowForm(false);
   }
 
@@ -41,7 +52,7 @@ export function CalendarScreen() {
           <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar — June 2025</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>School events (🔒) are set by admin. Your personal events are editable.</div>
         </div>
-        <button onClick={() => { setShowForm(true); setForm({ title: "", date: "" }); }}
+        <button onClick={() => { setShowForm(true); setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" }); }}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "#0ea5e9", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
         >
           <Plus size={14} /> Add Personal Event
@@ -70,7 +81,7 @@ export function CalendarScreen() {
                 <div key={`${r}-${col}`} 
                   onClick={() => {
                     if (valid) {
-                      setForm({ title: "", date: dayStr });
+                      setForm({ title: "", date: dayStr, time: "", endTime: "", type: "academic", audience: "students" });
                       setShowForm(true);
                     }
                   }}
@@ -177,10 +188,44 @@ export function CalendarScreen() {
                   style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", transition: "border-color 0.2s" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
               </div>
               
-              <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Date</label>
-                <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Date</label>
+                  <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Start Time</label>
+                  <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>End Time</label>
+                  <input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                </div>
+              </div>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Type</label>
+                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
+                    <option value="academic">Academic</option>
+                    <option value="meeting">Meeting</option>
+                    <option value="holiday">Holiday</option>
+                    <option value="exam">Exam</option>
+                    <option value="personal">Personal</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Audience</label>
+                  <select value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value as any })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
+                    <option value="students">My Students Only</option>
+                    <option value="teachers">Just Me (Personal)</option>
+                  </select>
+                </div>
               </div>
             </div>
             
