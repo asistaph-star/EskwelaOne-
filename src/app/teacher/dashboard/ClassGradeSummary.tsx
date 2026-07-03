@@ -25,11 +25,11 @@ export function ClassGradeSummary({ onStudentClick }: { onStudentClick:(id:numbe
           ))}
         </div>
       </div>
-      <div style={{ background:"#fff", border:`1.5px solid ${C.border}`, borderRadius:8, overflow:"hidden", boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+      <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", boxShadow: "0 6px 20px rgba(139,30,30,0.06)" }}>
         {/* Header */}
-        <div style={{ background:"#fafafa", borderBottom: `1px solid ${C.border}`, display:"grid", gridTemplateColumns:"2fr 1fr 1fr 90px 90px", padding:"10px 14px", gap:16 }}>
+        <div style={{ background:"#fafafa", borderBottom: `1px solid ${C.border}`, display:"grid", gridTemplateColumns:"2fr 1fr 1fr 90px 90px", padding:"12px 16px", gap:16 }}>
           {["Student Name", "Missing Tasks", "Absences", "Gen. Avg", "Status"].map(h=>(
-            <span key={h} style={{ fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.05em" }}>{h}</span>
+            <span key={h} style={{ fontSize:9, fontWeight:800, color:C.t3, textTransform:"uppercase", letterSpacing:"0.06em" }}>{h}</span>
           ))}
         </div>
         {rows.map((r,i)=>{

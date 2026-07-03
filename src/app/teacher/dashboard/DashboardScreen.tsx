@@ -53,9 +53,12 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
         ].map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
-            <div key={idx} style={{ background: "#fff", border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "16px", display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.02)" }}>
+            <div key={idx} style={{ background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "16px", display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 6px 16px rgba(139,30,30,0.06)", transition: "transform 0.2s, box-shadow 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(139,30,30,0.12)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 16px rgba(139,30,30,0.06)"; }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: kpi.bg, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.05)" }}>
                   <Icon size={14} color={kpi.color} />
                 </div>
                 <div style={{ fontSize: 9.5, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", lineHeight: 1.2 }}>{kpi.label}</div>
@@ -82,9 +85,9 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:18 }}>
             {MY_CLASSES.map(cls => (
               <button key={cls.id} onClick={()=>onClassClick(cls.id)}
-                style={{ background:"#fff", border:`1.5px solid ${C.border}`, borderRadius:8, overflow:"hidden", cursor:"pointer", textAlign:"left", transition:"all 0.15s", padding: 18, display: "flex", flexDirection: "column", gap: 14 }}
-                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.m500; (e.currentTarget as HTMLElement).style.boxShadow=`0 4px 16px rgba(139,30,30,0.06)`;}}
-                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.border; (e.currentTarget as HTMLElement).style.boxShadow="none";}}>
+                style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", cursor:"pointer", textAlign:"left", transition:"all 0.2s", padding: 18, display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 6px 20px rgba(139,30,30,0.05)" }}
+                onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform = "translateY(-3px)"; (e.currentTarget as HTMLElement).style.borderColor=C.m500; (e.currentTarget as HTMLElement).style.boxShadow=`0 12px 30px rgba(139,30,30,0.12)`;}}
+                onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.borderColor=C.border; (e.currentTarget as HTMLElement).style.boxShadow="0 6px 20px rgba(139,30,30,0.05)";}}>
                 
                 {/* Header Section */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -96,7 +99,7 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
                 </div>
                 
                 {/* Ledger fields */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}` }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}`, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.02)" }}>
                   {[["Enrolled",`${cls.students}`],["Term",cls.semester],["Role",cls.adviser?"Class Adviser":"Subject Only"]].map(([l,v]) => (
                     <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems: "center" }}>
                       <span style={{ fontSize:9.5, color:C.t3, fontWeight:600 }}>{l}</span>
