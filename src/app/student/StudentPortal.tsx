@@ -158,7 +158,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
         {/* School campus building — decorative background */}
