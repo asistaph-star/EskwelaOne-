@@ -3,6 +3,15 @@ import { C } from '../../shared/constants/tokens';
 import { SCHOOL_EVENTS, CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
 import { Plus, Trash2, Edit2, Calendar, Lock, ChevronLeft, ChevronRight, X, Save, Clock } from 'lucide-react';
 
+function formatTimeDisplay(timeStr?: string) {
+  if (!timeStr) return "";
+  let [h, m] = timeStr.split(":");
+  let hr = parseInt(h);
+  let ampm = hr >= 12 ? "p" : "a";
+  hr = hr % 12 || 12;
+  return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
+}
+
 export function PEventsScreen() {
   const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS]);
   const [showForm, setShowForm] = useState(false);
@@ -102,18 +111,9 @@ export function PEventsScreen() {
                     <div style={{ fontSize: 12, fontWeight: 700, color: col >= 5 ? C.t3 : C.t1, marginBottom: 8, padding: "2px 4px" }}>{day}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {dayEvents.map(ev => {
-                        // Formatting time for display, e.g., "08:00 AM" -> "8am"
-                        const formatTime = (t: string) => {
-                          if (!t) return "";
-                          let [h, m] = t.split(":");
-                          let hr = parseInt(h);
-                          let ampm = hr >= 12 ? "p" : "a";
-                          hr = hr % 12 || 12;
-                          return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
-                        };
-                        const timeStr = formatTime(ev.time || "");
-                        const endStr = formatTime(ev.endTime || "");
-                        const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "";
+                        const timeStr = formatTimeDisplay(ev.time);
+                        const endStr = formatTimeDisplay(ev.endTime);
+                        const fullTime = timeStr ? (endStr ? `${timeStr} - ${endStr}` : timeStr) : "All day";
 
                         return (
                           <div 
@@ -135,7 +135,7 @@ export function PEventsScreen() {
                             <div style={{ fontSize: 9.5, color: C.t1, fontWeight: 700, lineHeight: 1.2 }}>
                               {ev.title}
                             </div>
-                            {fullTime && <div style={{ fontSize: 8.5, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.7)" }}>{fullTime}</div>}
+                            <div style={{ fontSize: 8.5, color: ev.color, fontWeight: 700, marginTop: 2, filter: "brightness(0.7)" }}>{fullTime}</div>
                           </div>
                         );
                       })}
@@ -156,10 +156,10 @@ export function PEventsScreen() {
         {sorted.map(ev => {
           const cfg = EVENT_TYPE_CONFIG[ev.type];
           
-          let timeDisplay = "";
+          let timeDisplay = "All day";
           if (ev.time) {
-            timeDisplay = ev.time;
-            if (ev.endTime) timeDisplay += ` - ${ev.endTime}`;
+            timeDisplay = formatTimeDisplay(ev.time);
+            if (ev.endTime) timeDisplay += ` - ${formatTimeDisplay(ev.endTime)}`;
           }
 
           return (
@@ -172,7 +172,7 @@ export function PEventsScreen() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>
                   <span style={{ fontWeight: 600, color: C.t2 }}>{ev.date}</span>
-                  {timeDisplay ? <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}><Clock size={10} style={{ display: "inline", marginBottom: -1, marginRight: 3 }} />{timeDisplay}</span> : null}
+                  <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}><Clock size={10} style={{ display: "inline", marginBottom: -1, marginRight: 3 }} />{timeDisplay}</span>
                   <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}>{cfg.label}</span>
                   <span style={{ marginLeft: 6, paddingLeft: 6, borderLeft: `1px solid ${C.borderMed}` }}>{ev.audience === "all" ? "Everyone" : ev.audience === "teachers" ? "Teachers Only" : "Students Only"}</span>
                 </div>
