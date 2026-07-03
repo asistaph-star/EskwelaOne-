@@ -36,7 +36,7 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
       <style>{`
         .sf10-doc { color: #000; }
         .sf10-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .sf10-table th, .sf10-table td { border: 1px solid ${borderColor}; padding: 3px 4px; }
+        .sf10-table th, .sf10-table td { border: 1px solid ${borderColor}; padding: 3px 4px; height: 18px; }
         .sf10-table th { background: #fff; font-weight: bold; text-align: center; }
         .sf10-row { display: flex; gap: 8px; margin-bottom: 6px; }
         @media print {
@@ -165,9 +165,10 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
                   })}
                   <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
                   <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
+                  <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center", fontWeight: "bold", borderLeft: "none" }}>General Average</td>
-                    <td></td>
+                    <td colSpan={5} style={{ textAlign: "right", fontWeight: "bold", paddingRight: 16, borderLeft: "none" }}>General Average</td>
+                    <td style={{ textAlign: "center" }}></td>
                     <td style={{ borderRight: "none" }}></td>
                   </tr>
                 </tbody>
