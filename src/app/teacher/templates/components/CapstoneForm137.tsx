@@ -163,9 +163,13 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
                       </tr>
                     );
                   })}
-                  <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
-                  <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
-                  <tr><td style={{ borderLeft: "none" }}>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td style={{ borderRight: "none" }}></td></tr>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <tr key={`blank-${i}`}>
+                      <td style={{ borderLeft: "none" }}>&nbsp;</td>
+                      <td></td><td></td><td></td><td></td><td></td>
+                      <td style={{ borderRight: "none" }}></td>
+                    </tr>
+                  ))}
                   <tr>
                     <td style={{ textAlign: "center", fontWeight: "bold", borderLeft: "none" }}>General Average</td>
                     <td colSpan={4}></td>
