@@ -38,7 +38,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
   const initials = "AS";
 
   return (
-    <div style={{ width: collapsed ? 70 : 260, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
+    <div style={{ width: collapsed ? 70 : 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
       {/* School campus building — decorative background */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
