@@ -1528,53 +1528,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      {/* ── Slide-in Right Side Notification Drawer ── */}
-      {notifOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }} onClick={() => setNotifOpen(false)}>
-          <div style={{ width: 340, height: "100%", background: "#fff", display: "flex", flexDirection: "column", animation: "slideIn 0.2s ease-out" }} onClick={e => e.stopPropagation()}>
-            <style>{`
-              @keyframes slideIn {
-                from { transform: translateX(100%); }
-                to { transform: translateX(0); }
-              }
-            `}</style>
-            <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Notifications (3)</span>
-              <button onClick={() => setNotifOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: C.t3, fontWeight: 600 }}>Close</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                { title: "PTA General Assembly Meeting", from: "School Administration", desc: "PTA meeting at the school gymnasium on Friday, June 13, starting at 3:00 PM.", date: "Just now", color: C.blue, type: "announcement" },
-                { title: "Form 137 Missing Documents", from: "Ms. Ana R. Soriano", desc: "You still need to turn in your junior high clearance card to officially complete compliance.", date: "2 hours ago", color: C.amber, type: "alert" },
-                { title: "First Quarterly Assessment", from: "Registrar Office", desc: "First quarter checklist distribution will begin on Monday. Check with your class adviser.", date: "June 25", color: C.m700, type: "exam" }
-              ].map((n, idx) => (
-                <div key={idx} style={{ padding: 12, border: `1px solid ${C.borderMed}`, borderLeft: `4px solid ${n.color}`, borderRadius: 4, background: C.paper, display: "flex", gap: 12 }}>
-                  {n.type === "exam" ? (
-                    /* Calendar chip on the left */
-                    <div style={{ width: 42, height: 42, background: C.m100, border: `1px solid ${C.m700}`, borderRadius: 4, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <span style={{ fontSize: 7, fontWeight: 800, color: C.m700, textTransform: "uppercase" }}>June</span>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: C.m700, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>25</span>
-                    </div>
-                  ) : (
-                    /* Normal icon indicator */
-                    <div style={{ width: 42, height: 42, background: n.color + "15", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <Bell size={18} color={n.color} />
-                    </div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 2 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: C.t1 }}>{n.title}</div>
-                      <span style={{ fontSize: 8, color: C.t3, fontWeight: 600 }}>{n.date}</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: n.color, fontWeight: 700, marginBottom: 4 }}>{n.from}</div>
-                    <p style={{ fontSize: 10.2, color: C.t2, margin: 0, lineHeight: 1.4 }}>{n.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 4. DIGITAL QR ID CARD MODAL */}
       {showQRModal && (
