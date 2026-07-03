@@ -1522,44 +1522,23 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
       {/* 4. DIGITAL QR ID CARD MODAL */}
       {showQRModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0, 0, 0, 0.65)",
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backdropFilter: "blur(6px)",
-          animation: "fadeIn 0.2s ease-out"
-        }}>
-          <div style={{ position: "relative", width: 340 }}>
-            {/* Close button outside the card */}
-            <button 
-              onClick={() => setShowQRModal(false)}
-              style={{
-                position: "absolute",
-                top: -40,
-                right: 0,
-                background: "rgba(255,255,255,0.2)",
-                border: "none",
-                width: 32,
-                height: 32,
-                borderRadius: 16,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "background 0.2s"
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
-            >
-              ✕
-            </button>
+        <div 
+          onClick={() => setShowQRModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(6px)",
+            animation: "fadeIn 0.2s ease-out",
+            cursor: "pointer"
+          }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position: "relative", width: 340, cursor: "default" }}>
 
             {/* Premium ID Card Design */}
             <div style={{
@@ -1650,6 +1629,10 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   This acts as your official digital ID.<br/>Scan at school gate terminal for validation.
                 </div>
               </div>
+            </div>
+            
+            <div style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 600, letterSpacing: "0.02em", animation: "fadeIn 0.4s ease-out 0.2s both" }}>
+              Tap anywhere to close
             </div>
           </div>
         </div>
