@@ -181,8 +181,8 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
                     <th colSpan={5} style={{ textAlign:"left", fontWeight:"normal", borderLeft: "none", borderRight: "none" }}>
                       <div className="sf10-row" style={{ margin: "4px 8px" }}>
                         <Field label="Remedial Classes" labelStyle={{ marginRight: 16 }} flex={0} />
-                        <Field label="Conducted from (mm/dd/yyyy)" width={120} />
-                        <Field label="to (mm/dd/yyyy)" width={120} />
+                        <Field label="Conducted from (mm/dd/yyyy)" flex={1} />
+                        <Field label="to (mm/dd/yyyy)" flex={1} />
                       </div>
                     </th>
                   </tr>
