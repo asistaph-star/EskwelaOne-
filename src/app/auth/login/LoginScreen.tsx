@@ -103,7 +103,6 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
 
           {/* Titles */}
           <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.m700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Welcome back!</div>
             <div style={{ fontSize: 24, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 6 }}>Sign in to your account</div>
             <div style={{ fontSize: 11.5, color: C.t3, lineHeight: 1.4 }}>Access your university portal to continue managing academic and administrative tasks.</div>
           </div>
