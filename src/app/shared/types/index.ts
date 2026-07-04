@@ -13,7 +13,7 @@ export type PScreen =
   | "p-analytics" | "p-teachers"
   | "p-welfare" | "p-inventory"
   | "p-reports" | "p-templates"
-  | "p-events"
+  | "p-events" | "p-faculty-attendance"
   | "p-settings" | "p-help";
 
 export interface RCStudent {

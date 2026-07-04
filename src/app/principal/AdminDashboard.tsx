@@ -14,6 +14,7 @@ import { PInventory } from './inventory/PInventory';
 import { PReports } from './reports/PReports';
 import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
+import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { X } from 'lucide-react';
 
 export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
@@ -28,8 +29,13 @@ export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
     "p-welfare":  "Student Welfare",     "p-inventory": "Inventory",
     "p-reports":  "Reports",             "p-templates": "Template Hub",
     "p-events":   "School Events",
+    "p-faculty-attendance": "Live Faculty Attendance",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
+
+  if (screen === "p-faculty-attendance") {
+    return <PLiveFacultyAttendance onExit={() => setScreen("p-dashboard")} />;
+  }
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:C.paper, fontFamily:"'Inter',sans-serif" }}>

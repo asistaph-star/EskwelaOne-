@@ -21,6 +21,7 @@ const P_NAV_GROUPS = [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
     { id: "p-reports" as PScreen,    label: "Reports",             icon: FileSpreadsheet },
     { id: "p-templates" as PScreen,  label: "Forms & Records",     icon: BookMarked },
+    { id: "p-faculty-attendance" as PScreen, label: "Live Faculty Attendance", icon: Monitor },
   ]},
 ];
 
