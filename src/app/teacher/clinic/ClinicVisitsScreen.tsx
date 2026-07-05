@@ -7,6 +7,7 @@ import { GradebookFullScreen } from '../grades/GradebookFullScreen';
 import { Stamp } from '../../shared/components/Stamp';
 import { gradeColor } from '../../shared/utils/helpers';
 import { RC_SUBJECTS } from '../../shared/constants/seedData';
+
 const CLINIC_DATA = [
   { id:"200001", name:"Aguilar, Liza Marie",  section:"Gr. 8 Rizal",    date:"Jun 10 · 9:14 AM",  complaint:"Headache, dizziness",       action:"Rest given, paracetamol",      by:"Nurse Reyes", status:"Discharged", excused:true  },
   { id:"200005", name:"Espino, Hannah Grace", section:"Gr. 8 Rizal",    date:"Jun 10 · 10:02 AM", complaint:"Stomach ache",              action:"Rest, warm compress",          by:"Nurse Reyes", status:"Monitoring", excused:false },
@@ -147,6 +148,8 @@ function AttendanceDirectScreen() {
 export function ClinicVisitsScreen() {
   const [section, setSection] = useState("All sections");
   const [search, setSearch] = useState("");
+  const [selectedHistory, setSelectedHistory] = useState<{name:string, section:string}|null>(null);
+  
   const filtered = CLINIC_DATA.filter(r=>{
     const matchSec = section==="All sections" || r.section.includes(section.split(" ")[1]??section);
     const matchSearch = !search || r.name.toLowerCase().includes(search.toLowerCase());
@@ -191,14 +194,14 @@ export function ClinicVisitsScreen() {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                {["Student","Section","Date & Time","Complaint / Reason","Action Taken","Nurse","Status","Excused"].map(h=>(
+                {["Student","Section","Date & Time","Complaint / Reason","Action Taken","Nurse","Status","Excused","Action"].map(h=>(
                   <th key={h} style={{ textAlign:"left", padding:"8px 12px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", whiteSpace:"nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length===0 ? (
-                <tr><td colSpan={8} style={{ padding:"28px", textAlign:"center", fontSize:12, color:C.t3 }}>No clinic visit records for this section.</td></tr>
+                <tr><td colSpan={9} style={{ padding:"28px", textAlign:"center", fontSize:12, color:C.t3 }}>No clinic visit records for this section.</td></tr>
               ) : filtered.map((r,i)=>(
                 <tr key={r.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -214,6 +217,9 @@ export function ClinicVisitsScreen() {
                   </td>
                   <td style={{ padding:"9px 12px", textAlign:"center" }}>
                     {r.excused && <Stamp label="Excused" color={C.teal} bg={C.tealBg} />}
+                  </td>
+                  <td style={{ padding:"9px 12px" }}>
+                    <button onClick={()=>setSelectedHistory({name:r.name, section:r.section})} style={{ fontSize:10, fontWeight:600, color:C.teal, background:C.tealBg, border:`1px solid rgba(20,184,166,0.3)`, borderRadius:4, padding:"4px 8px", cursor:"pointer", whiteSpace:"nowrap" }}>History</button>
                   </td>
                 </tr>
               ))}
@@ -237,8 +243,88 @@ export function ClinicVisitsScreen() {
           </div>
         </div>
       </div>
+
+      {/* Overlay */}
+      {selectedHistory && (
+        <StudentMedicalHistoryCard studentName={selectedHistory.name} section={selectedHistory.section} onClose={()=>setSelectedHistory(null)} />
+      )}
     </div>
   );
 }
 
-/* ─── Multi-grade report card data ──────────────────────────── */
+/* ─── StudentMedicalHistoryCard ────────────────────────────── */
+function StudentMedicalHistoryCard({ studentName, section, onClose }:{ studentName:string, section:string, onClose:()=>void }) {
+  const mockHistory = [
+    { date: "Jun 10, 2025", time: "9:14 AM", complaint: "Headache, dizziness", action: "Rest given, paracetamol", status: "Discharged", nurse: "Nurse Reyes" },
+    { date: "Mar 15, 2025", time: "11:30 AM", complaint: "Stomach ache", action: "Warm compress, rest for 30m", status: "Discharged", nurse: "Nurse Reyes" },
+    { date: "Nov 02, 2024", time: "2:15 PM", complaint: "Fever (38.5°C)", action: "Called parent, sent home", status: "Sent home", nurse: "Nurse Reyes" }
+  ];
+
+  const profile = {
+    allergies: studentName.includes("Santos") ? "Peanuts, Dust" : "None known",
+    bloodType: "O+",
+    contact: "0917-123-4567 (Mother)"
+  };
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(10,5,5,0.45)" }} />
+      <div style={{ position:"fixed", top:0, right:0, bottom:0, zIndex:401, width:480, background:"#fff", display:"flex", flexDirection:"column", boxShadow:"-8px 0 40px rgba(74,10,16,0.25)", overflow:"hidden" }}>
+        <div style={{ background:C.teal, padding:"16px 20px", display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+          <div style={{ width:46, height:46, borderRadius:23, background:"#fff", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Stethoscope size={22} color={C.teal} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ color:"#fff", fontSize:18, fontWeight:700, fontFamily:"'Fraunces',serif", lineHeight:1.2 }}>{studentName}</div>
+            <div style={{ color:"rgba(255,255,255,0.7)", fontSize:11, marginTop:2 }}>{section} · SY 2025–2026</div>
+          </div>
+          <button onClick={onClose} style={{ width:32, height:32, borderRadius:16, background:"rgba(255,255,255,0.2)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", flexShrink:0 }}>
+            <X size={18}/>
+          </button>
+        </div>
+        <div style={{ padding:"20px", borderBottom:`1px solid ${C.borderMed}`, background:C.paper }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.t1, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:12 }}>Medical Profile</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+            <div>
+              <div style={{ fontSize:10, color:C.t3, marginBottom:4 }}>Allergies</div>
+              <div style={{ fontSize:13, fontWeight:600, color:profile.allergies!=="None known"?C.red:C.t1 }}>{profile.allergies}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:10, color:C.t3, marginBottom:4 }}>Blood Type</div>
+              <div style={{ fontSize:13, fontWeight:600, color:C.t1 }}>{profile.bloodType}</div>
+            </div>
+            <div style={{ gridColumn:"1 / -1" }}>
+              <div style={{ fontSize:10, color:C.t3, marginBottom:4 }}>Emergency Contact</div>
+              <div style={{ fontSize:13, fontWeight:600, color:C.t1 }}>{profile.contact}</div>
+            </div>
+          </div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"20px" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.t1, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:16 }}>Clinic Visit History</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            {mockHistory.map((h, i) => (
+              <div key={i} style={{ borderLeft:`2px solid ${C.borderMed}`, paddingLeft:16, position:"relative" }}>
+                <div style={{ position:"absolute", left:-6, top:0, width:10, height:10, borderRadius:5, background:C.teal, border:"2px solid #fff" }} />
+                <div style={{ fontSize:10, fontWeight:700, color:C.t2, fontFamily:"'JetBrains Mono',monospace", marginBottom:4 }}>{h.date} · {h.time}</div>
+                <div style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:6, padding:"12px" }}>
+                  <div style={{ marginBottom:8 }}>
+                    <div style={{ fontSize:10, color:C.t3, marginBottom:2 }}>Complaint</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.t1 }}>{h.complaint}</div>
+                  </div>
+                  <div style={{ marginBottom:8 }}>
+                    <div style={{ fontSize:10, color:C.t3, marginBottom:2 }}>Action Taken / Treatment</div>
+                    <div style={{ fontSize:12, color:C.t1 }}>{h.action}</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:10, paddingTop:10, borderTop:`1px solid ${C.borderMed}` }}>
+                    <div style={{ fontSize:11, color:C.t3 }}>Attended by: <span style={{ fontWeight:600, color:C.t2 }}>{h.nurse}</span></div>
+                    <Stamp label={h.status} color={h.status==="Discharged"?C.green:h.status==="Sent home"?C.red:C.amber} bg={h.status==="Discharged"?C.greenBg:h.status==="Sent home"?C.redBg:C.amberBg} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

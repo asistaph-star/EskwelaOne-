@@ -4,15 +4,15 @@ import { TScreen, GradeCardInfo } from '../../shared/types';
 import { STUDENTS_GR8, MY_CLASSES, GRADEBOOK } from '../../App';
 import { AttendanceHub } from '../attendance/AttendanceHub';
 import { GradebookFullScreen } from '../grades/GradebookFullScreen';
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from 'recharts';
-import { ArrowRight, Sparkles, Users, CalendarCheck, FileText, BarChart2, ChevronRight, Printer, Download, Target, X } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ArrowRight, Sparkles, Users, CalendarCheck, FileText, BarChart2, ChevronRight, Printer, Download, Target, X, ClipboardList, Activity } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { gradeColor, calcGrade } from '../../shared/utils/helpers';
 import { BAR_DATA, PIE_DATA, TREND_DATA } from '../../shared/constants/seedData';
 import { StudentReportCard } from '../../student/components/StudentReportCard';
 
-type HubTab = "students" | "attendance" | "gradebook" | "analytics";
+type HubTab = "students" | "attendance" | "assignments" | "gradebook" | "analytics";
 export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:number, onBack:()=>void, onShowGradeCard?:(info:GradeCardInfo)=>void }) {
   const [tab, setTab] = useState<HubTab>("students");
   const cls = MY_CLASSES.find(c=>c.id===classId) ?? MY_CLASSES[0];
@@ -23,6 +23,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
   const TABS: { id:HubTab, label:string, icon:React.ElementType }[] = [
     { id:"students",   label:"Students",   icon:Users },
     { id:"attendance", label:"Attendance", icon:CalendarCheck },
+    { id:"assignments",label:"Assignments",icon:ClipboardList },
     { id:"gradebook",  label:"Gradebook",  icon:FileText },
     { id:"analytics",  label:"Analytics",  icon:BarChart2 },
   ];
@@ -47,11 +48,12 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
             {cls.adviser && <Stamp label="Class Adviser" color={C.gold} bg={C.goldLight} />}
           </div>
         </div>
-        {/* 4-module quick stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginTop:12 }}>
+        {/* 5-module quick stats */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginTop:12 }}>
           {[
             { icon:Users,       label:"Students",   value:`${cls.students}`, sub:"enrolled", color:C.m700 },
             { icon:CalendarCheck,label:"Attendance", value:"94.2%",          sub:"this week", color:C.green },
+            { icon:ClipboardList,label:"Assignments",value:"3 Active",       sub:"this week", color:C.teal },
             { icon:FileText,    label:"Gradebook",  value:"Q1 Open",        sub:"12 pending", color:C.amber },
             { icon:BarChart2,   label:"Analytics",  value:"82.4",           sub:"class avg",  color:C.purple },
           ].map((s,i) => {
@@ -135,6 +137,48 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── ATTENDANCE TAB ── */}
         {tab==="attendance" && <AttendanceHub students={STUDENTS_GR8} />}
+
+        {/* ── ASSIGNMENTS TAB ── */}
+        {tab==="assignments" && (
+          <DocPanel title="Class Assignments" icon={ClipboardList}
+            action={<button style={{ fontSize:10, fontWeight:600, color:C.m900, background:C.gold, border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>+ Create Assignment</button>}>
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead>
+                <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
+                  {["Title","Type","Due Date","Completion","Status"].map(h => (
+                    <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { title:"Chapter 3 Practice Exercises", type:"Written Work", due:"Tomorrow, 11:59 PM", comp:85, status:"Active" },
+                  { title:"Science Project Proposal", type:"Performance Task", due:"Jun 15, 2025", comp:40, status:"Active" },
+                  { title:"Weekly Quiz 1", type:"Assessment", due:"Jun 8, 2025", comp:100, status:"Closed" },
+                ].map((a,i) => (
+                  <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
+                    <td style={{ padding:"10px 14px", fontSize:13, fontWeight:600, color:C.t1 }}>{a.title}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{a.type}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t3 }}>{a.due}</td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <div style={{ flex:1, height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
+                          <div style={{ width:`${a.comp}%`, height:"100%", background:a.comp===100?C.green:C.teal }} />
+                        </div>
+                        <span style={{ fontSize:11, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:C.t1 }}>{a.comp}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <Stamp label={a.status} color={a.status==="Active"?C.teal:C.t3} bg={a.status==="Active"?C.tealBg:C.m50} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DocPanel>
+        )}
 
         {/* ── GRADEBOOK TAB ── */}
         {tab==="gradebook" && (
@@ -255,6 +299,42 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
               </div>
             </DocPanel>
 
+            {/* Assignment Completion Rates */}
+            <DocPanel title="Assignment Completion Rates" icon={ClipboardList}>
+              <div style={{ padding:16 }}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <RBarChart data={[{name:"W1",rate:95},{name:"W2",rate:88},{name:"W3",rate:92},{name:"W4",rate:85}]}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="name" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0,100]} tick={{fontSize:10,fill:C.t3,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip formatter={(v:number)=>[`${v}%`,"Completion"]} cursor={{fill:"rgba(0,0,0,0.05)"}} contentStyle={{fontSize:12,borderRadius:4}} />
+                    <Bar dataKey="rate" fill={C.teal} radius={[3,3,0,0]} />
+                  </RBarChart>
+                </ResponsiveContainer>
+              </div>
+            </DocPanel>
+
+            {/* Classroom Activity */}
+            <DocPanel title="Classroom Activity" icon={Activity}>
+              <div style={{ padding:16 }}>
+                <div style={{ fontSize:10, color:C.t3, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:700 }}>Daily Active Students</div>
+                <ResponsiveContainer width="100%" height={120}>
+                  <AreaChart data={[{day:"Mon",val:38},{day:"Tue",val:40},{day:"Wed",val:39},{day:"Thu",val:41},{day:"Fri",val:37}]}>
+                    <defs>
+                      <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={C.purple} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={C.purple} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="day" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{fontSize:12,borderRadius:4}} />
+                    <Area type="monotone" dataKey="val" stroke={C.purple} fillOpacity={1} fill="url(#colorVal)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </DocPanel>
+
             {/* AI Executive Summary */}
             <DocPanel title="AI Executive Summary" icon={Sparkles}>
               <div style={{ padding:16 }}>
@@ -317,5 +397,3 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
     </div>
   );
 }
-
-/* ─── SCREEN 4 — AI Quick Tools ─────────────────────────────── */
