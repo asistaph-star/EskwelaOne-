@@ -76,6 +76,7 @@ import { LoginScreen } from "./auth/login/LoginScreen";
 import { SimpleShell } from "./shared/components/SimpleShell";
 import { StudentPortal } from "./student/StudentPortal";
 import { AdminDashboard } from "./principal/AdminDashboard";
+import { NurseApp } from "./nurse/NurseApp";
 import { TSidebar } from "./teacher/shared/TSidebar";
 import { DashboardScreen } from "./teacher/dashboard/DashboardScreen";
 import { ClassroomHub } from "./teacher/classroom/ClassroomHub";
@@ -138,6 +139,9 @@ export default function App() {
   }
   if (role === "Parent") {
     return <SimpleShell role={role} onLogout={logout} />;
+  }
+  if (role === "Nurse") {
+    return <NurseApp onLogout={logout} />;
   }
 
   // Teacher portal dashboard render
