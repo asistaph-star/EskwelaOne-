@@ -17,6 +17,7 @@ import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { X } from 'lucide-react';
+import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 
 export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<PScreen>("p-dashboard");
@@ -88,6 +89,7 @@ export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
           )}
         </div>
       </div>
+      <AIAssistantWidget role="Principal" />
     </div>
   );
 }

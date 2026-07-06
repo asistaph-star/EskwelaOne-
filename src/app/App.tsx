@@ -121,6 +121,7 @@ import { TInboxScreen } from "./teacher/messages/TInboxScreen";
 import { StubScreen } from "./shared/components/StubScreen";
 import { StudentDetailOverlay } from "./shared/components/StudentDetailOverlay";
 import { NotificationDropdown } from "./shared/components/NotificationDropdown";
+import { AIAssistantWidget } from "./shared/components/AIAssistantWidget";
 
 // 3. Main Routing App Shell Orchestrator
 export default function App() {
@@ -312,6 +313,7 @@ export default function App() {
       {gradeCard && (
         <StudentDetailOverlay student={{ id: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.id || 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.avg || 85, status: [...STUDENTS_GR8,...STUDENTS_GR9,...STUDENTS_GR10].find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.status || 'Passed', lrn: '100001', grade: gradeCard.grade, section: gradeCard.section, adviser: 'Ana R. Soriano', gender: 'male' }} onClose={() => setGradeCard(null)} />
       )}
+      <AIAssistantWidget role="Teacher" />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { C } from '../shared/constants/tokens';
 import { CLINIC_STUDENTS, CLINIC_VISITS_SEED } from '../shared/constants/seedData';
 import { ClinicVisit, ClinicStudent } from '../shared/types';
 import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse } from 'lucide-react';
+import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -403,7 +404,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
 
       {isRecordOpen && <RecordVisitDrawer students={CLINIC_STUDENTS} onSave={handleAddVisit} onClose={() => setIsRecordOpen(false)} />}
       {viewingStudent && <MedicalHistoryDrawer student={viewingStudent} visits={visits.filter(v => v.studentId === viewingStudent.id)} onClose={() => setViewingStudent(null)} />}
-
+      <AIAssistantWidget role="Nurse" />
     </div>
   );
 }
