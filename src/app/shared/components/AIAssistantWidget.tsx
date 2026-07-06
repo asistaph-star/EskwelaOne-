@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Sparkles, X, Send } from "lucide-react";
-import { C } from "../constants/seedData";
+import { C } from "../constants/tokens";
 
 export function AIAssistantWidget({ role }: { role: "Teacher" | "Principal" | "Nurse" }) {
   const [isOpen, setIsOpen] = useState(false);

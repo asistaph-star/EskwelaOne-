@@ -4,6 +4,7 @@ import { CLINIC_STUDENTS, CLINIC_VISITS_SEED } from '../shared/constants/seedDat
 import { ClinicVisit, ClinicStudent } from '../shared/types';
 import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { NSidebar, NScreen } from './shared/NSidebar';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -259,6 +260,7 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
 
 // ── Main Nurse App Shell ──
 export function NurseApp({ onLogout }: { onLogout: () => void }) {
+  const [screen, setScreen] = useState<NScreen>("n-dashboard");
   const [visits, setVisits] = useState<ClinicVisit[]>(CLINIC_VISITS_SEED);
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<ClinicStudent | null>(null);
@@ -280,40 +282,33 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif" }}>
       
-      {/* ── Top Navigation Bar ── */}
-      <div style={{ background: C.m800, padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <HeartPulse size={20} color={C.gold} />
-          </div>
-          <div>
-            <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>Clinic Dashboard</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 2 }}>Sindalan NHS Health Unit</div>
-          </div>
-        </div>
-        
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#fff" }}>School Nurse</div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)" }}>Clinic Staff</div>
-            </div>
-            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.m600, border: `2px solid ${C.gold}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>
-              N
-            </div>
-          </div>
-          <button onClick={onLogout} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: 6 }}>
-            <LogOut size={16} /> <span style={{ fontSize: 12, fontWeight: 600 }}>Sign Out</span>
-          </button>
-        </div>
-      </div>
+      {/* ── Left Sidebar ── */}
+      <NSidebar active={screen} onNav={setScreen} onLogout={onLogout} />
 
       {/* ── Main Content Area ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
-        {/* Quick Stats & Header */}
+        {/* Top Header for Content Area */}
+        <div style={{ background: "#fff", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderBottom: `1px solid ${C.borderMed}` }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Clinic Operations</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>Maria Clara</div>
+              <div style={{ fontSize: 10, color: C.t3 }}>School Nurse</div>
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, fontWeight: 700, fontSize: 14 }}>
+              MC
+            </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          {(screen === "n-dashboard" || screen === "n-clinic") ? (
+            <>
+              {/* Quick Stats & Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Health Records</h2>
@@ -399,6 +394,24 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
               </tbody>
             </table>
           </div>
+        </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center", borderRadius: 12 }}>
+              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 72, height: 72, borderRadius: 36, background: C.m100, border: `2px solid ${C.m700}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, boxShadow: "0 4px 12px rgba(139,30,30,0.1)" }}>
+                  <span style={{ fontSize: 32 }}>🚧</span>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 6 }}>Module Locked</h3>
+                  <p style={{ fontSize: 13, color: C.t2, lineHeight: 1.6 }}>This nurse module is currently being finalized.</p>
+                </div>
+                <div style={{ marginTop: 8, padding: "8px 16px", background: C.m100, color: C.m700, borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1px solid rgba(139,30,30,0.1)` }}>
+                  Feature Coming Soon
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
