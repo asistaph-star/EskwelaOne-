@@ -61,15 +61,15 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
   const bgDark = '#2A0505'; // Deep dark maroon
   const bgHeader = '#2A0505';
   const bgTicker = '#3D0808'; 
-  const bgMain = '#F3F4F6'; // Light background for main area
+  const bgMain = '#FAF5F0'; // Warm off-white paper bg
   const bgCardLight = '#FFFFFF';
   
-  const green = '#10b981';
-  const yellow = '#f59e0b';
-  const red = '#ef4444';
-  const gray = '#6b7280';
-  const textDark = '#111827';
-  const textMuted = '#6B7280';
+  const green = '#155E36';
+  const yellow = '#92400E';
+  const red = '#911818';
+  const gray = '#8A7070';
+  const textDark = '#190D0D';
+  const textMuted = '#4A3232';
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: bgMain, color: textDark, fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
@@ -131,7 +131,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
               </motion.div>
             ) : (
               waiting.map(w => (
-                <motion.div key={w.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} style={{ background: bgCardLight, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <motion.div key={w.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} style={{ background: bgCardLight, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, border: '1px solid rgba(139,30,30,0.15)', boxShadow: '0 2px 4px rgba(139,30,30,0.04)' }}>
                    <img src={w.img} style={{ width: 40, height: 40, borderRadius: 20 }} alt="" />
                    <div>
                      <div style={{ fontWeight: 600, fontSize: 14, color: textDark }}>{w.name}</div>
