@@ -22,9 +22,7 @@ const T_NAV_GROUPS = [
     { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
   { category: "Tools & Growth", items: [
-    { id:"tools",              label:"Tools",             icon:Wrench },
     { id:"ai-tools",           label:"AI Insights & Reports",    icon:Sparkles },
-    { id:"pro-dev",            label:"Prof. Development", icon:GraduationCap },
   ]},
 ];
 

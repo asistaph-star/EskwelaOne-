@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Calendar, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, Settings, MessageSquare, ChevronDown
+  Wrench, Sparkles, GraduationCap, Settings, MessageSquare, ChevronDown, LogOut
 } from 'lucide-react';
 
 export type NScreen =
@@ -22,9 +22,7 @@ const N_NAV_GROUPS = [
     { id:"n-reports",          label:"Medical Reports",   icon:FileText },
   ]},
   { category: "Tools & Growth", items: [
-    { id:"n-tools",            label:"Tools",             icon:Wrench },
     { id:"n-ai",               label:"AI Insights & Reports",    icon:Sparkles },
-    { id:"n-pro-dev",          label:"Prof. Development", icon:GraduationCap },
   ]},
 ];
 
