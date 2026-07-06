@@ -22,6 +22,7 @@ const P_NAV_GROUPS = [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
     { id: "p-reports" as PScreen,    label: "Reports",             icon: FileText },
     { id: "p-templates" as PScreen,  label: "Forms & Records",     icon: BookMarked },
+    { id: "p-faculty-attendance" as PScreen, label: "Live Faculty Attendance", icon: Monitor },
   ]},
 ];
 
@@ -34,7 +35,7 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
   collapsed?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const user = { name: "Dr. Roberto Santos", sub: "School Principal" };
+  const user = { name: "Dr. Roberto Santos", sub: "School Administrator" };
   const initials = "RS";
 
   return (

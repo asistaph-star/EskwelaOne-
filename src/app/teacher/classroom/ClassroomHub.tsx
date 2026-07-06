@@ -1,38 +1,29 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { TScreen, GradeCardInfo } from '../../shared/types';
-import { STUDENTS_GR8, STUDENTS_GR9, STUDENTS_GR10, MY_CLASSES, GRADEBOOK, GRADEBOOK_GR9, GRADEBOOK_GR10 } from '../../App';
+import { STUDENTS_GR8, MY_CLASSES, GRADEBOOK } from '../../App';
 import { AttendanceHub } from '../attendance/AttendanceHub';
 import { GradebookFullScreen } from '../grades/GradebookFullScreen';
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line } from 'recharts';
-import { ArrowRight, Sparkles, Users, CalendarCheck, FileText, BarChart2, ChevronRight, Printer, Download, Target, X } from 'lucide-react';
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ArrowRight, Sparkles, Users, CalendarCheck, FileText, BarChart2, ChevronRight, Printer, Download, Target, X, ClipboardList, Activity } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { gradeColor, calcGrade } from '../../shared/utils/helpers';
 import { BAR_DATA, PIE_DATA, TREND_DATA } from '../../shared/constants/seedData';
 import { StudentReportCard } from '../../student/components/StudentReportCard';
-import { useAppContext } from '../../shared/AppContext';
 
-type HubTab = "students" | "attendance" | "gradebook" | "analytics";
+type HubTab = "students" | "attendance" | "assignments" | "gradebook" | "analytics";
 export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:number, onBack:()=>void, onShowGradeCard?:(info:GradeCardInfo)=>void }) {
   const [tab, setTab] = useState<HubTab>("students");
-  const [activeClassId, setActiveClassId] = useState(classId);
-  const cls = MY_CLASSES.find(c=>c.id===activeClassId) ?? MY_CLASSES[0];
+  const cls = MY_CLASSES.find(c=>c.id===classId) ?? MY_CLASSES[0];
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDone, setAiDone] = useState(false);
-  
-  const activeStudents = cls.grade === 9 ? STUDENTS_GR9 : cls.grade === 10 ? STUDENTS_GR10 : STUDENTS_GR8;
-  const activeGradebook = cls.grade === 9 ? GRADEBOOK_GR9 : cls.grade === 10 ? GRADEBOOK_GR10 : GRADEBOOK;
-  const [profileStudent, setProfileStudent] = useState<typeof activeStudents[0]|null>(null);
-  const { addBehaviorLog } = useAppContext();
-  const [behaviorStudent, setBehaviorStudent] = useState<typeof activeStudents[0]|null>(null);
-  const [behaviorType, setBehaviorType] = useState('Misconduct');
-  const [behaviorNote, setBehaviorNote] = useState('');
-  const submitBehavior = () => { if(behaviorStudent && behaviorNote) { addBehaviorLog({ id: 'log-'+Date.now(), studentName: behaviorStudent.first + ' ' + behaviorStudent.surname, section: 'Grade ' + cls.grade + ' - ' + cls.section, type: behaviorType, date: 'Today', status: 'Pending', note: behaviorNote }); setBehaviorStudent(null); setBehaviorNote(''); } };
+  const [profileStudent, setProfileStudent] = useState<typeof STUDENTS_GR8[0]|null>(null);
 
   const TABS: { id:HubTab, label:string, icon:React.ElementType }[] = [
     { id:"students",   label:"Students",   icon:Users },
     { id:"attendance", label:"Attendance", icon:CalendarCheck },
+    { id:"assignments",label:"Assignments",icon:ClipboardList },
     { id:"gradebook",  label:"Gradebook",  icon:FileText },
     { id:"analytics",  label:"Analytics",  icon:BarChart2 },
   ];
@@ -48,18 +39,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
         </div>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Classroom Hub</div>
-              <select 
-                value={activeClassId} 
-                onChange={(e) => setActiveClassId(Number(e.target.value))}
-                style={{ fontSize: 13, padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.borderMed}`, outline: "none", cursor: "pointer", color: C.t1, fontWeight: 600 }}
-              >
-                {MY_CLASSES.map(c => (
-                  <option key={c.id} value={c.id}>Grade {c.grade} {c.section} ({c.subject})</option>
-                ))}
-              </select>
-            </div>
+            <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Classroom Hub — Grade {cls.grade} {cls.section}</div>
             <div style={{ fontSize:12, color:C.t3, marginTop:2 }}>{cls.subject} · {cls.students} students · {cls.semester} · SY 2025–2026</div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
@@ -68,11 +48,12 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
             {cls.adviser && <Stamp label="Class Adviser" color={C.gold} bg={C.goldLight} />}
           </div>
         </div>
-        {/* 4-module quick stats */}
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginTop:12 }}>
+        {/* 5-module quick stats */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginTop:12 }}>
           {[
             { icon:Users,       label:"Students",   value:`${cls.students}`, sub:"enrolled", color:C.m700 },
             { icon:CalendarCheck,label:"Attendance", value:"94.2%",          sub:"this week", color:C.green },
+            { icon:ClipboardList,label:"Assignments",value:"3 Active",       sub:"this week", color:C.teal },
             { icon:FileText,    label:"Gradebook",  value:"Q1 Open",        sub:"12 pending", color:C.amber },
             { icon:BarChart2,   label:"Analytics",  value:"82.4",           sub:"class avg",  color:C.purple },
           ].map((s,i) => {
@@ -112,7 +93,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── STUDENTS TAB ── */}
         {tab==="students" && (
-          <DocPanel title={`Student Roster — Grade ${cls.grade} ${cls.section}`} icon={Users}
+          <DocPanel title="Student Roster — Grade 8 Rizal" icon={Users}
             action={<div style={{ display:"flex", gap:6 }}>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Student QR</button>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Parent Contacts</button>
@@ -127,7 +108,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                 </tr>
               </thead>
               <tbody>
-                {activeStudents.map((s,i) => (
+                {STUDENTS_GR8.map((s,i) => (
                   <tr key={s.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
@@ -146,7 +127,6 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                     <td style={{ padding:"10px 14px", display:"flex", gap:5 }}>
                       <button onClick={()=>onShowGradeCard?.({name:`${s.surname}, ${s.first}`,section:cls.section,grade:cls.grade})} style={{ fontSize:10, color:C.m700, background:C.m100, border:"none", borderRadius:4, padding:"4px 8px", cursor:"pointer" }}>Grades</button>
                       <button onClick={()=>setProfileStudent(s)} style={{ fontSize:10, color:C.t2, background:C.paper, border:`1px solid ${C.border}`, borderRadius:4, padding:"4px 8px", cursor:"pointer" }}>Profile</button>
-                      <button onClick={()=>setBehaviorStudent(s)} style={{ fontSize:10, color:C.amber, background:C.amberBg, border:"none", borderRadius:4, padding:"4px 8px", cursor:"pointer" }}>Log</button>
                     </td>
                   </tr>
                 ))}
@@ -156,7 +136,49 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
         )}
 
         {/* ── ATTENDANCE TAB ── */}
-        {tab==="attendance" && <AttendanceHub students={activeStudents} />}
+        {tab==="attendance" && <AttendanceHub students={STUDENTS_GR8} />}
+
+        {/* ── ASSIGNMENTS TAB ── */}
+        {tab==="assignments" && (
+          <DocPanel title="Class Assignments" icon={ClipboardList}
+            action={<button style={{ fontSize:10, fontWeight:600, color:C.m900, background:C.gold, border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>+ Create Assignment</button>}>
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead>
+                <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
+                  {["Title","Type","Due Date","Completion","Status"].map(h => (
+                    <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { title:"Chapter 3 Practice Exercises", type:"Written Work", due:"Tomorrow, 11:59 PM", comp:85, status:"Active" },
+                  { title:"Science Project Proposal", type:"Performance Task", due:"Jun 15, 2025", comp:40, status:"Active" },
+                  { title:"Weekly Quiz 1", type:"Assessment", due:"Jun 8, 2025", comp:100, status:"Closed" },
+                ].map((a,i) => (
+                  <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
+                    <td style={{ padding:"10px 14px", fontSize:13, fontWeight:600, color:C.t1 }}>{a.title}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{a.type}</td>
+                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t3 }}>{a.due}</td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <div style={{ flex:1, height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
+                          <div style={{ width:`${a.comp}%`, height:"100%", background:a.comp===100?C.green:C.teal }} />
+                        </div>
+                        <span style={{ fontSize:11, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:C.t1 }}>{a.comp}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <Stamp label={a.status} color={a.status==="Active"?C.teal:C.t3} bg={a.status==="Active"?C.tealBg:C.m50} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DocPanel>
+        )}
 
         {/* ── GRADEBOOK TAB ── */}
         {tab==="gradebook" && (
@@ -179,7 +201,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
               </div>
             </div>
 
-            <DocPanel title={`Scholastic Record Ledger — Grade ${cls.grade} ${cls.section} · ${cls.subject} · Q1`} icon={FileText}>
+            <DocPanel title="Scholastic Record Ledger — Grade 8 Rizal · Mathematics 8 · Q1" icon={FileText}>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", minWidth:800 }}>
                   <thead>
@@ -199,7 +221,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                     </tr>
                   </thead>
                   <tbody>
-                    {activeGradebook.map((s,i) => {
+                    {GRADEBOOK.map((s,i) => {
                       const avg = parseFloat(calcGrade(s.ww, s.pt, s.qa));
                       return (
                         <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
@@ -277,24 +299,44 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
               </div>
             </DocPanel>
 
-            {/* Top Performers */}
-            <DocPanel title="Top Performers (Top 5)" icon={Sparkles}>
-              <div style={{ padding:16, display:"flex", flexDirection:"column", gap:8 }}>
-                {[...activeStudents].sort((a,b)=>parseFloat(b.avg)-parseFloat(a.avg)).slice(0,5).map((s,i) => (
-                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 12px", border:`1px solid ${C.borderMed}`, borderRadius:4, background:i===0?C.goldLight+"30":"#fff" }}>
-                    <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-                      <div style={{ width:24, height:24, borderRadius:12, background:i===0?C.gold:C.m100, color:i===0?"#fff":C.m700, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800 }}>{i+1}</div>
-                      <div style={{ fontSize:12, fontWeight:700, color:C.t1 }}>{s.surname}, {s.first}</div>
-                    </div>
-                    <div style={{ fontSize:14, fontFamily:"'JetBrains Mono',monospace", fontWeight:800, color:C.green }}>{s.avg}</div>
-                  </div>
-                ))}
+            {/* Assignment Completion Rates */}
+            <DocPanel title="Assignment Completion Rates" icon={ClipboardList}>
+              <div style={{ padding:16 }}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <RBarChart data={[{name:"W1",rate:95},{name:"W2",rate:88},{name:"W3",rate:92},{name:"W4",rate:85}]}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="name" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0,100]} tick={{fontSize:10,fill:C.t3,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} unit="%" />
+                    <Tooltip formatter={(v:number)=>[`${v}%`,"Completion"]} cursor={{fill:"rgba(0,0,0,0.05)"}} contentStyle={{fontSize:12,borderRadius:4}} />
+                    <Bar dataKey="rate" fill={C.teal} radius={[3,3,0,0]} />
+                  </RBarChart>
+                </ResponsiveContainer>
+              </div>
+            </DocPanel>
+
+            {/* Classroom Activity */}
+            <DocPanel title="Classroom Activity" icon={Activity}>
+              <div style={{ padding:16 }}>
+                <div style={{ fontSize:10, color:C.t3, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:700 }}>Daily Active Students</div>
+                <ResponsiveContainer width="100%" height={120}>
+                  <AreaChart data={[{day:"Mon",val:38},{day:"Tue",val:40},{day:"Wed",val:39},{day:"Thu",val:41},{day:"Fri",val:37}]}>
+                    <defs>
+                      <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={C.purple} stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor={C.purple} stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
+                    <XAxis dataKey="day" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{fontSize:12,borderRadius:4}} />
+                    <Area type="monotone" dataKey="val" stroke={C.purple} fillOpacity={1} fill="url(#colorVal)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </DocPanel>
 
             {/* AI Executive Summary */}
-            <div style={{ gridColumn: "1 / -1" }}>
-              <DocPanel title="AI Executive Summary" icon={Sparkles}>
+            <DocPanel title="AI Executive Summary" icon={Sparkles}>
               <div style={{ padding:16 }}>
                 <div style={{ borderLeft:`3px solid ${C.gold}`, paddingLeft:12, marginBottom:14 }}>
                   <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4, display:"flex", alignItems:"center", gap:5 }}><Sparkles size={10} color={C.gold} /> AI Diagnostic Report · June 10, 2025</div>
@@ -324,7 +366,6 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                 </div>
               </div>
             </DocPanel>
-            </div>
           </div>
         )}
       </div>
@@ -349,36 +390,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                 </button>
               </div>
             </div>
-            <StudentReportCard student={{ surname:profileStudent.surname, first:profileStudent.first, lrn:profileStudent.lrn, grade:(profileStudent as any).grade ?? 8, section:(profileStudent as any).section ?? "Rizal", adviser:"Ana R. Soriano", gender:(profileStudent as any).gender ?? "male", avg:(profileStudent as any).avg } as any} />
-          </div>
-        </div>
-      )}
-      {behaviorStudent && (
-        <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.4)" }}>
-          <div style={{ background:"#fff", width:400, borderRadius:8, padding:24, boxShadow:"0 4px 20px rgba(0,0,0,0.15)" }}>
-            <h3 style={{ margin:"0 0 16px 0", fontSize:16, color:C.t1 }}>Log Behavior Incident</h3>
-            <div style={{ marginBottom:12 }}>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:C.t2, marginBottom:4 }}>Student</label>
-              <div style={{ fontSize:14, fontWeight:700, color:C.t1 }}>{behaviorStudent.first} {behaviorStudent.surname}</div>
-            </div>
-            <div style={{ marginBottom:12 }}>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:C.t2, marginBottom:4 }}>Incident Type</label>
-              <select value={behaviorType} onChange={e=>setBehaviorType(e.target.value)} style={{ width:"100%", boxSizing:"border-box", padding:"8px 12px", borderRadius:4, border:`1px solid ${C.borderMed}`, fontSize:12 }}>
-                <option>Misconduct</option>
-                <option>Disruption</option>
-                <option>Tardiness</option>
-                <option>Truancy</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div style={{ marginBottom:20 }}>
-              <label style={{ display:"block", fontSize:12, fontWeight:600, color:C.t2, marginBottom:4 }}>Details</label>
-              <textarea value={behaviorNote} onChange={e=>setBehaviorNote(e.target.value)} rows={3} style={{ width:"100%", boxSizing:"border-box", padding:"8px 12px", borderRadius:4, border:`1px solid ${C.borderMed}`, resize:"none" }} />
-            </div>
-            <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
-              <button onClick={()=>setBehaviorStudent(null)} style={{ padding:"8px 16px", borderRadius:4, border:`1px solid ${C.borderMed}`, background:"#fff", cursor:"pointer", fontSize:12, fontWeight:600 }}>Cancel</button>
-              <button onClick={submitBehavior} style={{ padding:"8px 16px", borderRadius:4, border:"none", background:C.amber, color:"#fff", cursor:"pointer", fontSize:12, fontWeight:600 }}>Log Incident</button>
-            </div>
+            <StudentReportCard student={{ surname:profileStudent.surname, first:profileStudent.first, lrn:profileStudent.lrn, grade:(profileStudent as any).grade ?? 8, section:(profileStudent as any).section ?? "Rizal", adviser:"Ana R. Soriano", gender:(profileStudent as any).gender ?? "male" } as any} />
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { QKey, QData } from '../types';
+import { QKey, QData, InventoryItem, ClinicStudent, ClinicVisit } from '../types';
 
 export const SECTION_GRADES: Record<string, {id:number,surname:string,first:string,subject:string,avg:number,status:string}[]> = {
   "Rizal (Gr.8)": [
@@ -160,4 +160,156 @@ export const P_INVENTORY = [
   { item:"Library Books",         cat:"Library",qty:1240,cond:"Mixed",         loc:"Library",        status:"Good" },
   { item:"Office Printer",        cat:"Office", qty:1,   cond:"Under Repair",  loc:"Principal Office",status:"Repair"},
   { item:"Sports Equipment Set",  cat:"PE",     qty:3,   cond:"Borrowed",      loc:"Brgy. Council",  status:"Borrowed"},
+];
+
+export const EXTENDED_P_INVENTORY: InventoryItem[] = [
+  {
+    id: "INV-1001",
+    name: "Desktop Computers",
+    category: "ICT",
+    description: "Dell OptiPlex 3080 Desktop computers for the main computer laboratory.",
+    quantity: 42,
+    unit: "units",
+    supplier: "TechWorld IT Solutions",
+    purchaseDate: "2023-05-15",
+    condition: "Functional",
+    location: "Computer Lab",
+    status: "Good",
+    updates: [
+      { id: "u1", date: "2023-05-15", user: "Admin", action: "Added", details: "Initial entry of 42 units." },
+      { id: "u2", date: "2024-01-10", user: "IT Support", action: "Maintenance", details: "Routine cleaning and OS updates performed on all units." }
+    ]
+  },
+  {
+    id: "INV-1002",
+    name: "Projectors",
+    category: "ICT",
+    description: "Epson EB-X06 XGA 3LCD Projectors for classroom use.",
+    quantity: 8,
+    unit: "units",
+    supplier: "TechWorld IT Solutions",
+    purchaseDate: "2023-08-20",
+    condition: "Functional",
+    location: "Various rooms",
+    status: "Good",
+    updates: [
+      { id: "u3", date: "2023-08-20", user: "Admin", action: "Added", details: "Initial entry of 8 units." }
+    ]
+  },
+  {
+    id: "INV-2001",
+    name: "Science Lab Microscope Set",
+    category: "Science",
+    description: "Advanced compound microscopes for Grade 9 & 10 biology experiments.",
+    quantity: 1,
+    unit: "set (10 pcs)",
+    supplier: "EduSci Equipment Inc.",
+    purchaseDate: "2022-11-05",
+    condition: "Under Repair",
+    location: "Science Lab",
+    status: "Repair",
+    updates: [
+      { id: "u4", date: "2022-11-05", user: "Admin", action: "Added", details: "Initial entry." },
+      { id: "u5", date: "2025-06-01", user: "Mr. Santiago", action: "Reported Issue", details: "2 microscopes have broken lenses. Sent for repair." }
+    ]
+  },
+  {
+    id: "INV-3001",
+    name: "Library Books (Various Subjects)",
+    category: "Library",
+    description: "Assorted textbooks, reference materials, and fiction books.",
+    quantity: 1240,
+    unit: "pcs",
+    supplier: "DepEd Central / Donations",
+    purchaseDate: "2020-01-01",
+    condition: "Mixed",
+    location: "Library",
+    status: "Good",
+    updates: [
+      { id: "u6", date: "2024-05-20", user: "Librarian", action: "Inventory Audit", details: "Counted 1240 books. 15 marked for binding." }
+    ]
+  },
+  {
+    id: "INV-4001",
+    name: "Office Printer",
+    category: "Office",
+    description: "HP LaserJet Pro MFP M428fdw for the administrative office.",
+    quantity: 1,
+    unit: "unit",
+    supplier: "OfficeWarehouse",
+    purchaseDate: "2024-02-14",
+    condition: "Under Repair",
+    location: "Principal Office",
+    status: "Repair",
+    updates: [
+      { id: "u7", date: "2024-02-14", user: "Admin", action: "Added", details: "New printer installed." },
+      { id: "u8", date: "2025-06-12", user: "Secretary", action: "Reported Issue", details: "Paper jam error 13.0000. Service requested." }
+    ]
+  },
+  {
+    id: "INV-5001",
+    name: "Sports Equipment Set",
+    category: "PE",
+    description: "Includes basketballs, volleyballs, nets, and cones.",
+    quantity: 3,
+    unit: "sets",
+    supplier: "SportsHouse",
+    purchaseDate: "2023-07-30",
+    condition: "Borrowed",
+    location: "Brgy. Council",
+    status: "Borrowed",
+    updates: [
+      { id: "u9", date: "2023-07-30", user: "Admin", action: "Added", details: "Initial entry." },
+      { id: "u10", date: "2025-06-15", user: "PE Coordinator", action: "Borrowed", details: "Borrowed by Brgy. Council for summer sports league. Expected return: July 5." }
+    ]
+  }
+];
+
+export const CLINIC_STUDENTS: ClinicStudent[] = [
+  { id: "S-001", name: "Aguilar, Liza Marie", grade: "8", section: "Rizal", bloodType: "O+", allergies: "Peanuts", emergencyContact: "Maria Aguilar (0917-123-4567)", medicalConditions: "None" },
+  { id: "S-002", name: "Bondoc, Ramon Jr.", grade: "8", section: "Rizal", bloodType: "A+", allergies: "None", emergencyContact: "Ramon Bondoc Sr. (0918-987-6543)", medicalConditions: "Asthma" },
+  { id: "S-003", name: "Cruz, Trisha Ann", grade: "8", section: "Rizal", bloodType: "B+", allergies: "Dust", emergencyContact: "Elena Cruz (0920-111-2222)", medicalConditions: "None" },
+  { id: "S-004", name: "Delos Reyes, Daniel", grade: "8", section: "Rizal", bloodType: "AB+", allergies: "None", emergencyContact: "Pedro Delos Reyes (0919-333-4444)", medicalConditions: "None" },
+  { id: "S-005", name: "Espino, Hannah Grace", grade: "8", section: "Rizal", bloodType: "O-", allergies: "Seafood", emergencyContact: "Grace Espino (0921-555-6666)", medicalConditions: "Anemia" },
+  { id: "S-006", name: "Santos, Juan Miguel", grade: "10", section: "Pilot", bloodType: "A+", allergies: "None", emergencyContact: "Miguel Santos (0917-777-8888)", medicalConditions: "None" },
+  { id: "S-007", name: "Garcia, Ana Kristine", grade: "10", section: "Pilot", bloodType: "O+", allergies: "Aspirin", emergencyContact: "Ana Garcia (0918-999-0000)", medicalConditions: "Migraines" },
+];
+
+export const CLINIC_VISITS_SEED: ClinicVisit[] = [
+  {
+    id: "V-1001",
+    studentId: "S-002",
+    date: "2026-06-25",
+    time: "10:30 AM",
+    symptoms: "Shortness of breath, wheezing",
+    diagnoses: "Mild Asthma Attack",
+    medications: "Salbutamol Nebulizer",
+    treatments: "15 mins nebulization, observed for 30 mins",
+    vitalSigns: { temperature: "36.8°C", bloodPressure: "110/70", heartRate: "98 bpm" },
+    notes: "Patient responded well to nebulization. Instructed to rest."
+  },
+  {
+    id: "V-1002",
+    studentId: "S-005",
+    date: "2026-06-26",
+    time: "01:15 PM",
+    symptoms: "Dizziness, pale skin",
+    diagnoses: "Suspected Anemia fatigue",
+    medications: "None",
+    treatments: "Given water and allowed to rest on the clinic bed for 1 hour.",
+    vitalSigns: { temperature: "36.5°C", bloodPressure: "90/60", heartRate: "72 bpm" },
+    notes: "Mother was called to fetch the student. Advised to take iron supplements."
+  },
+  {
+    id: "V-1003",
+    studentId: "S-007",
+    date: "2026-07-02",
+    time: "09:45 AM",
+    symptoms: "Throbbing headache, sensitivity to light",
+    diagnoses: "Migraine",
+    medications: "Paracetamol 500mg",
+    treatments: "Cold compress on forehead, rested in dark room.",
+    vitalSigns: { temperature: "36.7°C", bloodPressure: "120/80", heartRate: "80 bpm" },
+    notes: "Student felt better after 45 mins. Returned to class."
+  }
 ];

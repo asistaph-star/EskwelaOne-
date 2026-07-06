@@ -40,7 +40,7 @@ export function PReports() {
             </div>
             <div style={{ fontSize:12, color:C.t3, textAlign:"center", fontStyle:"italic" }}>
               Full report document will be generated here showing actual school data.<br />
-              This is a read-only preview — Principal access only.
+              This is a read-only preview — Admin access only.
             </div>
           </div>
         </div>
@@ -51,7 +51,7 @@ export function PReports() {
     <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
       <div style={{ marginBottom:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:4 }}>Reports</div>
-        <div style={{ fontSize:12, color:C.t3 }}>View and download official school reports. Read-only — principal oversight access.</div>
+        <div style={{ fontSize:12, color:C.t3 }}>View and download official school reports. Read-only — admin oversight access.</div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
         {REPORTS.map(r=>(
@@ -68,4 +68,4 @@ export function PReports() {
   );
 }
 
-/* ══ Principal App Shell ══ */
+/* ══ Admin App Shell ══ */

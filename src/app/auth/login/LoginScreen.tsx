@@ -103,7 +103,6 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
 
           {/* Titles */}
           <div style={{ marginBottom: 22 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.m700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Welcome back!</div>
             <div style={{ fontSize: 24, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 6 }}>Sign in to your account</div>
             <div style={{ fontSize: 11.5, color: C.t3, lineHeight: 1.4 }}>Access your university portal to continue managing academic and administrative tasks.</div>
           </div>
@@ -121,7 +120,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Portal Role</label>
             <div style={{ display: "flex", background: C.m50, padding: 3, borderRadius: 8, gap: 2, border: `1px solid ${C.borderMed}` }}>
-              {(["Student", "Teacher", "Principal", "Admin"] as Role[]).map((r) => {
+              {(["Student", "Teacher", "Admin", "Nurse"] as Role[]).map((r) => {
                 const active = role === r;
                 return (
                   <button key={r} type="button" onClick={() => setRole(r)} style={{ flex: 1, padding: "6px 0", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "#fff" : C.t2, background: active ? C.m700 : "transparent", border: "none", borderRadius: 6, cursor: "pointer", transition: "all 0.15s" }}>

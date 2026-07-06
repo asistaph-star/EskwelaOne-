@@ -19,10 +19,9 @@ export function useLayout() {
 }
 
 export const ROLE_USER = {
-  Principal: { initials: "RS", name: "Dr. Roberto Santos", sub: "School Principal" },
+  Admin: { initials: "RS", name: "Dr. Roberto Santos", sub: "School Administrator" },
   Teacher: { initials: "AS", name: "Ana R. Soriano", sub: "Adviser, Grade 10 - Pilot" },
   Student: { initials: "JM", name: "Juan Miguel Santos", sub: "Grade 10 - Pilot (LRN 100001)" },
-  Admin: { initials: "AD", name: "System Administrator", sub: "IT Operations & Database Control" },
   Parent: { initials: "PA", name: "Parent Portal", sub: "Student academic progress monitoring" },
   Registrar: { initials: "RE", name: "Registrar Office", sub: "Learner Permanent Records (SF10) Management" },
 };
@@ -104,7 +103,8 @@ export const GRADEBOOK_GR10 = [
 import { LoginScreen } from "./auth/login/LoginScreen";
 import { SimpleShell } from "./shared/components/SimpleShell";
 import { StudentPortal } from "./student/StudentPortal";
-import { PrincipalDashboard } from "./principal/PrincipalDashboard";
+import { AdminDashboard } from "./principal/AdminDashboard";
+import { NurseApp } from "./nurse/NurseApp";
 import { TSidebar } from "./teacher/shared/TSidebar";
 import { DashboardScreen } from "./teacher/dashboard/DashboardScreen";
 import { ClassroomHub } from "./teacher/classroom/ClassroomHub";
@@ -161,14 +161,17 @@ export default function App() {
   }
 
   // Redirect for specific dashboards
-  if (role === "Principal") {
-    return <PrincipalDashboard onLogout={logout} />;
+  if (role === "Admin") {
+    return <AdminDashboard onLogout={logout} />;
   }
   if (role === "Student") {
     return <StudentPortal onLogout={logout} />;
   }
-  if (role === "Admin" || role === "Parent") {
+  if (role === "Parent") {
     return <SimpleShell role={role} onLogout={logout} />;
+  }
+  if (role === "Nurse") {
+    return <NurseApp onLogout={logout} />;
   }
 
   // Teacher portal dashboard render

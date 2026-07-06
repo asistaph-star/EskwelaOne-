@@ -1,6 +1,4 @@
-
-
-export type Role = "Admin" | "Teacher" | "Principal" | "Student" | "Parent" | "Registrar";
+export type Role = "Admin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse";
 
 export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
@@ -13,7 +11,7 @@ export type PScreen =
   | "p-analytics" | "p-teachers"
   | "p-welfare" | "p-inventory"
   | "p-reports" | "p-templates"
-  | "p-events" | "p-messages"
+  | "p-events" | "p-messages" | "p-faculty-attendance"
   | "p-settings" | "p-help";
 
 export interface RCStudent {
@@ -61,3 +59,56 @@ export interface SubjectHistory {
   gr10?: GradeRecord;
 }
 export type GradeLevel = "gr7" | "gr8" | "gr9" | "gr10";
+
+export interface InventoryUpdate {
+  id: string;
+  date: string;
+  user: string;
+  action: string;
+  details: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  supplier: string;
+  purchaseDate: string;
+  condition: string;
+  location: string;
+  status: "Good" | "Repair" | "Borrowed" | "Lost" | "Damaged";
+  updates: InventoryUpdate[];
+}
+
+export interface VitalSigns {
+  temperature?: string;
+  bloodPressure?: string;
+  heartRate?: string;
+}
+
+export interface ClinicVisit {
+  id: string;
+  studentId: string;
+  date: string;
+  time: string;
+  symptoms: string;
+  diagnoses: string;
+  medications: string;
+  treatments: string;
+  vitalSigns: VitalSigns;
+  notes: string;
+}
+
+export interface ClinicStudent {
+  id: string;
+  name: string;
+  grade: string;
+  section: string;
+  bloodType: string;
+  allergies: string;
+  emergencyContact: string;
+  medicalConditions: string;
+}

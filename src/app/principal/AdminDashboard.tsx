@@ -15,22 +15,28 @@ import { PReports } from './reports/PReports';
 import { PInboxScreen } from './messages/PInboxScreen';
 import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
+import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { X } from 'lucide-react';
 
-export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
+export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<PScreen>("p-dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isMobile, isTablet }  = useLayout();
-  const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for principal */
+  const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for admin */
 
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-welfare":  "Student Welfare",     "p-inventory": "Inventory",
-    "p-reports":  "Reports",             "p-templates": "Forms & Records",
+    "p-reports":  "Reports",             "p-templates": "Template Hub",
     "p-events":   "School Events",       "p-messages":  "Messages & Communications",
+    "p-faculty-attendance": "Live Faculty Attendance",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
+
+  if (screen === "p-faculty-attendance") {
+    return <PLiveFacultyAttendance onExit={() => setScreen("p-dashboard")} />;
+  }
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:C.paper, fontFamily:"'Inter',sans-serif" }}>
@@ -85,5 +91,3 @@ export function PrincipalDashboard({ onLogout }: { onLogout:()=>void }) {
     </div>
   );
 }
-
-/* ─── Other role stubs ──────────────────────────────────────── */
