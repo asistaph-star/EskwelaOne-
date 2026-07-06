@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { C } from '../shared/constants/tokens';
 import { CLINIC_STUDENTS, CLINIC_VISITS_SEED } from '../shared/constants/seedData';
 import { ClinicVisit, ClinicStudent } from '../shared/types';
-import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse } from 'lucide-react';
+import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse, Bell } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { NSidebar, NScreen } from './shared/NSidebar';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
@@ -265,6 +266,8 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<ClinicStudent | null>(null);
   const [search, setSearch] = useState("");
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { isMobile, isTablet } = useLayout();
 
   const handleAddVisit = (v: ClinicVisit) => {
     setVisits([v, ...visits]); // Add to top
@@ -291,17 +294,96 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
         {/* Top Header for Content Area */}
-        <div style={{ background: "#fff", padding: "0 24px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, borderBottom: `1px solid ${C.borderMed}` }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Clinic Operations</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>Maria Clara</div>
-              <div style={{ fontSize: 10, color: C.t3 }}>School Nurse</div>
-            </div>
-            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, fontWeight: 700, fontSize: 14 }}>
-              MC
+        <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {isMobile && (
+              <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: C.m700 }}>
+                <span style={{ fontSize: 18 }}>☰</span>
+              </button>
+            )}
+            <div>
+              <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
+                {screen === 'n-dashboard' ? "Dashboard Overview" : "Clinic Operations"}
+              </h1>
+              <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>Tuesday, June 10, 2025</div>
             </div>
           </div>
+          
+          {/* Right Area: Search, Theme sun, Notification Bell & Profile dropdown */}
+          {!isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              {/* Search bar mockup */}
+              <div style={{ display: "flex", alignItems: "center", position: "relative", width: 220 }}>
+                <Search size={13} color={C.t3} style={{ position: "absolute", left: 10 }} />
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  style={{
+                    width: "100%",
+                    padding: "6px 12px 6px 30px",
+                    fontSize: 11,
+                    color: C.t1,
+                    background: C.m50,
+                    border: "1.5px solid " + C.borderMed,
+                    borderRadius: 20,
+                    outline: "none",
+                    transition: "all 0.15s"
+                  }}
+                  onFocus={e => {
+                    e.currentTarget.style.borderColor = C.m700;
+                    e.currentTarget.style.background = "#fff";
+                  }}
+                  onBlur={e => {
+                    e.currentTarget.style.borderColor = C.borderMed;
+                    e.currentTarget.style.background = C.m50;
+                  }}
+                />
+              </div>
+
+              {/* Action buttons and Profile */}
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+
+                {/* Notification Bell */}
+                <div style={{ position: "relative" }}>
+                  <button 
+                    onClick={() => setNotifOpen(true)}
+                    style={{
+                      background: notifOpen ? C.m50 : "transparent",
+                      border: "none",
+                      borderRadius: 16,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 32,
+                      height: 32,
+                      position: "relative",
+                      transition: "background 0.2s"
+                    }}
+                  >
+                    <Bell size={18} color={notifOpen ? C.m700 : C.t2} />
+                    <div style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      background: C.red,
+                      color: "#fff",
+                      fontSize: 8,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      width: 14,
+                      height: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1.5px solid #fff"
+                    }}>5</div>
+                  </button>
+                  <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
