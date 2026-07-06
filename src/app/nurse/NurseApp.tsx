@@ -6,6 +6,7 @@ import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRi
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { NSidebar, NScreen } from './shared/NSidebar';
+import { useLayout } from '../App';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -267,7 +268,9 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
   const [viewingStudent, setViewingStudent] = useState<ClinicStudent | null>(null);
   const [search, setSearch] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isMobile, isTablet } = useLayout();
+  const nav = (s: NScreen) => { setScreen(s); setMenuOpen(false); };
 
   const handleAddVisit = (v: ClinicVisit) => {
     setVisits([v, ...visits]); // Add to top
@@ -286,11 +289,19 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif" }}>
-      
-      {/* ── Left Sidebar ── */}
-      <NSidebar active={screen} onNav={setScreen} onLogout={onLogout} />
-
-      {/* ── Main Content Area ── */}
+      {!isMobile && <NSidebar active={screen} onNav={nav} onLogout={onLogout} />}
+      {isMobile && menuOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex" }}>
+          <div onClick={() => setMenuOpen(false)} style={{ flex: 1, background: "rgba(0,0,0,0.5)" }} />
+          <div style={{ width: 280 }}>
+            <NSidebar active={screen} onNav={(s) => { nav(s); setMenuOpen(false); }} onLogout={onLogout} />
+          </div>
+          <button onClick={() => setMenuOpen(false)}
+            style={{ position: "absolute", top: 14, right: 14, width: 34, height: 34, borderRadius: 20, background: "rgba(255,255,255,0.12)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={16} color="#fff" />
+          </button>
+        </div>
+      )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
         {/* Top Header for Content Area */}
