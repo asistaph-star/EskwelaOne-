@@ -59,17 +59,23 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
   const tTotal = tPresent + tLate + tAbsent + tWaiting;
 
   const bgDark = '#2A0505'; // Deep dark maroon
-  const bgCard = '#3D0808'; // C.m900 for cards
+  const bgHeader = '#2A0505';
+  const bgTicker = '#3D0808'; 
+  const bgMain = '#F3F4F6'; // Light background for main area
+  const bgCardLight = '#FFFFFF';
+  
   const green = '#10b981';
   const yellow = '#f59e0b';
   const red = '#ef4444';
   const gray = '#6b7280';
+  const textDark = '#111827';
+  const textMuted = '#6B7280';
   
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: bgDark, color: '#fff', fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: bgMain, color: textDark, fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
       
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+      <div style={{ background: bgHeader, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={onExit} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <X size={20} />
@@ -119,17 +125,17 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
         <Column title="WAITING TO TAP IN" count={tWaiting} color={gray}>
           <AnimatePresence>
             {waiting.length === 0 ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: 'rgba(255,255,255,0.3)' }}>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
                 <Check size={32} style={{ marginBottom: 12 }} />
                 <div>All clear</div>
               </motion.div>
             ) : (
               waiting.map(w => (
-                <motion.div key={w.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} style={{ background: bgCard, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <motion.div key={w.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} style={{ background: bgCardLight, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, border: '1px solid #E5E7EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                    <img src={w.img} style={{ width: 40, height: 40, borderRadius: 20 }} alt="" />
                    <div>
-                     <div style={{ fontWeight: 600, fontSize: 14 }}>{w.name}</div>
-                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{w.role}</div>
+                     <div style={{ fontWeight: 600, fontSize: 14, color: textDark }}>{w.name}</div>
+                     <div style={{ fontSize: 11, color: textMuted }}>{w.role}</div>
                    </div>
                 </motion.div>
               ))
@@ -142,17 +148,17 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 8, height: '100%' }}>
             <AnimatePresence>
               {faculty.filter(f => f.status === 'present').map(f => (
-                <motion.div key={f.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} style={{ background: bgCard, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <motion.div key={f.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <img src={f.img} style={{ width: 44, height: 44, borderRadius: 22 }} alt="" />
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>{f.name}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{f.role}</div>
+                      <div style={{ fontWeight: 600, fontSize: 15, color: textDark }}>{f.name}</div>
+                      <div style={{ fontSize: 12, color: textMuted }}>{f.role}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: green }}>{f.time}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{f.ago}</div>
+                    <div style={{ fontSize: 11, color: textMuted }}>{f.ago}</div>
                   </div>
                 </motion.div>
               ))}
@@ -164,17 +170,17 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
         <Column title="LATE" count={tLate} color={yellow}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 8, height: '100%' }}>
              {faculty.filter(f => f.status === 'late').map(f => (
-                <div key={f.id} style={{ background: bgCard, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(245,158,11,0.2)' }}>
+                <div key={f.id} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(245,158,11,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <img src={f.img} style={{ width: 40, height: 40, borderRadius: 20 }} alt="" />
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{f.name}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{f.role}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: textDark }}>{f.name}</div>
+                      <div style={{ fontSize: 11, color: textMuted }}>{f.role}</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: yellow }}>{f.time}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{f.ago}</div>
+                    <div style={{ fontSize: 10, color: textMuted }}>{f.ago}</div>
                   </div>
                 </div>
               ))}
@@ -183,7 +189,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
 
         {/* Absent */}
         <Column title="ABSENT" count={tAbsent} color={red}>
-           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: 'rgba(255,255,255,0.3)' }}>
+           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
               <AlertCircle size={32} style={{ marginBottom: 12 }} />
               <div>None recorded yet</div>
             </div>
@@ -192,15 +198,15 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
       </div>
 
       {/* TICKER */}
-      <div style={{ height: 60, background: bgCard, borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', padding: '0 24px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+      <div style={{ height: 60, background: bgTicker, color: '#fff', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', padding: '0 24px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
         <div style={{ display: 'flex', gap: 24, animation: 'scroll 30s linear infinite' }}>
           {faculty.map((f, i) => (
             <div key={`${f.id}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.05)', padding: '6px 16px', borderRadius: 20 }}>
                <img src={f.img} style={{ width: 24, height: 24, borderRadius: 12 }} alt="" />
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                 <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
+                 <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{f.name}</span>
                  <span style={{ fontSize: 11, color: f.status === 'present' ? green : yellow }}>Tapped In</span>
-                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{f.ago}</span>
+                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{f.ago}</span>
                </div>
             </div>
           ))}
@@ -224,7 +230,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
           background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-          background: rgba(255,255,255,0.1);
+          background: rgba(0,0,0,0.15);
           border-radius: 10px;
         }
       `}} />
@@ -247,7 +253,7 @@ function Column({ title, count, color, children }: { title: string, count: numbe
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: 4, background: color }} />
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.8)' }}>{title}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', color: '#4B5563' }}>{title}</div>
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, color }}>{count}</div>
       </div>
