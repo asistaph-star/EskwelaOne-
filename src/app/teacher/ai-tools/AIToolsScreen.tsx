@@ -10,7 +10,7 @@ export function AIToolsScreen() {
   const [activePlan, setActivePlan] = useState<string | null>(null);
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: 24, background: C.paper, position: "relative" }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "transparent", position: "relative" }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Sparkles size={24} color={C.gold} />

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight, X, ChevronDown } from 'lucide-react';
 import { CapstoneForm137 } from './components/CapstoneForm137';
-import { FullStudentReportCard } from './components/FullStudentReportCard';
+import { Form138 } from '../../shared/components/Form138';
+
 export type CurriculumType = "new" | "old";  /* new = Q1-Q3, old = Q1-Q4 */
 export interface GradeRecord { q1:number; q2:number; q3:number; q4?:number; curriculum:CurriculumType; }
 export interface SubjectHistory {
@@ -53,7 +54,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   /* ── Full-screen document view ── */
   if (viewing) {
     return (
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:C.paper }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"transparent" }}>
         {/* Document topbar — looks like a screen inside the app */}
         <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
           <button onClick={()=>setViewing(null)}
@@ -80,7 +81,25 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
         {/* Document content */}
         <div style={{ flex:1, overflowY:"auto", padding:24 }}>
           {viewing==="rc" ? (
-            <FullStudentReportCard student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano" }} />
+            <Form138 
+              student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano", age: 16, gender: "Male" }}
+              quarter={1}
+              sy="2025–2026"
+              grades={{
+                generalAverage: 88.5,
+                subjects: [
+                  { name: "Filipino", grade: 88, remarks: "PASSED" },
+                  { name: "English", grade: 90, remarks: "PASSED" },
+                  { name: "Mathematics", grade: 84, remarks: "PASSED" },
+                  { name: "Science", grade: 89, remarks: "PASSED" },
+                  { name: "Araling Panlipunan", grade: 91, remarks: "PASSED" },
+                  { name: "Technology and Livelihood Education", grade: 87, remarks: "PASSED" },
+                  { name: "MAPEH", grade: 90, remarks: "PASSED" },
+                  { name: "Edukasyon sa Pagpapakatao", grade: 92, remarks: "PASSED" }
+                ]
+              }}
+              attendance={{ daysOfSchool: 54, daysPresent: 53, daysAbsent: 1 }}
+            />
           ) : (
             <CapstoneForm137 student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano" }} />
           )}
@@ -90,7 +109,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   }
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper }}>
+    <div style={{ flex:1, overflowY:"auto", background:"transparent" }}>
       <div style={{ maxWidth:700, margin:"0 auto", padding:40 }}>
         {/* Header */}
         <div style={{ marginBottom:32 }}>
@@ -176,5 +195,3 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
     </div>
   );
 }
-
-/* ─── App ───────────────────────────────────────────────────── */

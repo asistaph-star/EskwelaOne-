@@ -15,7 +15,7 @@ export function PTeachers() {
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24, display:"flex", flexDirection:"column" }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24, display:"flex", flexDirection:"column" }}>
       
       {/* Top Header & Actions */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:20 }}>

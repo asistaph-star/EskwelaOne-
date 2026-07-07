@@ -39,7 +39,7 @@ export function QuarterlySummaryScreen() {
     : "—";
 
   return (
-    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:C.paper}}>
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background: "transparent"}}>
 
       {/* Controls */}
       <div style={{background:"#fff",borderBottom:`1px solid ${C.borderMed}`,padding:"9px 18px",

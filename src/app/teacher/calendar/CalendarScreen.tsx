@@ -47,7 +47,7 @@ export function CalendarScreen() {
   const sorted = [...allEvents].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: 28, background: C.paper }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: 28, background: "transparent" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar — June 2025</div>

@@ -112,7 +112,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: "20px 24px" }}>
+    <div style={{ flex: 1, overflowY: "auto", background: "transparent", padding: "20px 24px" }}>
       
       {/* 1. TOP KPI CARDS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>

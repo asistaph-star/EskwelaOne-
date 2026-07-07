@@ -47,7 +47,7 @@ export function PReports() {
             <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:3, padding:"6px 14px", cursor:"pointer" }}><Download size={12}/>Download PDF</button>
           </div>
         </div>
-        <div style={{ flex:1, overflowY:"auto", padding:32, background:C.paper }}>
+        <div style={{ flex:1, overflowY:"auto", padding:32, background: "transparent" }}>
           <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, padding:28, maxWidth:800, margin:"0 auto" }}>
             <div style={{ textAlign:"center", borderBottom:`2px solid ${C.t1}`, paddingBottom:16, marginBottom:20 }}>
               <div style={{ fontSize:10, fontWeight:600, color:C.t2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Republic of the Philippines · Department of Education · Region III</div>
@@ -66,7 +66,7 @@ export function PReports() {
     );
   }
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
       <div style={{ marginBottom:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:4 }}>Reports</div>
         <div style={{ fontSize:12, color:C.t3 }}>View and download official school reports. Read-only — admin oversight access.</div>

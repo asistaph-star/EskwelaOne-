@@ -16,7 +16,7 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
   const { excuseLetters, updateExcuseLetter, announcements } = useAppContext();
   
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper, padding: "24px 32px" }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding: "24px 32px" }}>
       <div style={{ width: "100%", margin: "0 auto", display: "flex", flexDirection: "column" }}>
         
         {/* Official header block */}

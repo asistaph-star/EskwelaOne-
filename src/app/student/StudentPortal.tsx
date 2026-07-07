@@ -36,12 +36,6 @@ const STUDENT_NAV_GROUPS = [
     items: [
       { id: "announcements", label: "Announcements", icon: Bell },
       ]
-  },
-  {
-    title: "Services",
-    items: [
-      { id: "requests", label: "Documents", icon: FolderOpen },
-      ]
   }
 ];
 
@@ -51,7 +45,6 @@ const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
   attendance: { title: "Gate Attendance", sub: "Daily Logs & excuse submissions" },
   assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
   announcements: { title: "Announcements", sub: "School Bulletin Board" },
-  requests: { title: "Document Requests", sub: "Administrative Services" },
   calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
   settings: { title: "Account Settings", sub: "Profile & Security Configuration" }
 };
@@ -75,19 +68,12 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const q3Status = gradesStatus["Gr10Rizal-Q3"] || "Draft";
 
   const [tab, setTab] = useState<
-    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "requests" | "settings" | "calendar" | "announcements" | "messages"
+    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "settings" | "calendar" | "announcements" | "messages"
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
 
-  // Document Requests States
-  const [docType, setDocType] = useState("Official Report Card Copy (SF9)");
-  const [purpose, setPurpose] = useState("Scholarship Application");
-  const [requests, setRequests] = useState([
-    { id: "REQ-002", type: "Official Report Card Copy (SF9)", date: "June 5, 2025", purpose: "Scholarship", status: "Ready" },
-    { id: "REQ-001", type: "Form 137 (SF10)", date: "May 12, 2025", purpose: "Further Studies / Transfer", status: "Released" }
-  ]);
 
   // Unified To-Do Checklist States
   const [todos, setTodos] = useState([
@@ -127,20 +113,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     { name: "Grade 9", avg: 88.2 },
     { name: "Grade 10", avg: 87.0 }
   ];
-
-  // Document Request Action
-  function handleRequestSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const newReq = {
-      id: `REQ-${Math.floor(Math.random() * 900 + 100)}`,
-      type: docType,
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      purpose: purpose,
-      status: "Pending Review"
-    };
-    setRequests([newReq, ...requests]);
-    alert("Document request submitted successfully!");
-  }
 
   // Excuse Letter Submit
   function handleExcuseSubmit(e: React.FormEvent) {
@@ -217,9 +189,9 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 const Icon = item.icon;
                 const tabMap: Record<string, string> = {
                   dashboard: "dashboard", calendar: "calendar", academics: "academics",
-                  attendance: "attendance", assignments: "assignments", resources: "resources",
-                  announcements: "announcements", messages: "messages", requests: "requests",
-                  behavior: "behavior"
+                  attendance: "attendance", assignments: "assignments",
+                  announcements: "announcements", messages: "messages",
+                  settings: "settings"
                 };
                 const mappedTab = tabMap[item.id] || item.id;
                 const isActive = tab === mappedTab;
@@ -413,7 +385,23 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {/* Inner Content Area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 100px 28px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 100px 28px", position: "relative", zIndex: 1 }}>
+          
+          {/* Global Watermark */}
+          <img 
+            src="/school_seal.jpg" 
+            alt="" 
+            style={{ 
+              position: "fixed", 
+              top: "50%", 
+              left: "calc(50% + 120px)", // 120px offset for the 240px sidebar
+              transform: "translate(-50%, -50%)", 
+              width: "85vh", 
+              opacity: 0.05, 
+              pointerEvents: "none", 
+              zIndex: -1 
+            }} 
+          />
 
           {/* 1. MOCKUP STUDENT DASHBOARD */}
           {tab === "dashboard" && (
@@ -1064,71 +1052,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* 5. DOCUMENT REQUESTS */}
-          {tab === "requests" && (
-            <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
-              {/* Form panel */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "16px 20px" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 14 }}>Submit New Document Request</div>
-                <form onSubmit={handleRequestSubmit}>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: "block", fontSize: 11, color: C.t2, marginBottom: 5 }}>Select Document Type</label>
-                    <select value={docType} onChange={e=>setDocType(e.target.value)} style={{ width: "100%", padding: 8, fontSize: 12, border: `1px solid ${C.borderMed}`, borderRadius: 4, background: C.m50 }}>
-                      <option value="Official Report Card Copy (SF9)">Official Report Card Copy (SF9)</option>
-                      <option value="Good Moral Character Certificate">Good Moral Character Certificate</option>
-                      <option value="Learner Permanent Record (SF10 / Form 137)">Learner Permanent Record (SF10 / Form 137)</option>
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: "block", fontSize: 11, color: C.t2, marginBottom: 5 }}>Purpose of Request</label>
-                    <select value={purpose} onChange={e=>setPurpose(e.target.value)} style={{ width: "100%", padding: 8, fontSize: 12, border: `1px solid ${C.borderMed}`, borderRadius: 4, background: C.m50 }}>
-                      <option value="Scholarship Application">Scholarship Application</option>
-                      <option value="Further Studies / Transfer">Further Studies / Transfer</option>
-                      <option value="Employment Requirement">Employment Requirement</option>
-                      <option value="General Reference ID">General Reference ID</option>
-                    </select>
-                  </div>
-                  <button type="submit" style={{ width: "100%", background: C.m700, color: "#fff", border: "none", padding: "9px 16px", borderRadius: 3, cursor: "pointer", fontSize: 11, fontWeight: 700 }}>
-                    Submit Request
-                  </button>
-                </form>
-              </div>
-
-              {/* Status Tracker list */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Document Request Status Tracker</div>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: C.m50, borderBottom: `1px solid ${C.borderMed}` }}>
-                      {["Request ID", "Document Type", "Date", "Purpose", "Status", "Actions"].map(h => (
-                        <th key={h} style={{ textAlign: "left", padding: "8px 14px", fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {requests.map((r) => (
-                      <tr key={r.id} style={{ borderBottom: `0.5px solid ${C.border}` }}>
-                        <td style={{ padding: "10px 14px", fontSize: 11.5, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: C.t1 }}>{r.id}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{r.type}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t3 }}>{r.date}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t2 }}>{r.purpose}</td>
-                        <td style={{ padding: "10px 14px" }}><Stamp label={r.status} color={r.status === "Ready" ? C.green : r.status === "Released" ? C.blue : C.amber} bg={r.status === "Ready" ? C.greenBg : r.status === "Released" ? C.blueBg : C.amberBg} /></td>
-                        <td style={{ padding: "10px 14px" }}>
-                          {r.status === "Ready" && (
-                            <button onClick={() => alert("Downloading document...")} style={{ background: C.m100, border: `1px solid rgba(139,30,30,0.15)`, padding: "4px 8px", borderRadius: 3, cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.m700, display: "flex", alignItems: "center", gap: 3 }}><Download size={10}/> Download</button>
-                          )}
-                          {r.status === "Pending Review" && (
-                            <button onClick={() => setRequests(requests.filter(x=>x.id!==r.id))} style={{ background: "#f3f4f6", border: "1px solid #d1d5db", padding: "4px 8px", borderRadius: 3, cursor: "pointer", fontSize: 10, fontWeight: 600, color: C.t2 }}>Cancel</button>
-                          )}
-                          {r.status === "Released" && <span style={{ fontSize: 10, color: C.t3, fontStyle: "italic" }}>Handed Over</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
           {/* 8. CLINIC RECORD */}
           {tab === "clinic" && (

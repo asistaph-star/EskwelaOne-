@@ -180,7 +180,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
         <DocPanel title="QR Attendance Records — June 10, 2025" icon={QrCode}
           action={<span style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>{gateAttendance.length} scans today</span>}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:7, background:C.paper, border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
               <Search size={12} color={C.t3} />
               <input placeholder="Search by name or LRN…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
             </div>
@@ -296,7 +296,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
       {sub==="late" && (
         <DocPanel title="Late Monitoring — June 2025" icon={Clock}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:7, background:C.paper, border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
               <Search size={12} color={C.t3} />
               <input placeholder="Search student…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
             </div>

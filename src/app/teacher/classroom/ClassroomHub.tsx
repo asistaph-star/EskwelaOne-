@@ -29,7 +29,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
   ];
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent" }}>
       {/* Section header */}
       <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"12px 24px" }}>
         <div style={{ display:"flex", gap:5, alignItems:"center", fontSize:11, color:C.t3, marginBottom:8 }}>

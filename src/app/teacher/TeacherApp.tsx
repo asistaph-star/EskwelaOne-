@@ -122,7 +122,21 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
+          <img 
+            src="/school_seal.jpg" 
+            alt="" 
+            style={{ 
+              position: "fixed", 
+              top: "50%", 
+              left: "calc(50% + 120px)", // 120px offset for the 240px sidebar
+              transform: "translate(-50%, -50%)", 
+              width: "85vh", 
+              opacity: 0.05, 
+              pointerEvents: "none", 
+              zIndex: -1 
+            }} 
+          />
           {screen === "dashboard" && <DashboardScreen 
             onNav={nav} 
             onGradebookClick={(id) => { setClassId(id); setScreen("gradebook"); }} 

@@ -12,7 +12,7 @@ export function TLeaveScreen() {
   ];
 
   return (
-    <div style={{ flex: 1, padding: 24, overflowY: "auto", background: C.paper }}>
+    <div style={{ flex: 1, padding: 24, overflowY: "auto", background: "transparent" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>My Leave Requests</h2>

@@ -37,7 +37,7 @@ function MedicalHistoryDrawer({ student, visits, onClose }: { student: ClinicStu
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", background: C.paper }}>
+        <div style={{ flex: 1, overflowY: "auto", background: "transparent" }}>
           {/* Medical Profile */}
           <div style={{ padding: 20, background: "#fff", borderBottom: `1px solid ${C.borderMed}` }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>Medical Profile</div>
@@ -317,7 +317,21 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
+        <img 
+          src="/school_seal.jpg" 
+          alt="" 
+          style={{ 
+            position: "fixed", 
+            top: "50%", 
+            left: "calc(50% + 120px)", 
+            transform: "translate(-50%, -50%)", 
+            width: "85vh", 
+            opacity: 0.05, 
+            pointerEvents: "none", 
+            zIndex: -1 
+          }} 
+        />
         
         {/* Top Header for Content Area */}
         <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>

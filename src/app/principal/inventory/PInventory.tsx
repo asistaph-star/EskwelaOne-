@@ -286,7 +286,7 @@ export function PInventory() {
   const getStatusBg = (s:string) => s==="Good"?C.greenBg:s==="Repair"?C.amberBg:s==="Borrowed"?C.blueBg:C.redBg;
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: 24 }}>
+    <div style={{ flex: 1, overflowY: "auto", background: "transparent", padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>Inventory Management</h2>

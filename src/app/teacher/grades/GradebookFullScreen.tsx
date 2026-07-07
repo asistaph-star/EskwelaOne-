@@ -159,7 +159,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   const activeAccent = Q_ACCENT[quarter];
 
   return (
-    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background:C.paper}}>
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background: "transparent"}}>
 
       {/* ── Controls bar ── */}
       <div style={{background:"#fff",borderBottom:`1px solid ${C.borderMed}`,padding:"9px 18px",

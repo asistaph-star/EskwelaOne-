@@ -596,7 +596,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
 
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
-    <div style={{ flex:1, overflowY:"auto", background:C.paper }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent" }}>
 
       {/* ════════════════════════════════════════════════
           TOP HEADER BAND — only maroon section on page

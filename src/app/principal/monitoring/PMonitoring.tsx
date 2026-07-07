@@ -11,7 +11,7 @@ export function PMonitoring() {
   const [chartView, setChartView] = useState("Weekly");
   const { gateAttendance } = useAppContext();
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
       {/* Redesigned Gate Cards Grid */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
         {[

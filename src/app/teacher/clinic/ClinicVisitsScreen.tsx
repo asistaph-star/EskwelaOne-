@@ -119,7 +119,7 @@ function AttendanceDirectScreen() {
   const [section, setSection] = useState("Gr. 8 Rizal");
   const studentsForSection = section.includes("8") ? STUDENTS_GR8 : STUDENTS_GR8; // all use same dataset for demo
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:C.paper }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background: "transparent" }}>
       {/* Section selector header */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.borderMed}`, padding:"9px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
         <span style={{ fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>Section</span>
@@ -159,7 +159,7 @@ export function ClinicVisitsScreen() {
   const statusBg    = (s:string) => s==="Discharged"?C.greenBg:s==="Sent home"?C.redBg:C.amberBg;
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:C.paper }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background: "transparent" }}>
       {/* Controls */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.borderMed}`, padding:"9px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0, flexWrap:"wrap" }}>
         <div style={{ position:"relative" }}>
@@ -172,7 +172,7 @@ export function ClinicVisitsScreen() {
           </select>
           <ChevronDown size={11} style={{ position:"absolute", right:7, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }} />
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:7, background:C.paper, border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1, maxWidth:260 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1, maxWidth:260 }}>
           <Search size={12} color={C.t3} />
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search student…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
         </div>

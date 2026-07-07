@@ -50,7 +50,7 @@ export function TProfileScreen() {
   };
 
   return (
-    <div style={{ flex: 1, padding: 32, overflowY: "auto", background: C.paper, display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ flex: 1, padding: 32, overflowY: "auto", background: "transparent", display: "flex", flexDirection: "column", gap: 24 }}>
       
       {/* HEADER */}
       <div>

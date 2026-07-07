@@ -14,7 +14,7 @@ export function PAcademics() {
   const pendingApprovals = Object.entries(gradesStatus).filter(([k, v]) => v === "Submitted");
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:C.paper, padding:24 }}>
+    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
       {/* Pending Grade Approvals Queue */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
         <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.m800, fontFamily:"'Fraunces',serif", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

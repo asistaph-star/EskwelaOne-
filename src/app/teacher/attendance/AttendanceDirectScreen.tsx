@@ -7,7 +7,7 @@ export function AttendanceDirectScreen() {
   const [section, setSection] = useState("Gr. 8 Rizal");
   const studentsForSection = section.includes("8") ? STUDENTS_GR8 : STUDENTS_GR8; // all use same dataset for demo
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:C.paper }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background: "transparent" }}>
       {/* Section selector header */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.borderMed}`, padding:"9px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
         <span style={{ fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>Section</span>

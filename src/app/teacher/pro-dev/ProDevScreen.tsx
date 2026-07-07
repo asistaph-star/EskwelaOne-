@@ -13,7 +13,7 @@ export function ProDevScreen() {
   const totalPoints = CERTS.reduce((s,c)=>s+c.points, 0);
 
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:24, background:C.paper }}>
+    <div style={{ flex:1, overflowY:"auto", padding:24, background: "transparent" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Professional Development</div>

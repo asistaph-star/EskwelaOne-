@@ -32,7 +32,21 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
         
         <PHeaderBand title={getTitle()} />
         
-        <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        <main style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
+          <img 
+            src="/school_seal.jpg" 
+            alt="" 
+            style={{ 
+              position: "fixed", 
+              top: "50%", 
+              left: "calc(50% + 120px)", 
+              transform: "translate(-50%, -50%)", 
+              width: "85vh", 
+              opacity: 0.05, 
+              pointerEvents: "none", 
+              zIndex: -1 
+            }} 
+          />
           {screen === "dashboard" && <AdminDashboard onNavigate={setScreen} />}
           {screen === "search" && <StudentDataSearch />}
           {screen === "teacher-create" && <CreateTeacher />}
