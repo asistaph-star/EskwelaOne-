@@ -189,7 +189,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>Critical Alerts</span>
-              <button onClick={() => onNav("p-welfare")} style={{ fontSize: 10, background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8, fontWeight: 600 }}>View All &rarr;</button>
+              <button onClick={() => onNav("p-dashboard")} style={{ fontSize: 10, background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8, fontWeight: 600 }}>View All &rarr;</button>
             </div>
             <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
               {[
@@ -211,7 +211,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>Students Requiring Attention</span>
-              <button onClick={() => onNav("p-welfare")} style={{ fontSize: 10, background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8, fontWeight: 600 }}>View All &rarr;</button>
+              <button onClick={() => onNav("p-dashboard")} style={{ fontSize: 10, background: "none", border: "none", color: "#fff", cursor: "pointer", opacity: 0.8, fontWeight: 600 }}>View All &rarr;</button>
             </div>
             <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
               {[

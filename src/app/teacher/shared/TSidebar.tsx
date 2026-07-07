@@ -3,15 +3,14 @@ import { TScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Calendar, Users, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare
+  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert
 } from 'lucide-react';
 
 const T_NAV_GROUPS = [
   { category: "Overview", items: [
     { id:"dashboard",          label:"Dashboard",         icon:LayoutDashboard },
     { id:"calendar",           label:"Calendar",          icon:Calendar },
-    { id:"messages",           label:"Messages",          icon:MessageSquare },
-  ]},
+    ]},
   { category: "Teaching", items: [
     { id:"classroom",          label:"Classroom Hub",     icon:Users },
     { id:"grades-direct",      label:"Grades",            icon:FileText },
@@ -19,10 +18,13 @@ const T_NAV_GROUPS = [
   ]},
   { category: "Records", items: [
     { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
+    { id:"behavior",           label:"Behavioral Reports", icon:ShieldAlert },
     { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
   { category: "Tools & Growth", items: [
+    { id:"pro-dev",            label:"Professional Development", icon:GraduationCap },
     { id:"ai-tools",           label:"AI Insights & Reports",    icon:Sparkles },
+    { id:"leave-requests",     label:"My Leave Requests",        icon:Calendar },
   ]},
 ];
 
@@ -63,7 +65,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
               EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan NHS
+              Sindalan National High School
             </div>
           </div>
         )}
@@ -134,8 +136,8 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <Settings size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Settings</span>}
+              <User size={13} />
+              {!collapsed && <span style={{ fontSize: 11 }}>My Profile</span>}
             </button>
             <button onClick={() => { onNav('tutorials' as TScreen); setShowMenu(false); }}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}

@@ -14,8 +14,7 @@ const N_NAV_GROUPS = [
   { category: "Overview", items: [
     { id:"n-dashboard",        label:"Clinic Dashboard",  icon:LayoutDashboard },
     { id:"n-calendar",         label:"Calendar",          icon:Calendar },
-    { id:"n-messages",         label:"Messages",          icon:MessageSquare },
-  ]},
+    ]},
   { category: "Health & Welfare", items: [
     { id:"n-clinic",           label:"Health Records",    icon:Stethoscope },
     { id:"n-inventory",        label:"Clinic Inventory",  icon:BookMarked },
@@ -63,7 +62,7 @@ export function NSidebar({ active, onNav, onLogout, collapsed=false }: {
               EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan NHS
+              Sindalan National High School
             </div>
           </div>
         )}

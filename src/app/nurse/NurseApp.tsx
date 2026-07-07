@@ -7,6 +7,7 @@ import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { NSidebar, NScreen } from './shared/NSidebar';
 import { useLayout } from '../App';
+import { PrintableClinicReport } from './PrintableClinicReport';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -269,8 +270,22 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
   const [search, setSearch] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Report Filters
+  const [reportGrade, setReportGrade] = useState("All");
+  const [reportSection, setReportSection] = useState("All");
+  const [reportStudentName, setReportStudentName] = useState("");
+  const [selectedReportStudent, setSelectedReportStudent] = useState<ClinicStudent | null>(null);
+
   const { isMobile, isTablet } = useLayout();
   const nav = (s: NScreen) => { setScreen(s); setMenuOpen(false); };
+
+  const reportFilteredStudents = CLINIC_STUDENTS.filter(s => {
+    const matchGrade = reportGrade === "All" || s.grade.toString() === reportGrade;
+    const matchSection = reportSection === "All" || s.section === reportSection;
+    const matchName = s.name.toLowerCase().includes(reportStudentName.toLowerCase());
+    return matchGrade && matchSection && matchName;
+  });
 
   const handleAddVisit = (v: ClinicVisit) => {
     setVisits([v, ...visits]); // Add to top
@@ -489,6 +504,84 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
             </>
+          ) : screen === "n-reports" ? (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 24 }}>
+              <div>
+                <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Clinic Reports</h2>
+                <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Generate and print detailed medical records for students.</p>
+              </div>
+
+              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: C.m800, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: "0.05em" }}>Search Filters</h3>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 16, marginBottom: 24 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Year Level</label>
+                    <select value={reportGrade} onChange={e => setReportGrade(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13 }}>
+                      <option value="All">All Grades</option>
+                      <option value="7">Grade 7</option>
+                      <option value="8">Grade 8</option>
+                      <option value="9">Grade 9</option>
+                      <option value="10">Grade 10</option>
+                      <option value="11">Grade 11</option>
+                      <option value="12">Grade 12</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Section</label>
+                    <select value={reportSection} onChange={e => setReportSection(e.target.value)} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13 }}>
+                      <option value="All">All Sections</option>
+                      <option value="Pilot">Pilot</option>
+                      <option value="Regular">Regular</option>
+                      <option value="A">Section A</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Student Name</label>
+                    <div style={{ position: "relative" }}>
+                      <Search size={14} color={C.t3} style={{ position: "absolute", left: 12, top: 12 }} />
+                      <input 
+                        value={reportStudentName} onChange={e => setReportStudentName(e.target.value)}
+                        placeholder="Type to search..." 
+                        style={{ width: "100%", padding: "10px 12px 10px 34px", border: `1px solid ${C.borderMed}`, borderRadius: 8, fontSize: 13, outline: "none" }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <h3 style={{ fontSize: 14, fontWeight: 800, color: C.t1, margin: "0 0 12px 0" }}>Select Student</h3>
+                <div style={{ border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", maxHeight: 300, overflowY: "auto" }}>
+                  {reportFilteredStudents.length === 0 ? (
+                    <div style={{ padding: 24, textAlign: "center", color: C.t3, fontSize: 13 }}>No students match the filters.</div>
+                  ) : (
+                    reportFilteredStudents.map(s => (
+                      <div key={s.id} onClick={() => setSelectedReportStudent(s)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: selectedReportStudent?.id === s.id ? C.m50 : "#fff" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 16, background: C.borderMed, display: "flex", alignItems: "center", justifyContent: "center" }}><User size={16} color={C.t3} /></div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{s.name}</div>
+                            <div style={{ fontSize: 11, color: C.t3 }}>Grade {s.grade} - {s.section}</div>
+                          </div>
+                        </div>
+                        {selectedReportStudent?.id === s.id && <div style={{ fontSize: 11, fontWeight: 700, color: C.m700, background: C.m100, padding: "4px 8px", borderRadius: 4 }}>SELECTED</div>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {selectedReportStudent && (
+                <div style={{ background: C.m900, borderRadius: 12, padding: 32, display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", boxShadow: "0 12px 32px rgba(139,30,30,0.2)" }}>
+                  <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 4px 0", fontFamily: "'Fraunces',serif" }}>Ready to Print</h3>
+                    <p style={{ fontSize: 13, margin: 0, color: "rgba(255,255,255,0.7)" }}>Generate a comprehensive medical report for <strong>{selectedReportStudent.name}</strong>.</p>
+                  </div>
+                  <button onClick={() => window.print()} style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 8, background: "#fff", color: C.m800, border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+                    <FileText size={18} /> Print Medical Report
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center", borderRadius: 12 }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
@@ -511,6 +604,9 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
       {isRecordOpen && <RecordVisitDrawer students={CLINIC_STUDENTS} onSave={handleAddVisit} onClose={() => setIsRecordOpen(false)} />}
       {viewingStudent && <MedicalHistoryDrawer student={viewingStudent} visits={visits.filter(v => v.studentId === viewingStudent.id)} onClose={() => setViewingStudent(null)} />}
       <AIAssistantWidget role="Nurse" />
+      
+      {/* Hidden printable report component */}
+      <PrintableClinicReport student={selectedReportStudent} visits={selectedReportStudent ? visits.filter(v => v.studentId === selectedReportStudent.id) : []} />
     </div>
   );
 }

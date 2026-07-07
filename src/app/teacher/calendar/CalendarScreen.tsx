@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { SCHOOL_EVENTS, TEACHER_PERSONAL_EVENTS, CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
+import { CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
+import { useAppContext } from '../../shared/AppContext';
 import { Calendar, ChevronLeft, ChevronRight, Lock, Plus, X, Save, Trash2 } from 'lucide-react';
 
 export function CalendarScreen() {
@@ -13,11 +14,11 @@ export function CalendarScreen() {
     return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
   }
 
-  const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([...TEACHER_PERSONAL_EVENTS]);
+  const { events, addEvent, deleteEvent } = useAppContext();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<{ title: string, date: string, time: string, endTime: string, type: CalendarEvent["type"], audience: CalendarEvent["audience"] }>({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
 
-  const allEvents = [...SCHOOL_EVENTS.filter(e => e.audience === "all" || e.audience === "teachers"), ...personalEvents];
+  const allEvents = events.filter(e => e.audience === "all" || e.audience === "teachers" || e.id.startsWith('tp-'));
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   function handleAddPersonal() {
@@ -34,13 +35,13 @@ export function CalendarScreen() {
       locked: form.audience === "students" || form.audience === "all",
       audience: form.audience
     };
-    setPersonalEvents(p => [...p, ev]);
+    addEvent(ev);
     setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
     setShowForm(false);
   }
 
   function handleRemovePersonal(id: string) {
-    setPersonalEvents(p => p.filter(e => e.id !== id));
+    deleteEvent(id);
   }
 
   const sorted = [...allEvents].sort((a, b) => a.date.localeCompare(b.date));

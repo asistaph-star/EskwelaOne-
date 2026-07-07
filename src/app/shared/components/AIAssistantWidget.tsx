@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Sparkles, X, Send } from "lucide-react";
 import { C } from "../constants/tokens";
 
-export function AIAssistantWidget({ role }: { role: "Teacher" | "Principal" | "Nurse" }) {
+export function AIAssistantWidget({ role }: { role: string }) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Customize initial message based on role

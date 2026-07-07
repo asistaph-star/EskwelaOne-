@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import { TODAY_SCHED, UPCOMING, STUDENTS_GR8, MY_CLASSES } from '../../App';
-import { CalendarCheck, FileText, Users, AlertCircle, BarChart2, Bell, Search, ChevronDown, ChevronLeft, ChevronRight, Building2, ArrowRight, Calendar, Wrench, FileDown, Download } from 'lucide-react';
+import { CalendarCheck, FileText, Users, AlertCircle, BarChart2, Bell, Search, ChevronDown, ChevronLeft, ChevronRight, Building2, ArrowRight, Calendar, Wrench, FileDown, Download, BookMarked } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { StatBox } from '../../shared/components/StatBox';
 import { DocPanel } from '../../shared/components/DocPanel';
@@ -11,9 +11,9 @@ import { SECTION_GRADES } from '../../shared/constants/seedData';
 import { StudentDetailOverlay } from '../../shared/components/StudentDetailOverlay';
 import { useAppContext } from '../../shared/AppContext';
 
-export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onClassClick:(id:number)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
+export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onGradebookClick:(id:number)=>void, onHubClick:(id:number)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
   const [detailStudent, setDetailStudent] = useState<typeof SECTION_GRADES[string][0]|null>(null);
-  const { excuseLetters, updateExcuseLetter } = useAppContext();
+  const { excuseLetters, updateExcuseLetter, announcements } = useAppContext();
   
   return (
     <div style={{ flex:1, overflowY:"auto", background:C.paper, padding: "24px 32px" }}>
@@ -81,50 +81,70 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
             {/* Assigned Sections */}
             <div>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>My Assigned Sections — SY 2025–2026</div>
+                <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>My Assigned Sections</div>
                 <button onClick={()=>onNav("classroom")} style={{ display:"flex", alignItems:"center", gap:5, fontSize:10, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"4px 10px", borderRadius:4, cursor:"pointer" }}>
                   Classroom Hub <ArrowRight size={10} />
                 </button>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
                 {MY_CLASSES.map(cls => (
-                  <button key={cls.id} className="hover-zoom" onClick={()=>onClassClick(cls.id)}
-                    style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", cursor:"pointer", textAlign:"left", padding: 18, display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 6px 20px rgba(139,30,30,0.05)" }}
-                    onMouseEnter={e=>{ (e.currentTarget as HTMLElement).style.borderColor=C.m500; }}
-                    onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.borderColor=C.border; }}>
+                  <div key={cls.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", display: "flex", flexDirection: "column", boxShadow: "0 6px 20px rgba(139,30,30,0.05)" }}>
                     
-                    {/* Header Section */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ fontSize:10, fontWeight:700, color:C.m700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>{cls.subject}</div>
-                        <div style={{ color:C.t1, fontSize:20, fontWeight:800, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{cls.section}</div>
-                      </div>
-                      <Stamp label={`Gr. ${cls.grade}`} color={C.m800} bg={C.m50} />
-                    </div>
-                    
-                    {/* Ledger fields */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}`, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.02)" }}>
-                      {[["Enrolled",`${cls.students}`],["Term",cls.semester],["Role",cls.adviser?"Class Adviser":"Subject Only"]].map(([l,v]) => (
-                        <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems: "center" }}>
-                          <span style={{ fontSize:9.5, color:C.t3, fontWeight:600 }}>{l}</span>
-                          <span style={{ fontSize:10, color:cls.adviser&&l==="Role"?C.m700:C.t1, fontWeight:700 }}>{v}</span>
+                    {/* Main Card Body -> Routes to Gradebook */}
+                    <button className="hover-zoom" onClick={()=>onGradebookClick(cls.id)}
+                      style={{ padding: 18, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}
+                      onMouseEnter={e=>{ (e.currentTarget.parentElement as HTMLElement).style.borderColor=C.m500; }}
+                      onMouseLeave={e=>{ (e.currentTarget.parentElement as HTMLElement).style.borderColor=C.border; }}>
+                      
+                      {/* Header Section */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <div style={{ fontSize:10, fontWeight:700, color:C.m700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>{cls.subject}</div>
+                          <div style={{ color:C.t1, fontSize:20, fontWeight:800, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{cls.section}</div>
                         </div>
-                      ))}
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div style={{ marginTop: "auto" }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                        <span style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight: 700 }}>Completion</span>
-                        <span style={{ fontSize:10, color:C.m700, fontFamily:"'JetBrains Mono',monospace", fontWeight:700 }}>{cls.completion}%</span>
                       </div>
-                      <div style={{ height:4, background:C.m100, borderRadius:2, overflow: "hidden" }}>
-                        <div style={{ height:"100%", width:`${cls.completion}%`, background:C.m700, borderRadius:2 }} />
+                      
+                      {/* Ledger fields (School Year, Grade, Section emphasize) */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}`, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.02)" }}>
+                        {[["School Year","SY 2025–2026"],["Grade Level",`Grade ${cls.grade}`],["Section",cls.section]].map(([l,v]) => (
+                          <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems: "center" }}>
+                            <span style={{ fontSize:9.5, color:C.t3, fontWeight:600 }}>{l}</span>
+                            <span style={{ fontSize:10, color:C.t1, fontWeight:700 }}>{v}</span>
+                          </div>
+                        ))}
                       </div>
+                    </button>
+
+                    {/* Secondary actions */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
+                      <button onClick={()=>onGradebookClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", borderRight: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.m700, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                        <FileText size={12} /> Gradebook
+                      </button>
+                      <button onClick={()=>onHubClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.t2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                        <Users size={12} /> Open Hub
+                      </button>
                     </div>
-                  </button>
+
+                  </div>
                 ))}
               </div>
+            </div>
+            
+            {/* Announcements */}
+            <div style={{ marginBottom: 16 }}>
+              <DocPanel title="School Announcements" icon={BookMarked}>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {announcements.map((a, i) => (
+                    <div key={i} style={{ background: C.paper, border: `1px solid ${C.borderLight}`, borderRadius: 6, padding: "10px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: C.m800 }}>{a.title}</div>
+                        <div style={{ fontSize: 9, color: C.t3 }}>{a.timestamp.split(',')[0]}</div>
+                      </div>
+                      <div style={{ fontSize: 10, color: C.t2, lineHeight: 1.4 }}>{a.body}</div>
+                    </div>
+                  ))}
+                </div>
+              </DocPanel>
             </div>
 
             {/* Students Needing Attention */}
@@ -162,12 +182,7 @@ export function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNa
                         <FileText size={10}/> {letter.filename}
                       </div>
 
-                      {letter.status === "Pending Review" && (
-                        <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                          <button onClick={() => updateExcuseLetter(letter.id, "Approved")} style={{ flex: 1, background: C.green, color: "#fff", border: "none", padding: "6px 0", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Approve</button>
-                          <button onClick={() => updateExcuseLetter(letter.id, "Rejected")} style={{ flex: 1, background: C.red, color: "#fff", border: "none", padding: "6px 0", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>Reject</button>
-                        </div>
-                      )}
+                      {/* Actions removed, teacher only views status */}
                     </div>
                   ))}
                   {excuseLetters.length === 0 && (

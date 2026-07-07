@@ -1,18 +1,18 @@
-export type Role = "Admin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse";
+export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse";
 
 export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
   | "grades-direct" | "attendance-direct" | "clinic-visits"
   | "ai-tools" | "pro-dev"
-  | "calendar" | "templates" | "tutorials" | "tools" | "help" | "settings";
+  | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior";
 
 export type PScreen =
   | "p-dashboard" | "p-monitoring"
   | "p-analytics" | "p-teachers"
-  | "p-welfare" | "p-inventory"
+  | "p-inventory"
   | "p-reports" | "p-templates"
-  | "p-events" | "p-messages" | "p-faculty-attendance"
-  | "p-settings" | "p-help";
+  | "p-events" | "p-faculty-attendance"
+  | "p-settings" | "p-help" | "p-behavior" | "p-attendance";
 
 export interface RCStudent {
   surname: string;

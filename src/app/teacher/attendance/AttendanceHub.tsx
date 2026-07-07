@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { AStatus, AttSub } from '../../shared/types';
 import { sColor, sBg } from '../../shared/utils/helpers';
-import { CalendarCheck, QrCode, FileDown, Plus, Search, Download, Printer, CheckCircle, FileSpreadsheet, Clock, UserCheck, Calendar, Activity } from 'lucide-react';
+import { CalendarCheck, QrCode, FileDown, Plus, Search, Download, Printer, CheckCircle, FileSpreadsheet, Clock, UserCheck, Calendar, Activity, FileText } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { ATT_DATES, ATT_STATUS_SEED, QR_LOG } from '../../shared/constants/seedData';
 import { STUDENTS_GR8 } from '../../App';
 import { useAppContext } from '../../shared/AppContext';
 export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
-  const { gateAttendance } = useAppContext();
+  const { gateAttendance, excuseLetters } = useAppContext();
   const [sub, setSub] = useState<AttSub>("daily");
 
   /* per-student per-date status — starts from seed */
@@ -39,6 +39,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
     { id:"manual", label:"Manual Attendance",   icon:UserCheck },
     { id:"late",   label:"Late Monitoring",     icon:Clock },
     { id:"sf2",    label:"SF2 Export",          icon:FileDown },
+    { id:"excuses" as any, label:"Excuse Letters", icon:FileText },
   ];
 
   return (
@@ -451,6 +452,37 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
             </div>
           </DocPanel>
         </div>
+      )}
+
+      {/* ══════════════════════════════════════════ 6. EXCUSE LETTERS */}
+      {sub==="excuses" as any && (
+        <DocPanel title="Submitted Excuse Letters" icon={FileText}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
+                {["Date Submitted","Student Name","Dates Covered","Attachment","Status"].map(h=>(
+                  <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {excuseLetters.map((exc, i) => (
+                <tr key={exc.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}>
+                  <td style={{ padding:"10px 14px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{exc.submittedDate}</td>
+                  <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{exc.studentName}</td>
+                  <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{exc.dates}</td>
+                  <td style={{ padding:"10px 14px", fontSize:11, color:C.m700, fontWeight:600, cursor:"pointer", textDecoration:"underline" }}>{exc.filename}</td>
+                  <td style={{ padding:"10px 14px" }}>
+                    <Stamp label={exc.status} color={exc.status==="Approved"?C.green:exc.status==="Pending Review"?C.amber:C.red} bg={exc.status==="Approved"?C.greenBg:exc.status==="Pending Review"?C.amberBg:C.redBg} />
+                  </td>
+                </tr>
+              ))}
+              {excuseLetters.length === 0 && (
+                <tr><td colSpan={5} style={{ padding:"20px", textAlign:"center", fontSize:12, color:C.t3 }}>No excuse letters submitted.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </DocPanel>
       )}
     </div>
   );

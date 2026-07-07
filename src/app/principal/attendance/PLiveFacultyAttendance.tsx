@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Check, Clock, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
+import { C } from '../../shared/constants/tokens';
 
 // Mock Data
 const INITIAL_FACULTY = [
@@ -21,6 +23,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
   const [faculty, setFaculty] = useState(INITIAL_FACULTY);
   const [waiting, setWaiting] = useState(WAITING_LIST);
   const [time, setTime] = useState(new Date());
+  const [selectedTeacher, setSelectedTeacher] = useState<{name: string, role: string, img?: string} | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -34,6 +37,17 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
         if (prev.length === 0) return prev;
         const nextPerson = prev[0];
         const newRest = prev.slice(1);
+        
+        // Trigger celebratory flash popup automatically
+        setTimeout(() => {
+          confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+          setSelectedTeacher({ name: nextPerson.name, role: nextPerson.role, img: nextPerson.img });
+          
+          // Auto close after 5 seconds
+          setTimeout(() => {
+            setSelectedTeacher(current => current?.name === nextPerson.name ? null : current);
+          }, 5000);
+        }, 0);
         
         const now = new Date();
         const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -132,7 +146,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
             ) : (
               waiting.map(w => (
                 <motion.div key={w.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50 }} style={{ background: bgCardLight, borderRadius: 12, padding: 12, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, border: '1px solid rgba(139,30,30,0.15)', boxShadow: '0 2px 4px rgba(139,30,30,0.04)' }}>
-                   <img src={w.img} style={{ width: 40, height: 40, borderRadius: 20 }} alt="" />
+                   <img src={w.img} style={{ width: 40, height: 40, borderRadius: 8 }} alt="" />
                    <div>
                      <div style={{ fontWeight: 600, fontSize: 14, color: textDark }}>{w.name}</div>
                      <div style={{ fontSize: 11, color: textMuted }}>{w.role}</div>
@@ -148,9 +162,11 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 8, height: '100%' }}>
             <AnimatePresence>
               {faculty.filter(f => f.status === 'present').map(f => (
-                <motion.div key={f.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <motion.div key={f.id} layout initial={{ opacity: 0, y: -20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer' }}
+                  onClick={() => { confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } }); setSelectedTeacher({ name: f.name, role: f.role, img: f.img }); }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img src={f.img} style={{ width: 44, height: 44, borderRadius: 22 }} alt="" />
+                    <img src={f.img} style={{ width: 44, height: 44, borderRadius: 8 }} alt="" />
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 15, color: textDark }}>{f.name}</div>
                       <div style={{ fontSize: 12, color: textMuted }}>{f.role}</div>
@@ -170,9 +186,11 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
         <Column title="LATE" count={tLate} color={yellow}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 8, height: '100%' }}>
              {faculty.filter(f => f.status === 'late').map(f => (
-                <div key={f.id} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(245,158,11,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div key={f.id} style={{ background: bgCardLight, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(245,158,11,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer' }}
+                  onClick={() => { confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } }); setSelectedTeacher({ name: f.name, role: f.role, img: f.img }); }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img src={f.img} style={{ width: 40, height: 40, borderRadius: 20 }} alt="" />
+                    <img src={f.img} style={{ width: 40, height: 40, borderRadius: 8 }} alt="" />
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14, color: textDark }}>{f.name}</div>
                       <div style={{ fontSize: 11, color: textMuted }}>{f.role}</div>
@@ -202,7 +220,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
         <div style={{ display: 'flex', gap: 24, animation: 'scroll 30s linear infinite' }}>
           {faculty.map((f, i) => (
             <div key={`${f.id}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.05)', padding: '6px 16px', borderRadius: 20 }}>
-               <img src={f.img} style={{ width: 24, height: 24, borderRadius: 12 }} alt="" />
+               <img src={f.img} style={{ width: 24, height: 24, borderRadius: 4 }} alt="" />
                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                  <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{f.name}</span>
                  <span style={{ fontSize: 11, color: f.status === 'present' ? green : yellow }}>Tapped In</span>
@@ -234,6 +252,10 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
           border-radius: 10px;
         }
       `}} />
+
+      {selectedTeacher && (
+        <LiveTapInOverlay teacher={selectedTeacher} onClose={() => setSelectedTeacher(null)} />
+      )}
     </div>
   );
 }
@@ -260,6 +282,34 @@ function Column({ title, count, color, children }: { title: string, count: numbe
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {children}
       </div>
+    </div>
+  );
+}
+
+function LiveTapInOverlay({ teacher, onClose }: { teacher: {name:string, role:string, img?:string}, onClose: () => void }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(15,8,8,0.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      
+      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "40px 32px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", boxShadow: "0 24px 60px rgba(74,10,16,0.4)", maxWidth: 420, width: "100%", position: "relative" }}>
+        
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, background: "rgba(0,0,0,0.05)", border: "none", color: "#666", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <X size={20} />
+        </button>
+
+        {teacher.img ? (
+          <img src={teacher.img} style={{ width: 180, height: 180, borderRadius: 24, border: `4px solid ${C.m50}`, objectFit: "cover", boxShadow: "0 12px 32px rgba(0,0,0,0.15)", marginBottom: 28 }} alt="" />
+        ) : (
+          <div style={{ width: 180, height: 180, borderRadius: 24, background: C.m50, border: "4px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 12px 32px rgba(0,0,0,0.15)", marginBottom: 28 }}>
+            <User size={72} color={C.m700} />
+          </div>
+        )}
+
+        <div style={{ fontSize: 13, fontWeight: 800, color: C.m700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Faculty Check-In</div>
+        <div style={{ fontSize: 36, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", lineHeight: 1.1, marginBottom: 12 }}>{teacher.name}</div>
+        <div style={{ fontSize: 18, color: C.t2, fontWeight: 500 }}>{teacher.role}</div>
+
+      </motion.div>
     </div>
   );
 }

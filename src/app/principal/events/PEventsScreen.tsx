@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { SCHOOL_EVENTS, CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
+import { CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
+import { useAppContext } from '../../shared/AppContext';
 import { Plus, Trash2, Edit2, Calendar, Lock, ChevronLeft, ChevronRight, X, Save, Clock } from 'lucide-react';
 
 function formatTimeDisplay(timeStr?: string) {
@@ -13,7 +14,7 @@ function formatTimeDisplay(timeStr?: string) {
 }
 
 export function PEventsScreen() {
-  const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS]);
+  const { events, addEvent, editEvent, deleteEvent } = useAppContext();
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", date: "", time: "", endTime: "", type: "academic" as CalendarEvent["type"], audience: "all" as CalendarEvent["audience"] });
@@ -24,14 +25,14 @@ export function PEventsScreen() {
     if (!form.title || !form.date) return;
     const cfg = EVENT_TYPE_CONFIG[form.type];
     if (editId) {
-      setEvents(ev => ev.map(e => e.id === editId ? { ...e, title: form.title, date: form.date, time: form.time, endTime: form.endTime, type: form.type, audience: form.audience, color: cfg.color } : e));
+      editEvent(editId, { title: form.title, date: form.date, time: form.time, endTime: form.endTime, type: form.type, audience: form.audience, color: cfg.color });
       setEditId(null);
     } else {
       const newEvent: CalendarEvent = {
         id: `se-${Date.now()}`, title: form.title, date: form.date, time: form.time, endTime: form.endTime, type: form.type,
         color: cfg.color, locked: true, audience: form.audience,
       };
-      setEvents(ev => [...ev, newEvent]);
+      addEvent(newEvent);
     }
     setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "all" });
     setShowForm(false);
@@ -44,7 +45,7 @@ export function PEventsScreen() {
   }
 
   function handleDelete(id: string) {
-    setEvents(ev => ev.filter(e => e.id !== id));
+    deleteEvent(id);
   }
 
   const sorted = [...events].sort((a, b) => {

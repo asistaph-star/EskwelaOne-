@@ -29,22 +29,19 @@ const STUDENT_NAV_GROUPS = [
       { id: "academics", label: "Grades", icon: BookOpen },
       { id: "attendance", label: "Attendance", icon: Calendar },
       { id: "assignments", label: "Assignments", icon: ClipboardList },
-      { id: "resources", label: "Subjects", icon: FileText }
-    ]
+      ]
   },
   {
     title: "Communication",
     items: [
       { id: "announcements", label: "Announcements", icon: Bell },
-      { id: "messages", label: "Messages", icon: MessageSquare }
-    ]
+      ]
   },
   {
     title: "Services",
     items: [
       { id: "requests", label: "Documents", icon: FolderOpen },
-      { id: "behavior", label: "Achievement", icon: Award }
-    ]
+      ]
   }
 ];
 
@@ -53,16 +50,16 @@ const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
   academics: { title: "Grades & Performance", sub: "Scholastic History & Grades" },
   attendance: { title: "Gate Attendance", sub: "Daily Logs & excuse submissions" },
   assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
-  resources: { title: "My Subjects", sub: "Academic Courses & Syllabus" },
   announcements: { title: "Announcements", sub: "School Bulletin Board" },
-  messages: { title: "Messages", sub: "Direct Communications" },
   requests: { title: "Document Requests", sub: "Administrative Services" },
   calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
-  behavior: { title: "Achievements", sub: "Honors & Recognitions" },
   settings: { title: "Account Settings", sub: "Profile & Security Configuration" }
 };
 
 export function StudentPortal({ onLogout }: { onLogout: () => void }) {
+  const { events } = useAppContext();
+  const [oldPass, setOldPass] = useState("");
+  const [newPass, setNewPass] = useState("");
   function formatTimeDisplay(timeStr?: string) {
     if (!timeStr) return "";
     let [h, m] = timeStr.split(":");
@@ -104,7 +101,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [excuseText, setExcuseText] = useState("");
   const [excuseFile, setExcuseFile] = useState<string|null>(null);
   const [notes, setNotes] = useState("");
-  const [newPass, setNewPass] = useState("");
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(false);
   const [replyText, setReplyText] = useState("");
@@ -205,7 +201,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan NHS
+              Sindalan National High School
             </div>
           </div>
         </div>
@@ -459,13 +455,11 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               </div>
 
               {/* KPI metrics strip */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                 {[
                   { label: "Attendance Rate", val: "95.4%", sub: "▲ 2% from last month", icon: CheckCircle, color: C.green, bg: "#f0fdf4" },
-                  { label: "Current GPA", val: "88.0", sub: "Above Passing", icon: Award, color: C.gold, bg: "#fefbeb" },
                   { label: "Assignments Due", val: "2", sub: "Due Today", icon: ClipboardList, color: C.red, bg: "#fef2f2" },
-                  { label: "Today's Classes", val: "4 Classes", sub: "Next: Math (9:00 AM)", icon: Clock, color: C.blue, bg: "#eff6ff" },
-                  { label: "Needs Attention", val: "2 Items", sub: "View details >", icon: AlertTriangle, color: "#f97316", bg: "#fff7ed" }
+                  { label: "Today's Classes", val: "4 Classes", sub: "Next: Math (9:00 AM)", icon: Clock, color: C.blue, bg: "#eff6ff" }
                 ].map((kpi, idx) => {
                   const Icon = kpi.icon;
                   return (
@@ -676,44 +670,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 {/* Right Area: Stacked Column for Grades and Academic Calendar */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%" }}>
                   
-                  {/* 3. Grades Summary */}
-                  <div className="hover-zoom" style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <Award size={16} color={C.m700} />
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Grades Summary (Q1 - Q3)</span>
-                      </div>
-                      <button onClick={() => setTab("academics")} style={{ background: "none", border: "none", color: C.m700, fontSize: 10.5, fontWeight: 700, cursor: "pointer", padding: 0 }} onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'} onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>View Grades</button>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 12, alignItems: "center" }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
-                        <div style={{ width: 80, height: 40, overflow: "hidden", position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                          <div style={{ width: 70, height: 70, borderRadius: 35, border: "6px solid #f3f4f6", borderTopColor: C.m700, borderRightColor: C.m700, transform: "rotate(45deg)", position: "absolute", bottom: -35 }} />
-                        </div>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: C.t1, marginTop: 4 }}>88.0</div>
-                        <div style={{ fontSize: 8, fontWeight: 700, color: C.green }}>Above Passing</div>
-                      </div>
-                      
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        {[
-                          { s: "Mathematics", g: 90 },
-                          { s: "English", g: 85 },
-                          { s: "Science", g: 88 },
-                          { s: "Filipino", g: 87 },
-                          { s: "Araling Panlipunan", g: 89 },
-                          { s: "PE & Health", g: 92 },
-                          { s: "TLE", g: 86 }
-                        ].map((sub, idx) => (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5 }}>
-                            <span style={{ color: C.t2 }}>{sub.s}</span>
-                            <span style={{ fontWeight: 700, color: C.t1 }}>{sub.g}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 5. Academic Calendar Widget */}
+                  {/* Removed Grades Summary */}                  {/* 5. Academic Calendar Widget */}
                   <div className="hover-zoom" style={{ flex: 1, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, padding: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -800,95 +757,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 {announcements.length === 0 && (
                   <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>No new announcements.</div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* MESSAGES SCREEN */}
-          {tab === "messages" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Messages & Communications</h1>
-                  <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Direct messaging channels with your class advisers and teachers.</div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 20, height: 500, background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden" }}>
-                
-                {/* Inbox list */}
-                <div style={{ borderRight: `1px solid ${C.borderMed}`, display: "flex", flexDirection: "column" }}>
-                  <div style={{ padding: 14, borderBottom: `1px solid ${C.borderMed}`, display: "flex", alignItems: "center", gap: 8, background: C.paper }}>
-                    <Search size={12} color={C.t3} />
-                    <input type="text" placeholder="Search chats..." style={{ background: "none", border: "none", fontSize: 11.5, outline: "none", width: "100%" }} />
-                  </div>
-                  <div style={{ flex: 1, overflowY: "auto" }}>
-                    {Array.from(new Set(messages.map(m => m.senderId === "s-juan" ? m.receiverId : m.senderId))).map((cid) => {
-                      const lastMsg = messages.filter(m => m.senderId === cid || m.receiverId === cid).pop();
-                      const name = lastMsg?.senderId === cid ? lastMsg.senderName : lastMsg?.receiverName;
-                      const isUnread = lastMsg && !lastMsg.read && lastMsg.receiverId === "s-juan";
-                      return (
-                        <div key={cid} onClick={() => setActiveConvId(cid)} style={{ padding: "14px 16px", borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: activeConvId === cid ? "rgba(139,30,30,0.03)" : "#fff", display: "flex", gap: 10, alignItems: "center" }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 14, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: C.m700, fontSize: 10.5 }}>{name?.charAt(0) || "T"}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: C.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
-                              <span style={{ fontSize: 8.5, color: C.t3 }}>{lastMsg?.timestamp}</span>
-                            </div>
-                            <div style={{ fontSize: 9.5, color: isUnread ? C.t1 : C.t3, fontWeight: isUnread ? 700 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{lastMsg?.senderId === "s-juan" ? "You: " : ""}{lastMsg?.content}</div>
-                          </div>
-                          {isUnread && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.m700 }} />}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Chat space */}
-                <div style={{ display: "flex", flexDirection: "column", background: C.paper }}>
-                  {activeConvId ? (
-                    <>
-                      <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
-                            {messages.find(m => m.senderId === activeConvId)?.senderName || messages.find(m => m.receiverId === activeConvId)?.receiverName || "Teacher"}
-                          </div>
-                          <div style={{ fontSize: 9.5, color: C.t3, marginTop: 1 }}>Active 10m ago</div>
-                        </div>
-                      </div>
-                      <div style={{ flex: 1, padding: 20, display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
-                        {messages.filter(m => (m.senderId === "s-juan" && m.receiverId === activeConvId) || (m.senderId === activeConvId && m.receiverId === "s-juan")).map((msg, idx) => {
-                          const isMe = msg.senderId === "s-juan";
-                          return (
-                            <div key={idx} style={{ alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "70%", background: isMe ? C.m700 : "#fff", color: isMe ? "#fff" : C.t1, padding: "10px 14px", borderRadius: isMe ? "10px 10px 0px 10px" : "0px 10px 10px 10px", fontSize: 11, border: isMe ? "none" : `1px solid ${C.borderMed}`, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                              {msg.content}
-                            </div>
-                          )
-                        })}
-                      </div>
-                      <form onSubmit={(e) => {
-                        e.preventDefault();
-                        if(!replyText.trim()) return;
-                        addMessage({
-                          id: "m-"+Date.now(),
-                          senderId: "s-juan",
-                          senderName: "Juan Dela Cruz",
-                          receiverId: activeConvId,
-                          receiverName: messages.find(m => m.senderId === activeConvId)?.senderName || messages.find(m => m.receiverId === activeConvId)?.receiverName || "Teacher",
-                          content: replyText,
-                          timestamp: "Just now",
-                          read: false
-                        });
-                        setReplyText("");
-                      }} style={{ padding: "12px 18px", borderTop: `1px solid ${C.borderMed}`, background: "#fff", display: "flex", gap: 10, alignItems: "center" }}>
-                        <input type="text" value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type a message here..." style={{ flex: 1, padding: "8px 14px", background: C.paper, border: "none", borderRadius: 20, fontSize: 11.5, outline: "none" }} />
-                        <button type="submit" style={{ background: C.m700, border: "none", color: "#fff", padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Send</button>
-                      </form>
-                    </>
-                  ) : (
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: C.t3, fontSize: 12 }}>Select a conversation</div>
-                  )}
-                </div>
               </div>
             </div>
           )}
@@ -1262,131 +1130,6 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {/* 6. LESSON RESOURCES */}
-          {tab === "resources" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Lesson Slides & Learning Materials</div>
-                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Resources uploaded by subject teachers.</div>
-              </div>
-
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Class Resources & Materials</div>
-                {[
-                  { name: "Quadratic Formula Presentation", subject: "Mathematics", type: "Lesson Slides", file: "Math_10_Quadratic.pdf" },
-                  { name: "Narrative Tone and Structure Guide", subject: "English", type: "Learning Material", file: "Eng10_NarrativeTone.pdf" },
-                  { name: "Grade 10 Science Curriculum DLL References", subject: "Science", type: "DLL Reference", file: "Sci10_DLL_Ref.pdf" }
-                ].map((res, idx) => (
-                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderBottom: idx < 2 ? `0.5px solid ${C.border}` : "none" }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{res.name}</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 3 }}>{res.subject} &middot; <strong style={{ color: C.m700 }}>{res.type}</strong></div>
-                    </div>
-                    <button onClick={() => alert(`Downloading file: ${res.file}`)} style={{ display: "flex", alignItems: "center", gap: 4, background: C.m100, border: `1px solid rgba(139,30,30,0.15)`, padding: "6px 12px", borderRadius: 3, cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.m700 }}>
-                      <Download size={11} /> {res.file}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Teacher Announcements</div>
-                <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 12 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>Math quiz postponement</div>
-                    <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>Posted by Ms. Ana R. Soriano &middot; June 9, 2025</div>
-                    <p style={{ fontSize: 11, color: C.t2, margin: "6px 0 0" }}>"Tomorrow's Math quiz on factoring will be postponed to Friday, June 13, to give more time for review."</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 7. BEHAVIOR & AWARDS */}
-          {tab === "behavior" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Student Behavior & Guidance Log</div>
-                <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Privately logged incident records and counseling history.</div>
-              </div>
-
-              {/* Disciplinary Records */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", display: "flex", justifyContent: "space-between" }}>
-                  <span>Disciplinary & Incident Records</span>
-                  <span style={{ fontSize:10, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").length} records</span>
-                </div>
-                {behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").length === 0 ? (
-                  <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>No behavioral incidents logged. Keep up the good work!</div>
-                ) : (
-                  behaviorLogs.filter(b=>b.studentName==="Juan Dela Cruz").map((log, idx, arr) => (
-                    <div key={log.id} style={{ padding: "12px 14px", borderBottom: idx < arr.length - 1 ? `0.5px solid ${C.border}` : "none", background: C.paper }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.amber }}>{log.type}</div>
-                        <span style={{ fontSize: 10, color: C.t3, fontFamily: "'JetBrains Mono',monospace" }}>{log.date}</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: C.t2, marginBottom: 8 }}>{log.note}</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 10, color: C.t3 }}>Logged by: {log.teacher || log.section}</span>
-                        <Stamp label={log.status} color={log.status==="Resolved"?C.green:C.amber} bg={log.status==="Resolved"?C.greenBg:C.amberBg} />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Achievements & honors list */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Certificates & Honors Award Badges</div>
-                <div style={{ padding: 14, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  {[
-                    { title: "First Quarter Honors Roll", rank: "With Honors", badge: "GPA 90.1", color: C.gold },
-                    { title: "Second Quarter Honors Roll", rank: "With Honors", badge: "GPA 89.9", color: C.gold },
-                    { title: "Third Quarter Honors Roll", rank: "With Honors", badge: "GPA 91.0", color: C.gold }
-                  ].map((cert, idx) => (
-                    <div key={idx} style={{ border: `1.5px solid ${C.borderMed}`, borderRadius: 6, padding: "14px 18px", background: C.paper, textAlign: "center" }}>
-                      <div style={{ display: "inline-flex", background: C.goldLight, width: 38, height: 38, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                        <Award size={18} color={cert.color} />
-                      </div>
-                      <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1 }}>{cert.title}</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 3 }}>{cert.rank} &middot; <strong style={{ color: C.gold }}>{cert.badge}</strong></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Commendations */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Commendations & Achievements</div>
-                {[
-                  { title: "Perfect Attendance in English", date: "May 2025", desc: "Recognized for zero absences or lates" },
-                  { title: "Science Classroom Assistance", date: "June 2, 2025", desc: "Helped arrange lab glassware apparatus after class hours" }
-                ].map((c, idx) => (
-                  <div key={idx} style={{ padding: "12px 14px", borderBottom: idx < 1 ? `0.5px solid ${C.border}` : "none" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{c.title}</div>
-                      <span style={{ fontSize: 10, color: C.green, fontWeight: 600 }}>{c.date}</span>
-                    </div>
-                    <div style={{ fontSize: 10.5, color: C.t3, marginTop: 3 }}>{c.desc}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Guidance Sessions */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", borderRadius: 4 }}>
-                <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Guidance Counseling Log</div>
-                <div style={{ padding: "12px 14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Routine Career Path Consultation</div>
-                    <span style={{ fontSize: 10, color: C.t3 }}>June 2, 2025</span>
-                  </div>
-                  <div style={{ fontSize: 10.5, color: C.t2, marginTop: 4 }}>Discussion about academic performance targets and senior high school STEM enrollment preparation.</div>
-                </div>
-              </div>
-
-            </div>
-          )}
-
           {/* 8. CLINIC RECORD */}
           {tab === "clinic" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1571,7 +1314,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ padding: "10px 14px", borderBottom: `0.5px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>School Events (🔒 Locked)</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                    {SCHOOL_EVENTS.filter(e => e.audience === "all" || e.audience === "students").map(ev => (
+                    {events.filter(e => e.audience === "all" || e.audience === "students").map(ev => (
                       <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: `1px solid ${C.border}` }}>
                         <div style={{ width: 3, height: 24, background: ev.color, borderRadius: 1.5, flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1753,7 +1496,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
                   <School size={16} color={C.gold} />
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>SINDALAN NHS</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>SINDALAN NATIONAL HIGH SCHOOL</span>
                 </div>
                 
                 <div style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid #fff", overflow: "hidden", marginBottom: 16, boxShadow: "0 8px 16px rgba(0,0,0,0.2)" }}>

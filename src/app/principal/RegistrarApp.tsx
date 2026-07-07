@@ -9,17 +9,15 @@ import { PDashboard } from './dashboard/PDashboard';
 import { PMonitoring } from './monitoring/PMonitoring';
 import { PAcademics } from './analytics/PAcademics';
 import { PTeachers } from './teachers/PTeachers';
-import { PWelfare } from './welfare/PWelfare';
 import { PInventory } from './inventory/PInventory';
 import { PReports } from './reports/PReports';
-import { PInboxScreen } from './messages/PInboxScreen';
 import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 
-export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
+export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<PScreen>("p-dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isMobile, isTablet }  = useLayout();
@@ -28,10 +26,9 @@ export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
-    "p-welfare":  "Student Welfare",     "p-inventory": "Inventory",
+    "p-inventory": "Inventory",
     "p-reports":  "Reports",             "p-templates": "Template Hub",
-    "p-events":   "School Events",       "p-messages":  "Messages & Communications",
-    "p-faculty-attendance": "Live Faculty Attendance",
+    "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
 
@@ -65,12 +62,10 @@ export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-monitoring" && <PMonitoring />}
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
-          {screen==="p-welfare"    && <PWelfare     />}
           {screen==="p-inventory"  && <PInventory   />}
           {screen==="p-reports"    && <PReports     />}
-          {screen==="p-templates"  && <TemplateHubScreen />}
+          {screen==="p-templates"  && <TemplateHubScreen role="registrar" />}
           {screen==="p-events"     && <PEventsScreen />}
-          {screen==="p-messages"   && <PInboxScreen />}
           {(screen==="p-settings"||screen==="p-help") && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
@@ -89,7 +84,7 @@ export function AdminDashboard({ onLogout }: { onLogout:()=>void }) {
           )}
         </div>
       </div>
-      <AIAssistantWidget role="Principal" />
+      <AIAssistantWidget role="Registrar" />
     </div>
   );
 }

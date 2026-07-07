@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
+import { SCHOOL_EVENTS, TEACHER_PERSONAL_EVENTS, CalendarEvent } from "./data/calendarData";
 
 // --- Types ---
 export type GradeStatus = "Draft" | "Submitted" | "Published" | "Returned";
@@ -23,6 +24,12 @@ type AppContextType = {
   // Announcements
   announcements: Announcement[];
   addAnnouncement: (a: Announcement) => void;
+
+  // Events
+  events: CalendarEvent[];
+  addEvent: (e: CalendarEvent) => void;
+  editEvent: (id: string, e: Partial<CalendarEvent>) => void;
+  deleteEvent: (id: string) => void;
 
   // Messages
   messages: Message[];
@@ -87,6 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gateAttendance, setGateAttendance] = useState<GateAttendance[]>(SEED_GATE_ATTENDANCE);
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>(SEED_CLINIC_REFERRALS);
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>(SEED_BEHAVIOR_LOGS);
+  const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS, ...TEACHER_PERSONAL_EVENTS]);
 
   const setGradeStatus = (key: string, status: GradeStatus) => {
     setGradesStatus(prev => ({ ...prev, [key]: status }));
@@ -102,6 +110,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addAnnouncement = (a: Announcement) => {
     setAnnouncements(prev => [a, ...prev]);
+  };
+
+  const addEvent = (e: CalendarEvent) => {
+    setEvents(prev => [...prev, e]);
+  };
+
+  const editEvent = (id: string, data: Partial<CalendarEvent>) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
+  };
+
+  const deleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(e => e.id !== id));
   };
 
   const addMessage = (msg: Message) => {
@@ -125,6 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       gradesStatus, setGradeStatus,
       excuseLetters, updateExcuseLetter, addExcuseLetter,
       announcements, addAnnouncement,
+      events, addEvent, editEvent, deleteEvent,
       messages, addMessage,
       gateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { ChevronLeft, Printer, Download, Eye } from 'lucide-react';
+import { AttendanceSummary } from './AttendanceSummary';
 
 export function PReports() {
   const [viewing, setViewing] = useState<string|null>(null);
@@ -16,6 +17,23 @@ export function PReports() {
     { id:"inv",   title:"Inventory Report",       desc:"Full school asset inventory — functional, repair, borrowed" },
   ];
   if (viewing) {
+    if (viewing === "att") {
+      return (
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#f8fafc" }}>
+          <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+            <button onClick={()=>setViewing(null)} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:3, cursor:"pointer" }}>
+              <ChevronLeft size={13}/> Back to Reports
+            </button>
+            <div style={{ width:1, height:22, background:C.borderMed }} />
+            <span style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Attendance Summary</span>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <AttendanceSummary />
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>

@@ -24,7 +24,7 @@ export const FULL_ACADEMIC_HISTORY: SubjectHistory[] = [
   { name:"Edukasyon sa Pagpapakatao",     gr7:{q1:95,q2:94,q3:96,q4:95,curriculum:"old"}, gr8:{q1:96,q2:97,q3:95,q4:96,curriculum:"old"}, gr9:{q1:97,q2:98,q3:96,q4:98,curriculum:"old"}, gr10:{q1:98,q2:99,q3:97,curriculum:"new"} }
 ];
 
-export function TemplateHubScreen() {
+export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "registrar" }) {
   const [modal, setModal]     = useState<"rc"|"f137"|null>(null);
   const [student, setStudent] = useState("Santos, Juan Miguel");
   const [sy, setSy]           = useState("SY 2025–2026");
@@ -37,11 +37,11 @@ export function TemplateHubScreen() {
       title:"Report Card",
       desc:"Form 138 — Complete academic history across Grade 7–10. Auto-detects Old Curriculum (Q1–Q4) for Grade 7 and New Curriculum (Q1–Q3) for Grade 8–10.",
     },
-    {
+    ...(false /* Hidden for now: role === "registrar" */ ? [{
       id:"f137" as const, emoji:"📄",
       title:"Form 137",
       desc:"Permanent Record — Official transfer document containing the student's complete scholastic record and personal information.",
-    },
+    }] : []),
   ];
 
   function handleView() {

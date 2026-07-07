@@ -3,7 +3,7 @@ import { PScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, AlertCircle, Package,
-  FileSpreadsheet, FileText, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar, MessageSquare
+  FileSpreadsheet, FileText, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar, MessageSquare, ShieldAlert
 } from 'lucide-react';
 
 const P_NAV_GROUPS = [
@@ -13,16 +13,16 @@ const P_NAV_GROUPS = [
   ]},
   { category: "Administration", items: [
     { id: "p-analytics" as PScreen,  label: "Academic Analytics",  icon: BarChart2 },
+    { id: "p-attendance" as PScreen, label: "Student Attendance",  icon: Users },
     { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
-    { id: "p-welfare" as PScreen,    label: "Student Welfare",     icon: AlertCircle },
     { id: "p-events" as PScreen,     label: "School Events",       icon: Calendar },
   ]},
   { category: "Operations", items: [
-    { id: "p-messages" as PScreen,   label: "Messages & Comm",     icon: MessageSquare },
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
     { id: "p-reports" as PScreen,    label: "Reports",             icon: FileText },
     { id: "p-templates" as PScreen,  label: "Forms & Records",     icon: BookMarked },
     { id: "p-faculty-attendance" as PScreen, label: "Live Faculty Attendance", icon: Monitor },
+    { id: "p-behavior" as PScreen, label: "Behavioral Reports", icon: ShieldAlert },
   ]},
 ];
 
@@ -66,7 +66,7 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
               EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan NHS
+              Sindalan National High School
             </div>
           </div>
         )}

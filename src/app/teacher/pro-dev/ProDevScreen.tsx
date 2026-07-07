@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { Calendar, Upload, Award, Star } from 'lucide-react';
+import { Calendar, Upload, Award, Star, X } from 'lucide-react';
 import { CERTS, SEMINARS } from '../../shared/constants/seedData';
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
 import { levelColor } from '../../shared/utils/helpers';
+
 export function ProDevScreen() {
   const [activeTab, setActiveTab] = useState<"certs"|"seminars"|"points">("certs");
+  const [uploadModal, setUploadModal] = useState(false);
   const totalHours = CERTS.reduce((s,c)=>s+c.hours, 0);
   const totalPoints = CERTS.reduce((s,c)=>s+c.points, 0);
 
@@ -45,7 +47,7 @@ export function ProDevScreen() {
           <div>
             <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ fontSize:12, color:C.t3 }}>{CERTS.length} certificates on record · {totalHours} training hours logged</div>
-              <button style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"7px 12px", cursor:"pointer" }}>
+              <button onClick={() => setUploadModal(true)} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"7px 12px", cursor:"pointer" }}>
                 <Upload size={12} /> Upload Certificate
               </button>
             </div>
@@ -148,8 +150,50 @@ export function ProDevScreen() {
           </div>
         )}
       </div>
+
+      {uploadModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(15,8,8,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: C.paper, borderRadius: 8, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 24px 60px rgba(74,10,16,0.3)" }}>
+            <div style={{ background: C.m800, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces',serif" }}>Upload Certificate</div>
+              <button onClick={() => setUploadModal(false)} style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer", display: "flex" }}><X size={16} /></button>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Training / Seminar Title</label>
+                  <input type="text" placeholder="Enter title" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Level</label>
+                    <select style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box", background: "#fff" }}>
+                      <option>School Level</option>
+                      <option>Division</option>
+                      <option>Regional</option>
+                      <option>National</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Hours Completed</label>
+                    <input type="number" placeholder="0" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Upload File (PDF/Image)</label>
+                  <div style={{ border: `1px dashed ${C.borderHeavy}`, background: C.m50, borderRadius: 4, padding: 20, textAlign: "center", cursor: "pointer" }}>
+                    <Upload size={20} color={C.m700} style={{ marginBottom: 8 }} />
+                    <div style={{ fontSize: 11, color: C.t2, fontWeight: 600 }}>Click to browse or drag file here</div>
+                  </div>
+                </div>
+                <button onClick={() => { setUploadModal(false); alert("Certificate uploaded successfully! Pending verification."); }} style={{ background: C.m700, color: "#fff", border: "none", padding: "10px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 10 }}>
+                  Submit Certificate
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-/* ─── Calendar Screen ───────────────────────────────────────── */

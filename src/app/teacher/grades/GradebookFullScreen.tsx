@@ -3,8 +3,9 @@ import { C } from '../../shared/constants/tokens';
 import { QKey, QData, GbItem, GbGrades } from '../../shared/types';
 import { ChevronDown, FileText, ChevronLeft, Plus, Download, Eye } from 'lucide-react';
 import { Q_SEED, GB_ROSTER } from '../../shared/constants/seedData';
+import { MY_CLASSES } from '../../App';
 import { Stamp } from '../../shared/components/Stamp';
-export function GradebookFullScreen({ onBack, hideBack=false }:{ onBack:()=>void, hideBack?:boolean }) {
+export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ classId?:number, onBack:()=>void, hideBack?:boolean }) {
   /* ── per-quarter data (each quarter has its own activities + scores) ── */
   const [allData, setAllData] = useState<Record<QKey,QData>>(Q_SEED);
   const [quarter, setQuarter] = useState<QKey>("Q1");
@@ -12,7 +13,8 @@ export function GradebookFullScreen({ onBack, hideBack=false }:{ onBack:()=>void
 
   /* ── shared settings ── */
   const [weights, setWeights] = useState({ww:25,pt:50,qa:25});
-  const [section, setSection] = useState("Gr. 8 Rizal");
+  const cls = MY_CLASSES.find(c=>c.id===classId) ?? MY_CLASSES[0];
+  const section = `Gr. ${cls.grade} ${cls.section}`;
 
   /* ── edit states ── */
   const [activeCell, setActiveCell] = useState<string|null>(null);
@@ -191,27 +193,16 @@ export function GradebookFullScreen({ onBack, hideBack=false }:{ onBack:()=>void
         {/* Section */}
         <div style={{display:"flex",alignItems:"center",gap:5}}>
           <span style={{fontSize:9,color:C.t3,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em"}}>Section</span>
-          <div style={{position:"relative"}}>
-            <select value={section} onChange={e=>setSection(e.target.value)}
-              style={{border:`1px solid ${C.borderMed}`,borderRadius:4,padding:"4px 22px 4px 7px",
-                fontSize:12,color:C.t1,background:"#fff",outline:"none",appearance:"none",cursor:"pointer"}}>
-              <option>Gr. 8 Rizal</option>
-              <option>Gr. 9 Einstein</option>
-              <option>Gr. 10 Pilot</option>
-            </select>
-            <ChevronDown size={11} style={{position:"absolute",right:5,top:"50%",transform:"translateY(-50%)",color:C.t3,pointerEvents:"none"}}/>
+          <div style={{padding:"4px 12px", fontSize:12, fontWeight:700, color:C.m700, background:C.m50, borderRadius:4, border:`1px solid ${C.m100}`}}>
+            Grade {cls.grade} — {cls.section}
           </div>
         </div>
 
         {/* Subject */}
         <div style={{display:"flex",alignItems:"center",gap:5}}>
           <span style={{fontSize:9,color:C.t3,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em"}}>Subject</span>
-          <div style={{position:"relative"}}>
-            <select style={{border:`1px solid ${C.borderMed}`,borderRadius:4,padding:"4px 22px 4px 7px",
-              fontSize:12,color:C.t1,background:"#fff",outline:"none",appearance:"none",cursor:"pointer"}}>
-              <option>Mathematics 8</option><option>Science 9</option><option>Filipino 10</option>
-            </select>
-            <ChevronDown size={11} style={{position:"absolute",right:5,top:"50%",transform:"translateY(-50%)",color:C.t3,pointerEvents:"none"}}/>
+          <div style={{padding:"4px 12px", fontSize:12, fontWeight:700, color:C.m700, background:C.m50, borderRadius:4, border:`1px solid ${C.m100}`}}>
+            {cls.subject}
           </div>
         </div>
 
@@ -445,7 +436,7 @@ export function GradebookFullScreen({ onBack, hideBack=false }:{ onBack:()=>void
             })()}
             <div style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.35)"}}>
               <span style={{fontWeight:700,color:"rgba(255,255,255,0.7)"}}>
-                Mathematics 8 · {section} · SY 2025–2026
+                {cls.subject} · Grade {cls.grade} {cls.section} · SY 2025–2026
               </span>
             </div>
           </div>
@@ -648,7 +639,7 @@ export function GradebookFullScreen({ onBack, hideBack=false }:{ onBack:()=>void
         ))}
         <div style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.35)"}}>
           <span style={{fontWeight:700,color:"rgba(255,255,255,0.7)"}}>
-            {quarter} · Mathematics 8 · {section} · SY 2025–2026
+            {quarter} · {cls.subject} · Grade {cls.grade} {cls.section} · SY 2025–2026
           </span>
         </div>
       </div>
