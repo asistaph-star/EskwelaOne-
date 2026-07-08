@@ -14,7 +14,6 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
-  const [hoverAdvisory, setHoverAdvisory] = useState(false);
 
   function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +47,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
         </div>
 
         {/* Middle hero */}
-        <div style={{ maxWidth: 500 }}>
+        <div style={{ maxWidth: 500, margin: "auto 0" }}>
           <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 46, fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 16px" }}>Education<br />Shapes the Future</h1>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: "0 0 28px" }}>Empowering every learner, supporting every educator, and building a better tomorrow together.</p>
 
@@ -62,62 +61,6 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
               <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 10.5, marginTop: 2, lineHeight: 1.4 }}>Delivering excellence in education through innovation, integrity, and service.</div>
             </div>
           </div>
-        </div>
-        
-        {/* Featured Announcement */}
-        <div style={{ maxWidth: 500, marginTop: 40 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>Featured Event</div>
-          
-          <div 
-            onMouseEnter={() => setHoverAdvisory(true)}
-            onMouseLeave={() => setHoverAdvisory(false)}
-            style={{ position: "relative", width: 420 }}
-          >
-            <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: 12, display: "flex", gap: 16, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.45)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.3)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)"; }}
-            >
-              <div style={{ width: 84, height: 84, borderRadius: 8, backgroundImage: "url(/nutrition_month.jpg)", backgroundSize: "cover", backgroundPosition: "center", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }} />
-              <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <div style={{ display: "inline-block", padding: "3px 8px", background: "#10b981", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 4, alignSelf: "flex-start", marginBottom: 8, letterSpacing: "0.05em" }}>UPCOMING EVENT</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 4, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>52nd Nutrition Month</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>Nutrisyon at Kalikasan Ating Pangalagaan! Join us this July.</div>
-              </div>
-            </div>
-
-            {/* Tooltip Hover */}
-            {hoverAdvisory && (
-              <div style={{ position: "absolute", bottom: "calc(100% + 16px)", left: 0, width: 320, background: "#fff", borderRadius: 16, boxShadow: "0 20px 40px rgba(0,0,0,0.4)", overflow: "hidden", zIndex: 50, animation: "fadeIn 0.2s ease-out" }}>
-                <div style={{ width: "100%", height: 320, backgroundImage: "url(/nutrition_month.jpg)", backgroundSize: "cover", backgroundPosition: "center" }} />
-                <div style={{ padding: "20px 24px" }}>
-                  <div style={{ display: "inline-block", padding: "4px 8px", background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 4, marginBottom: 12 }}>UPCOMING EVENT</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 8 }}>52nd Nutrition Month</div>
-                  <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.5 }}>Nutrisyon at Kalikasan Ating Pangalagaan! Let's celebrate health and nature this July 2026.</div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom info row */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 20 }}>
-          {[
-            { icon: Building2, title: "1 University", desc: "One integrated system" },
-            { icon: Users, title: "All Roles", desc: "Connected in one portal" },
-            { icon: ShieldCheck, title: "Secure Access", desc: "Your data is protected" },
-            { icon: Clock, title: "24/7 Access", desc: "Anytime, anywhere" }
-          ].map((f, idx) => {
-            const Icon = f.icon;
-            return (
-              <div key={idx} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Icon size={12} color={C.gold} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{f.title}</span>
-                </div>
-                <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.4)" }}>{f.desc}</span>
-              </div>
-            );
-          })}
         </div>
       </div>
 
