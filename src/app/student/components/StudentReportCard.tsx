@@ -81,7 +81,7 @@ export function StudentReportCard({ student, statuses, compact=false }: { studen
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"8px 20px" }}>
           {[
             ["Full Name", `${student.surname}, ${student.first}`],
-            ["Grade & Section", `Grade ${student.grade} — ${student.section}`],
+            ["Grade & Section", `Grade ${student.grade} - ${student.section}`],
             ["School Year", "SY 2025–2026"],
             ["LRN", student.lrn],
             ["Gender", student.gender === "male" ? "Male" : "Female"],
@@ -131,18 +131,18 @@ export function StudentReportCard({ student, statuses, compact=false }: { studen
                       { val: sg.q3, pub: q3Pub }
                     ].map((item,j)=>(
                       <td key={j} style={{ textAlign:"center", padding:"9px 4px", borderLeft:`0.5px solid ${C.border}` }}>
-                        <span style={item.pub ? gradeColor(item.val) : {color: C.t3}}>{item.pub ? item.val : "—"}</span>
+                        <span style={item.pub ? gradeColor(item.val) : {color: C.t3}}>{item.pub ? item.val : "-"}</span>
                       </td>
                     ))}
-                    {/* Final average — slightly emphasized */}
+                    {/* Final average - slightly emphasized */}
                     <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`1px solid ${C.borderMed}`, background:passed?"#fff":C.redBg }}>
                       <span style={{ fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:avg<75?C.red:avg>=90?C.green:C.t1 }}>
-                        {(q1Pub && q2Pub && q3Pub) ? avg.toFixed(1) : "—"}
+                        {(q1Pub && q2Pub && q3Pub) ? avg.toFixed(1) : "-"}
                       </span>
                     </td>
                     {/* Remarks stamp */}
                     <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`0.5px solid ${C.border}` }}>
-                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={passed?"PASSED":"FAILED"} color={passed?"#fff":C.red} bg={passed?C.green:C.redBg} /> : <span style={{color: C.t3, fontSize: 10}}>—</span>}
+                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={passed?"PASSED":"FAILED"} color={passed?"#fff":C.red} bg={passed?C.green:C.redBg} /> : <span style={{color: C.t3, fontSize: 10}}>-</span>}
                     </td>
                   </tr>
                 );
@@ -154,9 +154,9 @@ export function StudentReportCard({ student, statuses, compact=false }: { studen
                   <span style={{ fontSize:12, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif", textTransform:"uppercase", letterSpacing:"0.06em" }}>General Average</span>
                 </td>
                 {[
-                  q1Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q1,0)/subs.length*10)/10).toFixed(1) : "—",
-                  q2Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q2,0)/subs.length*10)/10).toFixed(1) : "—",
-                  q3Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q3,0)/subs.length*10)/10).toFixed(1) : "—",
+                  q1Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q1,0)/subs.length*10)/10).toFixed(1) : "-",
+                  q2Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q2,0)/subs.length*10)/10).toFixed(1) : "-",
+                  q3Pub ? (Math.round(subs.reduce((s,sg)=>s+sg.q3,0)/subs.length*10)/10).toFixed(1) : "-",
                 ].map((avg,j)=>(
                   <td key={j} style={{ textAlign:"center", padding:"11px 4px", borderLeft:`0.5px solid rgba(255,255,255,0.15)` }}>
                     <span style={{ fontSize:12, fontWeight:600, color:"rgba(255,255,255,0.7)", fontFamily:"'JetBrains Mono',monospace" }}>{avg}</span>
@@ -167,11 +167,11 @@ export function StudentReportCard({ student, statuses, compact=false }: { studen
                   <div style={{ display:"flex", alignItems:"center", gap:10, justifyContent:"center" }}>
                     <div style={{ textAlign:"center" }}>
                       <div style={{ fontSize:9, color:"rgba(255,255,255,0.5)", textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:2 }}>Final</div>
-                      <div style={{ fontSize:26, fontWeight:800, color:genAvg>=75?C.gold:"#f87171", fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{(q1Pub && q2Pub && q3Pub) ? genAvg.toFixed(1) : "—"}</div>
+                      <div style={{ fontSize:26, fontWeight:800, color:genAvg>=75?C.gold:"#f87171", fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{(q1Pub && q2Pub && q3Pub) ? genAvg.toFixed(1) : "-"}</div>
                     </div>
                     <div style={{ width:1, height:32, background:"rgba(255,255,255,0.15)" }}/>
                     <div>
-                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={finalRemark} color={finalColor} bg={finalBg} /> : <span style={{color: "rgba(255,255,255,0.3)", fontSize: 10}}>—</span>}
+                      {(q1Pub && q2Pub && q3Pub) ? <Stamp label={finalRemark} color={finalColor} bg={finalBg} /> : <span style={{color: "rgba(255,255,255,0.3)", fontSize: 10}}>-</span>}
                     </div>
                   </div>
                 </td>

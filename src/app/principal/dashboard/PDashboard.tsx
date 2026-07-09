@@ -193,9 +193,9 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
             <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
               {[
-                { text: "Emergency Clinic Case: Student Aguilar, Liza Marie (8-Rizal) sent home with high fever", color: C.red, badge: "🔴 Critical" },
-                { text: "Urgent Intervention Needed: Ocampo, Renz Adrian (10-Pilot) skipped class 5 times consecutively", color: C.red, badge: "🔴 Critical" },
-                { text: "Severe Discipline Incident: Reyes, Carlo Jose (9-Einstein) reported for vandalism", color: C.amber, badge: "🟠 High" },
+                { text: "Emergency Clinic Case: Student Aguilar, Liza Marie (8 Rizal) sent home with high fever", color: C.red, badge: "🔴 Critical" },
+                { text: "Urgent Intervention Needed: Ocampo, Renz Adrian (10 Pilot) skipped class 5 times consecutively", color: C.red, badge: "🔴 Critical" },
+                { text: "Severe Discipline Incident: Reyes, Carlo Jose (9 Einstein) reported for vandalism", color: C.amber, badge: "🟠 High" },
                 { text: "Teacher Absent: Navarro, Pedro M. (Master Teacher I) on leave today", color: "#B45309", badge: "🟡 Medium" },
                 { text: "Missing Attendance: Grade 8 Rizal (Soriano, A.) not yet submitted", color: C.blue, badge: "🔵 Info" },
               ].map((alert, idx) => (
@@ -215,11 +215,11 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
             <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
               {[
-                { name: "Juan Dela Cruz", gr: "Grade 10", sec: "10-Pilot", issue: "5 Consecutive Absences", badge: "🔴 URGENT", color: C.red, bg: C.redBg },
-                { name: "Maria Santos", gr: "Grade 8", sec: "8-Rizal", issue: "Failing Mathematics", badge: "🟠 HIGH", color: C.amber, bg: C.amberBg },
-                { name: "James Reyes", gr: "Grade 9", sec: "9-Einstein", issue: "Guidance Referral", badge: "🟡 MONITOR", color: C.blue, bg: C.blueBg },
-                { name: "Ocampo, Renz Adrian", gr: "Grade 10", sec: "10-Pilot", issue: "Skipping Class (Behavioral)", badge: "🔴 URGENT", color: C.red, bg: C.redBg },
-                { name: "Aguilar, Liza Marie", gr: "Grade 8", sec: "8-Rizal", issue: "High Fever (Clinic emergency)", badge: "🔵 CLINIC", color: C.teal, bg: C.tealBg }
+                { name: "Juan Dela Cruz", gr: "Grade 10", sec: "10 Pilot", issue: "5 Consecutive Absences", badge: "🔴 URGENT", color: C.red, bg: C.redBg },
+                { name: "Maria Santos", gr: "Grade 8", sec: "8 Rizal", issue: "Failing Mathematics", badge: "🟠 HIGH", color: C.amber, bg: C.amberBg },
+                { name: "James Reyes", gr: "Grade 9", sec: "9 Einstein", issue: "Guidance Referral", badge: "🟡 MONITOR", color: C.blue, bg: C.blueBg },
+                { name: "Ocampo, Renz Adrian", gr: "Grade 10", sec: "10 Pilot", issue: "Skipping Class (Behavioral)", badge: "🔴 URGENT", color: C.red, bg: C.redBg },
+                { name: "Aguilar, Liza Marie", gr: "Grade 8", sec: "8 Rizal", issue: "High Fever (Clinic emergency)", badge: "🔵 CLINIC", color: C.teal, bg: C.tealBg }
               ].map((s, idx) => (
                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: idx < 4 ? `1px solid ${C.border}` : "none" }}>
                   <div>

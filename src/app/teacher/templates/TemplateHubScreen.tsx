@@ -36,12 +36,12 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
     {
       id:"rc" as const, emoji:"📋",
       title:"Report Card",
-      desc:"Form 138 — Complete academic history across Grade 7–10. Auto-detects Old Curriculum (Q1–Q4) for Grade 7 and New Curriculum (Q1–Q3) for Grade 8–10.",
+      desc:"Form 138 - Complete academic history across Grade 7–10. Auto-detects Old Curriculum (Q1–Q4) for Grade 7 and New Curriculum (Q1–Q3) for Grade 8–10.",
     },
     ...(false /* Hidden for now: role === "registrar" */ ? [{
       id:"f137" as const, emoji:"📄",
       title:"Form 137",
-      desc:"Permanent Record — Official transfer document containing the student's complete scholastic record and personal information.",
+      desc:"Permanent Record - Official transfer document containing the student's complete scholastic record and personal information.",
     }] : []),
   ];
 
@@ -55,7 +55,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   if (viewing) {
     return (
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"transparent" }}>
-        {/* Document topbar — looks like a screen inside the app */}
+        {/* Document topbar - looks like a screen inside the app */}
         <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
           <button onClick={()=>setViewing(null)}
             style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:4, cursor:"pointer" }}>
@@ -64,7 +64,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
           <div style={{ width:1, height:22, background:C.borderMed }} />
           <div style={{ flex:1 }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>
-              {viewing==="rc" ? "Report Card — Form 138" : "Form 137 — Permanent Record"}
+              {viewing==="rc" ? "Report Card - Form 138" : "Form 137 - Permanent Record"}
             </div>
             <div style={{ fontSize:10, color:C.t3 }}>
               {student} · {sy}
@@ -137,7 +137,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
         </div>
       </div>
 
-      {/* Modal — appears when a template card is clicked */}
+      {/* Modal - appears when a template card is clicked */}
       {modal && (
         <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(15,8,8,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
           onClick={e=>{ if(e.target===e.currentTarget) setModal(null); }}>

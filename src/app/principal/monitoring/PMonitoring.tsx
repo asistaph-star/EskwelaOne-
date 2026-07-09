@@ -121,7 +121,7 @@ export function PMonitoring() {
               </BarChart>
             ) : (
               <BarChart data={[
-                { section: "10-Pilot", rate: 98.5 }, { section: "10-Einstein", rate: 96.1 }, { section: "9-Newton", rate: 89.2 }, { section: "8-Rizal", rate: 92.4 }, { section: "7-Makulay", rate: 93.1 }
+                { section: "10 Pilot", rate: 98.5 }, { section: "10 Einstein", rate: 96.1 }, { section: "9 Newton", rate: 89.2 }, { section: "8 Rizal", rate: 92.4 }, { section: "7 Makulay", rate: 93.1 }
               ]} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
                 <XAxis dataKey="section" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: C.t3 }} dy={10} />

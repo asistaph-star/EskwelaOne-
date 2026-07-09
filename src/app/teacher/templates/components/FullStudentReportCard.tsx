@@ -60,7 +60,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
       {/* ── Student info ── */}
       <div style={{ borderBottom:`2px solid ${C.m700}`, padding:"10px 24px", background:C.m50 }}>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"6px 20px" }}>
-          {[["Full Name",s.name],["LRN",s.lrn],["Grade & Section",`Grade ${s.grade} — ${s.section}`],["Adviser",s.adviser],["School","Sindalan National High School"],["School Year","SY 2025–2026"]].map(([l,v])=>(
+          {[["Full Name",s.name],["LRN",s.lrn],["Grade & Section",`Grade ${s.grade} - ${s.section}`],["Adviser",s.adviser],["School","Sindalan National High School"],["School Year","SY 2025–2026"]].map(([l,v])=>(
             <div key={l} style={{ borderBottom:`0.5px solid ${C.borderMed}`, paddingBottom:4 }}>
               <div style={{ fontSize:8, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:1 }}>{l}</div>
               <div style={{ fontSize:12, fontWeight:600, color:C.t1, fontFamily:l==="LRN"?"'JetBrains Mono',monospace":undefined }}>{v}</div>
@@ -131,7 +131,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
                     </td>
                   ))}
                   <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`1px solid ${C.borderMed}`, background:!pass?C.redBg:"transparent" }}>
-                    <span style={{ fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:!pass?C.red:avg>=90?C.green:C.t1 }}>{avg>0?avg.toFixed(1):"—"}</span>
+                    <span style={{ fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:!pass?C.red:avg>=90?C.green:C.t1 }}>{avg>0?avg.toFixed(1):"-"}</span>
                   </td>
                   <td style={{ textAlign:"center", padding:"9px 6px", borderLeft:`0.5px solid ${C.border}` }}>
                     {avg>0 && <Stamp label={pass?"PASSED":"FAILED"} color={pass?"#fff":C.red} bg={pass?focused.color:C.redBg} />}
@@ -164,7 +164,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
 
       {/* ── Summary across all grade levels ── */}
       <div style={{ padding:"10px 24px", background:C.paper, borderBottom:`1px solid ${C.borderMed}` }}>
-        <div style={{ fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>Academic Summary — All Grade Levels</div>
+        <div style={{ fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:8 }}>Academic Summary - All Grade Levels</div>
         <div style={{ display:"flex", gap:3 }}>
           {LEVELS.map(lv=>{
             const avg  = LevelAvg(lv.key);
@@ -172,7 +172,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
             return (
               <div key={lv.key} style={{ flex:1, padding:"8px 10px", border:`1px solid ${lv.color}30`, borderRadius:4, background:focusLevel===lv.key?lv.color+"15":"#fff", cursor:"pointer" }} onClick={()=>setFocusLevel(lv.key)}>
                 <div style={{ fontSize:9, color:lv.color, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.07em" }}>{lv.label}</div>
-                <div style={{ fontSize:18, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:avg>0?(pass?lv.color:C.red):"#ccc", lineHeight:1.2 }}>{avg>0?avg.toFixed(1):"—"}</div>
+                <div style={{ fontSize:18, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:avg>0?(pass?lv.color:C.red):"#ccc", lineHeight:1.2 }}>{avg>0?avg.toFixed(1):"-"}</div>
                 <div style={{ fontSize:9, color:C.t3 }}>{lv.sy}</div>
                 {avg>0 && <Stamp label={pass?"Passed":"Failed"} color={pass?lv.color:C.red} bg={pass?lv.color+"15":C.redBg} />}
               </div>

@@ -50,7 +50,7 @@ export function CalendarScreen() {
     <div style={{ flex: 1, overflowY: "auto", padding: 28, background: "transparent" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar — June 2025</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar - June 2025</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>School events (🔒) are set by admin. Your personal events are editable.</div>
         </div>
         <button onClick={() => { setShowForm(true); setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" }); }}

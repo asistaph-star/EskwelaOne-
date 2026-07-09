@@ -12,7 +12,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
   const { gateAttendance, excuseLetters } = useAppContext();
   const [sub, setSub] = useState<AttSub>("daily");
 
-  /* per-student per-date status — starts from seed */
+  /* per-student per-date status - starts from seed */
   const [attData, setAttData] = useState<Record<number,Record<number,AStatus>>>(ATT_STATUS_SEED as any);
   const [selectedDate, setSelectedDate] = useState(10); /* June 10 */
   const [month, setMonth] = useState(0); /* 0 = June 2025 */
@@ -65,7 +65,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
       {/* ══════════════════════════════════════════ 1. DAILY ATTENDANCE */}
       {sub==="daily" && (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 240px", gap:14 }}>
-          <DocPanel title={`Daily Attendance — June ${selectedDate}, 2025`} icon={CalendarCheck}
+          <DocPanel title={`Daily Attendance - June ${selectedDate}, 2025`} icon={CalendarCheck}
             action={
               <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                 <button onClick={()=>setSelectedDate(d=>Math.max(2,d-1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>‹</button>
@@ -177,7 +177,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
 
       {/* ══════════════════════════════════════════ 2. QR ATTENDANCE RECORDS */}
       {sub==="qr" && (
-        <DocPanel title="QR Attendance Records — June 10, 2025" icon={QrCode}
+        <DocPanel title="QR Attendance Records - June 10, 2025" icon={QrCode}
           action={<span style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>{gateAttendance.length} scans today</span>}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
@@ -229,7 +229,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
 
       {/* ══════════════════════════════════════════ 3. MANUAL ATTENDANCE */}
       {sub==="manual" && (
-        <DocPanel title="Manual Attendance — Monthly Grid" icon={UserCheck}
+        <DocPanel title="Manual Attendance - Monthly Grid" icon={UserCheck}
           action={
             <div style={{ display:"flex", gap:5, alignItems:"center" }}>
               <button onClick={()=>setMonth(m=>Math.max(0,m-1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>‹</button>
@@ -294,7 +294,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
 
       {/* ══════════════════════════════════════════ 4. LATE MONITORING */}
       {sub==="late" && (
-        <DocPanel title="Late Monitoring — June 2025" icon={Clock}>
+        <DocPanel title="Late Monitoring - June 2025" icon={Clock}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
               <Search size={12} color={C.t3} />
@@ -327,7 +327,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                     <td style={{ padding:"9px 14px" }}>
                       <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
                         {lateDates.length===0
-                          ? <span style={{ fontSize:11, color:C.t3 }}>—</span>
+                          ? <span style={{ fontSize:11, color:C.t3 }}>-</span>
                           : lateDates.map(d=>(
                               <span key={d} style={{ fontSize:10, background:C.amberBg, color:C.amber, padding:"1px 6px", borderRadius:3, fontFamily:"'JetBrains Mono',monospace" }}>Jun {d}</span>
                             ))
@@ -364,8 +364,8 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
           {/* SF2 header */}
           <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div>
-              <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Form 2 (SF2) — Learner's Attendance Record</div>
-              <div style={{ fontSize:12, color:C.t3, marginTop:2 }}>Grade 8 — Rizal · Mathematics 8 · June 2025 · Q1</div>
+              <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Form 2 (SF2) - Learner's Attendance Record</div>
+              <div style={{ fontSize:12, color:C.t3, marginTop:2 }}>Grade 8 - Rizal · Mathematics 8 · June 2025 · Q1</div>
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"7px 14px", cursor:"pointer" }}>
@@ -390,9 +390,9 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
             <div style={{ padding:"16px 20px 12px", borderBottom:`1px solid ${C.border}`, textAlign:"center" }}>
               <div style={{ fontSize:10, fontWeight:700, color:C.t2, textTransform:"uppercase", letterSpacing:"0.07em" }}>Republic of the Philippines · Department of Education</div>
               <div style={{ fontSize:15, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:3 }}>Sindalan National High School</div>
-              <div style={{ fontSize:11, color:C.t2 }}>School Form 2 (SF2) — Learner's Attendance Record</div>
+              <div style={{ fontSize:11, color:C.t2 }}>School Form 2 (SF2) - Learner's Attendance Record</div>
               <div style={{ display:"flex", justifyContent:"center", gap:24, marginTop:8, fontSize:11, color:C.t2 }}>
-                {[["School Year","SY 2025–2026"],["Grade & Section","Grade 8 — Rizal"],["Month","June 2025"],["Subject","Mathematics 8"]].map(([l,v])=>(
+                {[["School Year","SY 2025–2026"],["Grade & Section","Grade 8 - Rizal"],["Month","June 2025"],["Subject","Mathematics 8"]].map(([l,v])=>(
                   <div key={l} style={{ borderBottom:`1px solid ${C.borderMed}`, paddingBottom:4 }}>
                     <div style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.06em" }}>{l}</div>
                     <div style={{ fontSize:12, fontWeight:600, color:C.t1 }}>{v}</div>

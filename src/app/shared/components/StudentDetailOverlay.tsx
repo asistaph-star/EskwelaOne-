@@ -36,7 +36,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
           <>
             {/* Overlay topbar */}
             <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span style={{ color:"rgba(255,255,255,0.7)", fontSize:11 }}>Student Detail — {student.surname}, {student.first}</span>
+              <span style={{ color:"rgba(255,255,255,0.7)", fontSize:11 }}>Student Detail - {student.surname}, {student.first}</span>
               <button onClick={onClose} style={{ width:26, height:26, borderRadius:3, background:"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={14}/></button>
             </div>
 
@@ -50,7 +50,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
                   </div>
                   <div>
                     <div style={{ fontSize:16, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>{student.surname}, {student.first}</div>
-                    <div style={{ fontSize:11, color:C.t3, marginTop:2 }}>Grade 8 — Rizal · LRN 20000{student.id} · SY 2025–2026</div>
+                    <div style={{ fontSize:11, color:C.t3, marginTop:2 }}>Grade 8 - Rizal · LRN 20000{student.id} · SY 2025–2026</div>
                   </div>
                 </div>
                 {[["Adviser","Ana R. Soriano"],["Section","Rizal"],["School Year","SY 2025–2026"],["LRN",`20000${student.id}`]].map(([l,v])=>(
@@ -61,7 +61,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
                 ))}
               </div>
 
-              {/* Overall Grade Card — large stamped box */}
+              {/* Overall Grade Card - large stamped box */}
               <div style={{ padding:"18px 16px", background:atRisk?C.redBg:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8 }}>
                 <div style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.1em", fontWeight:700 }}>General Average</div>
                 <div style={{ fontSize:48, fontWeight:800, color:atRisk?C.red:student.avg>=90?C.green:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{student.avg.toFixed(1)}</div>

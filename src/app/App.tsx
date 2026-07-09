@@ -36,18 +36,18 @@ export const MY_CLASSES = [
 export const TODAY_SCHED = [
   { time: "7:30–8:30", subject: "Mathematics 8", section: "Gr. 8 Rizal", room: "Rm 101", status: "done" },
   { time: "8:30–9:30", subject: "Science 9", section: "Gr. 9 Einstein", room: "Rm 204", status: "done" },
-  { time: "9:30–10:00", subject: "—", section: "Break", room: "", status: "break" },
+  { time: "9:30–10:00", subject: "-", section: "Break", room: "", status: "break" },
   { time: "10:00–11:00", subject: "Filipino 10", section: "Gr. 10 Pilot", room: "Rm 312", status: "active" },
   { time: "11:00–12:00", subject: "Mathematics 8", section: "Gr. 8 Rizal", room: "Rm 101", status: "upcoming" },
   { time: "1:00–2:00", subject: "Advisory Period", section: "Gr. 8 Rizal", room: "Rm 101", status: "upcoming" },
 ];
 
 export const UPCOMING = [
-  { date: "Jun 13", label: "LAC Session — Numeracy", type: "lac", urgent: false },
+  { date: "Jun 13", label: "LAC Session - Numeracy", type: "lac", urgent: false },
   { date: "Jun 14", label: "Q1 Grading deadline", type: "deadline", urgent: true },
-  { date: "Jun 17", label: "Regional seminar — ICT Tools", type: "seminar", urgent: false },
+  { date: "Jun 17", label: "Regional seminar - ICT Tools", type: "seminar", urgent: false },
   { date: "Jun 20", label: "Parent-Teacher Conference", type: "ptc", urgent: false },
-  { date: "Jun 25", label: "SF2 submission — Division", type: "deadline", urgent: true },
+  { date: "Jun 25", label: "SF2 submission - Division", type: "deadline", urgent: true },
 ];
 
 export const STUDENTS_GR8 = [

@@ -58,15 +58,15 @@ export const GB_ROSTER = [
 
 export const CERTS = [
   { title:"Regional Training on 21st Century Teaching",level:"Regional",  hours:16, date:"Mar 2025", points:4 },
-  { title:"Division LAC — Numeracy Intervention",     level:"Division",  hours:8,  date:"Feb 2025", points:2 },
-  { title:"School-based INSET — ICT Integration",     level:"School",    hours:6,  date:"Jan 2025", points:1.5 },
+  { title:"Division LAC - Numeracy Intervention",     level:"Division",  hours:8,  date:"Feb 2025", points:2 },
+  { title:"School-based INSET - ICT Integration",     level:"School",    hours:6,  date:"Jan 2025", points:1.5 },
   { title:"National Summit on K-12 Curriculum",       level:"National",  hours:24, date:"Nov 2024", points:6 },
   { title:"District Science Fair Juror",              level:"District",  hours:8,  date:"Sep 2024", points:2 },
 ];
 
 export const SEMINARS = [
   { date:"Jun 17", title:"Regional ICT Tools Seminar",   level:"Regional", status:"confirmed" },
-  { date:"Jun 13", title:"LAC Session — Numeracy",       level:"School",   status:"confirmed" },
+  { date:"Jun 13", title:"LAC Session - Numeracy",       level:"School",   status:"confirmed" },
   { date:"Jul 3",  title:"Division Summer Reading Camp", level:"Division", status:"pending"   },
   { date:"Jul 15", title:"National Teachers Conference", level:"National", status:"pending"   },
 ];
@@ -124,14 +124,14 @@ export const QR_LOG = [
 ];
 
 export const P_TEACHERS = [
-  { name:"Navarro, Pedro M.",   rank:"Master Teacher II", years:2, grade:7,  sections:["7-Makulay","7-Matapat"],  subjects:["Mathematics 7","Science 7"],  advisory:"7-Makulay",  status:"amber" },
-  { name:"Batac, Lara B.",      rank:"Teacher III",       years:3, grade:7,  sections:["7-Masaya"],               subjects:["Filipino 7","EsP 7"],          advisory:null,         status:"red"   },
-  { name:"Soriano, Ana R.",     rank:"Teacher I",         years:1, grade:8,  sections:["8-Rizal"],                subjects:["Filipino 8","MAPEH 8"],        advisory:"8-Rizal",    status:"green" },
-  { name:"Panlilio, Jose L.",   rank:"Teacher II",        years:2, grade:8,  sections:["8-Rizal","8-Aguinaldo"],  subjects:["Mathematics 8"],               advisory:null,         status:"amber" },
-  { name:"Santiago, Ramon F.",  rank:"Teacher III",       years:1, grade:9,  sections:["9-Einstein"],             subjects:["Science 9","Mathematics 9"],   advisory:"9-Einstein", status:"green" },
-  { name:"Reyes, Maria C.",     rank:"Teacher II",        years:3, grade:9,  sections:["9-Einstein","9-Newton"],  subjects:["English 9","AP 9"],            advisory:null,         status:"red"   },
-  { name:"Dela Cruz, Cynthia",  rank:"Master Teacher I",  years:3, grade:10, sections:["10-Pilot"],               subjects:["English 10","AP 10"],          advisory:"10-Pilot",   status:"red"   },
-  { name:"Santos, Dr. Maria",   rank:"Teacher III",       years:2, grade:10, sections:["10-Pilot","10-Horizon"],  subjects:["Mathematics 10"],              advisory:null,         status:"amber" },
+  { name:"Navarro, Pedro M.",   rank:"Master Teacher II", years:2, grade:7,  sections:["7 Makulay","7 Matapat"],  subjects:["Mathematics 7","Science 7"],  advisory:"7 Makulay",  status:"amber" },
+  { name:"Batac, Lara B.",      rank:"Teacher III",       years:3, grade:7,  sections:["7 Masaya"],               subjects:["Filipino 7","EsP 7"],          advisory:null,         status:"red"   },
+  { name:"Soriano, Ana R.",     rank:"Teacher I",         years:1, grade:8,  sections:["8 Rizal"],                subjects:["Filipino 8","MAPEH 8"],        advisory:"8 Rizal",    status:"green" },
+  { name:"Panlilio, Jose L.",   rank:"Teacher II",        years:2, grade:8,  sections:["8 Rizal","8 Aguinaldo"],  subjects:["Mathematics 8"],               advisory:null,         status:"amber" },
+  { name:"Santiago, Ramon F.",  rank:"Teacher III",       years:1, grade:9,  sections:["9 Einstein"],             subjects:["Science 9","Mathematics 9"],   advisory:"9 Einstein", status:"green" },
+  { name:"Reyes, Maria C.",     rank:"Teacher II",        years:3, grade:9,  sections:["9 Einstein","9 Newton"],  subjects:["English 9","AP 9"],            advisory:null,         status:"red"   },
+  { name:"Dela Cruz, Cynthia",  rank:"Master Teacher I",  years:3, grade:10, sections:["10 Pilot"],               subjects:["English 10","AP 10"],          advisory:"10 Pilot",   status:"red"   },
+  { name:"Santos, Dr. Maria",   rank:"Teacher III",       years:2, grade:10, sections:["10 Pilot","10 Horizon"],  subjects:["Mathematics 10"],              advisory:null,         status:"amber" },
 ];
 
 export const P_GATE_LOG = [
@@ -147,10 +147,10 @@ export const P_GATE_LOG = [
 ];
 
 export const P_WELFARE = [
-  { name:"Ocampo, Renz Adrian",   section:"10-Pilot",   reason:"Academic",   type:"Behavior",  urgency:"urgent",    status:"Under investigation" },
-  { name:"Espino, Hannah Grace",  section:"8-Rizal",    reason:"Attendance", type:"Guidance",  urgency:"monitoring", status:"Referral pending" },
-  { name:"Bondoc, Ramon Jr.",     section:"8-Rizal",    reason:"Academic",   type:"Guidance",  urgency:"monitoring", status:"Counseling" },
-  { name:"Reyes, Carlo Jose",     section:"9-Einstein", reason:"Academic",   type:"Behavior",  urgency:"urgent",    status:"Parent notified" },
+  { name:"Ocampo, Renz Adrian",   section:"10 Pilot",   reason:"Academic",   type:"Behavior",  urgency:"urgent",    status:"Under investigation" },
+  { name:"Espino, Hannah Grace",  section:"8 Rizal",    reason:"Attendance", type:"Guidance",  urgency:"monitoring", status:"Referral pending" },
+  { name:"Bondoc, Ramon Jr.",     section:"8 Rizal",    reason:"Academic",   type:"Guidance",  urgency:"monitoring", status:"Counseling" },
+  { name:"Reyes, Carlo Jose",     section:"9 Einstein", reason:"Academic",   type:"Behavior",  urgency:"urgent",    status:"Parent notified" },
 ];
 
 export const P_INVENTORY = [

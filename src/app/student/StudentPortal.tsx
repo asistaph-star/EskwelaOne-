@@ -147,7 +147,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     <div style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
-        {/* School campus building — decorative background */}
+        {/* School campus building - decorative background */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
           backgroundImage: "url(/school_bg.jpg)",
@@ -157,7 +157,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           pointerEvents: "none", zIndex: 0
         }} />
         
-        {/* Brand Header — matches teacher sidebar exactly */}
+        {/* Brand Header - matches teacher sidebar exactly */}
         <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 8,
@@ -178,7 +178,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* Navigation list with categories — matches teacher sidebar */}
+        {/* Navigation list with categories - matches teacher sidebar */}
         <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", position: "relative", zIndex: 1 }}>
           {STUDENT_NAV_GROUPS.map((group, groupIdx) => (
             <div key={groupIdx} style={{ marginBottom: 8 }}>
@@ -218,7 +218,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
-        {/* Bottom Profile Popup — matches teacher sidebar exactly */}
+        {/* Bottom Profile Popup - matches teacher sidebar exactly */}
         <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}`, position: "relative", zIndex: 1 }}>
           <div 
             onClick={() => setProfileOpen(!profileOpen)}
@@ -407,7 +407,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* Official header block — same design as teacher dashboard */}
+              {/* Official header block - same design as teacher dashboard */}
               <div style={{ background: C.m800, borderRadius: 4, overflow: "hidden" }}>
                 <div style={{ background: `linear-gradient(90deg, ${C.m900} 0%, ${C.m800} 50%, ${C.m700} 100%)`, padding: "18px 24px 14px", display: "flex", alignItems: "center", gap: 18 }}>
                   <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(200,134,10,0.18)", border: "1.5px solid rgba(200,134,10,0.45)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

@@ -118,7 +118,7 @@ export function PAcademics() {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><PTableHeader cols={["Section","Grade","Average","Adviser"]} /></thead>
             <tbody>
-              {[["10-Pilot","10","87.3","Dela Cruz, C."],["8-Rizal","8","85.1","Soriano, A."],["9-Einstein","9","83.9","Santiago, R."],["7-Makulay","7","83.1","Navarro, P."]].map(([s,g,avg,adv],i)=>(
+              {[["10 Pilot","10","87.3","Dela Cruz, C."],["8 Rizal","8","85.1","Soriano, A."],["9 Einstein","9","83.9","Santiago, R."],["7 Makulay","7","83.1","Navarro, P."]].map(([s,g,avg,adv],i)=>(
                 <tr key={s} style={{ borderBottom:i<3?`0.5px solid ${C.border}`:"none" }}>
                   <td style={{ padding:"9px 16px", fontSize:12, fontWeight:600, color:C.t1 }}>{s}</td>
                   <td style={{ padding:"9px 16px", fontSize:11, color:C.t3 }}>Grade {g}</td>
@@ -138,16 +138,16 @@ export function PAcademics() {
           <thead><PTableHeader cols={["Rank","Student Name","Grade & Section","General Average"]} /></thead>
           <tbody>
             {[
-              ["1", "Valdez, Sophia", "10-Pilot", "98.2"],
-              ["2", "Mendoza, Gabriel", "10-Pilot", "97.8"],
-              ["3", "Bautista, Chloe", "9-Newton", "97.5"],
-              ["4", "Reyes, Miguel", "8-Rizal", "97.1"],
-              ["5", "Fernandez, Julia", "10-Einstein", "96.9"],
-              ["6", "Aquino, Liam", "7-Makulay", "96.5"],
-              ["7", "Cruz, Trisha Ann", "10-Pilot", "96.2"],
-              ["8", "Garcia, Ethan", "9-Galileo", "95.8"],
-              ["9", "Torres, Isabella", "8-Bonifacio", "95.7"],
-              ["10", "Gomez, Lucas", "7-Matapat", "95.5"]
+              ["1", "Valdez, Sophia", "10 Pilot", "98.2"],
+              ["2", "Mendoza, Gabriel", "10 Pilot", "97.8"],
+              ["3", "Bautista, Chloe", "9 Newton", "97.5"],
+              ["4", "Reyes, Miguel", "8 Rizal", "97.1"],
+              ["5", "Fernandez, Julia", "10 Einstein", "96.9"],
+              ["6", "Aquino, Liam", "7 Makulay", "96.5"],
+              ["7", "Cruz, Trisha Ann", "10 Pilot", "96.2"],
+              ["8", "Garcia, Ethan", "9 Galileo", "95.8"],
+              ["9", "Torres, Isabella", "8 Bonifacio", "95.7"],
+              ["10", "Gomez, Lucas", "7 Matapat", "95.5"]
             ].map(([rank, name, sec, avg], i)=>(
               <tr key={rank} style={{ borderBottom:i<9?`0.5px solid ${C.border}`:"none" }}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -171,7 +171,7 @@ export function PAcademics() {
         </div>
         {aiDone ? (
           <p style={{ fontSize:12, color:C.t1, lineHeight:1.8, margin:0 }}>
-            School-wide academic performance for Q1 SY 2025–2026 is at <strong>82.1 general average</strong>. Grade 10 leads at 84.1, while Grade 9 remains the lowest at 79.2. <strong>Mathematics consistently underperforms</strong> across all grade levels — Grades 7 and 8 are critically below threshold (71.2 and 73.5 respectively). Science 9 at 72.8 requires urgent faculty intervention. <strong>Recommended actions:</strong> (1) Schedule targeted remediation for Mathematics teachers; (2) Deploy peer-learning programs in Grades 8–9; (3) Request Division support for Science 9 curriculum alignment. Sections 9-Newton and 7-Matapat are flagged for special monitoring.
+            School-wide academic performance for Q1 SY 2025–2026 is at <strong>82.1 general average</strong>. Grade 10 leads at 84.1, while Grade 9 remains the lowest at 79.2. <strong>Mathematics consistently underperforms</strong> across all grade levels - Grades 7 and 8 are critically below threshold (71.2 and 73.5 respectively). Science 9 at 72.8 requires urgent faculty intervention. <strong>Recommended actions:</strong> (1) Schedule targeted remediation for Mathematics teachers; (2) Deploy peer-learning programs in Grades 8–9; (3) Request Division support for Science 9 curriculum alignment. Sections 9 Newton and 7 Matapat are flagged for special monitoring.
           </p>
         ) : <p style={{ fontSize:12, color:C.t3, fontStyle:"italic", margin:0 }}>Click "Generate Summary" to produce an AI-powered diagnostic overview of school performance with intervention recommendations.</p>}
       </div>

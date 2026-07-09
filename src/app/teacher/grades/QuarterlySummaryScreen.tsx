@@ -36,7 +36,7 @@ export function QuarterlySummaryScreen() {
   const failing  = finals.filter(g=>g>0&&g<75).length;
   const classAvg = finals.filter(g=>g>0).length
     ? (finals.filter(g=>g>0).reduce((a,b)=>a+b,0)/finals.filter(g=>g>0).length).toFixed(1)
-    : "—";
+    : "-";
 
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background: "transparent"}}>
@@ -173,7 +173,7 @@ export function QuarterlySummaryScreen() {
                     outline: isActive?`1.5px solid ${Q_ACCENT[quarter]}50`:"none",outlineOffset:-1}}>
                     <span style={{fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
                       color: g<=0?"#ccc":fail?C.red:high?C.green:C.t1}}>
-                      {g>0 ? g.toFixed(1) : "—"}
+                      {g>0 ? g.toFixed(1) : "-"}
                     </span>
                   </td>
                 );
@@ -198,7 +198,7 @@ export function QuarterlySummaryScreen() {
                     background: fa>0&&fa<75?C.redBg:C.goldLight}}>
                     <span style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",
                       color: fa<=0?"#ccc":fa<75?C.red:fa>=90?C.green:C.t1}}>
-                      {fa>0 ? fa.toFixed(1) : "—"}
+                      {fa>0 ? fa.toFixed(1) : "-"}
                     </span>
                   </td>
                   <td style={{border:`0.5px solid ${C.border}`,padding:"9px 6px",textAlign:"center",background:rowBg}}>

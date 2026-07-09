@@ -9,12 +9,12 @@ export function PReports() {
   const REPORTS = [
     { id:"sf1",   title:"SF1 School Register",   desc:"Class enrollment list per section and grade level" },
     { id:"sf2",   title:"SF2 Attendance Report",  desc:"Monthly learner attendance record for all sections" },
-    { id:"sf9",   title:"SF9 Scholastic Record",  desc:"Quarterly grade sheet — all subjects, all sections" },
+    { id:"sf9",   title:"SF9 Scholastic Record",  desc:"Quarterly grade sheet - all subjects, all sections" },
     { id:"enroll",title:"Enrollment Report",      desc:"Total enrollment by grade level and section breakdown" },
     { id:"att",   title:"Attendance Summary",     desc:"School-wide attendance rate and trend report" },
     { id:"grade", title:"Grade Report",           desc:"School average, passing/failing rates per grade level" },
     { id:"promo", title:"Promotion Report",       desc:"End-of-year promotion and retention rates per section" },
-    { id:"inv",   title:"Inventory Report",       desc:"Full school asset inventory — functional, repair, borrowed" },
+    { id:"inv",   title:"Inventory Report",       desc:"Full school asset inventory - functional, repair, borrowed" },
   ];
   if (viewing) {
     if (viewing === "att") {
@@ -41,7 +41,7 @@ export function PReports() {
             <ChevronLeft size={13}/> Back to Reports
           </button>
           <div style={{ width:1, height:22, background:C.borderMed }} />
-          <span style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>{REPORTS.find(r=>r.id===viewing)?.title} — Preview</span>
+          <span style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>{REPORTS.find(r=>r.id===viewing)?.title} - Preview</span>
           <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
             <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:3, padding:"6px 12px", cursor:"pointer" }}><Printer size={12}/>Print</button>
             <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:3, padding:"6px 14px", cursor:"pointer" }}><Download size={12}/>Download PDF</button>
@@ -58,7 +58,7 @@ export function PReports() {
             </div>
             <div style={{ fontSize:12, color:C.t3, textAlign:"center", fontStyle:"italic" }}>
               Full report document will be generated here showing actual school data.<br />
-              This is a read-only preview — Admin access only.
+              This is a read-only preview - Admin access only.
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@ export function PReports() {
     <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
       <div style={{ marginBottom:16 }}>
         <div style={{ fontSize:16, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:4 }}>Reports</div>
-        <div style={{ fontSize:12, color:C.t3 }}>View and download official school reports. Read-only — admin oversight access.</div>
+        <div style={{ fontSize:12, color:C.t3 }}>View and download official school reports. Read-only - admin oversight access.</div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
         {REPORTS.map(r=>(

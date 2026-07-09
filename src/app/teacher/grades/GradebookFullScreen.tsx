@@ -77,7 +77,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   const allGrades   = GB_ROSTER.map(s=>getQGrade(s.id)).filter(g=>g>0);
   const passing     = allGrades.filter(g=>g>=75).length;
   const failing     = allGrades.filter(g=>g<75).length;
-  const classAvg    = allGrades.length ? (allGrades.reduce((a,b)=>a+b,0)/allGrades.length).toFixed(1) : "—";
+  const classAvg    = allGrades.length ? (allGrades.reduce((a,b)=>a+b,0)/allGrades.length).toFixed(1) : "-";
   const weightsOk   = weights.ww+weights.pt+weights.qa === 100;
 
   /* ── column widths ── */
@@ -126,7 +126,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
         fontWeight:opts.bold?700:400,
         color:opts.color||(isRed?C.red:C.t2),background:opts.bg||"transparent",
         whiteSpace:"nowrap"}}>
-        {typeof val==="number" ? (val>0?val.toFixed(1):"—") : val}
+        {typeof val==="number" ? (val>0?val.toFixed(1):"-") : val}
       </td>
     );
   }
@@ -194,7 +194,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
         <div style={{display:"flex",alignItems:"center",gap:5}}>
           <span style={{fontSize:9,color:C.t3,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em"}}>Section</span>
           <div style={{padding:"4px 12px", fontSize:12, fontWeight:700, color:C.m700, background:C.m50, borderRadius:4, border:`1px solid ${C.m100}`}}>
-            Grade {cls.grade} — {cls.section}
+            Grade {cls.grade} - {cls.section}
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           </div>
         </div>
 
-        {/* Quarter tabs — always visible; active quarter = which ledger OR which column is highlighted in summary */}
+        {/* Quarter tabs - always visible; active quarter = which ledger OR which column is highlighted in summary */}
         <div style={{display:"flex",gap:2}}>
           {(["Q1","Q2","Q3"] as QKey[]).map(q=>{
             const isAct = quarter===q;
@@ -226,7 +226,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
         <div style={{width:1,height:22,background:C.border,flexShrink:0}}/>
 
-        {/* Weight inputs — only shown in grade entry view */}
+        {/* Weight inputs - only shown in grade entry view */}
         {view==="ledger" && (
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:9,color:C.t3,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.09em"}}>Weights:</span>
@@ -272,7 +272,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             display:"flex",alignItems:"center",gap:10}}>
             <FileText size={13} color={C.m700}/>
             <span style={{fontSize:11,color:C.t2}}>
-              Quarterly summary — read-only reference for <strong>Form 138 (Report Card)</strong>.
+              Quarterly summary - read-only reference for <strong>Form 138 (Report Card)</strong>.
               Edit scores in <button onClick={()=>setView("ledger")} style={{color:C.m700,background:"none",border:"none",cursor:"pointer",fontSize:11,fontWeight:700,padding:0,textDecoration:"underline"}}>Grade entry</button>.
             </span>
             <span style={{marginLeft:"auto",fontSize:10,color:C.t3}}>
@@ -361,7 +361,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                       outlineOffset:-1}}>
                       <span style={{fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
                         color: g<=0?"#ccc" : failing?C.red : high?C.green : C.t1}}>
-                        {g>0 ? g.toFixed(1) : "—"}
+                        {g>0 ? g.toFixed(1) : "-"}
                       </span>
                     </td>
                   );
@@ -392,7 +392,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                       background: finalAvg>0&&finalAvg<75 ? C.redBg : C.goldLight}}>
                       <span style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",
                         color: finalAvg<=0?"#ccc" : finalAvg<75?C.red : finalAvg>=90?C.green : C.t1}}>
-                        {finalAvg>0 ? finalAvg.toFixed(1) : "—"}
+                        {finalAvg>0 ? finalAvg.toFixed(1) : "-"}
                       </span>
                     </td>
                     {/* Status stamp */}
@@ -419,7 +419,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 return (q1>0&&q2>0&&q3>0) ? Math.round(((q1+q2+q3)/3)*10)/10 : 0;
               }).filter(g=>g>0);
               const pass=finals.filter(g=>g>=75).length, fail=finals.filter(g=>g<75).length;
-              const avg=finals.length?(finals.reduce((a,b)=>a+b,0)/finals.length).toFixed(1):"—";
+              const avg=finals.length?(finals.reduce((a,b)=>a+b,0)/finals.length).toFixed(1):"-";
               return (
                 <>
                   {([["Students",GB_ROSTER.length,"rgba(255,255,255,0.7)"],
@@ -513,7 +513,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
             {/* ── Row 2: activity sub-headers ── */}
             <tr>
-              {/* WW activity columns — key passed as 5th arg */}
+              {/* WW activity columns - key passed as 5th arg */}
               {wwItems.map(it=>
                 subTH(<div style={{lineHeight:1.4}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.04em"}}>{it.label}</div>
@@ -537,7 +537,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 <div style={{fontSize:8,color:"rgba(255,255,255,0.5)"}}>%</div>
               </div>, activeAccent, "#fff", 34, "ww-ps")}
 
-              {/* PT activity columns — key passed as 5th arg */}
+              {/* PT activity columns - key passed as 5th arg */}
               {ptItems.map(it=>
                 subTH(<div style={{lineHeight:1.4}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.04em"}}>{it.label}</div>
@@ -573,14 +573,14 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 <tr key={student.id}
                   onMouseEnter={e=>{ if(!activeCell)(e.currentTarget as HTMLElement).style.background=C.ledger; }}
                   onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.background=rowBg; }}>
-                  {/* Row number — sticky left */}
+                  {/* Row number - sticky left */}
                   <td style={{border:`0.5px solid ${C.border}`,padding:"7px 3px",textAlign:"center",
                     fontSize:10,color:C.t3,fontFamily:"'JetBrains Mono',monospace",
                     background:"#F8F5F4",position:"sticky",left:0,zIndex:1,
                     borderRight:`1px solid ${C.borderMed}`}}>
                     {idx+1}
                   </td>
-                  {/* Student name — sticky left */}
+                  {/* Student name - sticky left */}
                   <td style={{border:`0.5px solid ${C.border}`,padding:"7px 10px",
                     fontSize:12,fontWeight:600,color:C.t1,
                     background:"#fff",position:"sticky",left:W.num,zIndex:1,
@@ -605,14 +605,14 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                   {/* QA cell */}
                   {Cell(student.id, "qa", qaMax)}
 
-                  {/* Q-AVG — sticky right */}
+                  {/* Q-AVG - sticky right */}
                   <td style={{border:`1px solid ${C.borderMed}`,padding:"7px 4px",textAlign:"center",
                     fontSize:13,fontFamily:"'JetBrains Mono',monospace",fontWeight:700,
                     color: qGrade<=0?"#ccc" : qGrade<75?C.red : qGrade>=90?C.green : C.t1,
                     background: qGrade>0&&qGrade<75 ? C.redBg : C.goldLight,
                     position:"sticky",right:0,zIndex:1,
                     borderLeft:`2px solid ${C.borderMed}`}}>
-                    {qGrade>0 ? qGrade.toFixed(1) : "—"}
+                    {qGrade>0 ? qGrade.toFixed(1) : "-"}
                   </td>
                 </tr>
               );

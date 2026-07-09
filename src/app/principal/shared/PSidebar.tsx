@@ -40,7 +40,7 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
 
   return (
     <div style={{ width: collapsed ? 70 : 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
-      {/* School campus building — decorative background */}
+      {/* School campus building - decorative background */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
         backgroundImage: "url(/school_bg.jpg)",
@@ -72,7 +72,7 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
         )}
       </div>
 
-      {/* Nav List — grouped by category */}
+      {/* Nav List - grouped by category */}
       <div style={{ flex: 1, padding: "16px 12px", display: "flex", flexDirection: "column", gap: 2, overflowY: "auto", position: "relative", zIndex: 1 }}>
         {P_NAV_GROUPS.map(group => (
           <div key={group.category} style={{ marginBottom: 8 }}>

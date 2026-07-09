@@ -100,9 +100,9 @@ export function AIToolsScreen() {
               <div style={{ fontSize: 12, color: C.t2, marginBottom: 16, lineHeight: 1.5 }}>Based on recent academic data, AI suggests the following classroom-level strategies. Click a plan to view implementation details.</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
-                  { title: "Implement Peer Mentoring", target: "8-Rizal (Mathematics)", desc: "Pair high-performers with struggling students." },
-                  { title: "Small Group Remediation", target: "9-Einstein (Science)", desc: "Focusing on basic chemical equations." },
-                  { title: "Targeted Intervention Sessions", target: "10-Pilot (Filipino)", desc: "Fridays for students with missing requirements." },
+                  { title: "Implement Peer Mentoring", target: "8 Rizal (Mathematics)", desc: "Pair high-performers with struggling students." },
+                  { title: "Small Group Remediation", target: "9 Einstein (Science)", desc: "Focusing on basic chemical equations." },
+                  { title: "Targeted Intervention Sessions", target: "10 Pilot (Filipino)", desc: "Fridays for students with missing requirements." },
                 ].map((plan, idx) => (
                   <div key={idx} 
                     onClick={() => setActivePlan(plan.title)}
@@ -175,7 +175,7 @@ export function AIToolsScreen() {
               <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
                 {previewReport === "Quarterly Class Performance Report" && (
                   <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade 8 - Rizal (Mathematics) — Q1 Summary</div>
+                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade 8 - Rizal (Mathematics) - Q1 Summary</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Class Average:</strong> 82.4% (Pass Rate: 85%)</li>
                       <li><strong>Key Strengths:</strong> Geometry & Measurement (Avg: 88%)</li>
@@ -186,7 +186,7 @@ export function AIToolsScreen() {
                 )}
                 {previewReport === "Attendance Summary" && (
                   <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Cross-Section Attendance Report — Q1</div>
+                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Cross-Section Attendance Report - Q1</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Overall Attendance Rate:</strong> 94.2% (Target: 95%)</li>
                       <li><strong>Chronic Absences:</strong> Juan Dela Cruz (5 days), Miguel Rivera (4 days)</li>
@@ -212,10 +212,10 @@ export function AIToolsScreen() {
                   <div>
                     <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>At-Risk & High-Performer Summary</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Hannah Grace Espino:</strong> Math (68.5) — Needs immediate intervention on Quarterly Assessments.</li>
-                      <li><strong>Mark Ryan Hernandez:</strong> Math (71.0) — Failing due to missed Performance Tasks.</li>
-                      <li><strong>Ramon Bondoc Jr.:</strong> Math (76.8) — Borderline passing, monitor closely in Q2.</li>
-                      <li><strong>Trisha Ann Cruz:</strong> Math (93.1) — Excelling, recommended for peer-mentoring program.</li>
+                      <li><strong>Hannah Grace Espino:</strong> Math (68.5) - Needs immediate intervention on Quarterly Assessments.</li>
+                      <li><strong>Mark Ryan Hernandez:</strong> Math (71.0) - Failing due to missed Performance Tasks.</li>
+                      <li><strong>Ramon Bondoc Jr.:</strong> Math (76.8) - Borderline passing, monitor closely in Q2.</li>
+                      <li><strong>Trisha Ann Cruz:</strong> Math (93.1) - Excelling, recommended for peer-mentoring program.</li>
                       <li><strong>AI Recommendation:</strong> Pair Trisha Ann Cruz with Hannah Grace Espino for weekly peer-mentoring sessions.</li>
                     </ul>
                   </div>
@@ -249,7 +249,7 @@ export function AIToolsScreen() {
               <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
                 {activePlan === "Implement Peer Mentoring" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 8-Rizal has a bimodal grade distribution in Mathematics. Pairing top performers with at-risk students has a 78% historical success rate in improving quarterly scores.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 8 Rizal has a bimodal grade distribution in Mathematics. Pairing top performers with at-risk students has a 78% historical success rate in improving quarterly scores.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Target Subject:</strong> Mathematics 8 (Fractions & Ratios)</li>
                       <li><strong>AI Suggested Matches:</strong> 
@@ -264,7 +264,7 @@ export function AIToolsScreen() {
                 )}
                 {activePlan === "Small Group Remediation" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 25% of 9-Einstein scored below the passing threshold on the recent diagnostic test for basic chemical equations. Immediate remediation is required to prevent falling behind in Q2.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 25% of 9 Einstein scored below the passing threshold on the recent diagnostic test for basic chemical equations. Immediate remediation is required to prevent falling behind in Q2.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Target Subject:</strong> Science 9 (Chemical Equations)</li>
                       <li><strong>Targeted Students:</strong> Paulo Bautista (69.2%), Kevin Mendoza (77.5%)</li>
@@ -275,7 +275,7 @@ export function AIToolsScreen() {
                 )}
                 {activePlan === "Targeted Intervention Sessions" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> Several students in 10-Pilot are at risk of failing Q1 due to missing requirements rather than poor test scores. An intervention session can help them catch up.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> Several students in 10 Pilot are at risk of failing Q1 due to missing requirements rather than poor test scores. An intervention session can help them catch up.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Target Subject:</strong> Filipino 10 (Q1 Requirements)</li>
                       <li><strong>Targeted Students:</strong> Miguel Rivera (4 missing tasks), Renz Adrian Ocampo (2 missing tasks)</li>
@@ -300,4 +300,4 @@ export function AIToolsScreen() {
   );
 }
 
-/* ─── SCREEN 5 — Professional Development ───────────────────── */
+/* ─── SCREEN 5 - Professional Development ───────────────────── */

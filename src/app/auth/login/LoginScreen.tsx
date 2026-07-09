@@ -157,7 +157,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
               onMouseEnter={e => { if (!loading) e.currentTarget.style.background = C.m800; }}
               onMouseLeave={e => { if (!loading) e.currentTarget.style.background = C.m700; }}
             >
-              {loading ? (<><svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: "spin 0.8s linear infinite" }}><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" /><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>Signing in…</>) : (<>Sign In &rarr;</>)}
+              {loading ? (<><svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: "spin 0.8s linear infinite" }}><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" /><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>Signing in…</>) : (<>Sign In</>)}
             </button>
           </form>
 

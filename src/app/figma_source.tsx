@@ -68,18 +68,18 @@ const MY_CLASSES = [
 const TODAY_SCHED = [
   { time:"7:30–8:30",  subject:"Mathematics 8",   section:"Gr. 8 Rizal",    room:"Rm 101", status:"done" },
   { time:"8:30–9:30",  subject:"Science 9",       section:"Gr. 9 Einstein", room:"Rm 204", status:"done" },
-  { time:"9:30–10:00", subject:"—",               section:"Break",          room:"",       status:"break" },
+  { time:"9:30–10:00", subject:"-",               section:"Break",          room:"",       status:"break" },
   { time:"10:00–11:00",subject:"Filipino 10",     section:"Gr. 10 Pilot",   room:"Rm 312", status:"active" },
   { time:"11:00–12:00",subject:"Mathematics 8",   section:"Gr. 8 Rizal",    room:"Rm 101", status:"upcoming" },
   { time:"1:00–2:00",  subject:"Advisory Period", section:"Gr. 8 Rizal",    room:"Rm 101", status:"upcoming" },
 ];
 
 const UPCOMING = [
-  { date:"Jun 13", label:"LAC Session — Numeracy",        type:"lac",      urgent:false },
+  { date:"Jun 13", label:"LAC Session - Numeracy",        type:"lac",      urgent:false },
   { date:"Jun 14", label:"Q1 Grading deadline",           type:"deadline", urgent:true },
-  { date:"Jun 17", label:"Regional seminar — ICT Tools",  type:"seminar",  urgent:false },
+  { date:"Jun 17", label:"Regional seminar - ICT Tools",  type:"seminar",  urgent:false },
   { date:"Jun 20", label:"Parent-Teacher Conference",     type:"ptc",      urgent:false },
-  { date:"Jun 25", label:"SF2 submission — Division",     type:"deadline", urgent:true },
+  { date:"Jun 25", label:"SF2 submission - Division",     type:"deadline", urgent:true },
 ];
 
 const STUDENTS_GR8 = [
@@ -122,15 +122,15 @@ const TREND_DATA = [
 
 const CERTS = [
   { title:"Regional Training on 21st Century Teaching",level:"Regional",  hours:16, date:"Mar 2025", points:4 },
-  { title:"Division LAC — Numeracy Intervention",     level:"Division",  hours:8,  date:"Feb 2025", points:2 },
-  { title:"School-based INSET — ICT Integration",     level:"School",    hours:6,  date:"Jan 2025", points:1.5 },
+  { title:"Division LAC - Numeracy Intervention",     level:"Division",  hours:8,  date:"Feb 2025", points:2 },
+  { title:"School-based INSET - ICT Integration",     level:"School",    hours:6,  date:"Jan 2025", points:1.5 },
   { title:"National Summit on K-12 Curriculum",       level:"National",  hours:24, date:"Nov 2024", points:6 },
   { title:"District Science Fair Juror",              level:"District",  hours:8,  date:"Sep 2024", points:2 },
 ];
 
 const SEMINARS = [
   { date:"Jun 17", title:"Regional ICT Tools Seminar",   level:"Regional", status:"confirmed" },
-  { date:"Jun 13", title:"LAC Session — Numeracy",       level:"School",   status:"confirmed" },
+  { date:"Jun 13", title:"LAC Session - Numeracy",       level:"School",   status:"confirmed" },
   { date:"Jul 3",  title:"Division Summer Reading Camp", level:"Division", status:"pending"   },
   { date:"Jul 15", title:"National Teachers Conference", level:"National", status:"pending"   },
 ];
@@ -157,7 +157,7 @@ function levelColor(l: string) {
 
 /* ─── Shared micro-components ───────────────────────────────── */
 
-/* Stamp — official rubber-stamp-look badge */
+/* Stamp - official rubber-stamp-look badge */
 function Stamp({ label, color, bg }: { label:string, color:string, bg:string }) {
   return (
     <span style={{
@@ -172,7 +172,7 @@ function Stamp({ label, color, bg }: { label:string, color:string, bg:string }) 
   );
 }
 
-/* Ledger divider — the signature element repeated throughout */
+/* Ledger divider - the signature element repeated throughout */
 function LR() {
   return <div style={{ height:0, borderBottom:`1px solid ${C.border}` }} />;
 }
@@ -193,7 +193,7 @@ function DocPanel({ title, icon:Icon, children, action }: {
   );
 }
 
-/* Stat box — document-field aesthetic */
+/* Stat box - document-field aesthetic */
 function StatBox({ label, value, sub, accent }: { label:string, value:string|number, sub?:string, accent:string }) {
   return (
     <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"14px 16px", borderTop:`3px solid ${accent}` }}>
@@ -209,7 +209,7 @@ const ROLE_USER: Record<Role, { name:string, initials:string, sub:string }> = {
   Admin:     { name:"Maria B. Cruz",      initials:"MC", sub:"Administrative Officer" },
   Teacher:   { name:"Ana R. Soriano",     initials:"AS", sub:"Class Adviser · Gr. 8 Rizal" },
   Principal: { name:"Dr. Maria Santos",   initials:"MS", sub:"School Principal" },
-  Student:   { name:"Santos, Juan Miguel",initials:"SJ", sub:"Grade 10 — Pilot" },
+  Student:   { name:"Santos, Juan Miguel",initials:"SJ", sub:"Grade 10 - Pilot" },
 };
 
 function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
@@ -346,7 +346,7 @@ function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
 }
 
 /* ─── Teacher Sidebar ───────────────────────────────────────── */
-/* Single flat nav — spec order, no category groupings */
+/* Single flat nav - spec order, no category groupings */
 const T_FLAT_NAV = [
   { id:"dashboard",         label:"Dashboard",         icon:LayoutDashboard },
   { id:"classroom",         label:"Classroom Hub",     icon:Hash },
@@ -387,7 +387,7 @@ function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         </div>}
       </div>
 
-      {/* Nav — single flat list, no category groupings */}
+      {/* Nav - single flat list, no category groupings */}
       <div style={{ flex:1, padding:collapsed?"6px 4px":"8px 10px", overflowY:"auto" }}>
         {!collapsed && <div style={{ color:"rgba(255,255,255,0.22)", fontSize:9, fontWeight:700, letterSpacing:"0.1em", padding:"10px 6px 4px" }}>MAIN</div>}
 
@@ -585,7 +585,7 @@ function StudentsNeedingAttention({ onStudentClick }: { onStudentClick:(id:numbe
   );
 }
 
-/* ─── SCREEN 1 — Dashboard Overview ────────────────────────── */
+/* ─── SCREEN 1 - Dashboard Overview ────────────────────────── */
 function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onClassClick:(id:number)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
 
   const ATT = [
@@ -599,7 +599,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
     <div style={{ flex:1, overflowY:"auto", background: "transparent" }}>
 
       {/* ════════════════════════════════════════════════
-          TOP HEADER BAND — only maroon section on page
+          TOP HEADER BAND - only maroon section on page
           ════════════════════════════════════════════════ */}
       <div style={{ background:C.m800, padding:"16px 28px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -639,7 +639,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
       </div>
 
       {/* ════════════════════════════════════════════════
-          STAT ROW — unified bar, hairline-separated
+          STAT ROW - unified bar, hairline-separated
           ════════════════════════════════════════════════ */}
       <div style={{ background:"#fff", borderBottom:`1px solid ${C.borderMed}`, display:"flex" }}>
         {[
@@ -657,7 +657,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
       </div>
 
       {/* ════════════════════════════════════════════════
-          MAIN CONTENT — 65% / 35% split
+          MAIN CONTENT - 65% / 35% split
           ════════════════════════════════════════════════ */}
       <div style={{ display:"grid", gridTemplateColumns:"65fr 35fr", minHeight:0 }}>
 
@@ -717,7 +717,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
             Attendance Today · June 10, 2025
           </div>
 
-          {/* Attendance per section — stacked rows */}
+          {/* Attendance per section - stacked rows */}
           <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:24 }}>
             {ATT.map((s, i) => {
               const rate = Math.round((s.present / s.total) * 100);
@@ -748,7 +748,7 @@ function DashboardScreen({ onNav, onClassClick, onShowGradeCard }: { onNav:(s:TS
             Quick Actions
           </div>
 
-          {/* Quick actions — vertical list */}
+          {/* Quick actions - vertical list */}
           <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
             {([
               { icon:CalendarCheck, label:"Take Attendance", screen:"attendance-direct" as TScreen },

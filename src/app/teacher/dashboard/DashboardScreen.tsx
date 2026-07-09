@@ -195,9 +195,9 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
               <DocPanel title="Pending Grades" icon={AlertCircle}>
                 <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto" }}>
                   {[
-                    { sub: "Mathematics 8", sec: "8-Rizal", period: "Q1", status: "Missing 12 students" },
-                    { sub: "Science 9", sec: "9-Einstein", period: "Q1", status: "Missing 5 students" },
-                    { sub: "Filipino 10", sec: "10-Pilot", period: "Q1", status: "Missing 1 student" },
+                    { sub: "Mathematics 8", sec: "8 Rizal", period: "Q1", status: "Missing 12 students" },
+                    { sub: "Science 9", sec: "9 Einstein", period: "Q1", status: "Missing 5 students" },
+                    { sub: "Filipino 10", sec: "10 Pilot", period: "Q1", status: "Missing 1 student" },
                   ].map((g, idx) => (
                     <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4 }}>
                       <div>
@@ -227,7 +227,7 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 2 }}>Mathematics 8</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>8-Rizal • Rm 101</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>8 Rizal • Rm 101</div>
                 </div>
                 <div style={{ fontSize: 24, fontWeight: 800, color: C.gold, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>00:42:15</div>
               </div>
@@ -244,9 +244,9 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
                 </thead>
                 <tbody>
                   {[
-                    { sub: "Mathematics 8", sec: "8-Rizal", time: "7:30 AM", status: "Done" },
-                    { sub: "Science 9", sec: "9-Einstein", time: "9:00 AM", status: "Done" },
-                    { sub: "Filipino 10", sec: "10-Pilot", time: "1:00 PM", status: "Upcoming" },
+                    { sub: "Mathematics 8", sec: "8 Rizal", time: "7:30 AM", status: "Done" },
+                    { sub: "Science 9", sec: "9 Einstein", time: "9:00 AM", status: "Done" },
+                    { sub: "Filipino 10", sec: "10 Pilot", time: "1:00 PM", status: "Upcoming" },
                   ].map((s, idx) => (
                     <tr key={idx} style={{ borderBottom: idx < 2 ? `1px solid ${C.border}` : "none", background: idx % 2 === 0 ? "#fff" : C.paper }}>
                       <td style={{ padding: "8px 12px" }}>

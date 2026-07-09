@@ -18,7 +18,7 @@ const CLINIC_DATA = [
   { id:"200021", name:"Santos, Juan Miguel",  section:"Gr. 10 Pilot",   date:"Jun 3 · 9:00 AM",   complaint:"Allergic reaction",        action:"Antihistamine given, rest",    by:"Nurse Reyes", status:"Discharged", excused:false },
 ];
 
-/* ─── StudentGradeCard — right-side drawer, no navigation ──── */
+/* ─── StudentGradeCard - right-side drawer, no navigation ──── */
 interface GradeCardInfo { name:string; section:string; grade:number; }
 
 function StudentGradeCard({ student, onClose }:{ student:GradeCardInfo, onClose:()=>void }) {
@@ -43,7 +43,7 @@ function StudentGradeCard({ student, onClose }:{ student:GradeCardInfo, onClose:
           </div>
           <div style={{ flex:1 }}>
             <div style={{ color:"#fff", fontSize:15, fontWeight:700, fontFamily:"'Fraunces',serif", lineHeight:1.2 }}>{student.name}</div>
-            <div style={{ color:"rgba(255,255,255,0.55)", fontSize:10, marginTop:2 }}>Grade {student.grade} — {student.section} · SY 2025–2026</div>
+            <div style={{ color:"rgba(255,255,255,0.55)", fontSize:10, marginTop:2 }}>Grade {student.grade} - {student.section} · SY 2025–2026</div>
           </div>
           <button onClick={onClose} style={{ width:30, height:30, borderRadius:4, background:"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(255,255,255,0.7)", flexShrink:0 }}>
             <X size={16}/>
@@ -177,7 +177,7 @@ export function ClinicVisitsScreen() {
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search student…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
         </div>
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
-          <Stamp label="Read-only — clinic records are managed by the school nurse" color={C.teal} bg={C.tealBg} />
+          <Stamp label="Read-only - clinic records are managed by the school nurse" color={C.teal} bg={C.tealBg} />
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export function ClinicVisitsScreen() {
           {/* Doc header */}
           <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
             <Stethoscope size={14} color="rgba(255,255,255,0.7)" />
-            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif", flex:1 }}>Clinic Visit Records — {section}</span>
+            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif", flex:1 }}>Clinic Visit Records - {section}</span>
             <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>{filtered.length} records · June 2025</span>
           </div>
 

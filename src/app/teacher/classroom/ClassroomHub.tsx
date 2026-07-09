@@ -35,11 +35,11 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
         <div style={{ display:"flex", gap:5, alignItems:"center", fontSize:11, color:C.t3, marginBottom:8 }}>
           <button onClick={onBack} style={{ color:C.m700, background:"none", border:"none", cursor:"pointer", fontWeight:600, fontSize:11 }}>Dashboard</button>
           <ChevronRight size={11} color={C.t3} />
-          <span style={{ color:C.t1, fontWeight:600 }}>Grade {cls.grade} — {cls.section}</span>
+          <span style={{ color:C.t1, fontWeight:600 }}>Grade {cls.grade} - {cls.section}</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Classroom Hub — Grade {cls.grade} {cls.section}</div>
+            <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Classroom Hub - Grade {cls.grade} {cls.section}</div>
             <div style={{ fontSize:12, color:C.t3, marginTop:2 }}>{cls.subject} · {cls.students} students · {cls.semester} · SY 2025–2026</div>
           </div>
           <div style={{ display:"flex", gap:8 }}>
@@ -93,7 +93,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── STUDENTS TAB ── */}
         {tab==="students" && (
-          <DocPanel title="Student Roster — Grade 8 Rizal" icon={Users}
+          <DocPanel title="Student Roster - Grade 8 Rizal" icon={Users}
             action={<div style={{ display:"flex", gap:6 }}>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Student QR</button>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Parent Contacts</button>
@@ -201,7 +201,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
               </div>
             </div>
 
-            <DocPanel title="Scholastic Record Ledger — Grade 8 Rizal · Mathematics 8 · Q1" icon={FileText}>
+            <DocPanel title="Scholastic Record Ledger - Grade 8 Rizal · Mathematics 8 · Q1" icon={FileText}>
               <div style={{ overflowX:"auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", minWidth:800 }}>
                   <thead>
@@ -342,9 +342,9 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                   <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4, display:"flex", alignItems:"center", gap:5 }}><Sparkles size={10} color={C.gold} /> AI Diagnostic Report · June 10, 2025</div>
                   {aiDone ? (
                     <p style={{ fontSize:12, color:C.t1, lineHeight:1.7, margin:0 }}>
-                      <strong>Class Average:</strong> 82.4 — above the passing threshold.<br/>
-                      <strong>Students at Risk (below 75):</strong> Espino, Hannah Grace (68.5), Hernandez, Mark Ryan (71.0), Bondoc, Ramon Jr. (74.2) — recommend immediate remediation in fractions and algebraic expressions.<br/>
-                      <strong>Attendance concern:</strong> Espino (3 lates), Hernandez (2 absences) — coordinate with parents.<br/>
+                      <strong>Class Average:</strong> 82.4 - above the passing threshold.<br/>
+                      <strong>Students at Risk (below 75):</strong> Espino, Hannah Grace (68.5), Hernandez, Mark Ryan (71.0), Bondoc, Ramon Jr. (74.2) - recommend immediate remediation in fractions and algebraic expressions.<br/>
+                      <strong>Attendance concern:</strong> Espino (3 lates), Hernandez (2 absences) - coordinate with parents.<br/>
                       <strong>Teaching strategy:</strong> Introduce peer-mentoring pairs; assign Cruz, Ferrer as math tutors for identified students.
                     </p>
                   ) : (
@@ -357,7 +357,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                   {aiLoading?"Generating…":aiDone?"Regenerate":"Generate AI Report"}
                 </button>
                 <div style={{ marginTop:14, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                  {[["Espino, Hannah",68.5,"red"],["Hernandez, Mark",71.0,"red"],["Bondoc, Ramon",74.2,"amber"],["Delos Reyes, Daniel",81.7,"—"]].map(([n,avg,risk]) => (
+                  {[["Espino, Hannah",68.5,"red"],["Hernandez, Mark",71.0,"red"],["Bondoc, Ramon",74.2,"amber"],["Delos Reyes, Daniel",81.7,"-"]].map(([n,avg,risk]) => (
                     <div key={n} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 10px", background:risk==="red"?C.redBg:risk==="amber"?C.amberBg:C.paper, borderRadius:4, border:`0.5px solid ${C.border}` }}>
                       <span style={{ fontSize:11, color:C.t1, fontWeight:500 }}>{n}</span>
                       <span style={{ fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:risk==="red"?C.red:risk==="amber"?C.amber:C.t2, fontWeight:600 }}>{avg}</span>
@@ -377,7 +377,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
           <div style={{ width:"100%", maxWidth:900, borderRadius:4, overflow:"hidden", boxShadow:"0 20px 60px rgba(74,10,16,0.4)", background:"#fff" }}>
             {/* Overlay controls */}
             <div style={{ background:C.m900, padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span style={{ color:"rgba(255,255,255,0.7)", fontSize:11 }}>Student Report Card — {profileStudent.surname}, {profileStudent.first}</span>
+              <span style={{ color:"rgba(255,255,255,0.7)", fontSize:11 }}>Student Report Card - {profileStudent.surname}, {profileStudent.first}</span>
               <div style={{ display:"flex", gap:8 }}>
                 <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.1)", border:"none", borderRadius:3, padding:"4px 10px", cursor:"pointer" }}>
                   <Printer size={11}/> Print
