@@ -83,7 +83,7 @@ export function AttendanceSummary() {
       </div>
 
       <div className="print-only" style={{ display: "none", marginBottom: 32, textAlign: "center" }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>SINDALAN NATIONAL HIGH SCHOOL</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 8px" }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</h2>
         <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Monthly Attendance Summary - {selectedMonth} 2025</h3>
       </div>
 

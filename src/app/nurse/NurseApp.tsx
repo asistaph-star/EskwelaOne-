@@ -318,20 +318,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
-        <img 
-          src="/school_seal.jpg" 
-          alt="" 
-          style={{ 
-            position: "fixed", 
-            top: "50%", 
-            left: "calc(50% + 120px)", 
-            transform: "translate(-50%, -50%)", 
-            width: "85vh", 
-            opacity: 0.05, 
-            pointerEvents: "none", 
-            zIndex: -1 
-          }} 
-        />
+        
         
         {/* Top Header for Content Area */}
         <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>

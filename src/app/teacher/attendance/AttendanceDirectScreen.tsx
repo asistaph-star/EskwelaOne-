@@ -5,7 +5,23 @@ import { AttendanceHub } from './AttendanceHub';
 import { ChevronDown } from 'lucide-react';
 export function AttendanceDirectScreen() {
   const [section, setSection] = useState("Gr. 8 Rizal");
-  const studentsForSection = section.includes("8") ? STUDENTS_GR8 : STUDENTS_GR8; // all use same dataset for demo
+
+  // Always start from the original STUDENTS_GR8, then append any new students
+  // that were added via the + Add Student button (stored in localStorage)
+  const mergedStudents = React.useMemo(() => {
+    try {
+      const saved = localStorage.getItem('hub_students');
+      if (saved) {
+        const newOnes = JSON.parse(saved).filter(
+          (s: any) => typeof s.id === 'string' && s.id.startsWith('s') && s.surname && s.first
+        );
+        return [...STUDENTS_GR8, ...newOnes];
+      }
+    } catch(e) {}
+    return STUDENTS_GR8;
+  }, []);
+
+  const studentsForSection = mergedStudents;
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background: "transparent" }}>
       {/* Section selector header */}
@@ -25,7 +41,7 @@ export function AttendanceDirectScreen() {
           {studentsForSection.length} students · {section.includes("8")?"Mathematics 8":section.includes("9")?"Science 9":"Filipino 10"}
         </span>
       </div>
-      <div style={{ flex:1, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+      <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column" }}>
         <AttendanceHub students={studentsForSection} />
       </div>
     </div>

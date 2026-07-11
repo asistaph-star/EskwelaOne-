@@ -40,33 +40,15 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
 
   return (
     <div style={{ width: collapsed ? 70 : 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
-      {/* School campus building - decorative background */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
-        backgroundImage: "url(/school_bg.jpg)",
-        backgroundSize: "cover", backgroundPosition: "bottom center",
-        backgroundRepeat: "no-repeat",
-        opacity: 0.45,
-        pointerEvents: "none", zIndex: 0
-      }} />
       {/* Sidebar Brand Logo */}
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, position: "relative", zIndex: 1 }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: 8,
-          background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
-          border: "1.5px solid rgba(200, 134, 10, 0.45)",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-        }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.02em" }}>E1</span>
-        </div>
         {!collapsed && (
           <div>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              DigiSkwela<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+              DigiSkwela
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan National High School
+              Information and Communication Technology High School
             </div>
           </div>
         )}

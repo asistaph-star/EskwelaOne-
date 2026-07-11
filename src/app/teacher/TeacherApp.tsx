@@ -44,7 +44,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     "quarterly-summary": { title: "Quarterly Summary", sub: "Final ratings overview" },
     "grades-direct": { title: "Gradebooks Quick Access" },
     "attendance-direct": { title: "Attendance Quick Access" },
-    "clinic-visits": { title: "Student Clinic Logs", sub: "Sindalan National High School Health Unit" },
+    "clinic-visits": { title: "Student Clinic Logs", sub: "Information and Communication Technology High School Health Unit" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
     "ai-tools": { title: "AI Assistant Tools", sub: "Smart teaching aids" },
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
@@ -108,7 +108,15 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
                 />
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                {/* Teacher name + rank */}
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>Ms. Ana R. Soriano</div>
+                  <div style={{ marginTop:3 }}>
+                    <span style={{ fontSize:9, fontWeight:700, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:10, border:"1px solid #bbf7d0", letterSpacing:"0.05em" }}>Teacher I</span>
+                  </div>
+                </div>
+                <div style={{ width:1, height:32, background:C.border }} />
                 <div style={{ position: "relative" }}>
                   <button onClick={() => setNotifOpen(true)}
                     style={{ background: notifOpen ? C.m50 : "transparent", border: "none", borderRadius: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, position: "relative", transition: "background 0.2s" }}>
@@ -123,20 +131,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
-          <img 
-            src="/school_seal.jpg" 
-            alt="" 
-            style={{ 
-              position: "fixed", 
-              top: "50%", 
-              left: "calc(50% + 120px)", // 120px offset for the 240px sidebar
-              transform: "translate(-50%, -50%)", 
-              width: "85vh", 
-              opacity: 0.05, 
-              pointerEvents: "none", 
-              zIndex: -1 
-            }} 
-          />
+          
           {screen === "dashboard" && <DashboardScreen 
             onNav={nav} 
             onGradebookClick={(id) => { setClassId(id); setScreen("gradebook"); }} 

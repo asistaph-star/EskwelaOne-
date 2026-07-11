@@ -21,28 +21,22 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
     setTimeout(() => { setLoading(false); onLogin(role); }, 900);
   }
 
-  const photoUrl = "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1400&h=900&fit=crop&auto=format&q=80";
 
   return (
     <div style={{ minHeight: "100vh", width: "100vw", display: "flex", fontFamily: "'Inter',sans-serif", position: "relative", overflow: "hidden" }}>
 
-      {/* ── FULL-SCREEN background image + maroon overlay (behind everything) ── */}
-      <img src={photoUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(10,25,47,0.88) 0%, rgba(2,6,23,0.92) 100%)", zIndex: 1 }} />
-
+      {/* ── FULL-SCREEN background gradient ── */}
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(10,25,47,1) 0%, rgba(2,6,23,1) 100%)", zIndex: 1 }} />
       {/* ── LEFT BRAND PANEL (58%) ── */}
       <div style={{ flex: "0 0 58%", position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 64px", boxSizing: "border-box" }}>
 
         {/* Top Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 8, background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`, border: "1.5px solid rgba(200,134,10,0.5)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}>
-            <BookMarked size={18} color={C.gold} strokeWidth={2.5} />
-          </div>
           <div>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              DigiSkwela<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+              DigiSkwela
             </div>
-            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>SINDALAN NATIONAL HIGH SCHOOL</div>
+            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</div>
           </div>
         </div>
 

@@ -5,6 +5,26 @@ import { ChevronDown, Download, FileText, ArrowRight, BarChart2 } from 'lucide-r
 import { Stamp } from '../../shared/components/Stamp';
 import { Q_SEED, GB_ROSTER } from '../../shared/constants/seedData';
 export function QuarterlySummaryScreen() {
+  const ROSTER = (() => {
+    try {
+      const saved = localStorage.getItem('hub_students');
+      if (saved) {
+        const stored = JSON.parse(saved);
+        // Start from GB_ROSTER (the original 8 students with numeric IDs)
+        // then append any extra students that were added via the form
+        const newStudents = stored
+          .filter((s:any) => typeof s.id === 'string' && s.id.startsWith('s'))
+          .map((s:any, i:number) => ({
+            id: 100 + i,
+            surname: s.surname || s.name || '',
+            first: s.first || ''
+          }));
+        return [...GB_ROSTER, ...newStudents];
+      }
+    } catch(e) {}
+    return GB_ROSTER;
+  })();
+
   const [weights]  = useState({ww:25,pt:50,qa:25});
   const [section, setSection] = useState("Gr. 8 Rizal");
   const [quarter, setQuarter] = useState<QKey>("Q1");
@@ -12,13 +32,13 @@ export function QuarterlySummaryScreen() {
   /* use the same seed data as the gradebook */
   const allData = Q_SEED;
 
-  function psFor(sid:number, items:GbItem[], g:GbGrades) {
+  function psFor(sid:number|string, items:GbItem[], g:GbGrades) {
     const sg = g[sid] ?? {};
     const sumS = items.reduce((s,it)=>s+(parseFloat(sg[it.id])||0),0);
     const sumM = items.reduce((s,it)=>s+it.max,0);
     return sumM>0 ? Math.round((sumS/sumM)*1000)/10 : 0;
   }
-  function qGradeFor(sid:number, d:QData) {
+  function qGradeFor(sid:number|string, d:QData) {
     const g = d.grades[sid] ?? {};
     const wwPS = psFor(sid, d.wwItems, d.grades);
     const ptPS = psFor(sid, d.ptItems, d.grades);
@@ -28,7 +48,7 @@ export function QuarterlySummaryScreen() {
 
   const Q_ACCENT: Record<QKey,string> = {Q1:C.m700, Q2:"hsl(220,50%,30%)", Q3:"hsl(160,45%,28%)"};
 
-  const finals = GB_ROSTER.map(s=>{
+  const finals = ROSTER.map(s=>{
     const q1=qGradeFor(s.id,allData.Q1), q2=qGradeFor(s.id,allData.Q2), q3=qGradeFor(s.id,allData.Q3);
     return (q1>0&&q2>0&&q3>0) ? Math.round(((q1+q2+q3)/3)*10)/10 : 0;
   });
@@ -157,7 +177,7 @@ export function QuarterlySummaryScreen() {
             </tr>
           </thead>
           <tbody>
-            {GB_ROSTER.map((student,idx)=>{
+            {ROSTER.map((student,idx)=>{
               const q1g = qGradeFor(student.id, allData.Q1);
               const q2g = qGradeFor(student.id, allData.Q2);
               const q3g = qGradeFor(student.id, allData.Q3);
@@ -215,7 +235,7 @@ export function QuarterlySummaryScreen() {
       <div style={{background:C.m800,borderTop:`2px solid ${C.m700}`,padding:"8px 18px",
         display:"flex",alignItems:"center",gap:24,flexShrink:0}}>
         <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>Final Average Summary</span>
-        {([["Students",GB_ROSTER.length,"rgba(255,255,255,0.7)"],["Passed",passing,C.gold],["Failed",failing,"#FCA5A5"],["Class avg",classAvg,"#fff"]] as [string,number|string,string][])
+        {([["Students",ROSTER.length,"rgba(255,255,255,0.7)"],["Passed",passing,C.gold],["Failed",failing,"#FCA5A5"],["Class avg",classAvg,"#fff"]] as [string,number|string,string][])
           .map(([l,v,col])=>(
             <div key={l} style={{display:"flex",alignItems:"baseline",gap:5}}>
               <span style={{fontSize:9,color:"rgba(255,255,255,0.35)",textTransform:"uppercase",letterSpacing:"0.08em"}}>{l}</span>

@@ -62,20 +62,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
         />
         <ReadOnlyBanner />
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position: "relative", zIndex: 1 }}>
-          <img 
-            src="/school_seal.jpg" 
-            alt="" 
-            style={{ 
-              position: "fixed", 
-              top: "50%", 
-              left: "calc(50% + 120px)", 
-              transform: "translate(-50%, -50%)", 
-              width: "85vh", 
-              opacity: 0.05, 
-              pointerEvents: "none", 
-              zIndex: -1 
-            }} 
-          />
+          
           {screen==="p-dashboard"  && <PDashboard  onNav={setScreen} onShowGradeCard={showGradeCard} />}
           {screen==="p-monitoring" && <PMonitoring />}
           {screen==="p-analytics"  && <PAcademics  />}

@@ -147,33 +147,16 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     <div style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
-        {/* School campus building - decorative background */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, top: 0,
-          backgroundImage: "url(/school_bg.jpg)",
-          backgroundSize: "cover", backgroundPosition: "bottom center",
-          backgroundRepeat: "no-repeat",
-          opacity: 0.45,
-          pointerEvents: "none", zIndex: 0
-        }} />
         
         {/* Brand Header - matches teacher sidebar exactly */}
         <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 8,
-            background: `linear-gradient(135deg, ${C.m600} 0%, ${C.m800} 100%)`,
-            border: "1.5px solid rgba(200, 134, 10, 0.45)",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "#fff", fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: "-0.02em" }}>E1</span>
-          </div>
+          <img src="/school_seal.jpg" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} alt="School Logo" />
           <div>
             <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              DigiSkwela<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+              DigiSkwela
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Sindalan National High School
+              Information and Communication Technology High School
             </div>
           </div>
         </div>
@@ -387,60 +370,13 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         {/* Inner Content Area */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 100px 28px", position: "relative", zIndex: 1 }}>
           
-          {/* Global Watermark */}
-          <img 
-            src="/school_seal.jpg" 
-            alt="" 
-            style={{ 
-              position: "fixed", 
-              top: "50%", 
-              left: "calc(50% + 120px)", // 120px offset for the 240px sidebar
-              transform: "translate(-50%, -50%)", 
-              width: "85vh", 
-              opacity: 0.05, 
-              pointerEvents: "none", 
-              zIndex: -1 
-            }} 
-          />
+          
 
           {/* 1. MOCKUP STUDENT DASHBOARD */}
           {tab === "dashboard" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               
-              {/* Official header block - same design as teacher dashboard */}
-              <div style={{ background: C.m800, borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ background: `linear-gradient(90deg, ${C.m900} 0%, ${C.m800} 50%, ${C.m700} 100%)`, padding: "18px 24px 14px", display: "flex", alignItems: "center", gap: 18 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 10, background: "rgba(200,134,10,0.18)", border: "1.5px solid rgba(200,134,10,0.45)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <School size={22} color={C.gold} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Republic of the Philippines · Department of Education</div>
-                    <div style={{ color: "#fff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", lineHeight: 1.2 }}>Sindalan National High School</div>
-                    <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 4 }}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, letterSpacing: "0.06em" }}>GOOD MORNING</div>
-                    <div style={{ color: "#fff", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Juan Miguel Santos</div>
-                    <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 2, marginBottom: 6 }}>Tuesday, June 10, 2025 &middot; Week 3, Q1</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, fontSize: 10, color: "rgba(255,255,255,0.6)" }}>
-                      <span style={{ background: "rgba(255,255,255,0.1)", color: "#fff", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(255,255,255,0.2)" }}>
-                        ID: 1092-4819
-                      </span>
-                      <span style={{ background: "rgba(234,179,8,0.15)", color: "#FDE047", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(234,179,8,0.3)" }}>
-                        Grade 10 - Pilot
-                      </span>
-                      <button
-                        onClick={() => setShowQRModal(true)}
-                        style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(59,130,246,0.15)", color: "#93C5FD", padding: "2px 8px", borderRadius: 12, fontWeight: 600, border: "1px solid rgba(59,130,246,0.3)", cursor: "pointer", transition: "all 0.12s", fontSize: 10 }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.25)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "rgba(59,130,246,0.15)"}
-                      >
-                        <QrCode size={10} /> Show QR ID
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
 
               {/* KPI metrics strip */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
@@ -1419,7 +1355,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
                   <School size={16} color={C.gold} />
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>SINDALAN NATIONAL HIGH SCHOOL</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</span>
                 </div>
                 
                 <div style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid #fff", overflow: "hidden", marginBottom: 16, boxShadow: "0 8px 16px rgba(0,0,0,0.2)" }}>

@@ -51,7 +51,7 @@ export function PReports() {
           <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, padding:28, maxWidth:800, margin:"0 auto" }}>
             <div style={{ textAlign:"center", borderBottom:`2px solid ${C.t1}`, paddingBottom:16, marginBottom:20 }}>
               <div style={{ fontSize:10, fontWeight:600, color:C.t2, textTransform:"uppercase", letterSpacing:"0.08em" }}>Republic of the Philippines · Department of Education · Region III</div>
-              <div style={{ fontSize:18, fontWeight:800, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:5 }}>Sindalan National High School</div>
+              <div style={{ fontSize:18, fontWeight:800, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:5 }}>Information and Communication Technology High School</div>
               <div style={{ fontSize:12, color:C.t2, marginTop:3 }}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City</div>
               <div style={{ fontSize:14, fontWeight:700, color:C.m700, marginTop:10, textTransform:"uppercase", letterSpacing:"0.06em" }}>{REPORTS.find(r=>r.id===viewing)?.title}</div>
               <div style={{ fontSize:11, color:C.t3, marginTop:3 }}>School Year 2025–2026 · Quarter 1</div>

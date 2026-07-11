@@ -1,13 +1,39 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { QKey, QData, GbItem, GbGrades } from '../../shared/types';
-import { ChevronDown, FileText, ChevronLeft, Plus, Download, Eye } from 'lucide-react';
+import { ChevronDown, FileText, ChevronLeft, Plus, Download, Eye, Save, Trash2 } from 'lucide-react';
 import { Q_SEED, GB_ROSTER } from '../../shared/constants/seedData';
 import { MY_CLASSES } from '../../App';
 import { Stamp } from '../../shared/components/Stamp';
 export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ classId?:number, onBack:()=>void, hideBack?:boolean }) {
   /* ── per-quarter data (each quarter has its own activities + scores) ── */
-  const [allData, setAllData] = useState<Record<QKey,QData>>(Q_SEED);
+  const ROSTER = (() => {
+    try {
+      const saved = localStorage.getItem('hub_students');
+      if (saved) {
+        const stored = JSON.parse(saved);
+        // Start from GB_ROSTER (the original 8 students with numeric IDs)
+        // then append any extra students that were added via the form
+        const newStudents = stored
+          .filter((s:any) => typeof s.id === 'string' && s.id.startsWith('s'))
+          .map((s:any, i:number) => ({
+            id: 100 + i,
+            surname: s.surname || s.name || '',
+            first: s.first || ''
+          }));
+        return [...GB_ROSTER, ...newStudents];
+      }
+    } catch(e) {}
+    return GB_ROSTER;
+  })();
+
+  const [allData, setAllData] = useState<Record<QKey,QData>>(() => {
+    try {
+      const saved = localStorage.getItem('eskwela_grades');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return Q_SEED;
+  });
   const [quarter, setQuarter] = useState<QKey>("Q1");
   const [view,    setView]    = useState<"ledger"|"summary">("ledger");
 
@@ -28,13 +54,13 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   const grades   = qd.grades;
 
   /* ── computation (accepts any QData so summary can compute all quarters) ── */
-  function psFor(sid:number, items:GbItem[], g:GbGrades) {
+  function psFor(sid:number|string, items:GbItem[], g:GbGrades) {
     const sg = g[sid] ?? {};
     const sumS = items.reduce((s,it)=>s+(parseFloat(sg[it.id])||0), 0);
     const sumM = items.reduce((s,it)=>s+it.max, 0);
     return sumM>0 ? Math.round((sumS/sumM)*1000)/10 : 0;
   }
-  function qGradeFor(sid:number, d:QData) {
+  function qGradeFor(sid:number|string, d:QData) {
     const g = d.grades[sid] ?? {};
     const wwPS = psFor(sid, d.wwItems, d.grades);
     const ptPS = psFor(sid, d.ptItems, d.grades);
@@ -42,11 +68,11 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
     return Math.round((wwPS*(weights.ww/100)+ptPS*(weights.pt/100)+qaPS*(weights.qa/100))*10)/10;
   }
   /* active quarter shortcuts */
-  const getPS      = (sid:number, items:GbItem[]) => psFor(sid, items, grades);
-  const getQGrade  = (sid:number)                 => qGradeFor(sid, qd);
+  const getPS      = (sid:number|string, items:GbItem[]) => psFor(sid, items, grades);
+  const getQGrade  = (sid:number|string)                 => qGradeFor(sid, qd);
 
   /* ── update cell value (writes into active quarter) ── */
-  function setCell(sid:number, iid:string, val:string) {
+  function setCell(sid:number|string, iid:string, val:string) {
     setAllData(prev=>({
       ...prev,
       [quarter]:{
@@ -61,11 +87,19 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
     const n = wwItems.length+1;
     setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:[...prev[quarter].wwItems,{id:`ww${n}`,label:`WW ${n}`,max:100}]}}));
   }
+  function deleteWW(id:string) {
+    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:prev[quarter].wwItems.filter(x=>x.id!==id)}}));
+  }
+
   function addPT() {
     const n = ptItems.length+1;
     setAllData(prev=>({...prev,[quarter]:{...prev[quarter],ptItems:[...prev[quarter].ptItems,{id:`pt${n}`,label:`PT ${n}`,max:100}]}}));
   }
   /* ── update max for an activity in the active quarter ── */
+  function deletePT(id:string) {
+    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],ptItems:prev[quarter].ptItems.filter(x=>x.id!==id)}}));
+  }
+
   function updateWWMax(id:string, max:number) {
     setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:prev[quarter].wwItems.map(x=>x.id===id?{...x,max}:x)}}));
   }
@@ -74,7 +108,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   }
 
   /* ── summary stats ── */
-  const allGrades   = GB_ROSTER.map(s=>getQGrade(s.id)).filter(g=>g>0);
+  const allGrades   = ROSTER.map(s=>getQGrade(s.id)).filter(g=>g>0);
   const passing     = allGrades.filter(g=>g>=75).length;
   const failing     = allGrades.filter(g=>g<75).length;
   const classAvg    = allGrades.length ? (allGrades.reduce((a,b)=>a+b,0)/allGrades.length).toFixed(1) : "-";
@@ -84,7 +118,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   const W = { num:36, name:188, act:52, add:34, ps:58, qa:56, avg:70 };
 
   /* ── editable data cell ── */
-  function Cell(sid:number, iid:string, max:number) {
+  function Cell(sid:number|string, iid:string, max:number) {
     const key   = `${sid}:${iid}`;
     const val   = grades[sid]?.[iid] ?? "";
     const isAct = activeCell===key;
@@ -253,7 +287,12 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           </div>
         )}
 
-        <div style={{marginLeft:"auto"}}>
+        <div style={{marginLeft:"auto", display:"flex", gap:10}}>
+          <button onClick={() => { localStorage.setItem('eskwela_grades', JSON.stringify(allData)); alert("Grades saved successfully!"); }} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",
+            background:C.m600,color:"#fff",borderRadius:4,border:"none",cursor:"pointer",
+            fontSize:12,fontWeight:700}}>
+            <Save size={13}/> Save
+          </button>
           <button style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",
             background:C.m700,color:"#fff",borderRadius:4,border:"none",cursor:"pointer",
             fontSize:12,fontWeight:700}}>
@@ -342,7 +381,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             </thead>
 
             <tbody>
-              {GB_ROSTER.map((student,idx)=>{
+              {ROSTER.map((student,idx)=>{
                 const q1g = qGradeFor(student.id, allData.Q1);
                 const q2g = qGradeFor(student.id, allData.Q2);
                 const q3g = qGradeFor(student.id, allData.Q3);
@@ -414,7 +453,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:700,
               textTransform:"uppercase",letterSpacing:"0.1em"}}>Final Average Summary</span>
             {(()=>{
-              const finals = GB_ROSTER.map(s=>{
+              const finals = ROSTER.map(s=>{
                 const q1=qGradeFor(s.id,allData.Q1), q2=qGradeFor(s.id,allData.Q2), q3=qGradeFor(s.id,allData.Q3);
                 return (q1>0&&q2>0&&q3>0) ? Math.round(((q1+q2+q3)/3)*10)/10 : 0;
               }).filter(g=>g>0);
@@ -422,7 +461,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
               const avg=finals.length?(finals.reduce((a,b)=>a+b,0)/finals.length).toFixed(1):"-";
               return (
                 <>
-                  {([["Students",GB_ROSTER.length,"rgba(255,255,255,0.7)"],
+                  {([["Students",ROSTER.length,"rgba(255,255,255,0.7)"],
                      ["Passed",pass,C.gold],
                      ["Failed",fail,"#FCA5A5"],
                      ["Class avg",avg,"#fff"]] as [string,number|string,string][]).map(([l,v,col])=>(
@@ -515,7 +554,8 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             <tr>
               {/* WW activity columns - key passed as 5th arg */}
               {wwItems.map(it=>
-                subTH(<div style={{lineHeight:1.4}}>
+                subTH(<div style={{lineHeight:1.4, position:"relative"}}>
+                  <button onClick={() => deleteWW(it.id)} title="Delete column" style={{position:"absolute", top:2, right:2, background:"transparent", border:"none", color:"rgba(255,255,255,0.6)", width:14, height:14, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", padding:0}} onMouseEnter={e=>(e.currentTarget.style.color="#FCA5A5")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,0.6)")}><Trash2 size={10}/></button>
                   <div style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.04em"}}>{it.label}</div>
                   {MaxInput(it, updateWWMax)}
                 </div>, activeAccent, "#fff", 34, it.id)
@@ -539,7 +579,8 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
               {/* PT activity columns - key passed as 5th arg */}
               {ptItems.map(it=>
-                subTH(<div style={{lineHeight:1.4}}>
+                subTH(<div style={{lineHeight:1.4, position:"relative"}}>
+                  <button onClick={() => deletePT(it.id)} title="Delete column" style={{position:"absolute", top:2, right:2, background:"transparent", border:"none", color:"rgba(255,255,255,0.6)", width:14, height:14, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", padding:0}} onMouseEnter={e=>(e.currentTarget.style.color="#FCA5A5")} onMouseLeave={e=>(e.currentTarget.style.color="rgba(255,255,255,0.6)")}><Trash2 size={10}/></button>
                   <div style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.04em"}}>{it.label}</div>
                   {MaxInput(it, updatePTMax)}
                 </div>, "hsl(220,50%,30%)", "#fff", 34, it.id)
@@ -564,7 +605,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           </thead>
 
           <tbody>
-            {GB_ROSTER.map((student,idx)=>{
+            {ROSTER.map((student,idx)=>{
               const wwPS   = getPS(student.id, wwItems);
               const ptPS   = getPS(student.id, ptItems);
               const qGrade = getQGrade(student.id);
@@ -627,7 +668,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
         <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:700,
           textTransform:"uppercase",letterSpacing:"0.1em"}}>Class Summary</span>
         {([
-          ["Students",  GB_ROSTER.length,        "rgba(255,255,255,0.7)"],
+          ["Students",  ROSTER.length,        "rgba(255,255,255,0.7)"],
           ["Passing",   passing,                  C.gold],
           ["Failing",   failing,                  "#FCA5A5"],
           ["Class avg", classAvg,                 "#fff"],

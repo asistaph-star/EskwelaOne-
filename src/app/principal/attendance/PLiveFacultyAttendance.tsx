@@ -102,7 +102,7 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
             </div>
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.05em' }}>LIVE TEACHER ATTENDANCE</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>July 4, 2026 - Sindalan National High School</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>July 4, 2026 - Information and Communication Technology High School</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(239,68,68,0.2)', color: red, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginLeft: 16 }}>
