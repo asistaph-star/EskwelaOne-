@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, UserPlus, Package } from "lucide-react";
+import { UserPlus, Package } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
@@ -17,28 +17,8 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
         </p>
       </div>
 
-      {/* Buttons Area */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, width: "100%" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, width: "100%" }}>
         
-        <button 
-          onClick={() => onNavigate("search")}
-          style={{ 
-            background: "#fff", padding: "32px 24px", borderRadius: 16, border: `1px solid ${C.borderLight}`, 
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 16, cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.03)", transition: "all 0.2s" 
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.borderColor = C.m700; e.currentTarget.style.boxShadow = "0 12px 24px rgba(139, 30, 30, 0.1)"; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = C.borderLight; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)"; }}
-        >
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${C.m700}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Search size={32} color={C.m700} />
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Student Data Search</div>
-            <div style={{ fontSize: 12, color: C.t3 }}>Search by LRN or Name to view detailed student profiles, academic records, and print documents.</div>
-          </div>
-        </button>
-
         <button 
           onClick={() => onNavigate("inventory")}
           style={{ 
