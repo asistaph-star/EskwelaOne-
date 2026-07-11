@@ -3,7 +3,7 @@ import { PScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, AlertCircle, Package,
-  FileSpreadsheet, FileText, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar, MessageSquare, ShieldAlert
+  FileSpreadsheet, FileText, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar, MessageSquare, ShieldAlert, ClipboardList
 } from 'lucide-react';
 
 const P_NAV_GROUPS = [
@@ -16,6 +16,7 @@ const P_NAV_GROUPS = [
     { id: "p-attendance" as PScreen, label: "Student Attendance",  icon: Users },
     { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
     { id: "p-events" as PScreen,     label: "School Events",       icon: Calendar },
+    { id: "p-leaves" as PScreen,     label: "Leave Management",    icon: ClipboardList },
   ]},
   { category: "Operations", items: [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },

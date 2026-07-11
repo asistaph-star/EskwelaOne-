@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, Package } from "lucide-react";
+import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, Package, ClipboardList } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
@@ -53,6 +53,12 @@ export function AdminSidebar({ activeScreen, onNavigate, onLogout }: AdminSideba
             label="Inventory Management" 
             active={activeScreen === "inventory"} 
             onClick={() => onNavigate("inventory")} 
+          />
+          <NavItem 
+            icon={ClipboardList} 
+            label="Leave Management" 
+            active={activeScreen === "leaves"} 
+            onClick={() => onNavigate("leaves")} 
           />
         </div>
 

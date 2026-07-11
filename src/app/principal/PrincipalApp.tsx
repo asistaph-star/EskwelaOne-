@@ -16,6 +16,7 @@ import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { BehavioralReports } from '../shared/reports/BehavioralReports';
 import { AttendanceSummary } from './reports/AttendanceSummary';
+import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 
@@ -33,6 +34,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
     "p-attendance": "Student Attendance",
     "p-behavior": "Behavioral Reports",
+    "p-leaves":   "Leave Management",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
   };
 
@@ -73,6 +75,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-events"     && <PEventsScreen />}
           {screen==="p-attendance" && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><AttendanceSummary /></div>}
           {screen==="p-behavior"   && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
+          {screen==="p-leaves"     && <PLeaveManagement />}
           {(screen==="p-settings"||screen==="p-help") && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>

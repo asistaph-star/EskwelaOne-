@@ -3,6 +3,7 @@ import { C } from '../../shared/constants/tokens';
 import { BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight, X, ChevronDown } from 'lucide-react';
 import { CapstoneForm137 } from './components/CapstoneForm137';
 import { Form138 } from '../../shared/components/Form138';
+import { FormSF2 } from './components/FormSF2';
 
 export type CurriculumType = "new" | "old";  /* new = Q1-Q3, old = Q1-Q4 */
 export interface GradeRecord { q1:number; q2:number; q3:number; q4?:number; curriculum:CurriculumType; }
@@ -26,17 +27,24 @@ export const FULL_ACADEMIC_HISTORY: SubjectHistory[] = [
 ];
 
 export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "registrar" }) {
-  const [modal, setModal]     = useState<"rc"|"f137"|null>(null);
+  const [modal, setModal]     = useState<"rc"|"f137"|"sf2"|null>(null);
   const [student, setStudent] = useState("Santos, Juan Miguel");
   const [sy, setSy]           = useState("SY 2025–2026");
+  const [section, setSection] = useState("Grade 8 - Rizal");
+  const [month, setMonth]     = useState("June 2025");
   /* viewing = the document is being shown full-screen inside the app */
-  const [viewing, setViewing] = useState<"rc"|"f137"|null>(null);
+  const [viewing, setViewing] = useState<"rc"|"f137"|"sf2"|null>(null);
 
   const TEMPLATES = [
     {
       id:"rc" as const, emoji:"📋",
       title:"Report Card",
       desc:"Form 138 - Complete academic history across Grade 7–10. Auto-detects Old Curriculum (Q1–Q4) for Grade 7 and New Curriculum (Q1–Q3) for Grade 8–10.",
+    },
+    {
+      id:"sf2" as const, emoji:"📅",
+      title:"School Form 2 (SF2)",
+      desc:"Daily Attendance Record - Monthly class document used to track the daily attendance of learners, calculate attendance averages, and evaluate attendance rates.",
     },
     ...(false /* Hidden for now: role === "registrar" */ ? [{
       id:"f137" as const, emoji:"📄",
@@ -55,8 +63,39 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   if (viewing) {
     return (
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"transparent" }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .printable-doc-area, .printable-doc-area * {
+              visibility: visible;
+            }
+            .printable-doc-area {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100% !important;
+              height: auto !important;
+              overflow: visible !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              background: #fff !important;
+            }
+            .printable-doc-area > div {
+              box-shadow: none !important;
+              border: none !important;
+              margin: 0 !important;
+              max-width: 100% !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+          }
+        ` }} />
+
         {/* Document topbar - looks like a screen inside the app */}
-        <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
+        <div className="no-print" style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
           <button onClick={()=>setViewing(null)}
             style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:4, cursor:"pointer" }}>
             <ChevronLeft size={13}/> Back to Forms and Records
@@ -64,13 +103,13 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
           <div style={{ width:1, height:22, background:C.borderMed }} />
           <div style={{ flex:1 }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>
-              {viewing==="rc" ? "Report Card - Form 138" : "Form 137 - Permanent Record"}
+              {viewing==="rc" ? "Report Card - Form 138" : viewing==="sf2" ? "School Form 2 (SF2) - Learner Attendance Record" : "Form 137 - Permanent Record"}
             </div>
             <div style={{ fontSize:10, color:C.t3 }}>
-              {student} · {sy}
+              {viewing==="sf2" ? `${section} · ${month} · ${sy}` : `${student} · ${sy}`}
             </div>
           </div>
-          <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"6px 12px", cursor:"pointer" }}>
+          <button onClick={() => window.print()} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"6px 12px", cursor:"pointer" }}>
             <Printer size={13}/> Print
           </button>
           <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"6px 14px", cursor:"pointer" }}>
@@ -79,7 +118,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
         </div>
 
         {/* Document content */}
-        <div style={{ flex:1, overflowY:"auto", padding:24 }}>
+        <div className="printable-doc-area" style={{ flex:1, overflowY:"auto", padding:24 }}>
           {viewing==="rc" ? (
             <Form138 
               student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano", age: 16, gender: "Male" }}
@@ -100,6 +139,8 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
               }}
               attendance={{ daysOfSchool: 54, daysPresent: 53, daysAbsent: 1 }}
             />
+          ) : viewing==="sf2" ? (
+            <FormSF2 section={section} month={month} sy={sy} />
           ) : (
             <CapstoneForm137 student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano" }} />
           )}
@@ -117,8 +158,8 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
           <div style={{ fontSize:13, color:C.t3 }}>Select a document template to view the official DepEd form for a student.</div>
         </div>
 
-        {/* Two template cards */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        {/* Template cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:20 }}>
           {TEMPLATES.map(t=>(
             <button key={t.id} onClick={()=>setModal(t.id)}
               style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderTop:`3px solid ${C.m700}`, borderRadius:4, padding:"24px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:12, transition:"box-shadow 0.15s" }}
@@ -147,7 +188,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
               <div>
                 <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:2 }}>Generate document</div>
                 <div style={{ fontSize:15, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif" }}>
-                  {modal==="rc" ? "Report Card" : "Form 137"}
+                  {modal==="rc" ? "Report Card" : modal==="sf2" ? "School Form 2 (SF2)" : "Form 137"}
                 </div>
               </div>
               <button onClick={()=>setModal(null)} style={{ width:28, height:28, borderRadius:4, background:"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -162,22 +203,50 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
                   <span style={{ fontWeight:600, color:C.m700 }}>Auto curriculum:</span>{" "}Grade 7 = Old (Q1–Q4) · Grade 8–10 = New (Q1–Q3)
                 </div>
               )}
-
-              {[
-                { label:"Student", value:student, setter:setStudent, opts:["Santos, Juan Miguel","Garcia, Ana Kristine","Cruz, Trisha Ann","Espino, Hannah Grace","Ferrer, Joshua","Bondoc, Ramon Jr.","Ocampo, Renz Adrian","Hernandez, Mark Ryan"] },
-                { label:"School Year", value:sy, setter:setSy, opts:["SY 2025–2026","SY 2024–2025","SY 2023–2024","SY 2022–2023"] },
-              ].map(f=>(
-                <div key={f.label}>
-                  <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>{f.label}</label>
-                  <div style={{ position:"relative" }}>
-                    <select value={f.value} onChange={e=>f.setter(e.target.value)}
-                      style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
-                      {f.opts.map(o=><option key={o}>{o}</option>)}
-                    </select>
-                    <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
-                  </div>
+              {modal==="sf2" && (
+                <div style={{ padding:"8px 12px", background:C.m50, border:`0.5px solid ${C.borderMed}`, borderRadius:4, fontSize:11, color:C.t2 }}>
+                  <span style={{ fontWeight:600, color:C.m700 }}>Class Record:</span> Generates daily attendance grid and calculates monthly averages.
                 </div>
-              ))}
+              )}
+
+              {modal === "sf2" ? (
+                <>
+                  {[
+                    { label:"Grade & Section", value:section, setter:setSection, opts:["Grade 8 - Rizal", "Grade 9 - Einstein", "Grade 10 - Pilot"] },
+                    { label:"Month", value:month, setter:setMonth, opts:["June 2025", "July 2025", "August 2025"] },
+                    { label:"School Year", value:sy, setter:setSy, opts:["SY 2025–2026","SY 2024–2025","SY 2023–2024","SY 2022–2023"] },
+                  ].map(f=>(
+                    <div key={f.label}>
+                      <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>{f.label}</label>
+                      <div style={{ position:"relative" }}>
+                        <select value={f.value} onChange={e=>f.setter(e.target.value)}
+                          style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
+                          {f.opts.map(o=><option key={o}>{o}</option>)}
+                        </select>
+                        <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {[
+                    { label:"Student", value:student, setter:setStudent, opts:["Santos, Juan Miguel","Garcia, Ana Kristine","Cruz, Trisha Ann","Espino, Hannah Grace","Ferrer, Joshua","Bondoc, Ramon Jr.","Ocampo, Renz Adrian","Hernandez, Mark Ryan"] },
+                    { label:"School Year", value:sy, setter:setSy, opts:["SY 2025–2026","SY 2024–2025","SY 2023–2024","SY 2022–2023"] },
+                  ].map(f=>(
+                    <div key={f.label}>
+                      <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>{f.label}</label>
+                      <div style={{ position:"relative" }}>
+                        <select value={f.value} onChange={e=>f.setter(e.target.value)}
+                          style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
+                          {f.opts.map(o=><option key={o}>{o}</option>)}
+                        </select>
+                        <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
 
             {/* Modal footer */}

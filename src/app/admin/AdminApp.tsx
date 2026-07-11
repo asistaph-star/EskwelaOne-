@@ -7,8 +7,9 @@ import { InventoryManagement } from "./operations/InventoryManagement";
 import { AttendanceSummary } from "./reports/AttendanceSummary";
 import { PHeaderBand } from "../principal/shared/PHeaderBand";
 import { C } from "../shared/constants/tokens";
+import { PLeaveManagement } from "../principal/leaves/PLeaveManagement";
 
-export type AdminScreen = "dashboard" | "search" | "attendance" | "teacher-create" | "inventory";
+export type AdminScreen = "dashboard" | "search" | "attendance" | "teacher-create" | "inventory" | "leaves";
 
 export function AdminApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<AdminScreen>("dashboard");
@@ -20,6 +21,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
       case "attendance": return "Attendance Summaries";
       case "teacher-create": return "Provision Account";
       case "inventory": return "Inventory Management";
+      case "leaves": return "Leave Management";
       default: return "";
     }
   };
@@ -38,6 +40,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
           {screen === "search" && <StudentDataSearch />}
           {screen === "teacher-create" && <CreateTeacher />}
           {screen === "inventory" && <InventoryManagement />}
+          {screen === "leaves" && <PLeaveManagement />}
         </main>
       </div>
     </div>

@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ResponsiveContainer, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { PTableHeader } from '../shared/PTableHeader';
 import { Stamp } from '../../shared/components/Stamp';
 import { Sparkles } from 'lucide-react';
 import { useAppContext } from '../../shared/AppContext';
+
+const GRADUATION_DATA = [
+  { year: "2020", graduates: 185, rate: 92.5, male: 90, female: 95 },
+  { year: "2021", graduates: 210, rate: 94.2, male: 102, female: 108 },
+  { year: "2022", graduates: 245, rate: 95.8, male: 118, female: 127 },
+  { year: "2023", graduates: 280, rate: 96.5, male: 135, female: 145 },
+  { year: "2024", graduates: 310, rate: 97.2, male: 148, female: 162 },
+  { year: "2025", graduates: 335, rate: 98.0, male: 160, female: 175 },
+  { year: "2026", graduates: 342, rate: 98.8, male: 180, female: 162 }
+];
 
 export function PAcademics() {
   const [aiDone, setAiDone] = useState(false);
@@ -15,6 +25,53 @@ export function PAcademics() {
 
   return (
     <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
+      {/* Historical Graduation Analytics */}
+      <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14, padding: "16px 20px" }}>
+        <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:2 }}>Historical Graduation Performance (2020 – 2026)</div>
+        <div style={{ fontSize:11, color:C.t3, marginBottom:16 }}>Track the total number of graduates, annual trends, and gender distribution over the past 7 years.</div>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 3.8fr", gap: 24, alignItems: "center" }}>
+          {/* Stats Summaries */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ background: C.m50, border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "12px 14px" }}>
+              <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Cumulative Graduates</div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: C.m800, lineHeight: 1 }}>1,907</div>
+              <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>Across all batches (2020 - 2026)</div>
+            </div>
+            
+            <div style={{ background: C.greenBg, border: `1px solid rgba(22,101,52,0.15)`, borderRadius: 4, padding: "12px 14px" }}>
+              <div style={{ fontSize: 9, color: C.green, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Average Completion Rate</div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: C.green, lineHeight: 1 }}>96.1%</div>
+              <div style={{ fontSize: 10, color: C.green, marginTop: 4 }}>▲ Steady rise year-over-year</div>
+            </div>
+
+            <div style={{ background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "12px 14px" }}>
+              <div style={{ fontSize: 9, color: C.t2, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>2026 Graduation Target</div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: C.t1, lineHeight: 1 }}>342 / 346</div>
+              <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>98.8% estimated projection</div>
+            </div>
+          </div>
+
+          {/* Recharts Bar Chart */}
+          <div style={{ height: 210, width: "100%" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RBarChart data={GRADUATION_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.border} />
+                <XAxis dataKey="year" stroke={C.t3} fontSize={10} tickLine={false} />
+                <YAxis stroke={C.t3} fontSize={10} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ background: "#fff", border: `1px solid ${C.borderMed}`, fontSize: 11, borderRadius: 4 }}
+                  labelStyle={{ fontWeight: "bold", color: C.t1 }}
+                />
+                <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                <Bar name="Male Graduates" dataKey="male" fill="#a3a195" radius={[2, 2, 0, 0]} />
+                <Bar name="Female Graduates" dataKey="female" fill={C.m700} radius={[2, 2, 0, 0]} />
+              </RBarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
       {/* Pending Grade Approvals Queue */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
         <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.m800, fontFamily:"'Fraunces',serif", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -12,7 +12,7 @@ export type PScreen =
   | "p-inventory"
   | "p-reports" | "p-templates"
   | "p-events" | "p-faculty-attendance"
-  | "p-settings" | "p-help" | "p-behavior" | "p-attendance";
+  | "p-settings" | "p-help" | "p-behavior" | "p-attendance" | "p-leaves";
 
 export interface RCStudent {
   surname: string;

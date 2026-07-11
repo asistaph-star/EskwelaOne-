@@ -3,14 +3,16 @@ import { Search, UserPlus, Package } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
+
+
 export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) => void }) {
   return (
-    <div style={{ padding: "40px", maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32, alignItems: "center", justifyContent: "center", minHeight: "80%" }}>
+    <div style={{ padding: "40px", maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32, alignItems: "stretch", minHeight: "100%", overflowY: "auto" }}>
       
       {/* Header Area */}
       <div style={{ textAlign: "center" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>Welcome to the IT Operations Portal</h1>
-        <p style={{ margin: "8px 0 0", fontSize: 14, color: C.t3, maxWidth: 500, lineHeight: 1.5 }}>
+        <p style={{ margin: "8px 0 0", fontSize: 14, color: C.t3, maxWidth: 500, lineHeight: 1.5, marginLeft: "auto", marginRight: "auto" }}>
           Manage system access, oversee physical assets, and retrieve specific student data from the school database.
         </p>
       </div>
@@ -76,6 +78,8 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
         </button>
 
       </div>
+
+
     </div>
   );
 }
