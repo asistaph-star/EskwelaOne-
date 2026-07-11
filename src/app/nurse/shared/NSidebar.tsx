@@ -6,14 +6,13 @@ import {
 } from 'lucide-react';
 
 export type NScreen =
-  | "n-dashboard" | "n-calendar" | "n-messages"
+  | "n-dashboard" | "n-messages"
   | "n-clinic" | "n-inventory" | "n-reports"
   | "n-tools" | "n-ai" | "n-pro-dev" | "n-settings" | "n-help";
 
 const N_NAV_GROUPS = [
   { category: "Overview", items: [
     { id:"n-dashboard",        label:"Clinic Dashboard",  icon:LayoutDashboard },
-    { id:"n-calendar",         label:"Calendar",          icon:Calendar },
     ]},
   { category: "Health & Welfare", items: [
     { id:"n-clinic",           label:"Health Records",    icon:Stethoscope },

@@ -13,15 +13,12 @@ const P_NAV_GROUPS = [
   ]},
   { category: "Administration", items: [
     { id: "p-analytics" as PScreen,  label: "Academic Analytics",  icon: BarChart2 },
-    { id: "p-attendance" as PScreen, label: "Student Attendance",  icon: Users },
     { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
     { id: "p-events" as PScreen,     label: "School Events",       icon: Calendar },
     { id: "p-leaves" as PScreen,     label: "Leave Management",    icon: ClipboardList },
   ]},
   { category: "Operations", items: [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
-    { id: "p-reports" as PScreen,    label: "Reports",             icon: FileText },
-    { id: "p-templates" as PScreen,  label: "Forms & Records",     icon: BookMarked },
     { id: "p-faculty-attendance" as PScreen, label: "Live Faculty Attendance", icon: Monitor },
     { id: "p-behavior" as PScreen, label: "Behavioral Reports", icon: ShieldAlert },
   ]},

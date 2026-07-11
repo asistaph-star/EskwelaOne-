@@ -10,9 +10,8 @@ export type PScreen =
   | "p-dashboard" | "p-monitoring"
   | "p-analytics" | "p-teachers"
   | "p-inventory"
-  | "p-reports" | "p-templates"
   | "p-events" | "p-faculty-attendance"
-  | "p-settings" | "p-help" | "p-behavior" | "p-attendance" | "p-leaves";
+  | "p-settings" | "p-help" | "p-behavior" | "p-leaves";
 
 export interface RCStudent {
   surname: string;

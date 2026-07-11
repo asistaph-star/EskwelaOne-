@@ -10,12 +10,9 @@ import { PMonitoring } from './monitoring/PMonitoring';
 import { PAcademics } from './analytics/PAcademics';
 import { PTeachers } from './teachers/PTeachers';
 import { PInventory } from './inventory/PInventory';
-import { PReports } from './reports/PReports';
-import { TemplateHubScreen } from '../teacher/templates/TemplateHubScreen';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 import { BehavioralReports } from '../shared/reports/BehavioralReports';
-import { AttendanceSummary } from './reports/AttendanceSummary';
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
@@ -30,9 +27,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-inventory": "Inventory",
-    "p-reports":  "Reports",             "p-templates": "Template Hub",
     "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
-    "p-attendance": "Student Attendance",
     "p-behavior": "Behavioral Reports",
     "p-leaves":   "Leave Management",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
@@ -70,10 +65,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
           {screen==="p-inventory"  && <PInventory   />}
-          {screen==="p-reports"    && <PReports     />}
-          {screen==="p-templates"  && <TemplateHubScreen role="teacher" />}
           {screen==="p-events"     && <PEventsScreen />}
-          {screen==="p-attendance" && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><AttendanceSummary /></div>}
           {screen==="p-behavior"   && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
           {screen==="p-leaves"     && <PLeaveManagement />}
           {(screen==="p-settings"||screen==="p-help") && (

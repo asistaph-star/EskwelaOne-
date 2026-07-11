@@ -8,6 +8,8 @@ import { NotificationDropdown } from '../shared/components/NotificationDropdown'
 import { NSidebar, NScreen } from './shared/NSidebar';
 import { useLayout } from '../App';
 import { PrintableClinicReport } from './PrintableClinicReport';
+import { ClinicInventory } from './inventory/ClinicInventory';
+import { NAiInsights } from './ai/NAiInsights';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -583,6 +585,10 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                 </div>
               )}
             </div>
+          ) : screen === "n-ai" ? (
+            <NAiInsights />
+          ) : screen === "n-inventory" ? (
+            <ClinicInventory />
           ) : (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center", borderRadius: 12 }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
