@@ -242,13 +242,13 @@ function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
       {/* Photo panel */}
       <div style={{ flex:"0 0 58%", position:"relative", overflow:"hidden", display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
         <img src={photoUrl} alt="Classroom" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", objectPosition:"center top" }} />
-        <div style={{ position:"absolute", inset:0, background:`linear-gradient(to bottom, rgba(61,8,8,0.12) 0%, rgba(61,8,8,0.55) 45%, rgba(61,8,8,0.96) 100%)` }} />
+        <div style={{ position:"absolute", inset:0, background:`linear-gradient(to bottom, rgba(10,25,47,0.12) 0%, rgba(10,25,47,0.55) 45%, rgba(10,25,47,0.96) 100%)` }} />
         <div style={{ position:"absolute", top:32, left:36, display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ width:34, height:34, borderRadius:8, background:C.gold, display:"flex", alignItems:"center", justifyContent:"center" }}>
             <BookMarked size={16} color={C.m900} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ color:"#fff", fontSize:14, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>EskwelaOne+</div>
+            <div style={{ color:"#fff", fontSize:14, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>DigiSkwela</div>
             <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10 }}>Education Management System</div>
           </div>
         </div>
@@ -336,7 +336,7 @@ function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
 
           <div style={{ marginTop:36, textAlign:"center", fontSize:11, color:C.t3, lineHeight:1.8 }}>
             Schools Division of San Fernando City · Region III<br />
-            <span style={{color:"#ccc"}}>EskwelaOne+ v1.0 · DepEd Compliant · SY 2025–2026</span>
+            <span style={{color:"#ccc"}}>DigiSkwela v1.0 · DepEd Compliant · SY 2025–2026</span>
           </div>
         </div>
       </div>
@@ -377,7 +377,7 @@ function TSidebar({ active, onNav, onLogout, collapsed=false }: {
             <BookMarked size={15} color={C.m900} strokeWidth={2.5} />
           </div>
           {!collapsed && <div>
-            <div style={{ color:"#fff", fontSize:13, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>EskwelaOne+</div>
+            <div style={{ color:"#fff", fontSize:13, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>DigiSkwela</div>
             <div style={{ color:"rgba(255,255,255,0.35)", fontSize:9, marginTop:1 }}>Sindalan NHS</div>
           </div>}
         </div>

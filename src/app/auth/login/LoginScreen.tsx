@@ -28,7 +28,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
 
       {/* ── FULL-SCREEN background image + maroon overlay (behind everything) ── */}
       <img src={photoUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(61,8,8,0.88) 0%, rgba(26,2,2,0.92) 100%)", zIndex: 1 }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(10,25,47,0.88) 0%, rgba(2,6,23,0.92) 100%)", zIndex: 1 }} />
 
       {/* ── LEFT BRAND PANEL (58%) ── */}
       <div style={{ flex: "0 0 58%", position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 64px", boxSizing: "border-box" }}>
@@ -40,7 +40,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
           </div>
           <div>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+              DigiSkwela<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>SINDALAN NATIONAL HIGH SCHOOL</div>
           </div>
@@ -52,7 +52,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: "0 0 28px" }}>Empowering every learner, supporting every educator, and building a better tomorrow together.</p>
 
           {/* Commitment banner */}
-          <div style={{ background: "rgba(61,8,8,0.45)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ background: "rgba(10,25,47,0.45)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 36, height: 36, borderRadius: 20, background: "rgba(234,179,8,0.12)", border: "1px solid rgba(234,179,8,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <GraduationCap size={18} color={C.gold} />
             </div>

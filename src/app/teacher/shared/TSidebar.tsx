@@ -62,7 +62,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
         {!collapsed && (
           <div>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              EskwelaOne<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
+              DigiSkwela<sup style={{ color: C.gold, fontSize: "0.6em" }}>+</sup>
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
               Sindalan National High School

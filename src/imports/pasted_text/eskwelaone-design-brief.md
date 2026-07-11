@@ -1,4 +1,4 @@
-EskwelaOne+ — Figma Design Brief
+DigiSkwela — Figma Design Brief
 
 Sindalan National High School · Education Management Information System
 Version 1.0 | SY 2025–2026
@@ -6,7 +6,7 @@ Version 1.0 | SY 2025–2026
 
 1. Product Identity
 
-Product: EskwelaOne+ — a web-based EMIS for Sindalan National High School
+Product: DigiSkwela — a web-based EMIS for Sindalan National High School
 Primary users: Teachers, Subject Coordinators, Registrar, School Nurse, Prefect of Discipline, Principal
 Goal of the UI: Make daily school operations feel organized, trustworthy, and fast — for educators who are not power users of software
 
@@ -91,7 +91,7 @@ Stats row: repeat(4, 1fr) with 10px gap
 
 
 Background: navy-900 (#0F2240)
-Logo area: 18px top padding, includes the EskwelaOne+ wordmark + Sindalan NHS sub-label
+Logo area: 18px top padding, includes the DigiSkwela wordmark + Sindalan NHS sub-label
 Logo mark: 28×28px rounded square in gold-500, contains the app icon
 Nav section labels: uppercase 10px muted white, 12px top padding
 Nav items: 12px Inter, icons at 15px Tabler outline
@@ -435,7 +435,7 @@ QR code generator panel: search student → generate and print QR code
 
 7. Navigation Structure
 
-EskwelaOne+
+DigiSkwela
 ├── Dashboard (teacher home)
 ├── Students
 │   └── [Student Detail]
@@ -508,7 +508,7 @@ Don't build modals for simple actions — use inline expand or side panels inste
 
 11. Figma File Structure Recommendation
 
-📁 EskwelaOne+ Design
+📁 DigiSkwela Design
 ├── 📄 _Design System
 │   ├── Colors (all tokens as styles)
 │   ├── Typography (all text styles)
@@ -553,4 +553,4 @@ Notification bell → slide-in drawer from the right showing alert list
 
 
 
-Brief prepared for EskwelaOne+ Figma design work. Align all screen designs to this system before presenting to stakeholders or DepEd reviewers.
+Brief prepared for DigiSkwela Figma design work. Align all screen designs to this system before presenting to stakeholders or DepEd reviewers.

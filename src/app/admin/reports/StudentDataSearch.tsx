@@ -134,7 +134,7 @@ export function StudentDataSearch() {
             </div>
             
             <div style={{ fontSize: 11, color: C.t3, textAlign: "center", marginTop: 40, paddingTop: 20, borderTop: `1px dotted ${C.borderMed}` }}>
-              System Generated Document &bull; EskwelaOne+ Admin/IT Portal
+              System Generated Document &bull; DigiSkwela Admin/IT Portal
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
-FIGMA PROMPT — EskwelaOne+ Full Design with Login, Original Features, School Colors, and Responsive Layout
-Using the existing EskwelaOne+ Figma design as the base, apply the following updates and additions. Keep the same visual language — card components, sidebar nav, top bar with school year/quarter selector. Quarters are now 3 (Q1, Q2, Q3) not 4.
+FIGMA PROMPT — DigiSkwela Full Design with Login, Original Features, School Colors, and Responsive Layout
+Using the existing DigiSkwela Figma design as the base, apply the following updates and additions. Keep the same visual language — card components, sidebar nav, top bar with school year/quarter selector. Quarters are now 3 (Q1, Q2, Q3) not 4.
 
 COLOR SCHEME — UPDATE ENTIRE DESIGN
 Replace all current accent/primary colors with the official Sindalan NHS color palette:
@@ -19,7 +19,7 @@ Page background and card backgrounds stay white/light gray — only the accent c
 
 Centered card layout on a light gray or maroon-tinted background
 School logo top center inside the card
-School name: "Sindalan National High School" + "EskwelaOne+" subtitle
+School name: "Sindalan National High School" + "DigiSkwela" subtitle
 Fields: Email input, Password input
 Primary button: "Sign In" (maroon)
 No role selector — role is determined automatically after login
@@ -32,7 +32,7 @@ Mobile: card becomes full screen with padding only
 SIDEBAR NAV STRUCTURE
 Admin role sees: Dashboard, Students, Attendance, Gradebook, Analytics, Clinic Visits, Behavior Records, Reports, Faculty, Inventory, Gate Tracking
 Teacher role sees: Dashboard, Students, Attendance, Gradebook, Reports
-Sidebar header shows: school logo, "EskwelaOne+", school name, logged-in user name and role below
+Sidebar header shows: school logo, "DigiSkwela", school name, logged-in user name and role below
 
 1. Student Management Page
 

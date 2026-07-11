@@ -1,4 +1,4 @@
-Design a Teacher Dashboard for EskwelaOne+, a web-based school management 
+Design a Teacher Dashboard for DigiSkwela, a web-based school management 
 system for Sindalan National High School.
 
 AVOID GENERIC AI-DASHBOARD LOOK:
