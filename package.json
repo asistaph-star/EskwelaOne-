@@ -73,7 +73,7 @@
     "puppeteer": "^25.3.0",
     "tailwindcss": "4.1.12",
     "typescript": "^6.0.3",
-    "vite": "^6.4.3"
+    "vite": "6.3.5"
   },
   "peerDependencies": {
     "react": "18.3.1",
@@ -85,11 +85,6 @@
     },
     "react-dom": {
       "optional": true
-    }
-  },
-  "pnpm": {
-    "overrides": {
-      "vite": "6.3.5"
     }
   }
 }
