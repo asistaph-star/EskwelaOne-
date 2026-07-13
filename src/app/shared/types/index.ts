@@ -2,7 +2,7 @@ export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Reg
 
 export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
-  | "grades-direct" | "attendance-direct"
+  | "grades-direct" | "attendance-direct" | "clinic-visits"
   | "ai-tools" | "pro-dev"
   | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior";
 

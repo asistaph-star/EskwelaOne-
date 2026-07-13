@@ -13,6 +13,7 @@ import { QuarterlySummaryScreen } from "./grades/QuarterlySummaryScreen";
 import { GradesDirectScreen } from "./grades/GradesDirectScreen";
 import { AttendanceHub } from "./attendance/AttendanceHub";
 import { AttendanceDirectScreen } from "./attendance/AttendanceDirectScreen";
+import { ClinicVisitsScreen } from "./clinic/ClinicVisitsScreen";
 import { AIToolsScreen } from "./ai-tools/AIToolsScreen";
 import { ProDevScreen } from "./pro-dev/ProDevScreen";
 import { CalendarScreen } from "./calendar/CalendarScreen";
@@ -43,6 +44,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     "quarterly-summary": { title: "Quarterly Summary", sub: "Final ratings overview" },
     "grades-direct": { title: "Gradebooks Quick Access" },
     "attendance-direct": { title: "Attendance Quick Access" },
+    "clinic-visits": { title: "Student Clinic Logs", sub: "Information and Communication Technology High School Health Unit" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
     "ai-tools": { title: "AI Assistant Tools", sub: "Smart teaching aids" },
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
@@ -141,6 +143,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           {screen === "quarterly-summary" && <QuarterlySummaryScreen />}
           {screen === "grades-direct" && <GradesDirectScreen />}
           {screen === "attendance-direct" && <AttendanceDirectScreen />}
+          {screen === "clinic-visits" && <ClinicVisitsScreen />}
           {screen === "behavior" && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
           {screen === "ai-tools" && <AIToolsScreen />}
           {screen === "pro-dev" && <ProDevScreen />}
