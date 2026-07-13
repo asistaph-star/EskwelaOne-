@@ -417,13 +417,13 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
           
-          {(screen === "n-dashboard" || screen === "n-clinic") ? (
+          {(screen === "n-dashboard") ? (
             <>
               {/* Quick Stats & Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Health Records</h2>
-            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Manage student visits, diagnoses, and medical profiles.</p>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Dashboard Overview</h2>
+            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Overview of clinic operations and recent student visits.</p>
           </div>
           <button onClick={() => setIsRecordOpen(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 6, background: C.m700, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 12px rgba(153,27,27,0.2)" }}>
             <Plus size={16} /> Record New Visit

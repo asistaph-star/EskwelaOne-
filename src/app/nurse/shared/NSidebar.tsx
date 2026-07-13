@@ -7,7 +7,7 @@ import {
 
 export type NScreen =
   | "n-dashboard" | "n-messages"
-  | "n-clinic" | "n-inventory" | "n-reports"
+  | "n-inventory" | "n-reports"
   | "n-tools" | "n-ai" | "n-pro-dev" | "n-settings" | "n-help";
 
 const N_NAV_GROUPS = [
@@ -15,7 +15,6 @@ const N_NAV_GROUPS = [
     { id:"n-dashboard",        label:"Clinic Dashboard",  icon:LayoutDashboard },
     ]},
   { category: "Health & Welfare", items: [
-    { id:"n-clinic",           label:"Health Records",    icon:Stethoscope },
     { id:"n-inventory",        label:"Clinic Inventory",  icon:BookMarked },
     { id:"n-reports",          label:"Medical Reports",   icon:FileText },
   ]},
