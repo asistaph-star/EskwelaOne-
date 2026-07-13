@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
-  LayoutDashboard, Calendar, Users, FileText, Stethoscope, BookMarked,
+  LayoutDashboard, Calendar, Users, FileText, BookMarked,
   Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert
 } from 'lucide-react';
 
@@ -17,7 +17,6 @@ const T_NAV_GROUPS = [
     { id:"attendance-direct",  label:"Attendance",        icon:Users },
   ]},
   { category: "Records", items: [
-    { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
     { id:"behavior",           label:"Behavioral Reports", icon:ShieldAlert },
     { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
