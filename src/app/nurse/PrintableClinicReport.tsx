@@ -11,7 +11,7 @@ export function PrintableClinicReport({ student, visits }: { student: ClinicStud
       
       {/* HEADER / LETTERHEAD */}
       <div style={{ textAlign: "center", borderBottom: `4px solid ${C.m800}`, paddingBottom: 24, marginBottom: 24 }}>
-        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: C.m800, margin: "0 0 8px 0", letterSpacing: "0.02em" }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</h1>
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 28, color: C.m800, margin: "0 0 8px 0", letterSpacing: "0.02em" }}></h1>
         <h2 style={{ fontSize: 16, fontWeight: 700, color: C.t2, margin: "0 0 4px 0", textTransform: "uppercase", letterSpacing: "0.1em" }}>School Clinic Department</h2>
         <p style={{ fontSize: 12, color: C.t3, margin: 0 }}>City of San Fernando, Pampanga</p>
         

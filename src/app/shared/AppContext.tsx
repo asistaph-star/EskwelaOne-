@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { SCHOOL_EVENTS, TEACHER_PERSONAL_EVENTS, CalendarEvent } from "./data/calendarData";
 
-// --- Types ---
+// --- Types --
 export type GradeStatus = "Draft" | "Submitted" | "Published" | "Returned";
 export type ExcuseStatus = "Pending Review" | "Approved" | "Rejected";
 export type Message = { id: string; senderId: string; senderName: string; receiverId?: string; receiverName?: string; text?: string; content?: string; timestamp: string; isAI?: boolean; read?: boolean; };
@@ -45,7 +45,7 @@ type AppContextType = {
   addBehaviorLog: (log: BehaviorLog) => void;
 };
 
-// --- Seed Data ---
+// --- Seed Data --
 const SEED_GRADES_STATUS: Record<string, GradeStatus> = {
   "Gr10-Rizal-Q1": "Published",
   "Gr10-Rizal-Q2": "Submitted", // Sitting in Principal's queue

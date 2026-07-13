@@ -36,7 +36,7 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
               DigiSkwela
             </div>
-            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</div>
+            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}></div>
           </div>
         </div>
 

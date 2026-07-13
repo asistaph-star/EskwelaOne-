@@ -156,7 +156,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               DigiSkwela
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Information and Communication Technology High School
+              
             </div>
           </div>
         </div>
@@ -1355,7 +1355,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
                   <School size={16} color={C.gold} />
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}>INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.15em", color: "#fff" }}></span>
                 </div>
                 
                 <div style={{ width: 100, height: 100, borderRadius: 50, border: "4px solid #fff", overflow: "hidden", marginBottom: 16, boxShadow: "0 8px 16px rgba(0,0,0,0.2)" }}>

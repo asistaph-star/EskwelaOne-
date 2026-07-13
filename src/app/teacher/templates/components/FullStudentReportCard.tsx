@@ -48,7 +48,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
         </div>
         <div style={{ flex:1 }}>
           <div style={{ color:"rgba(255,255,255,0.5)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:2 }}>Republic of the Philippines · Department of Education · Region III</div>
-          <div style={{ color:"#fff", fontSize:15, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Information and Communication Technology High School</div>
+          <div style={{ color:"#fff", fontSize:15, fontWeight:700, fontFamily:"'Fraunces',serif" }}></div>
           <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10 }}>Sindalan, City of San Fernando, Pampanga</div>
         </div>
         <div style={{ textAlign:"right" }}>
@@ -60,7 +60,7 @@ export function FullStudentReportCard({ student }: { student?: { name:string; lr
       {/* ── Student info ── */}
       <div style={{ borderBottom:`2px solid ${C.m700}`, padding:"10px 24px", background:C.m50 }}>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"6px 20px" }}>
-          {[["Full Name",s.name],["LRN",s.lrn],["Grade & Section",`Grade ${s.grade} - ${s.section}`],["Adviser",s.adviser],["School","Information and Communication Technology High School"],["School Year","SY 2025–2026"]].map(([l,v])=>(
+          {[["Full Name",s.name],["LRN",s.lrn],["Grade & Section",`Grade ${s.grade} - ${s.section}`],["Adviser",s.adviser],["School",""],["School Year","SY 2025–2026"]].map(([l,v])=>(
             <div key={l} style={{ borderBottom:`0.5px solid ${C.borderMed}`, paddingBottom:4 }}>
               <div style={{ fontSize:8, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:1 }}>{l}</div>
               <div style={{ fontSize:12, fontWeight:600, color:C.t1, fontFamily:l==="LRN"?"'JetBrains Mono',monospace":undefined }}>{v}</div>

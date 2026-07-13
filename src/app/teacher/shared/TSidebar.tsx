@@ -47,7 +47,7 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
               DigiSkwela
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              Information and Communication Technology High School
+              
             </div>
           </div>
         )}

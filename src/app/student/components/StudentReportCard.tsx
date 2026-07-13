@@ -66,7 +66,7 @@ export function StudentReportCard({ student, statuses, compact=false }: { studen
         </div>
         <div style={{ flex:1 }}>
           <div style={{ color:"rgba(255,255,255,0.55)", fontSize:9, textTransform:"uppercase", letterSpacing:"0.09em", marginBottom:2 }}>Republic of the Philippines · Department of Education · Region III</div>
-          <div style={{ color:"#fff", fontSize:15, fontWeight:700, fontFamily:"'Fraunces',serif", lineHeight:1.2 }}>Information and Communication Technology High School</div>
+          <div style={{ color:"#fff", fontSize:15, fontWeight:700, fontFamily:"'Fraunces',serif", lineHeight:1.2 }}></div>
           <div style={{ color:"rgba(255,255,255,0.55)", fontSize:10, marginTop:1 }}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City</div>
         </div>
         <div style={{ textAlign:"right" }}>

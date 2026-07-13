@@ -44,7 +44,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     "quarterly-summary": { title: "Quarterly Summary", sub: "Final ratings overview" },
     "grades-direct": { title: "Gradebooks Quick Access" },
     "attendance-direct": { title: "Attendance Quick Access" },
-    "clinic-visits": { title: "Student Clinic Logs", sub: "Information and Communication Technology High School Health Unit" },
+    "clinic-visits": { title: "Student Clinic Logs", sub: " Health Unit" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
     "ai-tools": { title: "AI Assistant Tools", sub: "Smart teaching aids" },
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },

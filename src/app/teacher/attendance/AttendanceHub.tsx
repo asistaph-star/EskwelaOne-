@@ -389,7 +389,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
           <DocPanel title="SF2 Document Preview" icon={FileSpreadsheet}>
             <div style={{ padding:"16px 20px 12px", borderBottom:`1px solid ${C.border}`, textAlign:"center" }}>
               <div style={{ fontSize:10, fontWeight:700, color:C.t2, textTransform:"uppercase", letterSpacing:"0.07em" }}>Republic of the Philippines · Department of Education</div>
-              <div style={{ fontSize:15, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:3 }}>Information and Communication Technology High School</div>
+              <div style={{ fontSize:15, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:3 }}></div>
               <div style={{ fontSize:11, color:C.t2 }}>School Form 2 (SF2) - Learner's Attendance Record</div>
               <div style={{ display:"flex", justifyContent:"center", gap:24, marginTop:8, fontSize:11, color:C.t2 }}>
                 {[["School Year","SY 2025–2026"],["Grade & Section","Grade 8 - Rizal"],["Month","June 2025"],["Subject","Mathematics 8"]].map(([l,v])=>(

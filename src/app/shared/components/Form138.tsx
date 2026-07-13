@@ -52,7 +52,7 @@ export function Form138({
           Republic of the Philippines • Department of Education • Region III
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Fraunces', serif", color: C.m900, marginBottom: 2 }}>
-          INFORMATION AND COMMUNICATION TECHNOLOGY HIGH SCHOOL
+          
         </div>
         <div style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>
           Sindalan, City of San Fernando, Pampanga
