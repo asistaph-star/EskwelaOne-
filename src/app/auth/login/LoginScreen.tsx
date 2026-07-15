@@ -26,15 +26,22 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
     <div style={{ minHeight: "100vh", width: "100vw", display: "flex", fontFamily: "'Inter',sans-serif", position: "relative", overflow: "hidden" }}>
 
       {/* ── FULL-SCREEN background gradient ── */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(10,25,47,1) 0%, rgba(2,6,23,1) 100%)", zIndex: 1 }} />
+      <div style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(135deg, rgba(10,25,47,1) 0%, rgba(2,6,23,1) 100%)`
+        }} />
+      </div>
       {/* ── LEFT BRAND PANEL (58%) ── */}
       <div style={{ flex: "0 0 58%", position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 64px", boxSizing: "border-box" }}>
 
         {/* Top Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img src="/school_seal.jpg" alt="Calulut Integrated School Logo" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} />
           <div>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-              DigiSkwela
+              Calulut Integrated School
             </div>
             <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}></div>
           </div>

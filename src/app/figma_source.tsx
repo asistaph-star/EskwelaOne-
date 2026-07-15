@@ -248,7 +248,7 @@ function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
             <BookMarked size={16} color={C.m900} strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ color:"#fff", fontSize:14, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>DigiSkwela</div>
+            <div style={{ color:"#fff", fontSize:14, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Calulut Integrated School</div>
             <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10 }}>Education Management System</div>
           </div>
         </div>
@@ -336,7 +336,7 @@ function LoginScreen({ onLogin }: { onLogin:(r:Role)=>void }) {
 
           <div style={{ marginTop:36, textAlign:"center", fontSize:11, color:C.t3, lineHeight:1.8 }}>
             Schools Division of San Fernando City · Region III<br />
-            <span style={{color:"#ccc"}}>DigiSkwela v1.0 · DepEd Compliant · SY 2025–2026</span>
+            <span style={{color:"#ccc"}}>Calulut Integrated School v1.0 · DepEd Compliant · SY 2025–2026</span>
           </div>
         </div>
       </div>
@@ -377,7 +377,7 @@ function TSidebar({ active, onNav, onLogout, collapsed=false }: {
             <BookMarked size={15} color={C.m900} strokeWidth={2.5} />
           </div>
           {!collapsed && <div>
-            <div style={{ color:"#fff", fontSize:13, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>DigiSkwela</div>
+            <div style={{ color:"#fff", fontSize:13, fontWeight:700, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>Calulut Integrated School</div>
             <div style={{ color:"rgba(255,255,255,0.35)", fontSize:9, marginTop:1 }}>Sindalan NHS</div>
           </div>}
         </div>

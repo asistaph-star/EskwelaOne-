@@ -153,7 +153,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           <img src="/school_seal.jpg" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} alt="School Logo" />
           <div>
             <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              DigiSkwela
+              Calulut Integrated School
             </div>
             <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
               
@@ -1395,7 +1395,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
                   border: `1px solid ${C.border}`
                 }}>
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=DigiSkwela-Student-100001" alt="QR Code" style={{ width: "100%", height: "100%", display: "block" }} />
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=Calulut Integrated School-Student-100001" alt="QR Code" style={{ width: "100%", height: "100%", display: "block" }} />
                 </div>
                 
                 <div style={{ fontSize: 10, color: C.t3, textAlign: "center", lineHeight: 1.5 }}>

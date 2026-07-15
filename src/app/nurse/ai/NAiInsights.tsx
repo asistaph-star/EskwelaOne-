@@ -22,7 +22,7 @@ export function NAiInsights() {
           <p style={{ fontSize: 13, color: C.t3, margin: '4px 0 0 0' }}>Automated analysis of clinic records, inventory, and health trends.</p>
         </div>
         <div style={{ background: C.m100, color: C.m700, padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={14} /> Powered by DigiSkwela AI
+          <Sparkles size={14} /> Powered by Calulut Integrated School AI
         </div>
       </div>
 

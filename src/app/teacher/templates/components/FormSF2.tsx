@@ -344,7 +344,7 @@ export function FormSF2({ section, month, sy }: FormSF2Props) {
             </div>
           </div>
           <div style={{ fontSize: 7, color: "#666", border: "1px dashed #ccc", padding: 6, borderRadius: 3, marginTop: 10 }}>
-            <strong>Generating Agency:</strong> DigiSkwela Forms & Records Core Module.<br />
+            <strong>Generating Agency:</strong> Calulut Integrated School Forms & Records Core Module.<br />
             <strong>DepEd Compliance:</strong> Matches formatting and computation guidelines for Philippine Public Schools.
           </div>
         </div>
