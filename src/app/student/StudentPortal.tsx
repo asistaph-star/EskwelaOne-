@@ -228,13 +228,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                 <Settings size={13} />
                 <span style={{ fontSize: 11 }}>Settings</span>
               </button>
-              <button onClick={() => { setProfileOpen(false); }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <BookMarked size={13} />
-                <span style={{ fontSize: 11 }}>Tutorials</span>
-              </button>
+
               <button onClick={() => { setProfileOpen(false); }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
