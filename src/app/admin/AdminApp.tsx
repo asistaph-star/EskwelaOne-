@@ -26,11 +26,11 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
     <div style={{ display: "flex", height: "100vh", backgroundColor: C.paper, fontFamily: "'Inter', sans-serif" }}>
       <AdminSidebar activeScreen={screen} onNavigate={setScreen} onLogout={onLogout} />
       
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
         <PHeaderBand title={getTitle()} />
         
-        <main style={{ flex: 1, overflowY: "auto", position: "relative", zIndex: 1 }}>
+        <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
           
           {screen === "dashboard" && <AdminDashboard onNavigate={setScreen} />}
           {screen === "teacher-create" && <CreateTeacher />}

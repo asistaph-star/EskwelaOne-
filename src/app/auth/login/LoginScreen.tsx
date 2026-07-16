@@ -37,13 +37,12 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
       <div style={{ flex: "0 0 58%", position: "relative", zIndex: 2, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "48px 64px", boxSizing: "border-box" }}>
 
         {/* Top Brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <img src="/school_seal.jpg" alt="Calulut Integrated School Logo" style={{ width: 42, height: 42, borderRadius: "50%", objectFit: "cover" }} />
-          <div>
-            <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, letterSpacing: "0.02em", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <img src="/school_seal.png" alt="CIS Logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <div style={{ display: "flex", alignItems: "center", overflow: "hidden", justifyContent: "center" }}>
+            <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 600, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
               Calulut Integrated School
             </div>
-            <div style={{ color: C.gold, fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginTop: 2 }}></div>
           </div>
         </div>
 

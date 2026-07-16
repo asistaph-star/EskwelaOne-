@@ -11,3 +11,47 @@
   box-shadow: 0 10px 25px -5px rgba(155, 35, 53, 0.1), 0 8px 10px -6px rgba(155, 35, 53, 0.1);
   z-index: 10;
 }
+
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+
+.watermark-bg {
+  position: relative;
+  z-index: 0;
+}
+.watermark-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/school_seal.png');
+  background-size: 650px;
+  background-repeat: no-repeat;
+  background-position: center calc(50% + 28px);
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: -1;
+}

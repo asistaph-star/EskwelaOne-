@@ -36,6 +36,22 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   });
   const [quarter, setQuarter] = useState<QKey>("Q1");
   const [view,    setView]    = useState<"ledger"|"summary">("ledger");
+  const [qCount, setQCount] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('eskwela_grades');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const qs = Object.keys(parsed).filter(k => k.startsWith('Q')).map(k => parseInt(k.substring(1))).filter(n => !isNaN(n));
+        if (qs.length > 0) return Math.max(...qs);
+      }
+    } catch(e) {}
+    return 3;
+  });
+  const activeQuarters = Array.from({length: qCount}, (_, i) => `Q${i+1}`);
+  
+  function getQAccent(q: string) {
+    return C.m700;
+  }
 
   /* ── shared settings ── */
   const [weights, setWeights] = useState({ww:25,pt:50,qa:25});
@@ -47,7 +63,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   const [editMaxId,  setEditMaxId]  = useState<string|null>(null);
 
   /* ── convenience accessors for the active quarter ── */
-  const qd       = allData[quarter];
+  const qd       = allData[quarter] || { wwItems: [], ptItems: [], qaMax: 100, grades: {} };
   const wwItems  = qd.wwItems;
   const ptItems  = qd.ptItems;
   const qaMax    = qd.qaMax;
@@ -61,6 +77,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
     return sumM>0 ? Math.round((sumS/sumM)*1000)/10 : 0;
   }
   function qGradeFor(sid:number|string, d:QData) {
+    if (!d) return 0;
     const g = d.grades[sid] ?? {};
     const wwPS = psFor(sid, d.wwItems, d.grades);
     const ptPS = psFor(sid, d.ptItems, d.grades);
@@ -189,8 +206,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   );
 
   /* ── quarter color palette (WW/PT/QA header colors match per-quarter accent) ── */
-  const Q_ACCENT: Record<QKey,string> = {Q1:C.m700, Q2:"hsl(220,50%,30%)", Q3:"hsl(160,45%,28%)"};
-  const activeAccent = Q_ACCENT[quarter];
+  const activeAccent = getQAccent(quarter);
 
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background: "transparent"}}>
@@ -242,9 +258,9 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
         {/* Quarter tabs - always visible; active quarter = which ledger OR which column is highlighted in summary */}
         <div style={{display:"flex",gap:2}}>
-          {(["Q1","Q2","Q3"] as QKey[]).map(q=>{
+          {activeQuarters.map(q=>{
             const isAct = quarter===q;
-            const acc = Q_ACCENT[q];
+            const acc = getQAccent(q);
             return (
               <button key={q} onClick={()=>setQuarter(q)}
                 style={{padding:"4px 13px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,
@@ -256,6 +272,20 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
               </button>
             );
           })}
+          {true && (
+            <button onClick={() => {
+              const next = qCount + 1;
+              const q = `Q${next}`;
+              setAllData(prev => prev[q] ? prev : { ...prev, [q]: { wwItems: [], ptItems: [], qaMax: 100, grades: {} } });
+              setQCount(next);
+            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Add Quarter">+</button>
+          )}
+          {qCount > 1 && (
+            <button onClick={() => {
+              if (quarter === `Q${qCount}`) setQuarter(`Q${qCount-1}` as QKey);
+              setQCount(c => c-1);
+            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Remove Quarter">-</button>
+          )}
         </div>
 
         <div style={{width:1,height:22,background:C.border,flexShrink:0}}/>
@@ -323,9 +353,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             <colgroup>
               <col style={{width:36}}/>{/* # */}
               <col style={{width:200}}/>{/* Name */}
-              <col style={{width:90}}/>{/* Q1 */}
-              <col style={{width:90}}/>{/* Q2 */}
-              <col style={{width:90}}/>{/* Q3 */}
+              {activeQuarters.map(q => <col key={q} style={{width:90}}/>)}
               <col style={{width:110}}/>{/* Final Avg */}
               <col style={{width:90}}/>{/* Status */}
             </colgroup>
@@ -340,12 +368,12 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                   position:"sticky",top:0,left:36,zIndex:6,
                   fontFamily:"'Fraunces',serif",letterSpacing:"0.04em"}}>STUDENT NAME</th>
                 {/* Quarter column headers */}
-                {(["Q1","Q2","Q3"] as QKey[]).map(q=>(
+                {activeQuarters.map(q=>(
                   <th key={q} style={{border:`1px solid rgba(255,255,255,0.15)`,
-                    background: quarter===q ? Q_ACCENT[q] : `${Q_ACCENT[q]}CC`,
+                    background: quarter===q ? getQAccent(q) : `${getQAccent(q)}CC`,
                     color:"#fff",fontSize:11,fontWeight:700,padding:"7px 4px",textAlign:"center",
                     position:"sticky",top:0,zIndex:4,letterSpacing:"0.08em",
-                    outline: quarter===q ? `2px solid ${Q_ACCENT[q]}` : "none",
+                    outline: quarter===q ? `2px solid ${getQAccent(q)}` : "none",
                     outlineOffset:-2}}>
                     {q}{quarter===q && <span style={{fontSize:9,marginLeft:5,opacity:0.7}}>▲</span>}
                   </th>
@@ -360,11 +388,11 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
               </tr>
               {/* Sub-header: labels */}
               <tr>
-                {(["Q1","Q2","Q3"] as QKey[]).map(q=>(
+                {activeQuarters.map(q=>(
                   <th key={q} style={{border:`0.5px solid ${C.border}`,
-                    background: quarter===q ? `${Q_ACCENT[q]}22` : C.m50,
+                    background: quarter===q ? `${getQAccent(q)}22` : C.m50,
                     padding:"4px 4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
-                    <span style={{fontSize:9,color:quarter===q?Q_ACCENT[q]:C.t3,fontWeight:600,
+                    <span style={{fontSize:9,color:quarter===q?getQAccent(q):C.t3,fontWeight:600,
                       textTransform:"uppercase",letterSpacing:"0.07em"}}>
                       Qrtly Grade
                     </span>
@@ -373,7 +401,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 <th style={{border:`0.5px solid ${C.border}`,background:C.goldLight,
                   padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
                   <span style={{fontSize:9,color:C.gold,fontWeight:600,
-                    textTransform:"uppercase",letterSpacing:"0.07em"}}>Q1+Q2+Q3 ÷ 3</span>
+                    textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{activeQuarters.join('+')} ÷ {qCount}</span>
                 </th>
                 <th style={{border:`0.5px solid ${C.border}`,background:C.m50,
                   padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}/>
@@ -382,11 +410,10 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
             <tbody>
               {ROSTER.map((student,idx)=>{
-                const q1g = qGradeFor(student.id, allData.Q1);
-                const q2g = qGradeFor(student.id, allData.Q2);
-                const q3g = qGradeFor(student.id, allData.Q3);
-                const allFilled = q1g>0 && q2g>0 && q3g>0;
-                const finalAvg = allFilled ? Math.round(((q1g+q2g+q3g)/3)*10)/10 : 0;
+                const grades = activeQuarters.map(q => qGradeFor(student.id, allData[q]));
+                const allFilled = !grades.some(g => g <= 0);
+                const sum = grades.reduce((acc, val) => acc + val, 0);
+                const finalAvg = allFilled ? Math.round((sum/grades.length)*10)/10 : 0;
                 const passed = finalAvg>=75;
                 const rowBg = idx%2===0 ? "#fff" : C.paper;
 
@@ -395,8 +422,8 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                   const high = g>=90;
                   return (
                     <td style={{border:`0.5px solid ${C.border}`,padding:"9px 6px",textAlign:"center",
-                      background: isActive ? (failing?C.redBg:`${Q_ACCENT[quarter]}10`) : (failing?C.redBg:rowBg),
-                      outline: isActive ? `1.5px solid ${Q_ACCENT[quarter]}50` : "none",
+                      background: isActive ? (failing?C.redBg:`${getQAccent(quarter)}10`) : (failing?C.redBg:rowBg),
+                      outline: isActive ? `1.5px solid ${getQAccent(quarter)}50` : "none",
                       outlineOffset:-1}}>
                       <span style={{fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
                         color: g<=0?"#ccc" : failing?C.red : high?C.green : C.t1}}>
@@ -416,16 +443,15 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                       background:"#F8F5F4",position:"sticky",left:0,zIndex:1}}>
                       {idx+1}
                     </td>
-                    {/* Name */}
                     <td style={{border:`0.5px solid ${C.border}`,padding:"9px 10px",
                       fontSize:12,fontWeight:600,color:C.t1,background:"#fff",
                       position:"sticky",left:36,zIndex:1,
                       borderRight:`2px solid ${C.borderMed}`,whiteSpace:"nowrap"}}>
                       {student.surname}, {student.first}
                     </td>
-                    {gradeCell(q1g, quarter==="Q1")}
-                    {gradeCell(q2g, quarter==="Q2")}
-                    {gradeCell(q3g, quarter==="Q3")}
+                    {activeQuarters.map((q, i) => {
+                      return <React.Fragment key={q}>{gradeCell(grades[i], quarter===q)}</React.Fragment>;
+                    })}
                     {/* Final Average */}
                     <td style={{border:`1px solid ${C.borderMed}`,padding:"9px 6px",textAlign:"center",
                       background: finalAvg>0&&finalAvg<75 ? C.redBg : C.goldLight}}>
@@ -447,15 +473,16 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             </tbody>
           </table>
 
-          {/* Summary footer */}
           <div style={{background:C.m800,borderTop:`2px solid ${C.m700}`,padding:"8px 18px",
             display:"flex",alignItems:"center",gap:24}}>
             <span style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:700,
               textTransform:"uppercase",letterSpacing:"0.1em"}}>Final Average Summary</span>
             {(()=>{
               const finals = ROSTER.map(s=>{
-                const q1=qGradeFor(s.id,allData.Q1), q2=qGradeFor(s.id,allData.Q2), q3=qGradeFor(s.id,allData.Q3);
-                return (q1>0&&q2>0&&q3>0) ? Math.round(((q1+q2+q3)/3)*10)/10 : 0;
+                const grades = activeQuarters.map(q => qGradeFor(s.id, allData[q]));
+                if (grades.some(g => g <= 0)) return 0;
+                const sum = grades.reduce((acc, val) => acc + val, 0);
+                return Math.round((sum/grades.length)*10)/10;
               }).filter(g=>g>0);
               const pass=finals.filter(g=>g>=75).length, fail=finals.filter(g=>g<75).length;
               const avg=finals.length?(finals.reduce((a,b)=>a+b,0)/finals.length).toFixed(1):"-";
@@ -690,4 +717,4 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
   );
 }
 
-/* ─── Clinic visit seed data ───────────────────────────────── */
+/* ─── Clinic visit seed data ───────────────────────────────── */

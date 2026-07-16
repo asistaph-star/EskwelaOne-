@@ -319,7 +319,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
           </button>
         </div>
       )}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
+      <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
         
         
         {/* Top Header for Content Area */}

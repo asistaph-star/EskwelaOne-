@@ -41,12 +41,15 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
       {/* Sidebar Brand Logo */}
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, position: "relative", zIndex: 1 }}>
         {!collapsed && (
-          <div>
-            <div style={{ color: "#fff", fontSize: 18, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Calulut Integrated School
-            </div>
-            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img src="/school_seal.png" alt="CIS Logo" style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+            <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", justifyContent: "center" }}>
+              <div style={{ color: "#ffffff", fontSize: 19, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                Calulut
+              </div>
+              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 3, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", lineHeight: 1 }}>
+                Integrated School
+              </div>
             </div>
           </div>
         )}

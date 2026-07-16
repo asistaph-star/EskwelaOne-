@@ -42,7 +42,8 @@ export const Q_SEED: Record<QKey, QData> = {
     }
   },
   Q2: { wwItems: [], ptItems: [], qaMax: 100, grades: {} },
-  Q3: { wwItems: [], ptItems: [], qaMax: 100, grades: {} }
+  Q3: { wwItems: [], ptItems: [], qaMax: 100, grades: {} },
+  Q4: { wwItems: [], ptItems: [], qaMax: 100, grades: {} }
 };
 
 export const GB_ROSTER = [

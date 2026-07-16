@@ -48,7 +48,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           </button>
         </div>
       )}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div className="watermark-bg" style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <PHeaderBand
           title={TITLES[screen]}
           sub="Tuesday, June 10, 2025"
@@ -57,7 +57,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           onSettings={() => setScreen("p-settings")}
         />
         <ReadOnlyBanner />
-        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position: "relative" }}>
           {screen==="p-dashboard"  && <PDashboard  onNav={setScreen} onShowGradeCard={showGradeCard} />}
           {screen==="p-monitoring" && <PMonitoring />}
           {screen==="p-analytics"  && <PAcademics  />}
@@ -67,7 +67,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-templates"  && <TemplateHubScreen role="registrar" />}
           {screen==="p-events"     && <PEventsScreen />}
           {(screen==="p-settings"||screen==="p-help") && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
+            <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 36, background: C.m100, border: `2px solid ${C.m700}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, boxShadow: "0 4px 12px rgba(139,30,30,0.1)" }}>
                   <span style={{ fontSize: 32 }}>🚧</span>

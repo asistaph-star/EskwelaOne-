@@ -28,9 +28,17 @@ export function QuarterlySummaryScreen() {
   const [weights]  = useState({ww:25,pt:50,qa:25});
   const [section, setSection] = useState("Gr. 8 Rizal");
   const [quarter, setQuarter] = useState<QKey>("Q1");
+  const [qCount, setQCount] = useState<number>(3);
+  const activeQuarters = Array.from({length: qCount}, (_, i) => `Q${i+1}`);
 
   /* use the same seed data as the gradebook */
-  const allData = Q_SEED;
+  const allData = (() => {
+    try {
+      const saved = localStorage.getItem('eskwela_grades');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return Q_SEED;
+  })();
 
   function psFor(sid:number|string, items:GbItem[], g:GbGrades) {
     const sg = g[sid] ?? {};
@@ -39,6 +47,7 @@ export function QuarterlySummaryScreen() {
     return sumM>0 ? Math.round((sumS/sumM)*1000)/10 : 0;
   }
   function qGradeFor(sid:number|string, d:QData) {
+    if (!d) return 0;
     const g = d.grades[sid] ?? {};
     const wwPS = psFor(sid, d.wwItems, d.grades);
     const ptPS = psFor(sid, d.ptItems, d.grades);
@@ -46,11 +55,13 @@ export function QuarterlySummaryScreen() {
     return Math.round((wwPS*(weights.ww/100)+ptPS*(weights.pt/100)+qaPS*(weights.qa/100))*10)/10;
   }
 
-  const Q_ACCENT: Record<QKey,string> = {Q1:C.m700, Q2:"hsl(220,50%,30%)", Q3:"hsl(160,45%,28%)"};
+  function getQAccent(q: string) { return C.m700; }
 
   const finals = ROSTER.map(s=>{
-    const q1=qGradeFor(s.id,allData.Q1), q2=qGradeFor(s.id,allData.Q2), q3=qGradeFor(s.id,allData.Q3);
-    return (q1>0&&q2>0&&q3>0) ? Math.round(((q1+q2+q3)/3)*10)/10 : 0;
+    const grades = activeQuarters.map(q => qGradeFor(s.id, allData[q]));
+    if (grades.some(g => g <= 0)) return 0;
+    const sum = grades.reduce((acc, val) => acc + val, 0);
+    return Math.round((sum/grades.length)*10)/10;
   });
   const passing = finals.filter(g=>g>=75).length;
   const failing  = finals.filter(g=>g>0&&g<75).length;
@@ -85,16 +96,25 @@ export function QuarterlySummaryScreen() {
         </div>
         {/* Quarter highlight */}
         <div style={{display:"flex",gap:2}}>
-          {(["Q1","Q2","Q3"] as QKey[]).map(q=>(
+          {activeQuarters.map(q=>(
             <button key={q} onClick={()=>setQuarter(q)}
               style={{padding:"4px 13px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,
                 transition:"all 0.12s",
-                border:quarter===q?`1.5px solid ${Q_ACCENT[q]}`:`1px solid ${C.borderMed}`,
-                background:quarter===q?Q_ACCENT[q]:"#fff",
+                border:quarter===q?`1.5px solid ${getQAccent(q)}`:`1px solid ${C.borderMed}`,
+                background:quarter===q?getQAccent(q):"#fff",
                 color:quarter===q?"#fff":C.t2}}>
               {q}
             </button>
           ))}
+          {true && (
+            <button onClick={() => setQCount(c => c+1)} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Add Quarter">+</button>
+          )}
+          {qCount > 1 && (
+            <button onClick={() => {
+              if (quarter === `Q${qCount}`) setQuarter(`Q${qCount-1}` as QKey);
+              setQCount(c => c-1);
+            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Remove Quarter">-</button>
+          )}
         </div>
         <span style={{fontSize:11,color:C.t3,marginLeft:4}}>
           Highlight a quarter to compare · Weights: WW {weights.ww}% · PT {weights.pt}% · QA {weights.qa}%
@@ -122,9 +142,7 @@ export function QuarterlySummaryScreen() {
           <colgroup>
             <col style={{width:36}}/>
             <col style={{width:200}}/>
-            <col style={{width:100}}/>
-            <col style={{width:100}}/>
-            <col style={{width:100}}/>
+            {activeQuarters.map(q => <col key={q} style={{width:100}}/>)}
             <col style={{width:120}}/>
             <col style={{width:90}}/>
           </colgroup>
@@ -138,12 +156,12 @@ export function QuarterlySummaryScreen() {
                 position:"sticky",top:0,left:36,zIndex:6,fontFamily:"'Fraunces',serif",letterSpacing:"0.04em"}}>
                 STUDENT NAME
               </th>
-              {(["Q1","Q2","Q3"] as QKey[]).map(q=>(
+              {activeQuarters.map(q=>(
                 <th key={q} style={{border:`1px solid rgba(255,255,255,0.15)`,
-                  background: quarter===q ? Q_ACCENT[q] : `${Q_ACCENT[q]}BB`,
+                  background: quarter===q ? getQAccent(q) : `${getQAccent(q)}BB`,
                   color:"#fff",fontSize:11,fontWeight:700,padding:"7px 4px",textAlign:"center",
                   position:"sticky",top:0,zIndex:4,letterSpacing:"0.08em",
-                  outline: quarter===q ? `2px solid ${Q_ACCENT[q]}` : "none",
+                  outline: quarter===q ? `2px solid ${getQAccent(q)}` : "none",
                   outlineOffset:-2}}>
                   {q}{quarter===q && <span style={{fontSize:9,marginLeft:4,opacity:0.7}}>▲</span>}
                 </th>
@@ -160,27 +178,25 @@ export function QuarterlySummaryScreen() {
               </th>
             </tr>
             <tr>
-              {(["Q1","Q2","Q3"] as QKey[]).map(q=>(
+              {activeQuarters.map(q=>(
                 <th key={q} style={{border:`0.5px solid ${C.border}`,
-                  background: quarter===q ? `${Q_ACCENT[q]}20` : C.m50,
+                  background: quarter===q ? `${getQAccent(q)}20` : C.m50,
                   padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
-                  <span style={{fontSize:9,color:quarter===q?Q_ACCENT[q]:C.t3,fontWeight:600,
+                  <span style={{fontSize:9,color:quarter===q?getQAccent(q):C.t3,fontWeight:600,
                     textTransform:"uppercase",letterSpacing:"0.07em"}}>Qrtly Grade</span>
                 </th>
               ))}
-              <th style={{border:`0.5px solid ${C.border}`,background:C.goldLight,
-                padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
-                <span style={{fontSize:9,color:C.gold,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.07em"}}>Q1+Q2+Q3 ÷ 3</span>
-              </th>
+                <th style={{border:`0.5px solid ${C.border}`,background:C.goldLight,
+                  padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
+                  <span style={{fontSize:9,color:C.gold,fontWeight:600,
+                    textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{activeQuarters.join('+')} ÷ {qCount}</span>
+                </th>
               <th style={{border:`0.5px solid ${C.border}`,background:C.m50,
                 padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}/>
             </tr>
           </thead>
           <tbody>
             {ROSTER.map((student,idx)=>{
-              const q1g = qGradeFor(student.id, allData.Q1);
-              const q2g = qGradeFor(student.id, allData.Q2);
-              const q3g = qGradeFor(student.id, allData.Q3);
               const fa  = finals[idx];
               const passed = fa>=75;
               const rowBg  = idx%2===0?"#fff":C.paper;
@@ -189,8 +205,8 @@ export function QuarterlySummaryScreen() {
                 const fail = g>0&&g<75, high = g>=90;
                 return (
                   <td style={{border:`0.5px solid ${C.border}`,padding:"9px 6px",textAlign:"center",
-                    background: isActive?(fail?C.redBg:`${Q_ACCENT[quarter]}10`):(fail?C.redBg:rowBg),
-                    outline: isActive?`1.5px solid ${Q_ACCENT[quarter]}50`:"none",outlineOffset:-1}}>
+                    background: isActive?(fail?C.redBg:`${getQAccent(quarter)}10`):(fail?C.redBg:rowBg),
+                    outline: isActive?`1.5px solid ${getQAccent(quarter)}50`:"none",outlineOffset:-1}}>
                     <span style={{fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
                       color: g<=0?"#ccc":fail?C.red:high?C.green:C.t1}}>
                       {g>0 ? g.toFixed(1) : "-"}
@@ -211,9 +227,10 @@ export function QuarterlySummaryScreen() {
                     borderRight:`2px solid ${C.borderMed}`,whiteSpace:"nowrap"}}>
                     {student.surname}, {student.first}
                   </td>
-                  {gradeCell(q1g, quarter==="Q1")}
-                  {gradeCell(q2g, quarter==="Q2")}
-                  {gradeCell(q3g, quarter==="Q3")}
+                  {activeQuarters.map(q => {
+                    const g = qGradeFor(student.id, allData[q]);
+                    return <React.Fragment key={q}>{gradeCell(g, quarter===q)}</React.Fragment>;
+                  })}
                   <td style={{border:`1px solid ${C.borderMed}`,padding:"9px 6px",textAlign:"center",
                     background: fa>0&&fa<75?C.redBg:C.goldLight}}>
                     <span style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono',monospace",
@@ -250,4 +267,4 @@ export function QuarterlySummaryScreen() {
   );
 }
 
-/* ─── GradebookFullScreen ───────────────────────────────────── */
+/* ─── GradebookFullScreen ───────────────────────────────────── */

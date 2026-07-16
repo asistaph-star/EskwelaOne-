@@ -34,7 +34,7 @@ export interface GradeCardInfo {
 
 export type GbItem = { id: string; label: string; max: number };
 export type GbGrades = Record<string | number, Record<string, string>>;
-export type QKey = "Q1" | "Q2" | "Q3";
+export type QKey = string;
 export interface QData {
   wwItems: GbItem[];
   ptItems: GbItem[];

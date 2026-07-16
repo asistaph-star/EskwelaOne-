@@ -144,19 +144,19 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   }
 
   return (
-    <div style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div className="watermark-bg" style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       {/* ── Left Sidebar Navigation ── */}
       <div style={{ width: 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", flexShrink: 0, position: "relative", overflow: "hidden" }}>
         
         {/* Brand Header - matches teacher sidebar exactly */}
         <div style={{ padding: "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
-          <img src="/school_seal.jpg" style={{ width: 36, height: 36, borderRadius: "50%", flexShrink: 0 }} alt="School Logo" />
-          <div>
-            <div style={{ color: "#fff", fontSize: 14, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Calulut Integrated School
+          <img src="/school_seal.png" alt="CIS Logo" style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", justifyContent: "center" }}>
+            <div style={{ color: "#ffffff", fontSize: 19, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+              Calulut
             </div>
-            <div style={{ fontSize: 8.5, color: "rgba(255,255,255,0.65)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.11em", marginTop: 2 }}>
-              
+            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 3, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", lineHeight: 1 }}>
+              Integrated School
             </div>
           </div>
         </div>
@@ -250,7 +250,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
       </div>
 
       {/* ── Main Content View Window ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         
         {/* Top Header Band */}
         <div style={{
