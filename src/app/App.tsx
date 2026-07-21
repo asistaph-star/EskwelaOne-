@@ -25,6 +25,7 @@ export const ROLE_USER = {
   Student: { initials: "JM", name: "Juan Miguel Santos", sub: "Grade 10 - Pilot (LRN 100001)" },
   Parent: { initials: "PA", name: "Parent Portal", sub: "Student academic progress monitoring" },
   Registrar: { initials: "RE", name: "Registrar Office", sub: "Learner Permanent Records (SF10) Management" },
+  Guidance: { initials: "GC", name: "Counselor Perez", sub: "School Guidance Counselor" },
 };
 
 export const MY_CLASSES = [
@@ -130,6 +131,8 @@ import { TeacherApp } from "./teacher/TeacherApp";
 import { PrincipalApp } from "./principal/PrincipalApp";
 import { RegistrarApp } from "./principal/RegistrarApp";
 import { AdminApp } from "./admin/AdminApp";
+import { GuidanceApp } from "./guidance/GuidanceApp";
+
 export default function App() {
   const [role, setRole] = useState<Role | null>(null);
 
@@ -154,6 +157,9 @@ export default function App() {
   }
   if (role === "Nurse") {
     return <NurseApp onLogout={() => setRole(null)} />;
+  }
+  if (role === "Guidance") {
+    return <GuidanceApp onLogout={() => setRole(null)} />;
   }
   
   return <TeacherApp onLogout={() => setRole(null)} />;

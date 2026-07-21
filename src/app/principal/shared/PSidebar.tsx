@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { PScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
-  LayoutDashboard, Monitor, BarChart2, Users, AlertCircle, Package,
-  FileSpreadsheet, FileText, BookMarked, Settings, HelpCircle, LogOut, ChevronDown, Calendar, MessageSquare, ShieldAlert, ClipboardList
+  LayoutDashboard, Monitor, BarChart2, Users, Package,
+  FileText, Calendar, Settings, HelpCircle, LogOut, ChevronDown, ShieldAlert, ClipboardList, Scan
 } from 'lucide-react';
 
 const P_NAV_GROUPS = [
@@ -16,10 +16,12 @@ const P_NAV_GROUPS = [
     { id: "p-teachers" as PScreen,   label: "Teacher Management",  icon: Users },
     { id: "p-events" as PScreen,     label: "School Events",       icon: Calendar },
     { id: "p-leaves" as PScreen,     label: "Leave Management",    icon: ClipboardList },
+    { id: "p-doc-requests" as PScreen, label: "Document Requests", icon: FileText },
   ]},
   { category: "Operations", items: [
     { id: "p-inventory" as PScreen,  label: "Inventory",           icon: Package },
     { id: "p-faculty-attendance" as PScreen, label: "Live Faculty Attendance", icon: Monitor },
+    { id: "p-scanner" as PScreen,    label: "Document Scanner",    icon: Scan },
     { id: "p-behavior" as PScreen, label: "Behavioral Reports", icon: ShieldAlert },
   ]},
 ];

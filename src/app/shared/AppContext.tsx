@@ -10,6 +10,37 @@ export type ExcuseLetter = { id: string; studentName: string; section: string; d
 export type GateAttendance = { studentName: string; time: string };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
 export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
+export type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed";
+export type AppointmentDirection = "parent-to-teacher" | "teacher-to-parent";
+export type Appointment = {
+  id: string;
+  studentName: string;
+  parentEmail: string;
+  teacherName: string;
+  date: string;
+  time: string;
+  purpose: string;
+  status: AppointmentStatus;
+  direction: AppointmentDirection;
+  createdAt: string;
+};
+export type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Principal Rejected" | "Ready for Pickup" | "Completed";
+export type DocumentRequest = {
+  id: string;
+  studentName: string;
+  section: string;
+  documentType: string;
+  purpose: string;
+  status: DocRequestStatus;
+  currentStage: number; // 1=Submitted, 2=Teacher Approved, 3=Principal Approved, 4=Ready for Pickup
+  submittedDate: string;
+  teacherName: string;
+  teacherApprovedDate?: string;
+  teacherRemarks?: string;
+  principalApprovedDate?: string;
+  principalRemarks?: string;
+  readyDate?: string; // estimated pickup date
+};
 
 type AppContextType = {
   // Grades
@@ -43,6 +74,18 @@ type AppContextType = {
 
   behaviorLogs: BehaviorLog[];
   addBehaviorLog: (log: BehaviorLog) => void;
+
+  // Appointments
+  parentEmail: string;
+  setParentEmail: (email: string) => void;
+  appointments: Appointment[];
+  addAppointment: (appt: Appointment) => void;
+  updateAppointment: (id: string, status: AppointmentStatus) => void;
+
+  // Document Requests
+  documentRequests: DocumentRequest[];
+  addDocumentRequest: (req: DocumentRequest) => void;
+  updateDocumentRequest: (id: string, updates: Partial<DocumentRequest>) => void;
 };
 
 // --- Seed Data --
@@ -83,7 +126,16 @@ const SEED_BEHAVIOR_LOGS: BehaviorLog[] = [
   { id: "log-2", studentName: "Juan Dela Cruz", section: "Grade 10 - Rizal", type: "Disruption", date: "Yesterday", status: "Parent notified", note: "Consistently disruptive during group activities." }
 ];
 
+const SEED_APPOINTMENTS: Appointment[] = [
+  { id: "appt-1", studentName: "Juan Miguel Santos", parentEmail: "maria.santos@email.com", teacherName: "Ana R. Soriano", date: "July 25, 2026", time: "10:00 AM", purpose: "Discuss quarterly academic performance and study habits improvement plan.", status: "Confirmed", direction: "parent-to-teacher", createdAt: "July 18, 2026" },
+  { id: "appt-2", studentName: "Juan Miguel Santos", parentEmail: "maria.santos@email.com", teacherName: "Carlo D. Reyes", date: "July 28, 2026", time: "2:00 PM", purpose: "Discuss Mathematics tutoring recommendations and supplementary materials.", status: "Pending", direction: "teacher-to-parent", createdAt: "July 20, 2026" },
+];
 
+const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
+  { id: "doc-1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
+  { id: "doc-2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
+  { id: "doc-3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
+];
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -95,6 +147,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>(SEED_CLINIC_REFERRALS);
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>(SEED_BEHAVIOR_LOGS);
   const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS, ...TEACHER_PERSONAL_EVENTS]);
+  const [parentEmail, setParentEmail] = useState<string>("maria.santos@email.com");
+  const [appointments, setAppointments] = useState<Appointment[]>(SEED_APPOINTMENTS);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>(SEED_DOCUMENT_REQUESTS);
 
   const setGradeStatus = (key: string, status: GradeStatus) => {
     setGradesStatus(prev => ({ ...prev, [key]: status }));
@@ -140,6 +195,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBehaviorLogs(prev => [log, ...prev]);
   };
 
+  const addAppointment = (appt: Appointment) => {
+    setAppointments(prev => [appt, ...prev]);
+  };
+
+  const updateAppointment = (id: string, status: AppointmentStatus) => {
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+  };
+
+  const addDocumentRequest = (req: DocumentRequest) => {
+    setDocumentRequests(prev => [req, ...prev]);
+  };
+
+  const updateDocumentRequest = (id: string, updates: Partial<DocumentRequest>) => {
+    setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
   return (
     <AppContext.Provider value={{
       gradesStatus, setGradeStatus,
@@ -149,7 +220,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages, addMessage,
       gateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,
-      behaviorLogs, addBehaviorLog
+      behaviorLogs, addBehaviorLog,
+      parentEmail, setParentEmail,
+      appointments, addAppointment, updateAppointment,
+      documentRequests, addDocumentRequest, updateDocumentRequest
     }}>
       {children}
     </AppContext.Provider>

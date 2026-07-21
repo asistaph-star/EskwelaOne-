@@ -1,17 +1,23 @@
-export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse";
+export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse" | "Guidance";
 
 export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
   | "grades-direct" | "attendance-direct" | "clinic-visits"
-  | "ai-tools" | "pro-dev"
-  | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior";
+  | "ai-tools" | "pro-dev" | "appointments" | "doc-requests"
+  | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior" | "scanner";
 
 export type PScreen =
   | "p-dashboard" | "p-monitoring"
   | "p-analytics" | "p-teachers"
-  | "p-inventory"
+  | "p-inventory" | "p-doc-requests"
   | "p-events" | "p-faculty-attendance"
-  | "p-settings" | "p-help" | "p-behavior" | "p-leaves";
+  | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner";
+
+export type GScreen =
+  | "g-dashboard" | "g-behavior" | "g-counseling" | "g-settings" | "g-help";
+
+export type RScreen =
+  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-settings" | "r-help";
 
 export interface RCStudent {
   surname: string;

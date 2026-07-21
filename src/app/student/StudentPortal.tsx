@@ -7,8 +7,9 @@ import {
   LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles
+  Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle
 } from 'lucide-react';
+import type { AppointmentStatus } from '../shared/AppContext';
 import { Stamp } from '../shared/components/Stamp';
 import { StatBox } from '../shared/components/StatBox';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
@@ -24,6 +25,12 @@ const STUDENT_NAV_GROUPS = [
     ]
   },
   {
+    title: "Services",
+    items: [
+      { id: "doc-requests", label: "Request Documents", icon: FileText }
+    ]
+  },
+  {
     title: "Academics",
     items: [
       { id: "academics", label: "Grades", icon: BookOpen },
@@ -35,6 +42,7 @@ const STUDENT_NAV_GROUPS = [
     title: "Communication",
     items: [
       { id: "announcements", label: "Announcements", icon: Bell },
+      { id: "appointments", label: "Book Appointment", icon: CalendarCheck },
       ]
   }
 ];
@@ -46,6 +54,8 @@ const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
   assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
   announcements: { title: "Announcements", sub: "School Bulletin Board" },
   calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
+  appointments: { title: "Book Appointment", sub: "Parent-Teacher Meeting Requests" },
+  "doc-requests": { title: "Request Documents", sub: "School Certificates & Records" },
   settings: { title: "Account Settings", sub: "Profile & Security Configuration" }
 };
 
@@ -62,13 +72,13 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
     return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
   }
 
-  const { gradesStatus, behaviorLogs, announcements, messages, addMessage, excuseLetters, addExcuseLetter } = useAppContext();
+  const { gradesStatus, behaviorLogs, announcements, messages, addMessage, excuseLetters, addExcuseLetter, parentEmail, setParentEmail, appointments, addAppointment, updateAppointment } = useAppContext();
   const q1Status = gradesStatus["Gr10Rizal-Q1"] || "Draft";
   const q2Status = gradesStatus["Gr10Rizal-Q2"] || "Draft";
   const q3Status = gradesStatus["Gr10Rizal-Q3"] || "Draft";
 
   const [tab, setTab] = useState<
-    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "settings" | "calendar" | "announcements" | "messages"
+    "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "settings" | "calendar" | "announcements" | "messages" | "appointments" | "doc-requests"
   >("dashboard");
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -91,6 +101,96 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
   const [emailAlerts, setEmailAlerts] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [activeConvId, setActiveConvId] = useState("t-ana");
+
+  // Appointment booking state
+  const [apptTeacher, setApptTeacher] = useState("");
+  const [apptDate, setApptDate] = useState("");
+  const [apptTime, setApptTime] = useState("");
+  const [apptPurpose, setApptPurpose] = useState("");
+  const [apptParentEmail, setApptParentEmail] = useState("");
+  const [showApptEmailPreview, setShowApptEmailPreview] = useState<string | null>(null);
+
+  const AVAILABLE_TEACHERS = [
+    "Ana R. Soriano",
+    "Carlo D. Reyes",
+    "Liza M. Bautista",
+    "Jose P. Dela Cruz",
+    "Maria L. Santos",
+  ];
+
+  // Document Request state
+  const { documentRequests, addDocumentRequest } = useAppContext();
+  const [docType, setDocType] = useState("");
+  const [docPurpose, setDocPurpose] = useState("");
+  const [docTeacher, setDocTeacher] = useState("Ana R. Soriano");
+
+  function handleDocumentRequest(e: React.FormEvent) {
+    e.preventDefault();
+    if (!docType || !docPurpose) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    addDocumentRequest({
+      id: "doc-" + Date.now(),
+      studentName: "Juan Miguel Santos",
+      section: "Grade 10 - Pilot",
+      documentType: docType,
+      purpose: docPurpose,
+      status: "Submitted",
+      currentStage: 1,
+      submittedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      teacherName: docTeacher
+    });
+    setDocType("");
+    setDocPurpose("");
+    alert("✅ Document request submitted successfully! It is now waiting for Teacher Verification.");
+  }
+
+  function handleBookAppointment(e: React.FormEvent) {
+    e.preventDefault();
+    const emailToUse = apptParentEmail || parentEmail;
+    if (!emailToUse || !apptTeacher || !apptDate || !apptTime || !apptPurpose) {
+      alert("Please fill in all fields including your parent's email.");
+      return;
+    }
+    const dateObj = new Date(apptDate);
+    const formattedDate = dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    const [h, m] = apptTime.split(":");
+    let hr = parseInt(h);
+    const ampm = hr >= 12 ? "PM" : "AM";
+    hr = hr % 12 || 12;
+    const formattedTime = `${hr}:${m} ${ampm}`;
+
+    // Save parent email if not already saved
+    if (!parentEmail && emailToUse) setParentEmail(emailToUse);
+
+    addAppointment({
+      id: "appt-" + Date.now(),
+      studentName: "Juan Miguel Santos",
+      parentEmail: emailToUse,
+      teacherName: apptTeacher,
+      date: formattedDate,
+      time: formattedTime,
+      purpose: apptPurpose,
+      status: "Pending",
+      direction: "parent-to-teacher",
+      createdAt: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+    });
+
+    setApptTeacher("");
+    setApptDate("");
+    setApptTime("");
+    setApptPurpose("");
+    setApptParentEmail("");
+    alert(`✅ Appointment request sent to ${apptTeacher}! A notification email has been simulated to ${emailToUse}.`);
+  }
+
+  function apptStatusColor(s: AppointmentStatus) {
+    return s === "Confirmed" ? C.green : s === "Pending" ? "#f59e0b" : s === "Declined" ? C.red : C.blue;
+  }
+  function apptStatusBg(s: AppointmentStatus) {
+    return s === "Confirmed" ? C.greenBg : s === "Pending" ? "#fef3c7" : s === "Declined" ? C.redBg : C.blueBg;
+  }
   const [aiBuddyOpen, setAiBuddyOpen] = useState(false);
 
   // Core Data
@@ -174,7 +274,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   dashboard: "dashboard", calendar: "calendar", academics: "academics",
                   attendance: "attendance", assignments: "assignments",
                   announcements: "announcements", messages: "messages",
-                  settings: "settings"
+                  appointments: "appointments", "doc-requests": "doc-requests", settings: "settings"
                 };
                 const mappedTab = tabMap[item.id] || item.id;
                 const isActive = tab === mappedTab;
@@ -1183,7 +1283,428 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-{/* 9. SETTINGS PAGE */}
+{/* 8. BOOK APPOINTMENT TAB */}
+          {tab === "appointments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Header */}
+              <div>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Book Parent-Teacher Appointment</h1>
+                <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Request an appointment between your parent/guardian and a teacher.</div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {/* Left: Booking Form */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden" }}>
+                  <div style={{ background: `linear-gradient(135deg, ${C.m800} 0%, ${C.m600} 100%)`, padding: "16px 22px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <CalendarCheck size={18} color="#fff" />
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces', serif" }}>New Appointment Request</div>
+                      <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>Fill in the details below</div>
+                    </div>
+                  </div>
+                  <form onSubmit={handleBookAppointment} style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+                    {/* Parent Email */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Parent / Guardian Email</label>
+                      <input
+                        type="email"
+                        value={apptParentEmail || parentEmail}
+                        onChange={e => setApptParentEmail(e.target.value)}
+                        placeholder="parent@email.com"
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, boxSizing: "border-box", outline: "none" }}
+                      />
+                      {parentEmail && !apptParentEmail && (
+                        <div style={{ marginTop: 4, fontSize: 9.5, color: C.green, display: "flex", alignItems: "center", gap: 4 }}>
+                          <CheckCircle size={10} /> Auto-filled from Settings
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Select Teacher */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Select Teacher</label>
+                      <select
+                        value={apptTeacher}
+                        onChange={e => setApptTeacher(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, background: "#fff", color: C.t1, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
+                      >
+                        <option value="">— Choose a teacher —</option>
+                        {AVAILABLE_TEACHERS.map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Date & Time */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Preferred Date</label>
+                        <input type="date" value={apptDate} onChange={e => setApptDate(e.target.value)}
+                          style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, boxSizing: "border-box", outline: "none" }} />
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Preferred Time</label>
+                        <input type="time" value={apptTime} onChange={e => setApptTime(e.target.value)}
+                          style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, boxSizing: "border-box", outline: "none" }} />
+                      </div>
+                    </div>
+
+                    {/* Purpose */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose / Agenda</label>
+                      <textarea
+                        value={apptPurpose}
+                        onChange={e => setApptPurpose(e.target.value)}
+                        placeholder="Describe the purpose of this appointment..."
+                        rows={3}
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, resize: "vertical", boxSizing: "border-box", outline: "none", fontFamily: "'Inter', sans-serif" }}
+                      />
+                    </div>
+
+                    {/* Submit */}
+                    <button type="submit" style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      background: C.m700, color: "#fff", border: "none",
+                      padding: "11px 20px", borderRadius: 6, cursor: "pointer",
+                      fontSize: 12, fontWeight: 700, width: "100%",
+                      boxShadow: "0 2px 8px rgba(29,78,216,0.25)",
+                      transition: "all 0.15s"
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.m600}
+                      onMouseLeave={e => e.currentTarget.style.background = C.m700}
+                    >
+                      <Send size={14} /> Send Appointment Request
+                    </button>
+
+                    {/* Info banner */}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "10px 14px", background: C.m50, borderRadius: 6, border: `1px solid ${C.borderMed}` }}>
+                      <Mail size={14} color={C.m700} style={{ flexShrink: 0, marginTop: 1 }} />
+                      <div style={{ fontSize: 10.5, color: C.t2, lineHeight: 1.5 }}>
+                        A notification email will be sent to your parent/guardian and the selected teacher. You will be notified once the appointment is confirmed or declined.
+                      </div>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Right: Appointment History */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Clock size={16} color={C.m700} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Appointment History</span>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: C.t3 }}>{appointments.filter(a => a.studentName === "Juan Miguel Santos").length} total</span>
+                  </div>
+
+                  {appointments.filter(a => a.studentName === "Juan Miguel Santos").length === 0 ? (
+                    <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
+                      <CalendarCheck size={32} color={C.t3} style={{ opacity: 0.4, marginBottom: 8 }} />
+                      <div style={{ fontSize: 12, color: C.t3 }}>No appointments yet. Book your first one!</div>
+                    </div>
+                  ) : (
+                    appointments.filter(a => a.studentName === "Juan Miguel Santos").map(appt => (
+                      <div key={appt.id} style={{
+                        background: "#fff", border: `1.5px solid ${C.borderMed}`,
+                        borderRadius: 8, padding: "16px 20px",
+                        display: "flex", flexDirection: "column", gap: 12,
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                        transition: "border-color 0.15s"
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = C.m700}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = C.borderMed}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 34, height: 34, borderRadius: 17, background: appt.direction === "parent-to-teacher" ? C.m50 : C.purpleBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              {appt.direction === "parent-to-teacher" ? <Send size={14} color={C.m700} /> : <Mail size={14} color={C.purple} />}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>{appt.teacherName}</div>
+                              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 1 }}>
+                                {appt.direction === "parent-to-teacher" ? "You → Teacher" : "Teacher → Parent"}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: 9.5, fontWeight: 700, color: apptStatusColor(appt.status),
+                            background: apptStatusBg(appt.status), padding: "3px 10px",
+                            borderRadius: 10, border: `1px solid ${apptStatusColor(appt.status)}20`
+                          }}>{appt.status}</span>
+                        </div>
+
+                        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.t2 }}>
+                            <CalendarCheck size={11} color={C.m700} /> {appt.date}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.t2 }}>
+                            <Clock size={11} color={C.m700} /> {appt.time}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.t2 }}>
+                            <Mail size={11} color={C.m700} /> {appt.parentEmail}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: 11, color: C.t2, padding: "8px 12px", background: C.paper, borderRadius: 4, borderLeft: `3px solid ${C.m700}` }}>
+                          <strong style={{ color: C.t1 }}>Purpose:</strong> {appt.purpose}
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 9.5, color: C.t3 }}>Requested on {appt.createdAt}</span>
+                          <button
+                            onClick={() => setShowApptEmailPreview(appt.id)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 5,
+                              background: "transparent", color: C.m700, border: `1px solid ${C.borderMed}`,
+                              padding: "5px 12px", borderRadius: 4, cursor: "pointer",
+                              fontSize: 10, fontWeight: 600, transition: "all 0.15s"
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = C.m50; e.currentTarget.style.borderColor = C.m700; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = C.borderMed; }}
+                          >
+                            <Eye size={11} /> View Email Preview
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Email Preview Modal for Student Appointments */}
+          {showApptEmailPreview && (() => {
+            const appt = appointments.find(a => a.id === showApptEmailPreview);
+            if (!appt) return null;
+            return (
+              <div onClick={() => setShowApptEmailPreview(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+                <div onClick={e => e.stopPropagation()} style={{
+                  width: 520, background: "#fff", borderRadius: 12,
+                  boxShadow: "0 20px 50px rgba(0,0,0,0.2)", overflow: "hidden",
+                  animation: "popIn 0.25s ease-out"
+                }}>
+                  <style>{`@keyframes popIn { 0% { opacity:0; transform:translateY(16px) scale(0.97); } 100% { opacity:1; transform:translateY(0) scale(1); } }`}</style>
+                  <div style={{ background: C.paper, padding: "16px 24px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Mail size={16} color={C.m700} />
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Email Preview</span>
+                    </div>
+                    <button onClick={() => setShowApptEmailPreview(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.t3, fontSize: 16 }}>✕</button>
+                  </div>
+                  <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>To:</span>
+                      <span style={{ fontSize: 11, color: C.t1 }}>{appt.parentEmail}, {appt.teacherName}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>From:</span>
+                      <span style={{ fontSize: 11, color: C.t1 }}>noreply@calulut-is.edu.ph</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>Subject:</span>
+                      <span style={{ fontSize: 11, color: C.t1, fontWeight: 600 }}>Parent-Teacher Appointment Request — Calulut Integrated School</span>
+                    </div>
+                    <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 4 }}>
+                      <div style={{ fontSize: 12, color: C.t1, lineHeight: 1.7, background: C.paper, padding: "16px 18px", borderRadius: 8, border: `1px solid ${C.border}` }}>
+                        <p style={{ margin: "0 0 10px" }}>Dear {appt.teacherName} & Parent/Guardian,</p>
+                        <p style={{ margin: "0 0 10px" }}>
+                          A <strong>parent-teacher appointment</strong> has been requested by the student <strong>{appt.studentName}</strong>.
+                        </p>
+                        <p style={{ margin: "0 0 6px" }}><strong>Appointment Details:</strong></p>
+                        <ul style={{ margin: "0 0 10px", paddingLeft: 20, fontSize: 11.5 }}>
+                          <li><strong>Teacher:</strong> {appt.teacherName}</li>
+                          <li><strong>Date:</strong> {appt.date}</li>
+                          <li><strong>Time:</strong> {appt.time}</li>
+                          <li><strong>Purpose:</strong> {appt.purpose}</li>
+                          <li><strong>Parent Email:</strong> {appt.parentEmail}</li>
+                        </ul>
+                        <p style={{ margin: "0 0 10px" }}>Please confirm your availability. The teacher will review this request and respond accordingly.</p>
+                        <p style={{ margin: "0", color: C.t3 }}>— Calulut Integrated School</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: C.t3, background: C.amberBg, padding: "4px 12px", borderRadius: 10, border: `1px solid ${C.amber}30` }}>
+                        ⚠ This is a preview — email sending is simulated
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+{/* 9. REQUEST DOCUMENTS TAB */}
+          {tab === "doc-requests" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              {/* Header */}
+              <div>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Request School Documents</h1>
+                <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Request official certificates and records. All requests go through a 2-stage verification process.</div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
+                {/* Request Form */}
+                <div style={{ background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", height: "fit-content" }}>
+                  <div style={{ background: `linear-gradient(135deg, ${C.m800} 0%, ${C.m600} 100%)`, padding: "16px 22px", display: "flex", alignItems: "center", gap: 10 }}>
+                    <FileText size={18} color="#fff" />
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces', serif" }}>New Request</div>
+                      <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>Submit a document request</div>
+                    </div>
+                  </div>
+                  <form onSubmit={handleDocumentRequest} style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Document Type</label>
+                      <select
+                        value={docType}
+                        onChange={e => setDocType(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, background: "#fff", color: C.t1, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
+                      >
+                        <option value="">— Select Document —</option>
+                        <option value="Certificate of Good Moral">Certificate of Good Moral</option>
+                        <option value="Certificate of Enrollment">Certificate of Enrollment</option>
+                        <option value="Form 137 (Permanent Record)">Form 137 (Permanent Record)</option>
+                        <option value="Diploma Copy">Diploma Copy</option>
+                        <option value="Honorable Dismissal">Honorable Dismissal</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Adviser / Teacher</label>
+                      <select
+                        value={docTeacher}
+                        onChange={e => setDocTeacher(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, background: "#fff", color: C.t1, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
+                      >
+                        {AVAILABLE_TEACHERS.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose of Request</label>
+                      <textarea
+                        value={docPurpose}
+                        onChange={e => setDocPurpose(e.target.value)}
+                        placeholder="Why do you need this document?"
+                        rows={3}
+                        style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, resize: "vertical", boxSizing: "border-box", outline: "none", fontFamily: "'Inter', sans-serif" }}
+                      />
+                    </div>
+
+                    <button type="submit" style={{
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                      background: C.m700, color: "#fff", border: "none",
+                      padding: "11px 20px", borderRadius: 6, cursor: "pointer",
+                      fontSize: 12, fontWeight: 700, width: "100%",
+                      boxShadow: "0 2px 8px rgba(29,78,216,0.25)",
+                      transition: "all 0.15s"
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.m600}
+                      onMouseLeave={e => e.currentTarget.style.background = C.m700}
+                    >
+                      <Send size={14} /> Submit Request
+                    </button>
+                  </form>
+                </div>
+
+                {/* Tracking & History */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Activity size={16} color={C.m700} />
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>Request Tracker</span>
+                  </div>
+
+                  {documentRequests.filter(r => r.studentName === "Juan Miguel Santos").length === 0 ? (
+                    <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
+                      <FileText size={32} color={C.t3} style={{ opacity: 0.4, marginBottom: 8 }} />
+                      <div style={{ fontSize: 12, color: C.t3 }}>You haven't requested any documents yet.</div>
+                    </div>
+                  ) : (
+                    documentRequests.filter(r => r.studentName === "Juan Miguel Santos").map(req => (
+                      <div key={req.id} style={{
+                        background: "#fff", border: `1.5px solid ${req.status === "Completed" ? C.green : req.status.includes("Rejected") ? C.red : C.m700}`, 
+                        borderRadius: 8, padding: "20px 24px",
+                        display: "flex", flexDirection: "column", gap: 20,
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+                      }}>
+                        {/* Status Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{req.documentType}</div>
+                            <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Requested on {req.submittedDate}</div>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 12,
+                              color: req.status === "Completed" || req.status.includes("Approved") || req.status === "Ready for Pickup" ? C.green : req.status.includes("Rejected") ? C.red : "#f59e0b",
+                              background: req.status === "Completed" || req.status.includes("Approved") || req.status === "Ready for Pickup" ? C.greenBg : req.status.includes("Rejected") ? C.redBg : "#fef3c7",
+                              border: `1px solid ${req.status === "Completed" || req.status.includes("Approved") || req.status === "Ready for Pickup" ? C.green : req.status.includes("Rejected") ? C.red : "#f59e0b"}40`
+                            }}>{req.status}</span>
+                            {req.readyDate && (
+                              <div style={{ fontSize: 10, fontWeight: 600, color: C.m700 }}>Pickup: {req.readyDate}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div style={{ padding: "16px 20px", background: C.paper, borderRadius: 8, border: `1px solid ${C.borderMed}`, position: "relative" }}>
+                          {req.status.includes("Rejected") ? (
+                            <div style={{ textAlign: "center", color: C.red, fontSize: 12, fontWeight: 600 }}>
+                              <XCircle size={24} style={{ marginBottom: 8 }} />
+                              <div>This request was rejected.</div>
+                              <div style={{ fontSize: 11, color: C.t2, fontWeight: 400, marginTop: 4 }}>
+                                Reason: {req.teacherRemarks || req.principalRemarks || "No remarks provided."}
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                              {[
+                                { stage: 1, label: "Submitted", desc: req.submittedDate },
+                                { stage: 2, label: "Teacher Verified", desc: req.teacherApprovedDate || (req.currentStage === 1 ? "Pending" : "—") },
+                                { stage: 3, label: "Principal Approved", desc: req.principalApprovedDate || (req.currentStage === 2 ? "Pending" : "—") },
+                                { stage: 4, label: "Ready for Pickup", desc: req.readyDate || (req.currentStage === 3 ? "Pending" : "—") },
+                              ].map((step, i) => {
+                                const isDone = req.currentStage > step.stage || (req.currentStage === 4 && step.stage === 4);
+                                const isActive = req.currentStage === step.stage;
+                                return (
+                                  <React.Fragment key={i}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, zIndex: 2 }}>
+                                      <div style={{
+                                        width: 28, height: 28, borderRadius: 14,
+                                        background: isDone ? C.green : isActive ? C.m700 : "#fff",
+                                        border: `2px solid ${isDone ? C.green : isActive ? C.m700 : C.borderMed}`,
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        boxShadow: isActive ? "0 0 0 4px rgba(29,78,216,0.15)" : "none",
+                                        transition: "all 0.3s"
+                                      }}>
+                                        {isDone ? <CheckCircle size={14} color="#fff" /> : isActive ? <Clock size={14} color="#fff" /> : <div style={{ width: 8, height: 8, borderRadius: 4, background: C.borderMed }} />}
+                                      </div>
+                                      <span style={{ fontSize: 9.5, fontWeight: isActive || isDone ? 700 : 500, color: isDone ? C.green : isActive ? C.m700 : C.t3, textAlign: "center" }}>{step.label}</span>
+                                      <span style={{ fontSize: 8.5, color: C.t3 }}>{step.desc}</span>
+                                    </div>
+                                    {i < 3 && (
+                                      <div style={{ flex: 1, height: 3, background: req.currentStage > i + 1 ? C.green : C.border, marginTop: -26, zIndex: 1 }} />
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ fontSize: 11, color: C.t2 }}>
+                          <strong>Purpose:</strong> {req.purpose}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+{/* 10. SETTINGS PAGE */}
           {tab === "settings" && (
             <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 20 }}>
               {/* Profile card change */}
@@ -1200,6 +1721,24 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
 
               {/* Security & Notification settings */}
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Parent/Guardian Email */}
+                <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "18px 22px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                    <Mail size={14} color={C.m700} />
+                    Parent / Guardian Email
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.t3, marginBottom: 10, lineHeight: 1.5 }}>This email will be used for appointment booking notifications and parent-teacher communication.</div>
+                  <form onSubmit={e => { e.preventDefault(); alert("Parent email saved successfully!"); }} style={{ display: "flex", gap: 10 }}>
+                    <input type="email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} placeholder="parent@email.com" style={{ flex: 1, padding: "8px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 4, boxSizing: "border-box", outline: "none" }} />
+                    <button type="submit" style={{ background: C.m700, color: "#fff", border: "none", padding: "8px 16px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>Save Email</button>
+                  </form>
+                  {parentEmail && (
+                    <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, fontSize: 10, color: C.green }}>
+                      <CheckCircle size={11} /> Saved: {parentEmail}
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "18px 22px" }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 12 }}>Change Account Password</div>
                   <form onSubmit={e => { e.preventDefault(); alert("Password updated successfully!"); setOldPass(""); setNewPass(""); }}>

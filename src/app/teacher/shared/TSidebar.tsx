@@ -3,7 +3,7 @@ import { TScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Calendar, Users, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert
+  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert, CalendarCheck, Scan
 } from 'lucide-react';
 
 const T_NAV_GROUPS = [
@@ -15,10 +15,13 @@ const T_NAV_GROUPS = [
     { id:"classroom",          label:"Classroom Hub",     icon:Users },
     { id:"grades-direct",      label:"Grades",            icon:FileText },
     { id:"attendance-direct",  label:"Attendance",        icon:Users },
+    { id:"appointments",       label:"Appointments",      icon:CalendarCheck },
   ]},
   { category: "Records", items: [
     { id:"clinic-visits",      label:"Clinic Visits",     icon:Stethoscope },
     { id:"behavior",           label:"Behavioral Reports", icon:ShieldAlert },
+    { id:"doc-requests",       label:"Document Requests", icon:FileText },
+    { id:"scanner",            label:"Document Scanner",  icon:Scan },
     { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
   { category: "Tools & Growth", items: [

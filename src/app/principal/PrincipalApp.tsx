@@ -12,10 +12,12 @@ import { PTeachers } from './teachers/PTeachers';
 import { PInventory } from './inventory/PInventory';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
-import { BehavioralReports } from '../shared/reports/BehavioralReports';
+import { PBehaviorScreen } from './student-services/PBehaviorScreen';
+import { CamScannerScreen } from '../shared/components/CamScannerScreen';
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
 
 export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<PScreen>("p-dashboard");
@@ -26,11 +28,11 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
-    "p-inventory": "Inventory",
+    "p-inventory": "Inventory",          "p-behavior":  "Behavioral Reports",
+    "p-reports":  "Reports",             "p-templates": "Template Hub",
     "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
-    "p-behavior": "Behavioral Reports",
-    "p-leaves":   "Leave Management",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
+    "p-scanner": "Document Scanner",
   };
 
   if (screen === "p-faculty-attendance") {
@@ -65,9 +67,13 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
           {screen==="p-inventory"  && <PInventory   />}
+          {screen==="p-reports"    && <PReports     />}
+          {screen==="p-templates"  && <TemplateHubScreen role="principal" />}
           {screen==="p-events"     && <PEventsScreen />}
           {screen==="p-behavior"   && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
+          {screen==="p-scanner"    && <CamScannerScreen />}
           {screen==="p-leaves"     && <PLeaveManagement />}
+          {screen==="p-doc-requests" && <PDocRequestsScreen />}
           {(screen==="p-settings"||screen==="p-help") && (
             <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>

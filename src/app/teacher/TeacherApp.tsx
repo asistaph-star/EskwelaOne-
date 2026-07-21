@@ -11,7 +11,6 @@ import { ClassroomHub } from "./classroom/ClassroomHub";
 import { GradebookFullScreen } from "./grades/GradebookFullScreen";
 import { QuarterlySummaryScreen } from "./grades/QuarterlySummaryScreen";
 import { GradesDirectScreen } from "./grades/GradesDirectScreen";
-import { AttendanceHub } from "./attendance/AttendanceHub";
 import { AttendanceDirectScreen } from "./attendance/AttendanceDirectScreen";
 import { ClinicVisitsScreen } from "./clinic/ClinicVisitsScreen";
 import { AIToolsScreen } from "./ai-tools/AIToolsScreen";
@@ -25,6 +24,9 @@ import { StubScreen } from "../shared/components/StubScreen";
 import { StudentDetailOverlay } from "../shared/components/StudentDetailOverlay";
 import { NotificationDropdown } from "../shared/components/NotificationDropdown";
 import { AIAssistantWidget } from "../shared/components/AIAssistantWidget";
+import { AppointmentsScreen } from "./appointments/AppointmentsScreen";
+import { DocRequestsScreen } from "./documents/DocRequestsScreen";
+import { CamScannerScreen } from "../shared/components/CamScannerScreen";
 
 export function TeacherApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<TScreen>("dashboard");
@@ -55,6 +57,9 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     tools: { title: "System Utilities", sub: "Calculators & formatting tools" },
     help: { title: "Help & Feedback", sub: "Contact IT operations support" },
     settings: { title: "My Profile", sub: "Personal Data Sheet & Tracking" },
+    appointments: { title: "Appointments", sub: "Parent-Teacher Meeting Requests" },
+    "doc-requests": { title: "Document Requests", sub: "Student Certificate Approvals" },
+    "scanner": { title: "Document Scanner", sub: "Scan and digitize documents" },
   };
 
   const bar = topbars[screen] || { title: "Teacher Portal" };
@@ -109,7 +114,6 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
               </div>
 
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                {/* Teacher name + rank */}
                 <div style={{ textAlign:"right" }}>
                   <div style={{ fontSize:13, fontWeight:700, color:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>Ms. Ana R. Soriano</div>
                   <div style={{ marginTop:3 }}>
@@ -145,12 +149,15 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           {screen === "attendance-direct" && <AttendanceDirectScreen />}
           {screen === "clinic-visits" && <ClinicVisitsScreen />}
           {screen === "behavior" && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
+          {screen === "scanner" && <CamScannerScreen />}
           {screen === "ai-tools" && <AIToolsScreen />}
           {screen === "pro-dev" && <ProDevScreen />}
           {screen === "calendar" && <CalendarScreen />}
           {screen === "templates" && <TemplateHubScreen />}
           {screen === "leave-requests" && <TLeaveScreen />}
           {screen === "settings" && <TProfileScreen />}
+          {screen === "appointments" && <AppointmentsScreen />}
+          {screen === "doc-requests" && <DocRequestsScreen />}
           {(screen === "tutorials" || screen === "tools" || screen === "help") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />
           )}

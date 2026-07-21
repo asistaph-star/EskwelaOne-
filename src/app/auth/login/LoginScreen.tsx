@@ -98,18 +98,21 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
           {/* Role selector */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Portal Role</label>
-            <div style={{ display: "flex", background: C.m50, padding: 3, borderRadius: 8, gap: 2, border: `1px solid ${C.borderMed}` }}>
-              {(["Student", "Teacher", "Admin", "ITAdmin", "Nurse"] as Role[]).map((r) => {
-                const active = role === r;
-                let displayRole = r as string;
-                if (r === "Admin") displayRole = "Super Admin";
-                if (r === "ITAdmin") displayRole = "Admin";
-                return (
-                  <button key={r} type="button" onClick={() => setRole(r)} style={{ flex: 1, padding: "6px 0", fontSize: 11, fontWeight: active ? 700 : 500, color: active ? "#fff" : C.t2, background: active ? C.m700 : "transparent", border: "none", borderRadius: 6, cursor: "pointer", transition: "all 0.15s" }}>
-                    {displayRole}
-                  </button>
-                );
-              })}
+            <div style={{ position: "relative" }}>
+              <select 
+                value={role} 
+                onChange={e => setRole(e.target.value as Role)} 
+                style={{ width: "100%", padding: "10px 12px", fontSize: 12.5, border: `1px solid ${C.borderMed}`, borderRadius: 6, background: C.m50, outline: "none", cursor: "pointer", color: C.t1, appearance: "none", fontFamily: "'Inter',sans-serif" }}
+              >
+                <option value="Student">Student Portal</option>
+                <option value="Teacher">Teacher Portal</option>
+                <option value="Guidance">Guidance Counselor</option>
+                <option value="Registrar">Registrar Office</option>
+                <option value="Nurse">School Nurse</option>
+                <option value="ITAdmin">Admin (IT)</option>
+                <option value="Admin">Principal</option>
+              </select>
+              <ChevronDown size={14} color={C.t3} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             </div>
           </div>
 
