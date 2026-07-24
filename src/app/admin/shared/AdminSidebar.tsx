@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, Package } from "lucide-react";
+import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, Package, User } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
@@ -87,15 +87,8 @@ export function AdminSidebar({ activeScreen, onNavigate, onLogout }: AdminSideba
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <Settings size={13} />
-              <span style={{ fontSize: 11 }}>Settings</span>
-            </button>
-            <button onClick={() => setShowMenu(false)}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <HelpCircle size={13} />
-              <span style={{ fontSize: 11 }}>Help & Feedback</span>
+              <User size={13} />
+              <span style={{ fontSize: 11 }}>My Profile</span>
             </button>
             <button onClick={onLogout}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}

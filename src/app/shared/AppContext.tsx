@@ -74,6 +74,7 @@ type AppContextType = {
 
   behaviorLogs: BehaviorLog[];
   addBehaviorLog: (log: BehaviorLog) => void;
+  updateBehaviorLog: (id: string, updates: Partial<BehaviorLog>) => void;
 
   // Appointments
   parentEmail: string;
@@ -195,6 +196,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBehaviorLogs(prev => [log, ...prev]);
   };
 
+  const updateBehaviorLog = (id: string, updates: Partial<BehaviorLog>) => {
+    setBehaviorLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+  };
+
   const addAppointment = (appt: Appointment) => {
     setAppointments(prev => [appt, ...prev]);
   };
@@ -220,7 +225,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages, addMessage,
       gateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,
-      behaviorLogs, addBehaviorLog,
+      behaviorLogs, addBehaviorLog, updateBehaviorLog,
       parentEmail, setParentEmail,
       appointments, addAppointment, updateAppointment,
       documentRequests, addDocumentRequest, updateDocumentRequest

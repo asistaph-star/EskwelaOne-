@@ -128,13 +128,6 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
               {!collapsed && <span style={{ fontSize: 11 }}>My Profile</span>}
             </button>
 
-            <button onClick={() => { onNav('help' as TScreen); setShowMenu(false); }}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <HelpCircle size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Help & Feedback</span>}
-            </button>
             <button onClick={onLogout}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}

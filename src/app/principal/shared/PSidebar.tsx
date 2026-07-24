@@ -3,7 +3,7 @@ import { PScreen, Role } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, Package,
-  FileText, Calendar, Settings, HelpCircle, LogOut, ChevronDown, ShieldAlert, ClipboardList, Scan
+  FileText, Calendar, Settings, HelpCircle, LogOut, ChevronDown, ShieldAlert, ClipboardList, Scan, User
 } from 'lucide-react';
 
 const P_NAV_GROUPS = [
@@ -120,20 +120,14 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
 
         {showMenu && (
           <div style={{ position: "absolute", bottom: "100%", left: 8, right: 8, marginBottom: 4, display: "flex", flexDirection: "column", gap: 4, padding: "6px", background: C.m800, borderRadius: 6, border: `1px solid ${C.borderHeavy}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.3)", zIndex: 10 }}>
-            <button onClick={() => { onNav('p-settings'); setShowMenu(false); }}
+            <button onClick={() => { onNav('p-settings' as PScreen); setShowMenu(false); }}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <Settings size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Settings</span>}
+              <User size={13} />
+              {!collapsed && <span style={{ fontSize: 11 }}>My Profile</span>}
             </button>
-            <button onClick={() => { onNav('p-help'); setShowMenu(false); }}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <HelpCircle size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Help & Feedback</span>}
-            </button>
+
             <button onClick={onLogout}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}

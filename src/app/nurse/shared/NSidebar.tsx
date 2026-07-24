@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import {
   LayoutDashboard, Calendar, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, Settings, MessageSquare, ChevronDown, LogOut
+  Wrench, Sparkles, GraduationCap, Settings, MessageSquare, ChevronDown, LogOut, User
 } from 'lucide-react';
 
 export type NScreen =
@@ -116,15 +116,16 @@ export function NSidebar({ active, onNav, onLogout, collapsed=false }: {
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <Settings size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Settings</span>}
+              <User size={13} />
+              {!collapsed && <span style={{ fontSize: 11 }}>My Profile</span>}
             </button>
-            <button onClick={() => { onLogout(); setShowMenu(false); }}
+
+            <button onClick={onLogout}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              <LogOut size={13} />
-              {!collapsed && <span style={{ fontSize: 11 }}>Sign Out</span>}
+              <LogOut size={13} color="#f87171" />
+              {!collapsed && <span style={{ fontSize: 11, color: "#f87171" }}>Logout</span>}
             </button>
           </div>
         )}
