@@ -1,5 +1,4 @@
-import React from "react";
-import { UserPlus, Package, GraduationCap } from "lucide-react";
+import { UserPlus, Package, Users } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
@@ -58,7 +57,7 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
         </button>
 
         <button 
-          onClick={() => onNavigate("student-create")}
+          onClick={() => onNavigate("accounts")}
           style={{ 
             background: "#fff", padding: "32px 24px", borderRadius: 16, border: `1px solid ${C.borderLight}`, 
             display: "flex", flexDirection: "column", alignItems: "center", gap: 16, cursor: "pointer",
@@ -67,12 +66,12 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
           onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.borderColor = C.m700; e.currentTarget.style.boxShadow = "0 12px 24px rgba(139, 30, 30, 0.1)"; }}
           onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.borderColor = C.borderLight; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.03)"; }}
         >
-          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${C.green}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <GraduationCap size={32} color={C.green} />
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: `${C.red}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Users size={32} color={C.red} />
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Student Account</div>
-            <div style={{ fontSize: 12, color: C.t3 }}>Register new students with parent contact info and generate system login credentials.</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Account Management</div>
+            <div style={{ fontSize: 12, color: C.t3 }}>Manage existing system accounts. View, reset passwords, or delete users from the system.</div>
           </div>
         </button>
 

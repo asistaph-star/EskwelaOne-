@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { AdminSidebar } from "./shared/AdminSidebar";
 import { AdminDashboard } from "./dashboard/AdminDashboard";
 import { CreateTeacher } from "./operations/CreateTeacher";
-import { CreateStudent } from "./operations/CreateStudent";
 import { InventoryManagement } from "./operations/InventoryManagement";
+import { AccountManagement } from "./operations/AccountManagement";
 import { AttendanceSummary } from "./reports/AttendanceSummary";
 import { PHeaderBand } from "../principal/shared/PHeaderBand";
 import { C } from "../shared/constants/tokens";
 
-export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "student-create" | "inventory";
+export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "inventory" | "accounts";
 
 export function AdminApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<AdminScreen>("dashboard");
@@ -18,8 +18,8 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
       case "dashboard": return "System Overview";
       case "attendance": return "Attendance Summaries";
       case "teacher-create": return "Provision Account";
-      case "student-create": return "Student Account Creator";
       case "inventory": return "Inventory Management";
+      case "accounts": return "Account Management";
       default: return "";
     }
   };
@@ -36,8 +36,8 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
           
           {screen === "dashboard" && <AdminDashboard onNavigate={setScreen} />}
           {screen === "teacher-create" && <CreateTeacher />}
-          {screen === "student-create" && <CreateStudent />}
           {screen === "inventory" && <InventoryManagement />}
+          {screen === "accounts" && <AccountManagement />}
         </main>
       </div>
     </div>

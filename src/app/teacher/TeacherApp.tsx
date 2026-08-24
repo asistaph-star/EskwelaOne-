@@ -27,6 +27,7 @@ import { AIAssistantWidget } from "../shared/components/AIAssistantWidget";
 import { AppointmentsScreen } from "./appointments/AppointmentsScreen";
 import { DocRequestsScreen } from "./documents/DocRequestsScreen";
 import { CamScannerScreen } from "../shared/components/CamScannerScreen";
+import { CreateStudent } from "./classroom/CreateStudent";
 
 export function TeacherApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<TScreen>("dashboard");
@@ -60,6 +61,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     appointments: { title: "Appointments", sub: "Parent-Teacher Meeting Requests" },
     "doc-requests": { title: "Document Requests", sub: "Student Certificate Approvals" },
     "scanner": { title: "Document Scanner", sub: "Scan and digitize documents" },
+    "student-create": { title: "Student Account Creator", sub: "Register a new student and provision system access" },
   };
 
   const bar = topbars[screen] || { title: "Teacher Portal" };
@@ -158,6 +160,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           {screen === "settings" && <TProfileScreen />}
           {screen === "appointments" && <AppointmentsScreen />}
           {screen === "doc-requests" && <DocRequestsScreen />}
+          {screen === "student-create" && <CreateStudent />}
           {(screen === "tutorials" || screen === "tools" || screen === "help") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />
           )}

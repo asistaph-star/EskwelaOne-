@@ -4,7 +4,7 @@ export type TScreen =
   | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
   | "grades-direct" | "attendance-direct" | "clinic-visits"
   | "ai-tools" | "pro-dev" | "appointments" | "doc-requests"
-  | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior" | "scanner";
+  | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior" | "scanner" | "student-create";
 
 export type PScreen =
   | "p-dashboard" | "p-monitoring"

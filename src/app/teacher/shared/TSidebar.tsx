@@ -13,6 +13,7 @@ const T_NAV_GROUPS = [
     ]},
   { category: "Teaching", items: [
     { id:"classroom",          label:"Classroom Hub",     icon:Users },
+    { id:"student-create",     label:"Add New Student",   icon:GraduationCap },
     { id:"grades-direct",      label:"Grades",            icon:FileText },
     { id:"attendance-direct",  label:"Attendance",        icon:Users },
     { id:"appointments",       label:"Appointments",      icon:CalendarCheck },
