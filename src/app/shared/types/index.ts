@@ -17,7 +17,7 @@ export type GScreen =
   | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";
 
 export type RScreen =
-  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-settings" | "r-help";
+  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-deficiency" | "r-settings" | "r-help";
 
 export interface RCStudent {
   surname: string;

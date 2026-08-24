@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RScreen } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { LayoutDashboard, Users, FileText, FolderOpen, Settings, HelpCircle, LogOut, ChevronDown, User } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FolderOpen, Settings, HelpCircle, LogOut, ChevronDown, User, AlertTriangle } from 'lucide-react';
 
 const R_NAV_GROUPS = [
   { category: "Overview", items: [
@@ -13,6 +13,7 @@ const R_NAV_GROUPS = [
   { category: "Records Management", items: [
     { id: "r-doc-requests" as RScreen, label: "Document Requests", icon: FileText },
     { id: "r-records" as RScreen, label: "Academic Records (SF10)", icon: FolderOpen },
+    { id: "r-deficiency" as RScreen, label: "Document Deficiency", icon: AlertTriangle },
   ]},
 ];
 
