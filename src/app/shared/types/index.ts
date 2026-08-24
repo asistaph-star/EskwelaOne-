@@ -14,7 +14,7 @@ export type PScreen =
   | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner";
 
 export type GScreen =
-  | "g-dashboard" | "g-behavior" | "g-counseling" | "g-settings" | "g-help";
+  | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";
 
 export type RScreen =
   | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-settings" | "r-help";

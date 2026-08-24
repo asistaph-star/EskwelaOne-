@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { GScreen } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { LayoutDashboard, Users, ShieldAlert, HeartHandshake, Settings, HelpCircle, LogOut, ChevronDown, User } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldAlert, HeartHandshake, Settings, HelpCircle, LogOut, ChevronDown, User, FileSearch } from 'lucide-react';
 
 const G_NAV_GROUPS = [
   { category: "Overview", items: [
     { id: "g-dashboard" as GScreen, label: "Dashboard Overview", icon: LayoutDashboard },
   ]},
   { category: "Student Services", items: [
+    { id: "g-records" as GScreen, label: "Student Records", icon: FileSearch },
     { id: "g-behavior" as GScreen, label: "Behavioral Reports", icon: ShieldAlert },
     { id: "g-counseling" as GScreen, label: "Counseling Sessions", icon: HeartHandshake },
   ]},

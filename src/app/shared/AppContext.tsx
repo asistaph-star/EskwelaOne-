@@ -24,6 +24,31 @@ export type Appointment = {
   direction: AppointmentDirection;
   createdAt: string;
 };
+export type CounselingLogType = "Counseling Session" | "Disciplinary Incident" | "Academic Review" | "Attendance Check-in" | "Parent Conference";
+export type CounselingLog = {
+  id: string;
+  studentId: string;
+  date: string;
+  type: CounselingLogType;
+  summary: string;
+  actionTaken: string;
+  counselor: string;
+};
+export type StudentRecordStatus = "Active monitoring" | "Case resolved" | "Needs follow-up" | "New case";
+export type StudentRecord = {
+  id: string;
+  fullName: string;
+  lrn: string;
+  grade: string;
+  section: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  primaryConcerns: string[];
+  effectiveStrategies: string[];
+  currentStatus: StudentRecordStatus;
+  aiSummary: string;
+};
 export type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Principal Rejected" | "Ready for Pickup" | "Completed";
 export type DocumentRequest = {
   id: string;
@@ -83,6 +108,11 @@ type AppContextType = {
   addAppointment: (appt: Appointment) => void;
   updateAppointment: (id: string, status: AppointmentStatus) => void;
 
+  // Student Records (Guidance)
+  studentRecords: StudentRecord[];
+  counselingLogs: CounselingLog[];
+  addCounselingLog: (log: CounselingLog) => void;
+
   // Document Requests
   documentRequests: DocumentRequest[];
   addDocumentRequest: (req: DocumentRequest) => void;
@@ -137,6 +167,76 @@ const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
   { id: "doc-2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
   { id: "doc-3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
 ];
+
+const SEED_STUDENT_RECORDS: StudentRecord[] = [
+  {
+    id: "sr-1",
+    fullName: "Juan Dela Cruz",
+    lrn: "200014",
+    grade: "Grade 10",
+    section: "Rizal",
+    parentName: "Mrs. Maria Dela Cruz",
+    parentEmail: "maria.delacruz@email.com",
+    parentPhone: "0917-834-5621",
+    primaryConcerns: ["Classroom misconduct", "Disruptive behavior during group activities", "Mobile phone policy violations"],
+    effectiveStrategies: ["Bi-weekly progress check-ins", "Parent-teacher conference", "Assigned peer mentor"],
+    currentStatus: "Active monitoring",
+    aiSummary: "Juan Dela Cruz has been documented across five guidance interactions since June 2026, primarily involving classroom misconduct and disruptive behavior. A pattern of recurring incidents during group activities has been identified, with escalation noted in early July. Following parental notification and the introduction of bi-weekly progress check-ins, observable improvement in classroom conduct has been reported by the advising teacher. The case remains under active monitoring with the next scheduled review on August 30, 2026."
+  },
+  {
+    id: "sr-2",
+    fullName: "Hannah Grace Espino",
+    lrn: "200005",
+    grade: "Grade 8",
+    section: "Rizal",
+    parentName: "Mr. Ricardo Espino",
+    parentEmail: "ricardo.espino@email.com",
+    parentPhone: "0926-451-7803",
+    primaryConcerns: ["Academic underperformance", "Frequent unexcused absences", "Exam-related anxiety"],
+    effectiveStrategies: ["Weekly academic counseling", "Coordinated study plan with adviser", "Referral to peer tutoring program"],
+    currentStatus: "Needs follow-up",
+    aiSummary: "Hannah Grace Espino has been the subject of four guidance office interactions since June 2026, primarily concerning declining academic performance and chronic absenteeism. Records indicate a pattern of unexcused absences correlating with quarterly examination periods, suggesting possible exam-related anxiety. A coordinated academic support plan involving weekly counseling, peer tutoring, and close collaboration with her class adviser was initiated in July 2026. While attendance has shown marginal improvement, the student's quarterly average remains below the passing threshold, and continued follow-up is strongly recommended."
+  },
+  {
+    id: "sr-3",
+    fullName: "Ramon Jr. Bondoc",
+    lrn: "200002",
+    grade: "Grade 8",
+    section: "Rizal",
+    parentName: "Mr. Ramon Sr. Bondoc",
+    parentEmail: "ramon.bondoc@email.com",
+    parentPhone: "0935-612-9487",
+    primaryConcerns: ["Peer conflict", "Reported bullying behavior", "Emotional regulation difficulties"],
+    effectiveStrategies: ["Individual counseling sessions", "Restorative justice circle", "Parent involvement and home-school agreement"],
+    currentStatus: "Active monitoring",
+    aiSummary: "Ramon Jr. Bondoc has been involved in six guidance-related interactions since May 2026, centered on peer conflict and reported bullying behavior targeting younger students. Documented incidents reveal a pattern of verbal aggression during unstructured periods such as recess and lunch. A restorative justice circle conducted in July 2026 with affected parties resulted in a formal agreement, and individual counseling sessions focused on emotional regulation were initiated. Parental engagement has been active, and while no new incidents have been reported in the past three weeks, the case remains under active monitoring."
+  }
+];
+
+const SEED_COUNSELING_LOGS: CounselingLog[] = [
+  // Juan Dela Cruz logs
+  { id: "cl-1", studentId: "sr-1", date: "2026-08-20", type: "Counseling Session", summary: "Bi-weekly progress check-in. Juan reported feeling more focused in class after being assigned a peer mentor. Teacher confirmed reduced disruptions in the past two weeks.", actionTaken: "Continued current intervention plan. Scheduled next check-in for September 3.", counselor: "Counselor Perez" },
+  { id: "cl-2", studentId: "sr-1", date: "2026-08-06", type: "Counseling Session", summary: "Follow-up session after parent conference. Discussed behavioral expectations and strategies for self-regulation during group activities.", actionTaken: "Assigned peer mentor from Grade 10 Honor Society. Provided self-monitoring checklist.", counselor: "Counselor Perez" },
+  { id: "cl-3", studentId: "sr-1", date: "2026-07-28", type: "Parent Conference", summary: "Conference with Mrs. Dela Cruz regarding recurring behavioral incidents. Parent expressed concern and willingness to collaborate on an intervention plan.", actionTaken: "Established home-school behavioral agreement. Parent will monitor homework completion and screen time.", counselor: "Counselor Perez" },
+  { id: "cl-4", studentId: "sr-1", date: "2026-07-15", type: "Disciplinary Incident", summary: "Reported by adviser for consistently disrupting group activities in Filipino 10 class. Third documented incident in two weeks.", actionTaken: "Formal written warning issued. Parent notification sent via official letter. Scheduled parent conference.", counselor: "Counselor Perez" },
+  { id: "cl-5", studentId: "sr-1", date: "2026-07-08", type: "Disciplinary Incident", summary: "Caught using mobile phone during lecture despite prior verbal warnings. Device was confiscated per school policy.", actionTaken: "Phone returned to parent after school. Student signed mobile phone policy acknowledgment form.", counselor: "Counselor Perez" },
+  { id: "cl-6", studentId: "sr-1", date: "2026-06-24", type: "Academic Review", summary: "Initial guidance check-in for Q1. Student's grades are satisfactory but adviser flagged emerging behavioral concerns in class.", actionTaken: "Noted for monitoring. Advised student on classroom expectations and self-discipline.", counselor: "Counselor Perez" },
+
+  // Hannah Grace Espino logs
+  { id: "cl-7", studentId: "sr-2", date: "2026-08-14", type: "Academic Review", summary: "Mid-quarter academic review. Hannah's current average is 68.5%, below the 75% passing threshold. She is at risk of failing Mathematics and Science.", actionTaken: "Coordinated with subject teachers for remedial worksheets. Enrolled in after-school peer tutoring (Tuesdays/Thursdays).", counselor: "Counselor Perez" },
+  { id: "cl-8", studentId: "sr-2", date: "2026-07-30", type: "Counseling Session", summary: "Hannah disclosed feeling overwhelmed before exams and frequently avoids school on test days. She described symptoms consistent with test anxiety.", actionTaken: "Provided coping strategy handout. Recommended relaxation techniques. Referred to weekly counseling.", counselor: "Counselor Perez" },
+  { id: "cl-9", studentId: "sr-2", date: "2026-07-10", type: "Attendance Check-in", summary: "Called in for attendance review. Hannah accumulated 5 unexcused absences in June, primarily on Mondays and Fridays.", actionTaken: "Parent contacted via phone. Attendance contract established with student and parent.", counselor: "Counselor Perez" },
+  { id: "cl-10", studentId: "sr-2", date: "2026-06-20", type: "Academic Review", summary: "Quarterly baseline academic check. Hannah's Grade 7 records show declining performance starting Q3 of previous year. Current trajectory suggests continued risk.", actionTaken: "Flagged for academic support. Coordinated with class adviser for study plan.", counselor: "Counselor Perez" },
+
+  // Ramon Jr. Bondoc logs
+  { id: "cl-11", studentId: "sr-3", date: "2026-08-12", type: "Counseling Session", summary: "Bi-weekly individual counseling session. Ramon demonstrated improved awareness of his emotional triggers. No new incidents reported in the past three weeks.", actionTaken: "Positive reinforcement provided. Continued emotional regulation exercises. Next session scheduled August 26.", counselor: "Counselor Perez" },
+  { id: "cl-12", studentId: "sr-3", date: "2026-07-29", type: "Counseling Session", summary: "Follow-up after restorative justice circle. Ramon expressed remorse and committed to the behavior agreement. Discussed healthy conflict resolution strategies.", actionTaken: "Began structured emotional regulation program (4 sessions). Provided journal for self-reflection.", counselor: "Counselor Perez" },
+  { id: "cl-13", studentId: "sr-3", date: "2026-07-22", type: "Disciplinary Incident", summary: "Restorative justice circle conducted with Ramon, two affected Grade 7 students, and their class advisers. All parties shared their perspectives.", actionTaken: "Formal behavioral agreement signed by all parties. Ramon committed to zero verbal aggression policy. Follow-up in one week.", counselor: "Counselor Perez" },
+  { id: "cl-14", studentId: "sr-3", date: "2026-07-08", type: "Disciplinary Incident", summary: "Second reported incident of verbal aggression toward Grade 7 students during lunch break. Witnesses confirmed intimidation behavior.", actionTaken: "Parent (Mr. Bondoc) called in for conference. Temporary lunch supervision assigned. Recommended individual counseling.", counselor: "Counselor Perez" },
+  { id: "cl-15", studentId: "sr-3", date: "2026-06-18", type: "Disciplinary Incident", summary: "Reported by recess duty teacher for verbal bullying of a Grade 7 student. Incident involved name-calling and exclusion from a group activity.", actionTaken: "Verbal warning issued. Student counseled on anti-bullying policy. Incident documented.", counselor: "Counselor Perez" },
+  { id: "cl-16", studentId: "sr-3", date: "2026-05-28", type: "Parent Conference", summary: "End-of-year parent conference for Grade 7. Mr. Bondoc raised concerns about Ramon's social difficulties and aggressive tendencies at home.", actionTaken: "Recommended continued monitoring into Grade 8. Noted for incoming guidance caseload.", counselor: "Counselor Reyes" }
+];
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -151,6 +251,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [parentEmail, setParentEmail] = useState<string>("maria.santos@email.com");
   const [appointments, setAppointments] = useState<Appointment[]>(SEED_APPOINTMENTS);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>(SEED_DOCUMENT_REQUESTS);
+  const [studentRecords] = useState<StudentRecord[]>(SEED_STUDENT_RECORDS);
+  const [counselingLogs, setCounselingLogs] = useState<CounselingLog[]>(SEED_COUNSELING_LOGS);
 
   const setGradeStatus = (key: string, status: GradeStatus) => {
     setGradesStatus(prev => ({ ...prev, [key]: status }));
@@ -216,6 +318,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
   };
 
+  const addCounselingLog = (log: CounselingLog) => {
+    setCounselingLogs(prev => [log, ...prev]);
+  };
+
   return (
     <AppContext.Provider value={{
       gradesStatus, setGradeStatus,
@@ -228,7 +334,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       behaviorLogs, addBehaviorLog, updateBehaviorLog,
       parentEmail, setParentEmail,
       appointments, addAppointment, updateAppointment,
-      documentRequests, addDocumentRequest, updateDocumentRequest
+      documentRequests, addDocumentRequest, updateDocumentRequest,
+      studentRecords, counselingLogs, addCounselingLog
     }}>
       {children}
     </AppContext.Provider>

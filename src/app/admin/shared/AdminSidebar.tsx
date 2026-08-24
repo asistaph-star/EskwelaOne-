@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, Package, User } from "lucide-react";
+import { LayoutDashboard, Search, CalendarDays, Settings, HelpCircle, LogOut, ChevronDown, UserPlus, GraduationCap, Package, User } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
 
@@ -59,6 +59,12 @@ export function AdminSidebar({ activeScreen, onNavigate, onLogout }: AdminSideba
             label="Provision Account" 
             active={activeScreen === "teacher-create"} 
             onClick={() => onNavigate("teacher-create")} 
+          />
+          <NavItem 
+            icon={GraduationCap} 
+            label="Student Account" 
+            active={activeScreen === "student-create"} 
+            onClick={() => onNavigate("student-create")} 
           />
         </div>
       </div>

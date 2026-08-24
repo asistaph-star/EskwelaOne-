@@ -5,6 +5,7 @@ import { GSidebar } from './shared/GSidebar';
 import { GDashboard } from './dashboard/GDashboard';
 import { GBehaviorScreen } from './behavior/GBehaviorScreen';
 import { GCounselingScreen } from './appointments/GCounselingScreen';
+import { GStudentRecordsScreen } from './records/GStudentRecordsScreen';
 import { StubScreen } from '../shared/components/StubScreen';
 import { Settings, HelpCircle, Bell } from 'lucide-react';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
@@ -16,6 +17,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
 
   const TITLES: Record<GScreen, { title: string; sub: string }> = {
     "g-dashboard": { title: "Guidance Dashboard", sub: "Overview of student cases and counseling schedules" },
+    "g-records": { title: "Student Records", sub: "Search and review student guidance history and AI case insights" },
     "g-behavior": { title: "Behavioral Reports", sub: "Track and manage student disciplinary cases" },
     "g-counseling": { title: "Counseling Sessions", sub: "Manage student and parent appointments" },
     "g-settings": { title: "Settings", sub: "Guidance Office Preferences" },
@@ -60,6 +62,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
 
         {/* Main Content Area */}
         {screen === "g-dashboard" && <GDashboard />}
+        {screen === "g-records" && <GStudentRecordsScreen />}
         {screen === "g-behavior" && <GBehaviorScreen />}
         {screen === "g-counseling" && <GCounselingScreen />}
         
