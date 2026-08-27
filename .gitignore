@@ -56,3 +56,26 @@ Thumbs.db
 .vercel
 
 .vercel
+# Scratch and debug files
+div_trace.txt
+dom_dump.txt
+fix-relations.js
+*.cjs
+git_diff_student_portal.txt
+test-output.pdf
+test-pdf.tsx
+*.dump
+backend/migration.sql
+backend/check_orphans.ts
+backend/check_system_user.ts
+backend/investigate_db.ts
+backend/mismatch_check.ts
+backend/scratch_rename.ts
+backend/validate_phase3.ts
+backend/verify_db.ts
+backend/verify_phase3.ts
+backend/seed-user.ts
+backend/seed_system_user.ts
+backend/src/scratch_rename.ts
+backend/src/check-terms.ts
+backend/src/check-users.ts
