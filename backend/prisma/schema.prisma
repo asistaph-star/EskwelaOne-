@@ -85,6 +85,15 @@ model Student {
   id                  String                    @id(map: "student_profiles_pkey") @db.VarChar(36)
   user_id             String                    @unique(map: "student_profiles_user_id_key") @db.VarChar(36)
   lrn                 String                    @unique(map: "student_profiles_lrn_key") @db.VarChar(20)
+  // Intentionally denormalized. Confirmed two reasons:
+  // (1) Read-performance cache — avoids joining through Enrollment/Section
+  //     on every read that needs a student's grade level.
+  // (2) A Student record can be created via registration before any
+  //     Section assignment exists (see user.service.ts student.create —
+  //     no section_id at creation time), so grade_level cannot always be
+  //     derived from a Section relation at that point.
+  // NOT used in JWT payload generation (auth.service.ts only signs
+  // { userId }). Reviewed in Phase 3 normalization audit.
   grade_level         Int
   date_of_birth       DateTime?
   gender              String?                   @db.VarChar(10)
@@ -382,6 +391,10 @@ model BehaviorLog {
 model Appointment {
   id           String   @id @db.VarChar(36)
   student_id   String   @db.VarChar(36)
+  // Intentionally NOT derived from Student.guardian_email — this is a
+  // per-appointment contact override the parent/guardian can set when
+  // booking, may differ from their profile email. Reviewed in Phase 3
+  // normalization audit.
   parent_email String?  @db.VarChar(255)
   teacher_id   String   @db.VarChar(36)
   date         DateTime
