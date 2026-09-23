@@ -231,13 +231,10 @@ type AppContextType = {
   documentRequests: DocumentRequest[];
   addDocumentRequest: (req: DocumentRequest) => void;
   updateDocumentRequest: (id: string, updates: Partial<DocumentRequest>) => void;
-<<<<<<< HEAD
-
   // System Accounts (IT Admin)
   systemAccounts: SystemAccount[];
   deleteAccount: (id: string) => void;
   resetPassword: (id: string) => void;
-=======
   
   // Teacher Ranking
   teacherRankings: TeacherRankingRecord[];
@@ -249,7 +246,6 @@ type AppContextType = {
   enrollmentError: string | null;
   addEnrollmentApplication: (app: Applicant) => Promise<void>;
   updateEnrollmentApplication: (id: string, updates: Partial<Applicant>) => void;
->>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
 };
 
 // --- Seed Data --
@@ -261,7 +257,6 @@ type AppContextType = {
 
 
 
-<<<<<<< HEAD
 const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
   { id: "doc-1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
   { id: "doc-2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
@@ -345,39 +340,6 @@ const SEED_SYSTEM_ACCOUNTS: SystemAccount[] = [
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [gradesStatus, setGradesStatus] = useState<Record<string, GradeStatus>>(SEED_GRADES_STATUS);
-  const [excuseLetters, setExcuseLetters] = useState<ExcuseLetter[]>(SEED_EXCUSE_LETTERS);
-  const [announcements, setAnnouncements] = useState<Announcement[]>(SEED_ANNOUNCEMENTS);
-  const [messages, setMessages] = useState<Message[]>(SEED_MESSAGES);
-  const [gateAttendance, setGateAttendance] = useState<GateAttendance[]>(SEED_GATE_ATTENDANCE);
-  const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>(SEED_CLINIC_REFERRALS);
-  const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>(SEED_BEHAVIOR_LOGS);
-  const [events, setEvents] = useState<CalendarEvent[]>([...SCHOOL_EVENTS, ...TEACHER_PERSONAL_EVENTS]);
-  const [parentEmail, setParentEmail] = useState<string>("maria.santos@email.com");
-  const [appointments, setAppointments] = useState<Appointment[]>(SEED_APPOINTMENTS);
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>(SEED_DOCUMENT_REQUESTS);
-  const [systemAccounts, setSystemAccounts] = useState<SystemAccount[]>(SEED_SYSTEM_ACCOUNTS);
-
-  const deleteAccount = (id: string) => {
-    setSystemAccounts(prev => prev.filter(a => a.id !== id));
-  };
-
-  const resetPassword = (id: string) => {
-    // In a real app, this would make an API call to reset the password.
-    // Here we might just unlock the account if it was locked.
-    setSystemAccounts(prev => prev.map(a => 
-      a.id === id ? { ...a, status: "Active" } : a
-    ));
-  };
-  const [studentRecords] = useState<StudentRecord[]>(SEED_STUDENT_RECORDS);
-  const [counselingLogs, setCounselingLogs] = useState<CounselingLog[]>(SEED_COUNSELING_LOGS);
-=======
-
-
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
 /**
  * Reusable authorization helper.
  * Validates whether the current user is authorized to perform an action on a specific resource.
@@ -391,7 +353,6 @@ function assertAuthorized(currentUser: CurrentUser | null, targetId: string, res
       throw new Error("Unauthorized: Cannot modify another user's profile.");
     }
   }
->>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
 
   if (resourceType === "announcement" && targetId === "All") {
     if (currentUser.role !== "Principal" && currentUser.role !== "Admin") {
@@ -804,17 +765,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       appointments, addAppointment, updateAppointment,
       documentRequests, addDocumentRequest, updateDocumentRequest,
-<<<<<<< HEAD
       studentRecords, counselingLogs, addCounselingLog,
-      systemAccounts, deleteAccount, resetPassword
-=======
+      systemAccounts, deleteAccount, resetPassword,
       teacherRankings, addTeacherRanking, updateTeacherRanking,
       teacherLeaves, addTeacherLeave, updateTeacherLeave,
       clinicVisitRecords, addClinicVisitRecord,
       enrollmentApplications,
       enrollmentError,
       addEnrollmentApplication, updateEnrollmentApplication
->>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
     }}>
       {children}
     </AppContext.Provider>

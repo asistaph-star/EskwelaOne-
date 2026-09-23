@@ -446,51 +446,51 @@ export const INITIAL_GRADE10_GRADEBOOKS: Record<string, Record<TermKey, TermData
 export const JUAN_HISTORICAL_ACADEMIC_RECORDS: SubjectHistory[] = [
   { 
     name: "Filipino",
-    gr7: { term1: 88, term2: 86, term3: 89, term4: 87, curriculum: "old" },
-    gr8: { term1: 89, term2: 90, term3: 88, curriculum: "new" },
-    gr9: { term1: 91, term2: 92, term3: 90, curriculum: "new" }
+    gr7: { q1: 88, q2: 86, q3: 89, q4: 87, curriculum: "old" },
+    gr8: { q1: 89, q2: 90, q3: 88, curriculum: "new" },
+    gr9: { q1: 91, q2: 92, q3: 90, curriculum: "new" }
   },
   { 
     name: "English",
-    gr7: { term1: 85, term2: 84, term3: 86, term4: 88, curriculum: "old" },
-    gr8: { term1: 87, term2: 88, term3: 87, curriculum: "new" },
-    gr9: { term1: 88, term2: 90, term3: 89, curriculum: "new" }
+    gr7: { q1: 85, q2: 84, q3: 86, q4: 88, curriculum: "old" },
+    gr8: { q1: 87, q2: 88, q3: 87, curriculum: "new" },
+    gr9: { q1: 88, q2: 90, q3: 89, curriculum: "new" }
   },
   { 
     name: "Mathematics",
-    gr7: { term1: 74, term2: 76, term3: 73, term4: 75, curriculum: "old" },
-    gr8: { term1: 76, term2: 78, term3: 75, curriculum: "new" },
-    gr9: { term1: 78, term2: 80, term3: 79, curriculum: "new" }
+    gr7: { q1: 74, q2: 76, q3: 73, q4: 75, curriculum: "old" },
+    gr8: { q1: 76, q2: 78, q3: 75, curriculum: "new" },
+    gr9: { q1: 78, q2: 80, q3: 79, curriculum: "new" }
   },
   { 
     name: "Science",
-    gr7: { term1: 91, term2: 90, term3: 92, term4: 93, curriculum: "old" },
-    gr8: { term1: 92, term2: 93, term3: 91, curriculum: "new" },
-    gr9: { term1: 93, term2: 94, term3: 95, curriculum: "new" }
+    gr7: { q1: 91, q2: 90, q3: 92, q4: 93, curriculum: "old" },
+    gr8: { q1: 92, q2: 93, q3: 91, curriculum: "new" },
+    gr9: { q1: 93, q2: 94, q3: 95, curriculum: "new" }
   },
   { 
     name: "Araling Panlipunan",
-    gr7: { term1: 90, term2: 89, term3: 91, term4: 90, curriculum: "old" },
-    gr8: { term1: 91, term2: 92, term3: 90, curriculum: "new" },
-    gr9: { term1: 92, term2: 93, term3: 94, curriculum: "new" }
+    gr7: { q1: 90, q2: 89, q3: 91, q4: 90, curriculum: "old" },
+    gr8: { q1: 91, q2: 92, q3: 90, curriculum: "new" },
+    gr9: { q1: 92, q2: 93, q3: 94, curriculum: "new" }
   },
   { 
     name: "Technology & Livelihood Educ.",
-    gr7: { term1: 88, term2: 87, term3: 89, term4: 88, curriculum: "old" },
-    gr8: { term1: 89, term2: 90, term3: 88, curriculum: "new" },
-    gr9: { term1: 90, term2: 91, term3: 92, curriculum: "new" }
+    gr7: { q1: 88, q2: 87, q3: 89, q4: 88, curriculum: "old" },
+    gr8: { q1: 89, q2: 90, q3: 88, curriculum: "new" },
+    gr9: { q1: 90, q2: 91, q3: 92, curriculum: "new" }
   },
   { 
     name: "MAPEH",
-    gr7: { term1: 92, term2: 91, term3: 93, term4: 94, curriculum: "old" },
-    gr8: { term1: 93, term2: 94, term3: 92, curriculum: "new" },
-    gr9: { term1: 94, term2: 95, term3: 96, curriculum: "new" }
+    gr7: { q1: 92, q2: 91, q3: 93, q4: 94, curriculum: "old" },
+    gr8: { q1: 93, q2: 94, q3: 92, curriculum: "new" },
+    gr9: { q1: 94, q2: 95, q3: 96, curriculum: "new" }
   },
   { 
     name: "Edukasyon sa Pagpapakatao",
-    gr7: { term1: 95, term2: 94, term3: 96, term4: 95, curriculum: "old" },
-    gr8: { term1: 96, term2: 97, term3: 95, curriculum: "new" },
-    gr9: { term1: 97, term2: 98, term3: 96, curriculum: "new" }
+    gr7: { q1: 95, q2: 94, q3: 96, q4: 95, curriculum: "old" },
+    gr8: { q1: 96, q2: 97, q3: 95, curriculum: "new" },
+    gr9: { q1: 97, q2: 98, q3: 96, curriculum: "new" }
   }
 ];
 
@@ -567,10 +567,10 @@ export function getStudentFullAcademicHistory(
   return JUAN_HISTORICAL_ACADEMIC_RECORDS.map(historyItem => {
     const curr = currentGrades.find(cg => cg.name.toLowerCase() === historyItem.name.toLowerCase());
     const gr10Record: GradeRecord = {
-      term1: curr?.term1 || 0,
-      term2: curr?.term2 || 0,
-      term3: curr?.term3 || 0,
-      term4: curr?.term4,
+      q1: curr?.term1 || 0,
+      q2: curr?.term2 || 0,
+      q3: curr?.term3 || 0,
+      q4: curr?.term4,
       curriculum: "new"
     };
 

@@ -22,8 +22,8 @@ export const TRAFFIC = (s: string) => {
 
 export function gradeAvg(rec?: GradeRecord): number {
   if (!rec) return 0;
-  const qCount = rec.curriculum === "old" && rec.term4 ? 4 : 3;
-  const sum = (rec.term1 || 0) + (rec.term2 || 0) + (rec.term3 || 0) + ((rec.term4) || 0);
+  const qCount = rec.curriculum === "old" && rec.q4 ? 4 : 3;
+  const sum = (rec.q1 || 0) + (rec.q2 || 0) + (rec.q3 || 0) + ((rec.q4) || 0);
   return Math.round(sum / qCount);
 }
 
