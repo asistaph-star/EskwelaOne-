@@ -400,6 +400,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [enrollmentApplications, setEnrollmentApplications] = useState<Applicant[]>([]);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
 
+  const [studentRecords, setStudentRecords] = useState<any[]>([]);
+  const [counselingLogs, setCounselingLogs] = useState<any[]>([]);
+  const [systemAccounts, setSystemAccounts] = useState<any[]>([]);
+  const deleteAccount = (id: string) => setSystemAccounts(prev => prev.filter(a => a.id !== id));
+  const resetPassword = (id: string) => setSystemAccounts(prev => prev.map(a => a.id === id ? { ...a, status: "Active" } : a));
+
   useEffect(() => {
     async function initDB() {
       if (currentUser) {
