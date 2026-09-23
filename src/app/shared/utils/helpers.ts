@@ -3,8 +3,8 @@
 import { C } from '../constants/tokens';
 import { AStatus, GradeRecord } from '../types';
 
-export function fa(sg: { q1: number; q2: number; q3: number }) {
-  return Math.round(((sg.q1 + sg.q2 + sg.q3) / 3) * 10) / 10;
+export function fa(sg: { term1: number; term2: number; term3: number }) {
+  return Math.round(((sg.term1 + sg.term2 + sg.term3) / 3) * 10) / 10;
 }
 
 export function sColor(s: AStatus): string {
@@ -22,8 +22,8 @@ export const TRAFFIC = (s: string) => {
 
 export function gradeAvg(rec?: GradeRecord): number {
   if (!rec) return 0;
-  const qCount = rec.curriculum === "old" && rec.q4 ? 4 : 3;
-  const sum = (rec.q1 || 0) + (rec.q2 || 0) + (rec.q3 || 0) + ((rec.q4) || 0);
+  const qCount = rec.curriculum === "old" && rec.term4 ? 4 : 3;
+  const sum = (rec.term1 || 0) + (rec.term2 || 0) + (rec.term3 || 0) + ((rec.term4) || 0);
   return Math.round(sum / qCount);
 }
 
@@ -35,8 +35,13 @@ export function levelColor(l: string) {
   return                       { bg:C.tealBg,  text:C.teal };
 }
 
-export function gradeColor(g: number): React.CSSProperties {
+export function gradeColor(g: number | string): React.CSSProperties {
   const f: React.CSSProperties = { fontFamily:"'JetBrains Mono',monospace", fontWeight:500, fontSize:12 };
+  if (typeof g === 'string') {
+    const parsed = parseInt(g, 10);
+    if (isNaN(parsed)) return {...f, color:C.t3}; // For '—' or other non-numbers
+    g = parsed;
+  }
   if (g>=90) return {...f, color:C.green};
   if (g>=75) return {...f, color:C.t2};
   return {...f, color:C.red, background:C.redBg, padding:"1px 5px", borderRadius:3};

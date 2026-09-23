@@ -20,11 +20,11 @@ export function PAcademics() {
   const [aiDone, setAiDone] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   
-  const { gradesStatus, setGradeStatus } = useAppContext();
+  const [gradesStatus, setGradeStatus] = React.useState<any>([]);
   const pendingApprovals = Object.entries(gradesStatus).filter(([k, v]) => v === "Submitted");
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
+    <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24 }}>
       {/* Historical Graduation Analytics */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14, padding: "16px 20px" }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:2 }}>Historical Graduation Performance (2020 – 2026)</div>
@@ -79,7 +79,7 @@ export function PAcademics() {
           {pendingApprovals.length > 0 && <Stamp label="Action Required" bg={C.amberBg} color={C.amber} />}
         </div>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><PTableHeader cols={["Section", "Quarter", "Status", "Actions"]} /></thead>
+          <thead><PTableHeader cols={["Section", "Term", "Status", "Actions"]} /></thead>
           <tbody>
             {pendingApprovals.length === 0 ? (
               <tr><td colSpan={4} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No pending grade submissions.</td></tr>
@@ -91,8 +91,8 @@ export function PAcademics() {
                   <td style={{ padding:"10px 16px", fontSize:12, color:C.t2 }}>{q}</td>
                   <td style={{ padding:"10px 16px" }}><Stamp label="Submitted for Review" bg={C.amberBg} color={C.amber} /></td>
                   <td style={{ padding:"10px 16px", display: "flex", gap: 8 }}>
-                    <button onClick={() => setGradeStatus(key, "Published")} style={{ background: C.green, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Publish</button>
-                    <button onClick={() => setGradeStatus(key, "Returned")} style={{ background: C.red, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Return for Revision</button>
+                    <button onClick={() => setGradeStatus(key)} style={{ background: C.green, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Publish</button>
+                    <button onClick={() => setGradeStatus(key)} style={{ background: C.red, color: "#fff", border: "none", padding: "4px 10px", borderRadius: 4, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Return for Revision</button>
                   </td>
                 </tr>
               );
@@ -114,18 +114,18 @@ export function PAcademics() {
         </div>
       </div>
       
-      {/* Q1 vs Q2 vs Q3 trend table */}
+      {/* T1 vs T2 vs T3 trend table */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
-        <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Performance Trends (Q1 / Q2 / Q3)</div>
+        <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Performance Trends (T1 / T2 / T3)</div>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><PTableHeader cols={["Grade Level","Q1 Average","Q2 Average","Q3 Average","Trend"]} /></thead>
+          <thead><PTableHeader cols={["Grade Level","T1 Average","T2 Average","T3 Average","Trend"]} /></thead>
           <tbody>
-            {[["Grade 7","83.4","84.1","83.8","↑ Stable"],["Grade 8","81.7","80.2","79.8","↓ Declining"],["Grade 9","79.2","79.9","80.4","↑ Improving"],["Grade 10","84.1","85.0","84.7","↑ Stable"]].map(([g,q1,q2,q3,t],i)=>(
+            {[["Grade 7","83.4","84.1","83.8","↑ Stable"],["Grade 8","81.7","80.2","79.8","↓ Declining"],["Grade 9","79.2","79.9","80.4","↑ Improving"],["Grade 10","84.1","85.0","84.7","↑ Stable"]].map(([g,t1,t2,t3,t],i)=>(
               <tr key={g} style={{ borderBottom:`0.5px solid ${C.border}` }}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
                 <td style={{ padding:"10px 16px", fontSize:12, fontWeight:600, color:C.t1 }}>{g}</td>
-                {[q1,q2,q3].map((v,j)=><td key={j} style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{v}</td>)}
+                {[t1,t2,t3].map((v,j)=><td key={j} style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{v}</td>)}
                 <td style={{ padding:"10px 16px" }}><Stamp label={t} color={t.includes("↑")?C.green:C.red} bg={t.includes("↑")?C.greenBg:C.redBg} /></td>
               </tr>
             ))}
@@ -228,7 +228,7 @@ export function PAcademics() {
         </div>
         {aiDone ? (
           <p style={{ fontSize:12, color:C.t1, lineHeight:1.8, margin:0 }}>
-            School-wide academic performance for Q1 SY 2025–2026 is at <strong>82.1 general average</strong>. Grade 10 leads at 84.1, while Grade 9 remains the lowest at 79.2. <strong>Mathematics consistently underperforms</strong> across all grade levels - Grades 7 and 8 are critically below threshold (71.2 and 73.5 respectively). Science 9 at 72.8 requires urgent faculty intervention. <strong>Recommended actions:</strong> (1) Schedule targeted remediation for Mathematics teachers; (2) Deploy peer-learning programs in Grades 8–9; (3) Request Division support for Science 9 curriculum alignment. Sections 9 Newton and 7 Matapat are flagged for special monitoring.
+            School-wide academic performance for T1 SY 2025–2026 is at <strong>82.1 general average</strong>. Grade 10 leads at 84.1, while Grade 9 remains the lowest at 79.2. <strong>Mathematics consistently underperforms</strong> across all grade levels - Grades 7 and 8 are critically below threshold (71.2 and 73.5 respectively). Science 9 at 72.8 requires urgent faculty intervention. <strong>Recommended actions:</strong> (1) Schedule targeted remediation for Mathematics teachers; (2) Deploy peer-learning programs in Grades 8–9; (3) Request Division support for Science 9 curriculum alignment. Sections 9 Newton and 7 Matapat are flagged for special monitoring.
           </p>
         ) : <p style={{ fontSize:12, color:C.t3, fontStyle:"italic", margin:0 }}>Click "Generate Summary" to produce an AI-powered diagnostic overview of school performance with intervention recommendations.</p>}
       </div>

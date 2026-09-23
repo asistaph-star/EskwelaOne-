@@ -1,9 +1,17 @@
 import React from 'react';
 import { C } from '../constants/tokens';
 import { Bell, AlertCircle, Megaphone, Calendar as CalendarIcon } from 'lucide-react';
+import { useAppContext } from '../AppContext';
 
 export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+  const { notifications, currentUser, markNotificationsRead } = useAppContext();
   if (!isOpen) return null;
+  
+  const myNotifications = notifications
+    .filter(n => n.recipientId === currentUser?.id)
+    .sort((a, b) => b.id.localeCompare(a.id)); // sort by timestamp/id descending
+
+  const unreadCount = myNotifications.filter(n => !n.isRead).length;
 
   return (
     <>
@@ -63,55 +71,34 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onC
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderMed}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: C.paper, borderTopLeftRadius: 12, borderTopRightRadius: 12, position: "relative", zIndex: 202 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Bell size={16} color={C.m700} />
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>Notifications</h3>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>Notifications {unreadCount > 0 && `(${unreadCount})`}</h3>
           </div>
-          <span style={{ fontSize: 11, color: C.m700, fontWeight: 700, cursor: 'pointer' }}>Mark all read</span>
+          {unreadCount > 0 && (
+            <span onClick={() => currentUser && markNotificationsRead(currentUser.id)} style={{ fontSize: 11, color: C.m700, fontWeight: 700, cursor: 'pointer' }}>Mark all read</span>
+          )}
         </div>
         
         <div style={{ maxHeight: 380, overflowY: 'auto', position: "relative", zIndex: 202, background: "#fff" }}>
           
-          {/* Notification 1 (Unread) */}
-          <div className="notif-item unread" style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderLight}`, display: 'flex', gap: 14, background: 'rgba(139,30,30,0.03)' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.m50, border: `1px solid ${C.borderMed}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <AlertCircle size={16} color={C.m700} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: C.t1 }}>System Maintenance</div>
-                <div style={{ width: 8, height: 8, borderRadius: 4, background: C.m700, marginTop: 4 }} />
+          {myNotifications.length === 0 ? (
+             <div style={{ padding: '24px 20px', textAlign: 'center', color: C.t3, fontSize: 12 }}>No new notifications</div>
+          ) : (
+            myNotifications.map((notif) => (
+              <div key={notif.id} className={!notif.isRead ? "notif-item unread" : "notif-item"} style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderLight}`, display: 'flex', gap: 14, background: !notif.isRead ? 'rgba(139,30,30,0.03)' : 'transparent' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 18, background: notif.iconType === "alert" ? C.redBg : notif.iconType === "document" ? C.blueBg : C.greenBg, border: `1px solid rgba(0,0,0,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {notif.iconType === "alert" ? <AlertCircle size={16} color={C.red} /> : notif.iconType === "document" ? <AlertCircle size={16} color={C.blue} /> : <Megaphone size={16} color={C.green} />}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: !notif.isRead ? 800 : 700, color: C.t1 }}>{notif.title}</div>
+                    {!notif.isRead && <div style={{ width: 8, height: 8, borderRadius: 4, background: C.m700, marginTop: 4 }} />}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4, marginBottom: 6 }}>{notif.body}</div>
+                  <div style={{ fontSize: 10, color: C.t3, fontWeight: 600 }}>{notif.timestamp}</div>
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4, marginBottom: 6 }}>The portal will be undergoing scheduled maintenance this weekend from 10 PM to 2 AM.</div>
-              <div style={{ fontSize: 10, color: C.t3, fontWeight: 600 }}>2 hours ago</div>
-            </div>
-          </div>
-
-          {/* Notification 2 */}
-          <div className="notif-item" style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderLight}`, display: 'flex', gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.blueBg, border: `1px solid rgba(0,0,0,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Megaphone size={16} color={C.blue} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>New Announcement</div>
-              </div>
-              <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4, marginBottom: 6 }}>Q1 Grading deadline has been extended to Jun 16. Please ensure all grades are submitted.</div>
-              <div style={{ fontSize: 10, color: C.t3, fontWeight: 600 }}>1 day ago</div>
-            </div>
-          </div>
-
-          {/* Notification 3 */}
-          <div className="notif-item" style={{ padding: '16px 20px', display: 'flex', gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 18, background: C.greenBg, border: `1px solid rgba(0,0,0,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <CalendarIcon size={16} color={C.green} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>PTA General Assembly</div>
-              </div>
-              <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4, marginBottom: 6 }}>The PTA meeting will be held at the school gymnasium on Friday, June 13, starting at 3:00 PM.</div>
-              <div style={{ fontSize: 10, color: C.t3, fontWeight: 600 }}>3 days ago</div>
-            </div>
-          </div>
+            ))
+          )}
           
         </div>
         

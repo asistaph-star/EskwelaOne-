@@ -1,77 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { TScreen, GradeCardInfo } from '../../shared/types';
-import { STUDENTS_GR8, MY_CLASSES, GRADEBOOK } from '../../App';
 import { AttendanceHub } from '../attendance/AttendanceHub';
 import { GradebookFullScreen } from '../grades/GradebookFullScreen';
-import { ResponsiveContainer, PieChart, Pie, Cell, BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, LineChart, Line, AreaChart, Area } from 'recharts';
 import { ArrowRight, Sparkles, Users, CalendarCheck, FileText, BarChart2, ChevronRight, Printer, Download, Target, X, ClipboardList, Activity } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
-import { gradeColor, calcGrade } from '../../shared/utils/helpers';
-import { BAR_DATA, PIE_DATA, TREND_DATA } from '../../shared/constants/seedData';
+import { gradeColor } from '../../shared/utils/helpers';
 import { StudentReportCard } from '../../student/components/StudentReportCard';
+import { useMyClasses } from '../shared/useMyClasses';
+import { apiClient } from '../../../api/client';
+import { EmptyState } from '../../shared/components/EmptyState';
+
 
 type HubTab = "students" | "attendance" | "assignments" | "gradebook" | "analytics";
-export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:number, onBack:()=>void, onShowGradeCard?:(info:GradeCardInfo)=>void }) {
+export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:string, onBack:()=>void, onShowGradeCard?:(info:GradeCardInfo)=>void }) {
   const [tab, setTab] = useState<HubTab>("students");
-  const cls = MY_CLASSES.find(c=>c.id===classId) ?? MY_CLASSES[0];
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiDone, setAiDone] = useState(false);
-  const [profileStudent, setProfileStudent] = useState<typeof STUDENTS_GR8[0]|null>(null);
-  const [gradebookRecords, setGradebookRecords] = useState<typeof GRADEBOOK>(() => {
-    try {
-      const saved = localStorage.getItem('hub_gradebook');
-      if (saved) return JSON.parse(saved);
-    } catch(e){}
-    return GRADEBOOK;
-  });
-  const [students, setStudents] = useState<typeof STUDENTS_GR8>(() => {
-    try {
-      const saved = localStorage.getItem('hub_students');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Only append students that were manually added (string IDs starting with 's')
-        // Always keep the base STUDENTS_GR8 to preserve the original 8 students with correct data
-        const newOnes = parsed.filter((s: any) => typeof s.id === 'string' && s.id.startsWith('s') && s.surname && s.first);
-        return [...STUDENTS_GR8, ...newOnes];
-      }
-    } catch(e){}
-    return STUDENTS_GR8;
-  });
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newStudent, setNewStudent] = useState({ lrn: '', surname: '', first: '' });
+  const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
+  const cls = myClasses.find(c=>c.id===classId) ?? myClasses[0];
+  
+  const [profileStudent, setProfileStudent] = useState<any|null>(null);
+  
+  const [students, setStudents] = useState<any[]>([]);
+  const [isLoadingRoster, setIsLoadingRoster] = useState(true);
+  const [rosterError, setRosterError] = useState<string|null>(null);
 
-  const handleAddStudent = (e) => {
-    e.preventDefault();
-    if (!newStudent.lrn || !newStudent.surname || !newStudent.first) return;
-    const added = [...students, {
-      id: "s" + Date.now(),
-      lrn: newStudent.lrn,
-      surname: newStudent.surname,
-      first: newStudent.first,
-      avg: "—",
-      att: "Good Standing",
-      status: "—",
-      gender: "unspecified"
-    }];
-    setStudents(added);
-    // Only persist the newly added students (not the original STUDENTS_GR8 base)
-    const newOnly = added.filter((s: any) => typeof s.id === 'string' && s.id.startsWith('s'));
-    localStorage.setItem('hub_students', JSON.stringify(newOnly));
-
-    const addedGb = [...gradebookRecords, {
-      name: `${newStudent.surname}, ${newStudent.first}`,
-      ww: ["", "", "", "", ""],
-      pt: ["", "", ""],
-      qa: ""
-    }] as any;
-    setGradebookRecords(addedGb);
-    localStorage.setItem('hub_gradebook', JSON.stringify(addedGb));
-
-    setShowAddModal(false);
-    setNewStudent({ lrn: '', surname: '', first: '' });
-  };
+  useEffect(() => {
+    if (!classId) return;
+    setIsLoadingRoster(true);
+    setRosterError(null);
+    apiClient.get(`/attendance/classes/${classId}/roster`)
+      .then((res: any) => {
+        const mapped = (res || []).map((s: any) => ({
+          id: s.student.id,
+          enrollmentId: s.id,
+          lrn: s.student.lrn,
+          surname: s.student.last_name,
+          first: s.student.first_name,
+          avg: "—", // Not calculating real average here for now
+          att: "Good Standing",
+          status: "—",
+          gender: "unspecified"
+        }));
+        setStudents(mapped);
+      })
+      .catch((err: any) => {
+        setRosterError(err.message || "Failed to load roster");
+      })
+      .finally(() => {
+        setIsLoadingRoster(false);
+      });
+  }, [classId]);
 
   const TABS: { id:HubTab, label:string, icon:React.ElementType }[] = [
     { id:"students",   label:"Students",   icon:Users },
@@ -80,6 +59,25 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
     { id:"gradebook",  label:"Gradebook",  icon:FileText },
     { id:"analytics",  label:"Analytics",  icon:BarChart2 },
   ];
+  if (isLoadingClasses || !cls) {
+    if (isLoadingClasses) {
+      return (
+        <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color: C.t3, fontSize: 14 }}>
+          Loading classroom...
+        </div>
+      );
+    }
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <EmptyState
+          icon={Users}
+          title="No Classes Assigned"
+          description="You don't have any sections assigned for this academic year yet."
+          guidance="Once an administrator assigns you to a section, your classes will appear here."
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex:1, overflowY:"auto", background: "transparent" }}>
@@ -146,12 +144,19 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── STUDENTS TAB ── */}
         {tab==="students" && (
-          <DocPanel title="Student Roster - Grade 8 Rizal" icon={Users}
+          <DocPanel title={`Student Roster - Grade ${cls.grade} ${cls.section}`} icon={Users}
             action={<div style={{ display:"flex", gap:6 }}>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Student QR</button>
               <button style={{ fontSize:10, fontWeight:600, color:"rgba(255,255,255,0.7)", background:"rgba(255,255,255,0.12)", border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer" }}>Parent Contacts</button>
-              <button onClick={()=>setShowAddModal(true)} style={{ fontSize:10, fontWeight:600, color:C.m900, background:C.gold, border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>+ Add Student</button>
             </div>}>
+            
+            {isLoadingRoster ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: C.t3, fontSize: 13 }}>Loading roster from backend...</div>
+            ) : rosterError ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: C.red, fontSize: 13 }}>{rosterError}</div>
+            ) : students.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: C.t3, fontSize: 13 }}>No students are currently enrolled in this class.</div>
+            ) : (
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead>
                 <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
@@ -185,6 +190,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
                 ))}
               </tbody>
             </table>
+            )}
           </DocPanel>
         )}
 
@@ -193,43 +199,10 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── ASSIGNMENTS TAB ── */}
         {tab==="assignments" && (
-          <DocPanel title="Class Assignments" icon={ClipboardList}
-            action={<button style={{ fontSize:10, fontWeight:600, color:C.m900, background:C.gold, border:"none", borderRadius:4, padding:"4px 10px", cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>+ Create Assignment</button>}>
-            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-              <thead>
-                <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                  {["Title","Type","Due Date","Completion","Status"].map(h => (
-                    <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { title:"Chapter 3 Practice Exercises", type:"Written Work", due:"Tomorrow, 11:59 PM", comp:85, status:"Active" },
-                  { title:"Science Project Proposal", type:"Performance Task", due:"Jun 15, 2025", comp:40, status:"Active" },
-                  { title:"Weekly Quiz 1", type:"Assessment", due:"Jun 8, 2025", comp:100, status:"Closed" },
-                ].map((a,i) => (
-                  <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
-                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
-                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
-                    <td style={{ padding:"10px 14px", fontSize:13, fontWeight:600, color:C.t1 }}>{a.title}</td>
-                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{a.type}</td>
-                    <td style={{ padding:"10px 14px", fontSize:11, color:C.t3 }}>{a.due}</td>
-                    <td style={{ padding:"10px 14px" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <div style={{ flex:1, height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
-                          <div style={{ width:`${a.comp}%`, height:"100%", background:a.comp===100?C.green:C.teal }} />
-                        </div>
-                        <span style={{ fontSize:11, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:C.t1 }}>{a.comp}%</span>
-                      </div>
-                    </td>
-                    <td style={{ padding:"10px 14px" }}>
-                      <Stamp label={a.status} color={a.status==="Active"?C.teal:C.t3} bg={a.status==="Active"?C.tealBg:C.m50} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <DocPanel title="Class Assignments" icon={ClipboardList}>
+            <div style={{ padding: "60px 20px", textAlign: "center", color: C.t3, fontSize: 13 }}>
+              This feature is currently unavailable. Homework and Assignments functionality will be added in a future phase.
+            </div>
           </DocPanel>
         )}
 
@@ -299,127 +272,11 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
 
         {/* ── ANALYTICS TAB ── */}
         {tab==="analytics" && (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-            {/* Subject Performance */}
-            <DocPanel title="Subject Performance Index" icon={BarChart2}>
-              <div style={{ padding:16 }}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <RBarChart data={BAR_DATA} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                    <XAxis type="number" domain={[60,100]} tick={{fontSize:10,fill:C.t3,fontFamily:"'JetBrains Mono',monospace"}} />
-                    <YAxis type="category" dataKey="subject" tick={{fontSize:10,fill:C.t2}} width={52} />
-                    <Tooltip formatter={(v:number)=>[`${v}`,"Avg"]} contentStyle={{fontSize:12,borderRadius:4,border:`1px solid ${C.borderMed}`}} />
-                    <Bar dataKey="avg" radius={[0,3,3,0]}>
-                      {BAR_DATA.map((e,i) => <Cell key={`bar-${i}`} fill={e.avg<75?C.red:e.avg>=90?C.green:C.m700} />)}
-                    </Bar>
-                  </RBarChart>
-                </ResponsiveContainer>
-              </div>
-            </DocPanel>
-
-            {/* Grade distribution */}
-            <DocPanel title="Grade Distribution" icon={Target}>
-              <div style={{ padding:16, display:"flex", alignItems:"center", gap:16 }}>
-                <PieChart width={130} height={130}>
-                  <Pie data={PIE_DATA} cx={60} cy={60} innerRadius={38} outerRadius={58} paddingAngle={2} dataKey="value">
-                    {PIE_DATA.map((e,i) => <Cell key={`pie-${i}`} fill={e.color} />)}
-                  </Pie>
-                </PieChart>
-                <div>
-                  {PIE_DATA.map((d,i) => (
-                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                      <div style={{ width:10, height:10, borderRadius:2, background:d.color, flexShrink:0 }} />
-                      <span style={{ fontSize:11, color:C.t2, flex:1 }}>{d.name}</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:d.color, fontFamily:"'JetBrains Mono',monospace" }}>{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DocPanel>
-
-            {/* Attendance trend */}
-            <DocPanel title="Attendance Trend (6 Weeks)" icon={CalendarCheck}>
-              <div style={{ padding:16 }}>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={TREND_DATA}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                    <XAxis dataKey="week" tick={{fontSize:10,fill:C.t3}} />
-                    <YAxis domain={[80,100]} tick={{fontSize:10,fill:C.t3,fontFamily:"'JetBrains Mono',monospace"}} unit="%" />
-                    <Tooltip formatter={(v:number)=>[`${v}%`,"Attendance"]} contentStyle={{fontSize:12,borderRadius:4}} />
-                    <Line type="monotone" dataKey="att" stroke={C.m700} strokeWidth={2} dot={{fill:C.m700,r:3}} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </DocPanel>
-
-            {/* Assignment Completion Rates */}
-            <DocPanel title="Assignment Completion Rates" icon={ClipboardList}>
-              <div style={{ padding:16 }}>
-                <ResponsiveContainer width="100%" height={160}>
-                  <RBarChart data={[{name:"W1",rate:95},{name:"W2",rate:88},{name:"W3",rate:92},{name:"W4",rate:85}]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-                    <XAxis dataKey="name" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0,100]} tick={{fontSize:10,fill:C.t3,fontFamily:"'JetBrains Mono',monospace"}} axisLine={false} tickLine={false} unit="%" />
-                    <Tooltip formatter={(v:number)=>[`${v}%`,"Completion"]} cursor={{fill:"rgba(0,0,0,0.05)"}} contentStyle={{fontSize:12,borderRadius:4}} />
-                    <Bar dataKey="rate" fill={C.teal} radius={[3,3,0,0]} />
-                  </RBarChart>
-                </ResponsiveContainer>
-              </div>
-            </DocPanel>
-
-            {/* Classroom Activity */}
-            <DocPanel title="Classroom Activity" icon={Activity}>
-              <div style={{ padding:16 }}>
-                <div style={{ fontSize:10, color:C.t3, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:700 }}>Daily Active Students</div>
-                <ResponsiveContainer width="100%" height={120}>
-                  <AreaChart data={[{day:"Mon",val:38},{day:"Tue",val:40},{day:"Wed",val:39},{day:"Thu",val:41},{day:"Fri",val:37}]}>
-                    <defs>
-                      <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={C.purple} stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor={C.purple} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.border} vertical={false} />
-                    <XAxis dataKey="day" tick={{fontSize:10,fill:C.t3}} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{fontSize:12,borderRadius:4}} />
-                    <Area type="monotone" dataKey="val" stroke={C.purple} fillOpacity={1} fill="url(#colorVal)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </DocPanel>
-
-            {/* AI Executive Summary */}
-            <DocPanel title="AI Executive Summary" icon={Sparkles}>
-              <div style={{ padding:16 }}>
-                <div style={{ borderLeft:`3px solid ${C.gold}`, paddingLeft:12, marginBottom:14 }}>
-                  <div style={{ fontSize:10, color:C.gold, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4, display:"flex", alignItems:"center", gap:5 }}><Sparkles size={10} color={C.gold} /> AI Diagnostic Report · June 10, 2025</div>
-                  {aiDone ? (
-                    <p style={{ fontSize:12, color:C.t1, lineHeight:1.7, margin:0 }}>
-                      <strong>Class Average:</strong> 82.4 - above the passing threshold.<br/>
-                      <strong>Students at Risk (below 75):</strong> Espino, Hannah Grace (68.5), Hernandez, Mark Ryan (71.0), Bondoc, Ramon Jr. (74.2) - recommend immediate remediation in fractions and algebraic expressions.<br/>
-                      <strong>Attendance concern:</strong> Espino (3 lates), Hernandez (2 absences) - coordinate with parents.<br/>
-                      <strong>Teaching strategy:</strong> Introduce peer-mentoring pairs; assign Cruz, Ferrer as math tutors for identified students.
-                    </p>
-                  ) : (
-                    <p style={{ fontSize:12, color:C.t3, lineHeight:1.7, margin:0, fontStyle:"italic" }}>Click "Generate Report" to produce an AI-powered diagnostic summary of your class, naming struggling students and recommending intervention strategies.</p>
-                  )}
-                </div>
-                <button onClick={()=>{ setAiLoading(true); setTimeout(()=>{setAiLoading(false);setAiDone(true);},1800); }}
-                  style={{ display:"flex", alignItems:"center", gap:7, padding:"8px 16px", background:aiDone?C.m50:C.m700, color:aiDone?C.m700:"#fff", border:aiDone?`1px solid ${C.borderMed}`:"none", borderRadius:4, cursor:"pointer", fontSize:12, fontWeight:600 }}>
-                  <Sparkles size={12} />
-                  {aiLoading?"Generating…":aiDone?"Regenerate":"Generate AI Report"}
-                </button>
-                <div style={{ marginTop:14, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                  {[["Espino, Hannah",68.5,"red"],["Hernandez, Mark",71.0,"red"],["Bondoc, Ramon",74.2,"amber"],["Delos Reyes, Daniel",81.7,"-"]].map(([n,avg,risk]) => (
-                    <div key={n} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 10px", background:risk==="red"?C.redBg:risk==="amber"?C.amberBg:C.paper, borderRadius:4, border:`0.5px solid ${C.border}` }}>
-                      <span style={{ fontSize:11, color:C.t1, fontWeight:500 }}>{n}</span>
-                      <span style={{ fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:risk==="red"?C.red:risk==="amber"?C.amber:C.t2, fontWeight:600 }}>{avg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DocPanel>
-          </div>
+          <DocPanel title="Class Analytics" icon={BarChart2}>
+            <div style={{ padding: "60px 20px", textAlign: "center", color: C.t3, fontSize: 13 }}>
+              Analytics charts are currently unavailable. Future phases will introduce real-time class metrics powered by authoritative backend data.
+            </div>
+          </DocPanel>
         )}
       </div>
 
@@ -448,34 +305,7 @@ export function ClassroomHub({ classId, onBack, onShowGradeCard }: { classId:num
         </div>
       )}
 
-      {/* ── Add Student Modal ── */}
-      {showAddModal && (
-        <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(15,8,8,0.6)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <div style={{ width:400, background:"#fff", borderRadius:8, padding:24, boxShadow:"0 20px 60px rgba(74,10,16,0.4)" }}>
-            <div style={{ fontSize:16, fontWeight:700, color:C.t1, marginBottom:16, fontFamily:"'Fraunces', serif" }}>Add New Student</div>
-            <form onSubmit={handleAddStudent} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <label style={{ fontSize:11, fontWeight:600, color:C.t2 }}>LRN (Learner Reference Number)</label>
-                <input value={newStudent.lrn} onChange={e=>setNewStudent({...newStudent, lrn:e.target.value})} style={{ width:"100%", padding:"8px 12px", borderRadius:4, border:`1px solid ${C.borderMed}`, marginTop:4, outline:"none", fontSize:12 }} required />
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:600, color:C.t2 }}>First Name</label>
-                  <input value={newStudent.first} onChange={e=>setNewStudent({...newStudent, first:e.target.value})} style={{ width:"100%", padding:"8px 12px", borderRadius:4, border:`1px solid ${C.borderMed}`, marginTop:4, outline:"none", fontSize:12 }} required />
-                </div>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:600, color:C.t2 }}>Surname</label>
-                  <input value={newStudent.surname} onChange={e=>setNewStudent({...newStudent, surname:e.target.value})} style={{ width:"100%", padding:"8px 12px", borderRadius:4, border:`1px solid ${C.borderMed}`, marginTop:4, outline:"none", fontSize:12 }} required />
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:12, marginTop:12, justifyContent:"flex-end" }}>
-                <button type="button" onClick={()=>setShowAddModal(false)} style={{ padding:"8px 16px", borderRadius:4, border:`1px solid ${C.borderMed}`, background:"#fff", cursor:"pointer", fontSize:12, fontWeight:600 }}>Cancel</button>
-                <button type="submit" style={{ padding:"8px 16px", borderRadius:4, border:"none", background:C.m700, color:"#fff", cursor:"pointer", fontSize:12, fontWeight:600 }}>Save Student</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

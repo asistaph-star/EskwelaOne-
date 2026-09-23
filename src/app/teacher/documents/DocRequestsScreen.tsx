@@ -5,13 +5,14 @@ import { FileText, CheckCircle, XCircle, Clock, User, Filter, MessageSquare, Che
 import type { DocRequestStatus } from '../../shared/AppContext';
 
 export function DocRequestsScreen() {
-  const { documentRequests, updateDocumentRequest } = useAppContext();
+  const { documentRequests, updateDocumentRequest, currentUser } = useAppContext();
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
 
-  const teacherName = "Ana R. Soriano";
-  const pendingRequests = documentRequests.filter(r => r.status === "Submitted" && r.teacherName === teacherName);
-  const processedRequests = documentRequests.filter(r => r.status !== "Submitted" && r.teacherName === teacherName);
+  const isCurrentTeacher = (r: any) => r.teacherId === currentUser?.id || (!r.teacherId && r.teacherName === currentUser?.name);
+
+  const pendingRequests = documentRequests.filter(r => r.status === "Submitted" && isCurrentTeacher(r));
+  const processedRequests = documentRequests.filter(r => r.status !== "Submitted" && isCurrentTeacher(r));
 
   function handleApprove(id: string) {
     updateDocumentRequest(id, {
@@ -21,21 +22,17 @@ export function DocRequestsScreen() {
       teacherRemarks: remarks[id] || "Verified and approved. Forwarding to Principal for final approval."
     });
     setRemarks(prev => ({ ...prev, [id]: "" }));
-    alert("✅ Document request approved and forwarded to the Principal for final approval.");
   }
 
   function handleReject(id: string) {
-    if (!remarks[id]) {
-      alert("Please provide a reason for rejection.");
-      return;
-    }
+    if (!remarks[id]) return;
+    
     updateDocumentRequest(id, {
       status: "Teacher Rejected",
       currentStage: 1,
       teacherRemarks: remarks[id]
     });
     setRemarks(prev => ({ ...prev, [id]: "" }));
-    alert("Request has been rejected. The student will be notified.");
   }
 
   function statusColor(s: DocRequestStatus) {
@@ -50,7 +47,7 @@ export function DocRequestsScreen() {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px 100px" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 32px 100px" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Header */}
         <div>
@@ -62,8 +59,8 @@ export function DocRequestsScreen() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
           {[
             { label: "Pending Verification", val: pendingRequests.length.toString(), icon: Clock, color: "#f59e0b", bg: "#fef3c7" },
-            { label: "Approved by You", val: documentRequests.filter(r => r.teacherName === teacherName && (r.status === "Teacher Approved" || r.status === "Principal Approved" || r.status === "Ready for Pickup" || r.status === "Completed")).length.toString(), icon: CheckCircle, color: C.green, bg: C.greenBg },
-            { label: "Total Requests", val: documentRequests.filter(r => r.teacherName === teacherName).length.toString(), icon: FileText, color: C.m700, bg: C.m50 },
+            { label: "Approved by You", val: documentRequests.filter(r => isCurrentTeacher(r) && (r.status === "Teacher Approved" || r.status === "Principal Approved" || r.status === "Ready for Pickup" || r.status === "Completed")).length.toString(), icon: CheckCircle, color: C.green, bg: C.greenBg },
+            { label: "Total Requests", val: documentRequests.filter(r => isCurrentTeacher(r)).length.toString(), icon: FileText, color: C.m700, bg: C.m50 },
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
             return (

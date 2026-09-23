@@ -1,175 +1,314 @@
 import React from 'react';
 import { C } from '../constants/tokens';
 import { BookMarked } from 'lucide-react';
-import { gradeColor } from '../utils/helpers';
+import { ReportCardDTO } from '../../../../../backend/src/academic/reportCard.service';
 
-export interface Form138Student {
-  name: string;
-  lrn: string;
-  grade: number;
-  section: string;
-  gender: string;
-  age: number;
-  adviser: string;
+function Stamp({ label, color, bg, border }: { label: string; color: string; bg: string; border?: string }) {
+  return (
+    <span style={{ 
+      display: "inline-block", 
+      padding: "2.5px 8px", 
+      borderRadius: 4, 
+      fontSize: 8.5, 
+      fontWeight: 800, 
+      textTransform: "uppercase", 
+      letterSpacing: "0.08em", 
+      color, 
+      background: bg,
+      border: border ? `1px solid ${border}` : undefined,
+      WebkitPrintColorAdjust: "exact",
+      printColorAdjust: "exact",
+      whiteSpace: "nowrap"
+    }}>
+      {label}
+    </span>
+  );
 }
 
-export interface Form138Grades {
-  subjects: { name: string; grade: number; remarks: string }[];
-  generalAverage: number;
-}
+export function Form138({ data }: { data: ReportCardDTO }) {
+  const { student, school, enrollment, scholastic, attendance, adviser, principal } = data;
 
-export interface Form138Attendance {
-  daysOfSchool: number;
-  daysPresent: number;
-  daysAbsent: number;
-}
-
-export function Form138({
-  student,
-  quarter = 1,
-  sy = "2025–2026",
-  grades,
-  attendance,
-}: {
-  student: Form138Student;
-  quarter?: number;
-  sy?: string;
-  grades: Form138Grades;
-  attendance: Form138Attendance;
-}) {
-  const qStr = ["First", "Second", "Third", "Fourth"][quarter - 1] + " Quarter";
+  const isPromoted = scholastic.generalAverage !== null && scholastic.generalAverage >= 75;
+  const hasFailed = scholastic.subjects.some(s => s.finalRating !== null && s.finalRating < 75);
+  const finalRemark = isPromoted ? (hasFailed ? "CONDITIONAL" : "PROMOTED") : (scholastic.generalAverage !== null ? "RETAINED" : "");
 
   return (
-    <div style={{ background: "#fff", fontFamily: "'Inter', sans-serif", maxWidth: 850, margin: "0 auto", border: `1px solid ${C.borderMed}`, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
-      
-      {/* ── Header ── */}
-      <div style={{ padding: "30px 40px", borderBottom: `2px solid ${C.m700}`, textAlign: "center", position: "relative" }}>
-        <div style={{ position: "absolute", top: 30, left: 40, width: 60, height: 60, borderRadius: 30, background: "rgba(232,160,32,0.18)", border: `2px solid rgba(232,160,32,0.45)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <BookMarked size={28} color={C.gold} strokeWidth={2} />
-        </div>
-        
-        <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.t2, marginBottom: 4 }}>
-          Republic of the Philippines • Department of Education • Region III
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'Fraunces', serif", color: C.m900, marginBottom: 2 }}>
-          
-        </div>
-        <div style={{ fontSize: 11, color: C.t3, marginBottom: 16 }}>
-          Sindalan, City of San Fernando, Pampanga
+    <div style={{ 
+      background: "#fff", 
+      fontFamily: "'Inter', sans-serif",
+      width: "100%",
+      maxWidth: 900,
+      margin: "0 auto",
+      boxSizing: "border-box",
+      border: `1.5px solid ${C.m800}`,
+      borderRadius: 8,
+      overflow: "hidden",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+      WebkitPrintColorAdjust: "exact",
+      printColorAdjust: "exact"
+    }}>
+
+      {/* ── Official Document Header ── */}
+      <div style={{ 
+        background: C.m800, 
+        padding: "10px 18px", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "space-between",
+        borderBottom: `2.5px solid ${C.gold}`,
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ 
+            width: 36, 
+            height: 36, 
+            borderRadius: 6, 
+            background: "rgba(245,158,11,0.15)", 
+            border: `1.5px solid rgba(245,158,11,0.45)`, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            flexShrink: 0 
+          }}>
+            <BookMarked size={20} color={C.gold} strokeWidth={2.2} />
+          </div>
+          <div>
+            <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 7.5, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 1, whiteSpace: "nowrap" }}>
+              Republic of the Philippines · Department of Education · {school.region}
+            </div>
+            <div style={{ color: "#fff", fontSize: 14.5, fontWeight: 800, fontFamily: "'Fraunces', serif", whiteSpace: "nowrap" }}>
+              {school.name}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 8.5, whiteSpace: "nowrap" }}>
+              {school.district}, {school.division} · School ID: {school.schoolId}
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: "inline-block", background: C.m50, border: `1px solid ${C.m700}`, padding: "6px 24px", borderRadius: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.m800, letterSpacing: "0.05em" }}>REPORT CARD (SF-9)</div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 7.5, textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+            DepEd Form 138 / SF9-JHS
+          </div>
+          <div style={{ color: C.gold, fontSize: 12, fontWeight: 700, fontFamily: "'Fraunces', serif", whiteSpace: "nowrap" }}>
+            Learner's Official Progress Report Card
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 9, whiteSpace: "nowrap" }}>
+            {school.academicYear}
+          </div>
         </div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, marginTop: 8 }}>{qStr} • SY {sy}</div>
       </div>
 
-      {/* ── Learner's Information ── */}
-      <div style={{ padding: "20px 40px", background: C.paper, borderBottom: `1px solid ${C.borderMed}` }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1.5fr", gap: "12px 24px" }}>
-          <div style={{ borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 9, color: C.t3, textTransform: "uppercase" }}>Name:</span>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{student.name}</div>
+      {/* ── Student Information Bar ── */}
+      <div style={{ 
+        borderBottom: `1.5px solid ${C.m700}`, 
+        padding: "8px 18px", 
+        background: C.m50,
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact"
+      }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 0.8fr 1fr 1fr", gap: "6px 14px", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: C.t3, textTransform: "uppercase" }}>Full Name</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1, whiteSpace: "nowrap" }}>{student.name}</div>
           </div>
-          <div style={{ borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 9, color: C.t3, textTransform: "uppercase" }}>Age / Sex:</span>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{student.age} / {student.gender}</div>
+          <div>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: C.t3, textTransform: "uppercase" }}>Grade & Section</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.t1, whiteSpace: "nowrap" }}>Grade {enrollment.gradeLevel} - {enrollment.section}</div>
           </div>
-          <div style={{ borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 9, color: C.t3, textTransform: "uppercase" }}>Grade & Section:</span>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{student.grade} - {student.section}</div>
+          <div>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: C.t3, textTransform: "uppercase" }}>LRN</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.t1, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{student.lrn}</div>
           </div>
-          <div style={{ borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 9, color: C.t3, textTransform: "uppercase" }}>LRN:</span>
-            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: C.t1 }}>{student.lrn}</div>
+          <div>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: C.t3, textTransform: "uppercase" }}>Gender / Age</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.t1, whiteSpace: "nowrap" }}>{student.gender} · Age {student.age !== null ? student.age : "N/A"}</div>
           </div>
-          <div style={{ gridColumn: "2 / -1", borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 9, color: C.t3, textTransform: "uppercase" }}>Adviser:</span>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{student.adviser}</div>
+          <div>
+            <div style={{ fontSize: 7.5, fontWeight: 800, color: C.t3, textTransform: "uppercase" }}>Class Adviser</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.t1, whiteSpace: "nowrap" }}>{adviser || ""}</div>
           </div>
         </div>
       </div>
 
-      {/* ── Content Body (Grades & Attendance side-by-side) ── */}
-      <div style={{ display: "flex" }}>
-        
-        {/* Left: Grades Table */}
-        <div style={{ flex: 2, padding: "30px 40px", borderRight: `1px dashed ${C.borderMed}` }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: C.m800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Academic Performance</div>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: C.m700 }}>
-                <th style={{ textAlign: "left", padding: "8px 12px", fontSize: 10, color: "#fff", textTransform: "uppercase" }}>Learning Area</th>
-                <th style={{ textAlign: "center", padding: "8px 12px", fontSize: 10, color: "#fff", textTransform: "uppercase", borderLeft: "1px solid rgba(255,255,255,0.2)" }}>Quarter Grade</th>
-                <th style={{ textAlign: "center", padding: "8px 12px", fontSize: 10, color: "#fff", textTransform: "uppercase", borderLeft: "1px solid rgba(255,255,255,0.2)" }}>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grades.subjects.map((sub, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
-                  <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{sub.name}</td>
-                  <td style={{ textAlign: "center", padding: "10px 12px", fontSize: 13, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: sub.grade < 75 ? C.red : C.t1, borderLeft: `1px solid ${C.borderLight}` }}>
-                    {sub.grade}
+      {/* ── Main Scholastic Grades Table ── */}
+      <div style={{ borderBottom: `1px solid ${C.borderMed}` }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <colgroup>
+            <col style={{ width: "26%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "18%" }} />
+          </colgroup>
+          <thead>
+            <tr style={{ 
+              background: C.m700,
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact"
+            }}>
+              <th style={{ textAlign: "left", padding: "7px 18px", fontSize: 8.5, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>
+                Learning Area / Subject
+              </th>
+              {["Term 1", "Term 2", "Term 3", "Term 4"].map(t => (
+                <th key={t} style={{ textAlign: "center", padding: "7px 4px", fontSize: 8.5, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.06em", borderLeft: `1px solid rgba(255,255,255,0.2)`, whiteSpace: "nowrap" }}>{t}</th>
+              ))}
+              <th style={{ textAlign: "center", padding: "7px 6px", fontSize: 8.5, fontWeight: 800, color: C.gold, textTransform: "uppercase", letterSpacing: "0.06em", borderLeft: `1.5px solid rgba(255,255,255,0.3)`, whiteSpace: "nowrap" }}>Final Rating</th>
+              <th style={{ textAlign: "center", padding: "7px 6px", fontSize: 8.5, fontWeight: 800, color: "rgba(255,255,255,0.95)", textTransform: "uppercase", letterSpacing: "0.06em", borderLeft: `1px solid rgba(255,255,255,0.2)`, whiteSpace: "nowrap" }}>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {scholastic.subjects.map((sub, i) => {
+              const passed = sub.remarks === 'PASSED';
+              return (
+                <tr key={sub.id}
+                  style={{ 
+                    borderBottom: `1px solid ${C.border}`, 
+                    background: i % 2 === 0 ? "#ffffff" : C.paper,
+                    WebkitPrintColorAdjust: "exact",
+                    printColorAdjust: "exact"
+                  }}
+                >
+                  <td style={{ padding: "6px 18px", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: C.t1, whiteSpace: "nowrap" }}>{sub.name}</div>
                   </td>
-                  <td style={{ textAlign: "center", padding: "10px 12px", fontSize: 10, fontWeight: 700, color: sub.grade < 75 ? C.red : C.green, borderLeft: `1px solid ${C.borderLight}` }}>
-                    {sub.remarks}
+                  {[
+                    sub.T1,
+                    sub.T2,
+                    sub.T3,
+                    sub.T4
+                  ].map((val, j) => (
+                    <td key={j} style={{ textAlign: "center", padding: "6px 4px", borderLeft: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>
+                      <span style={{ 
+                        fontSize: 11.5, 
+                        fontWeight: 700, 
+                        fontFamily: "'JetBrains Mono',monospace",
+                        color: val && val >= 90 ? "#15803d" : val && val >= 85 ? "#1e40af" : val && val >= 75 ? "#0f172a" : "#b91c1c"
+                      }}>
+                        {val !== null ? val : <span style={{ color: C.red }}>-</span>}
+                      </span>
+                    </td>
+                  ))}
+                  {/* Final Rating */}
+                  <td style={{ textAlign: "center", padding: "6px 6px", borderLeft: `1.5px solid ${C.borderMed}`, background: sub.finalRating !== null ? (passed ? "#f8fafc" : C.redBg) : "transparent", whiteSpace: "nowrap" }}>
+                    <span style={{ 
+                      fontSize: 12.5, 
+                      fontWeight: 800, 
+                      fontFamily: "'JetBrains Mono',monospace", 
+                      color: sub.finalRating !== null && sub.finalRating < 75 ? "#b91c1c" : sub.finalRating !== null && sub.finalRating >= 90 ? "#15803d" : C.t1 
+                    }}>
+                      {sub.finalRating !== null ? sub.finalRating : <span style={{ color: C.red }}>-</span>}
+                    </span>
+                  </td>
+                  {/* Remarks Badge */}
+                  <td style={{ textAlign: "center", padding: "6px 6px", borderLeft: `1px solid ${C.border}`, whiteSpace: "nowrap" }}>
+                    {sub.remarks !== null ? (
+                      <Stamp 
+                        label={passed ? "PASSED" : "FAILED"} 
+                        color={passed ? "#15803d" : "#b91c1c"} 
+                        bg={passed ? "#dcfce7" : "#fee2e2"} 
+                        border={passed ? "#bbf7d0" : "#fecaca"}
+                      />
+                    ) : (
+                      <span style={{ color: C.t3, fontSize: 10 }}>-</span>
+                    )}
                   </td>
                 </tr>
-              ))}
-              <tr style={{ background: C.m50, borderTop: `2px solid ${C.m700}` }}>
-                <td style={{ padding: "12px", fontSize: 11, fontWeight: 800, color: C.m900, textTransform: "uppercase" }}>General Average</td>
-                <td style={{ textAlign: "center", padding: "12px", fontSize: 16, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif", color: grades.generalAverage < 75 ? C.red : C.m900, borderLeft: `1px solid ${C.borderLight}` }}>
-                  {grades.generalAverage.toFixed(1)}
-                </td>
-                <td style={{ textAlign: "center", padding: "12px", fontSize: 11, fontWeight: 800, color: grades.generalAverage < 75 ? C.red : C.green, borderLeft: `1px solid ${C.borderLight}` }}>
-                  {grades.generalAverage >= 75 ? "PASSED" : "FAILED"}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              );
+            })}
+
+            {/* General Average Row */}
+            <tr style={{ 
+              background: C.m800, 
+              borderTop: `2px solid ${C.m700}`,
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact"
+            }}>
+              <td colSpan={5} style={{ padding: "8px 18px" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.1em" }}>General Average (GPA)</div>
+              </td>
+              <td style={{ textAlign: "center", padding: "8px 6px", borderLeft: `1.5px solid rgba(255,255,255,0.2)` }}>
+                <div style={{ color: C.gold, fontSize: 7, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 2 }}>Final Rating</div>
+                <div style={{ fontSize: 16, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: scholastic.generalAverage !== null && scholastic.generalAverage < 75 ? "#fca5a5" : "#fff" }}>
+                  {scholastic.generalAverage !== null ? scholastic.generalAverage : <span style={{ color: C.red }}>-</span>}
+                </div>
+              </td>
+              <td style={{ textAlign: "center", padding: "8px 6px", borderLeft: `1px solid rgba(255,255,255,0.2)` }}>
+                {scholastic.generalAverage !== null ? (
+                  <Stamp 
+                    label={finalRemark} 
+                    color={isPromoted ? "#15803d" : "#b91c1c"} 
+                    bg={isPromoted ? "#dcfce7" : "#fee2e2"} 
+                    border={isPromoted ? "#bbf7d0" : "#fecaca"}
+                  />
+                ) : <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}>-</span>}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{ display: "flex", background: C.paper, padding: 12, gap: 12, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+        
+        {/* Descriptors */}
+        <div style={{ flex: 1, border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: "8px 12px", background: "#fff" }}>
+          <div style={{ fontSize: 7.5, fontWeight: 800, color: C.m700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Descriptors & Grading Scale</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 8.5, color: C.t2 }}>
+            <div><strong>90-100:</strong> Outstanding</div>
+            <div><strong>85-89:</strong> Very Satisfactory</div>
+            <div><strong>80-84:</strong> Satisfactory</div>
+            <div><strong>75-79:</strong> Fairly Satisfactory</div>
+            <div><strong>&lt;75:</strong> Failed</div>
+          </div>
         </div>
 
-        {/* Right: Attendance & Signatures */}
-        <div style={{ flex: 1.2, padding: "30px 40px", display: "flex", flexDirection: "column", gap: 30 }}>
-          
-          {/* Attendance */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: C.m800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12 }}>Attendance Record</div>
-            <div style={{ border: `1px solid ${C.borderMed}`, borderRadius: 6, overflow: "hidden" }}>
-              <div style={{ display: "flex", borderBottom: `1px solid ${C.borderMed}`, background: C.paper }}>
-                <div style={{ flex: 2, padding: "8px 12px", fontSize: 10, fontWeight: 600, color: C.t2 }}>Days of School</div>
-                <div style={{ flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", color: C.t1, borderLeft: `1px solid ${C.borderMed}` }}>{attendance.daysOfSchool}</div>
+        {/* Signatures */}
+        <div style={{ flex: 1.5, display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "4px 8px" }}>
+          <div style={{ fontSize: 7.5, fontWeight: 800, color: C.m700, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Official Signatures & Certification</div>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+            {/* Adviser */}
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ borderTop: `1px solid ${C.t1}`, paddingTop: 3, marginTop: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: C.t1, whiteSpace: "nowrap" }}>{adviser || ""}</div>
+                <div style={{ fontSize: 7.5, color: C.t3, whiteSpace: "nowrap" }}>Class Adviser</div>
               </div>
-              <div style={{ display: "flex", borderBottom: `1px solid ${C.borderMed}` }}>
-                <div style={{ flex: 2, padding: "8px 12px", fontSize: 10, fontWeight: 600, color: C.t2 }}>Days Present</div>
-                <div style={{ flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", color: C.green, borderLeft: `1px solid ${C.borderMed}` }}>{attendance.daysPresent}</div>
+            </div>
+            {/* Principal */}
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ borderTop: `1px solid ${C.t1}`, paddingTop: 3, marginTop: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: C.t1, whiteSpace: "nowrap" }}>{principal || ""}</div>
+                <div style={{ fontSize: 7.5, color: C.t3, whiteSpace: "nowrap" }}>School Principal</div>
               </div>
-              <div style={{ display: "flex" }}>
-                <div style={{ flex: 2, padding: "8px 12px", fontSize: 10, fontWeight: 600, color: C.t2 }}>Days Absent</div>
-                <div style={{ flex: 1, padding: "8px 12px", fontSize: 12, fontWeight: 700, textAlign: "center", color: attendance.daysAbsent > 0 ? C.red : C.t1, borderLeft: `1px solid ${C.borderMed}` }}>{attendance.daysAbsent}</div>
+            </div>
+            {/* Parent */}
+            <div style={{ textAlign: "center", flex: 1 }}>
+              <div style={{ borderTop: `1px solid ${C.t1}`, paddingTop: 3, marginTop: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: C.t1, whiteSpace: "nowrap" }}>&nbsp;</div>
+                <div style={{ fontSize: 7.5, color: C.t3, whiteSpace: "nowrap" }}>Parent / Guardian<br/><span style={{ fontSize: 6.5 }}>Conforme</span></div>
               </div>
             </div>
           </div>
-
-          {/* Signatures */}
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: C.m800, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 20 }}>Signatures</div>
-            
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ borderBottom: `1px solid ${C.t1}`, height: 30 }} />
-              <div style={{ fontSize: 9, color: C.t3, textAlign: "center", marginTop: 4, textTransform: "uppercase" }}>Parent / Guardian's Signature</div>
-            </div>
-            
-            <div>
-              <div style={{ borderBottom: `1px solid ${C.t1}`, height: 30, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>{student.adviser}</span>
-              </div>
-              <div style={{ fontSize: 9, color: C.t3, textAlign: "center", marginTop: 4, textTransform: "uppercase" }}>Teacher / Adviser</div>
-            </div>
-          </div>
-
         </div>
+      </div>
 
+      <div style={{ 
+        padding: "8px 18px", 
+        background: C.m50, 
+        borderTop: `1px solid ${C.borderMed}`, 
+        fontSize: 7.5, 
+        color: C.t3,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
+      }}>
+        <div style={{ whiteSpace: "nowrap" }}>Official DepEd Form 138-JHS (SF9) · {school.name} · DigiSkwela Security Verified</div>
+        <div style={{ display: "flex", gap: 14, whiteSpace: "nowrap" }}>
+          <span>LRN: <strong>{student.lrn}</strong></span>
+          <span>Date Issued: <strong>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</strong></span>
+        </div>
       </div>
 
     </div>

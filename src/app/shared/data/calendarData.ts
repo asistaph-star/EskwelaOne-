@@ -26,18 +26,18 @@ export const SCHOOL_EVENTS: CalendarEvent[] = [
   { id: "se-2", title: "PTA General Assembly",    date: "2025-06-06", time: "13:00", endTime: "16:00", type: "meeting",   color: "#1e40af", locked: true, audience: "all" },
   { id: "se-3", title: "Nutrition Month Kick-off", date: "2025-06-09", time: "08:00", endTime: "12:00", type: "academic",  color: "#15803d", locked: true, audience: "all" },
   { id: "se-4", title: "Independence Day (No Classes)", date: "2025-06-12", type: "holiday", color: "#b91c1c", locked: true, audience: "all" },
-  { id: "se-5", title: "Q1 Diagnostic Exam",      date: "2025-06-16", time: "08:00", endTime: "15:00", type: "exam",      color: "#9333ea", locked: true, audience: "students" },
-  { id: "se-6", title: "Q1 Diagnostic Exam Day 2", date: "2025-06-17", time: "08:00", endTime: "15:00", type: "exam",     color: "#9333ea", locked: true, audience: "students" },
+  { id: "se-5", title: "T1 Diagnostic Exam",      date: "2025-06-16", time: "08:00", endTime: "15:00", type: "exam",      color: "#9333ea", locked: true, audience: "students" },
+  { id: "se-6", title: "T1 Diagnostic Exam Day 2", date: "2025-06-17", time: "08:00", endTime: "15:00", type: "exam",     color: "#9333ea", locked: true, audience: "students" },
   { id: "se-7", title: "LAC Session - All Teachers", date: "2025-06-13", time: "15:00", endTime: "17:00", type: "meeting", color: "#0369a1", locked: true, audience: "teachers" },
   { id: "se-8", title: "Brigada Eskwela",         date: "2025-06-20", time: "07:00", endTime: "12:00", type: "academic",  color: "#ca8604", locked: true, audience: "all" },
   { id: "se-9", title: "Foundation Day",           date: "2025-06-25", type: "holiday",   color: "#b91c1c", locked: true, audience: "all" },
   { id: "se-10", title: "SF2 Submission Deadline", date: "2025-06-27", time: "17:00", type: "academic",  color: "#ca8604", locked: true, audience: "teachers" },
-  { id: "se-11", title: "Quarterly Grades Encoding", date: "2025-06-30", type: "academic", color: "#7c2d12", locked: true, audience: "teachers" },
+  { id: "se-11", title: "Term Grades Encoding", date: "2025-06-30", type: "academic", color: "#7c2d12", locked: true, audience: "teachers" },
 ];
 
 // ── Teacher personal events (editable by the teacher) ──
 export const TEACHER_PERSONAL_EVENTS: CalendarEvent[] = [
-  { id: "tp-1", title: "Prepare Q1 Lesson Plans", date: "2025-06-05", type: "personal", color: "#0ea5e9", locked: false },
+  { id: "tp-1", title: "Prepare T1 Lesson Plans", date: "2025-06-05", type: "personal", color: "#0ea5e9", locked: false },
   { id: "tp-2", title: "Grade 10 Remedial Class",  date: "2025-06-11", type: "personal", color: "#0ea5e9", locked: false },
   { id: "tp-3", title: "DLL Review & Update",      date: "2025-06-18", type: "personal", color: "#0ea5e9", locked: false },
   { id: "tp-4", title: "Parent Conference - Santos", date: "2025-06-23", type: "personal", color: "#8b5cf6", locked: false },

@@ -1,8 +1,13 @@
 import { PrismaClient } from '@prisma/client';
+import { fieldEncryptionExtension } from 'prisma-field-encryption';
 
-const prisma = new PrismaClient({
+const basePrisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
+
+const prisma = basePrisma.$extends(
+  fieldEncryptionExtension()
+);
 
 export default prisma;
 
@@ -12,7 +17,7 @@ export default prisma;
  * If any operation fails, the entire transaction is rolled back.
  */
 export async function withTransaction<T>(
-  fn: (tx: Parameters<Parameters<PrismaClient['$transaction']>[0]>[0]) => Promise<T>
+  fn: (tx: any) => Promise<T>
 ): Promise<T> {
   return prisma.$transaction(fn, {
     maxWait: 5000,

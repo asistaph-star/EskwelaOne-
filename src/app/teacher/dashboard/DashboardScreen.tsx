@@ -1,35 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { TODAY_SCHED, UPCOMING, STUDENTS_GR8, MY_CLASSES } from '../../App';
 import { CalendarCheck, FileText, Users, AlertCircle, BarChart2, Bell, Search, ChevronDown, ChevronLeft, ChevronRight, Building2, ArrowRight, Calendar, Wrench, FileDown, Download, BookMarked } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { StatBox } from '../../shared/components/StatBox';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { ClassGradeSummary } from './ClassGradeSummary';
-import { SECTION_GRADES } from '../../shared/constants/seedData';
+import { NotificationDropdown } from '../../shared/components/NotificationDropdown';
 import { StudentDetailOverlay } from '../../shared/components/StudentDetailOverlay';
-import { useAppContext } from '../../shared/AppContext';
+import { useMyClasses } from '../shared/useMyClasses';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { apiClient } from '../../../api/client';
 
-export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onGradebookClick:(id:number)=>void, onHubClick:(id:number)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
-  const [detailStudent, setDetailStudent] = useState<typeof SECTION_GRADES[string][0]|null>(null);
-  const { excuseLetters, updateExcuseLetter, announcements } = useAppContext();
-  
+export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onGradebookClick:(id:string)=>void, onHubClick:(id:string)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
+  const [detailStudent, setDetailStudent] = useState<any|null>(null);
+  const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [isLoadingDash, setIsLoadingDash] = useState(true);
+
+  useEffect(() => {
+    setIsLoadingDash(true);
+    Promise.all([
+      apiClient.get('/admin/announcements'),
+      apiClient.get('/admin/events')
+    ])
+    .then(([annRes, evtRes]: any) => {
+      setAnnouncements(Array.isArray(annRes) ? annRes : []);
+      setEvents(Array.isArray(evtRes) ? evtRes : []);
+    })
+    .catch(err => {
+      console.error('Failed to load dashboard data:', err);
+      setAnnouncements([]);
+      setEvents([]);
+    })
+    .finally(() => setIsLoadingDash(false));
+  }, []);
+
+  const totalStudents = myClasses.reduce((sum, cls:any) => sum + (cls.students || 0), 0);
+
   return (
     <div style={{ flex:1, overflowY:"auto", background: "transparent", padding: "24px 32px" }}>
       <div style={{ width: "100%", margin: "0 auto", display: "flex", flexDirection: "column" }}>
-        
-
-
         {/* KPI metrics strip */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:14, marginBottom:20 }}>
           {[
-            { label: "Assigned Sections", val: "3", sub: "Gr. 8, 9, 10", icon: Users, color: C.m700, bg: C.m50 },
-            { label: "Total Students",    val: "107", sub: "Across all sections", icon: Users, color: C.m700, bg: C.m50 },
-            { label: "Today's Schedule",  val: "4 Classes", sub: "Classes today", icon: CalendarCheck, color: C.blue, bg: "#eff6ff" },
-            { label: "Pending Grades",    val: "12 Items", sub: "Items to encode", icon: AlertCircle, color: "#f59e0b", bg: "#fefbeb" },
-            { label: "Attendance Status", val: "94.2%", sub: "Schoolwide today", icon: BarChart2, color: C.green, bg: "#f0fdf4" },
-            { label: "Upcoming Events",   val: "5", sub: "Events this week", icon: Bell, color: C.purple, bg: "#faf5ff" }
+            { label: "Assigned Sections", val: isLoadingClasses ? "-" : `${myClasses.length}`, sub: "Active", icon: Users, color: C.m700, bg: C.m50 },
+            { label: "Total Students",    val: isLoadingClasses ? "-" : `${totalStudents}`, sub: "Across sections", icon: Users, color: C.m700, bg: C.m50 },
+            { label: "Today's Schedule",  val: "-", sub: "Coming Soon", icon: CalendarCheck, color: C.t3, bg: "#f1f5f9" },
+            { label: "Pending Grades",    val: "-", sub: "Coming Soon", icon: AlertCircle, color: C.t3, bg: "#f1f5f9" },
+            { label: "Attendance Status", val: "-", sub: "Coming Soon", icon: BarChart2, color: C.t3, bg: "#f1f5f9" },
+            { label: "Upcoming Events",   val: isLoadingDash ? "-" : `${events.length}`, sub: "Schoolwide", icon: Bell, color: C.purple, bg: "#faf5ff" }
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
             return (
@@ -65,7 +86,18 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
                 </button>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
-                {MY_CLASSES.map(cls => (
+                {isLoadingClasses ? (
+                  <div style={{ gridColumn: "1 / -1", padding: 20, textAlign: "center", color: C.t3, fontSize: 12 }}>Loading sections...</div>
+                ) : myClasses.length === 0 ? (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <EmptyState
+                      icon={Users}
+                      title="No Classes Assigned"
+                      description="You don't have any sections assigned for this academic year yet."
+                      guidance="Once an administrator assigns you to a section, your classes will appear here."
+                    />
+                  </div>
+                ) : myClasses.map(cls => (
                   <div key={cls.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", display: "flex", flexDirection: "column", boxShadow: "0 6px 20px rgba(139,30,30,0.05)" }}>
                     
                     {/* Main Card Body -> Routes to Gradebook */}
@@ -112,11 +144,17 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
             <div style={{ marginBottom: 16 }}>
               <DocPanel title="School Announcements" icon={BookMarked}>
                 <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {announcements.length === 0 && !isLoadingDash && (
+                    <div style={{ fontSize: 11, color: C.t3, padding: 10, textAlign: 'center' }}>No recent announcements</div>
+                  )}
+                  {isLoadingDash && (
+                    <div style={{ fontSize: 11, color: C.t3, padding: 10, textAlign: 'center' }}>Loading...</div>
+                  )}
                   {announcements.map((a, i) => (
                     <div key={i} style={{ background: C.paper, border: `1px solid ${C.borderLight}`, borderRadius: 6, padding: "10px 14px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: C.m800 }}>{a.title}</div>
-                        <div style={{ fontSize: 9, color: C.t3 }}>{a.timestamp.split(',')[0]}</div>
+                        <div style={{ fontSize: 9, color: C.t3 }}>{new Date(a.created_at).toLocaleDateString()}</div>
                       </div>
                       <div style={{ fontSize: 10, color: C.t2, lineHeight: 1.4 }}>{a.body}</div>
                     </div>

@@ -10,7 +10,7 @@ export function AIToolsScreen() {
   const [activePlan, setActivePlan] = useState<string | null>(null);
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: 24, background: "transparent", position: "relative" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24, background: "transparent", position: "relative" }}>
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Sparkles size={24} color={C.gold} />
@@ -127,7 +127,7 @@ export function AIToolsScreen() {
               <div style={{ fontSize: 12, color: C.t2, marginBottom: 16, lineHeight: 1.5 }}>Generate structured analytical reports based on actual system data with a single click.</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[
-                  "Quarterly Class Performance Report",
+                  "Term Class Performance Report",
                   "Attendance Summary",
                   "Grade Analysis",
                   "Student Performance Summary"
@@ -173,20 +173,20 @@ export function AIToolsScreen() {
                 <span style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>AI-Generated Report Ready</span>
               </div>
               <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
-                {previewReport === "Quarterly Class Performance Report" && (
+                {previewReport === "Term Class Performance Report" && (
                   <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade 8 - Rizal (Mathematics) - Q1 Summary</div>
+                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade 8 - Rizal (Mathematics) - T1 Summary</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Class Average:</strong> 82.4% (Pass Rate: 85%)</li>
                       <li><strong>Key Strengths:</strong> Geometry & Measurement (Avg: 88%)</li>
                       <li><strong>Weak Learning Areas:</strong> Fractions & Ratios (3 students scored below 75%)</li>
-                      <li><strong>AI Recommendation:</strong> Implement small group remediation for Hannah Grace Espino and Mark Ryan Hernandez focusing on basic fractional operations before Q2.</li>
+                      <li><strong>AI Recommendation:</strong> Implement small group remediation for Hannah Grace Espino and Mark Ryan Hernandez focusing on basic fractional operations before T2.</li>
                     </ul>
                   </div>
                 )}
                 {previewReport === "Attendance Summary" && (
                   <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Cross-Section Attendance Report - Q1</div>
+                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Cross-Section Attendance Report - T1</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Overall Attendance Rate:</strong> 94.2% (Target: 95%)</li>
                       <li><strong>Chronic Absences:</strong> Juan Dela Cruz (5 days), Miguel Rivera (4 days)</li>
@@ -212,9 +212,9 @@ export function AIToolsScreen() {
                   <div>
                     <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>At-Risk & High-Performer Summary</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Hannah Grace Espino:</strong> Math (68.5) - Needs immediate intervention on Quarterly Assessments.</li>
+                      <li><strong>Hannah Grace Espino:</strong> Math (68.5) - Needs immediate intervention on Term Assessments.</li>
                       <li><strong>Mark Ryan Hernandez:</strong> Math (71.0) - Failing due to missed Performance Tasks.</li>
-                      <li><strong>Ramon Bondoc Jr.:</strong> Math (76.8) - Borderline passing, monitor closely in Q2.</li>
+                      <li><strong>Ramon Bondoc Jr.:</strong> Math (76.8) - Borderline passing, monitor closely in T2.</li>
                       <li><strong>Trisha Ann Cruz:</strong> Math (93.1) - Excelling, recommended for peer-mentoring program.</li>
                       <li><strong>AI Recommendation:</strong> Pair Trisha Ann Cruz with Hannah Grace Espino for weekly peer-mentoring sessions.</li>
                     </ul>
@@ -223,7 +223,7 @@ export function AIToolsScreen() {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
                 <button onClick={() => setPreviewReport(null)} style={{ padding: "8px 16px", borderRadius: 4, background: "transparent", border: `1px solid ${C.borderMed}`, color: C.t2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Close</button>
-                <button onClick={() => { alert("Report downloaded successfully!"); setPreviewReport(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => { setPreviewReport(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                   <Download size={14} /> Download PDF
                 </button>
               </div>
@@ -249,7 +249,7 @@ export function AIToolsScreen() {
               <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
                 {activePlan === "Implement Peer Mentoring" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 8 Rizal has a bimodal grade distribution in Mathematics. Pairing top performers with at-risk students has a 78% historical success rate in improving quarterly scores.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 8 Rizal has a bimodal grade distribution in Mathematics. Pairing top performers with at-risk students has a 78% historical success rate in improving term scores.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Target Subject:</strong> Mathematics 8 (Fractions & Ratios)</li>
                       <li><strong>AI Suggested Matches:</strong> 
@@ -264,7 +264,7 @@ export function AIToolsScreen() {
                 )}
                 {activePlan === "Small Group Remediation" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 25% of 9 Einstein scored below the passing threshold on the recent diagnostic test for basic chemical equations. Immediate remediation is required to prevent falling behind in Q2.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 25% of 9 Einstein scored below the passing threshold on the recent diagnostic test for basic chemical equations. Immediate remediation is required to prevent falling behind in T2.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
                       <li><strong>Target Subject:</strong> Science 9 (Chemical Equations)</li>
                       <li><strong>Targeted Students:</strong> Paulo Bautista (69.2%), Kevin Mendoza (77.5%)</li>
@@ -275,9 +275,9 @@ export function AIToolsScreen() {
                 )}
                 {activePlan === "Targeted Intervention Sessions" && (
                   <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> Several students in 10 Pilot are at risk of failing Q1 due to missing requirements rather than poor test scores. An intervention session can help them catch up.</div>
+                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> Several students in 10 Pilot are at risk of failing T1 due to missing requirements rather than poor test scores. An intervention session can help them catch up.</div>
                     <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Target Subject:</strong> Filipino 10 (Q1 Requirements)</li>
+                      <li><strong>Target Subject:</strong> Filipino 10 (T1 Requirements)</li>
                       <li><strong>Targeted Students:</strong> Miguel Rivera (4 missing tasks), Renz Adrian Ocampo (2 missing tasks)</li>
                       <li><strong>Objective:</strong> Guided completion of Performance Task 2 and Quiz 3 makeup.</li>
                       <li><strong>Schedule:</strong> Fridays, 1:00 PM - 2:00 PM</li>
@@ -288,7 +288,7 @@ export function AIToolsScreen() {
               
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
                 <button onClick={() => setActivePlan(null)} style={{ padding: "8px 16px", borderRadius: 4, background: "transparent", border: `1px solid ${C.borderMed}`, color: C.t2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Dismiss Plan</button>
-                <button onClick={() => { alert("Action plan added to your Calendar and notifications sent to relevant students!"); setActivePlan(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => { setActivePlan(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                   <CheckCircle2 size={14} /> Approve & Implement
                 </button>
               </div>

@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { useAppContext } from '../../shared/AppContext';
 import { HeartHandshake, CheckCircle, XCircle, Clock, Calendar, Plus, Mail, X, User, FileText } from 'lucide-react';
 import type { Appointment } from '../../shared/AppContext';
+import { apiClient } from '@/api/client';
 
 export function GCounselingScreen() {
-  const { appointments, addAppointment, updateAppointment } = useAppContext();
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   
+  const loadData = async () => {
+    try {
+      const [apptRes, studentsRes] = await Promise.all([
+        apiClient.get<any>('/student-services/appointments/me'),
+        apiClient.get<any>('/users?role=Student')
+      ]);
+      setAppointments(apptRes);
+      setStudents(studentsRes); 
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadData(); }, []);
+
   const counselingAppts = appointments;
-  
   const pending = counselingAppts.filter(a => a.status === "Pending");
   const confirmed = counselingAppts.filter(a => a.status === "Confirmed");
   const completed = counselingAppts.filter(a => a.status === "Completed");
@@ -22,60 +35,44 @@ export function GCounselingScreen() {
   const [formPurpose, setFormPurpose] = useState("");
   const [formDirection, setFormDirection] = useState<"parent-to-teacher" | "teacher-to-parent">("teacher-to-parent");
 
-  function handleStatus(id: string, status: "Confirmed" | "Declined" | "Completed") {
-    updateAppointment(id, status);
+  const [scheduleModal, setScheduleModal] = useState(false);
+  const [form, setForm] = useState({
+    studentId: "",
+    parentEmail: "",
+    date: "",
+    time: "",
+    purpose: ""
+  });
+
+  async function handleStatus(id: string, status: "Confirmed" | "Declined" | "Completed") {
+    try {
+      const res = await apiClient.patch(`/student-services/appointments/${id}/status`, { status });
+      if (res) loadData();
+    } catch (e) { console.error(e); }
   }
 
-  function resetForm() {
-    setFormStudent("");
-    setFormParentEmail("");
-    setFormDate("");
-    setFormTime("");
-    setFormPurpose("");
-    setFormDirection("teacher-to-parent");
-  }
-
-  function handleSchedule(e: React.FormEvent) {
+  const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formStudent.trim() || !formParentEmail.trim() || !formDate || !formTime || !formPurpose.trim()) return;
-
-    // Format date for display
-    const dateObj = new Date(formDate + "T00:00:00");
-    const displayDate = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-    // Format time for display
-    const [h, m] = formTime.split(":");
-    const hour = parseInt(h);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    const displayTime = `${displayHour}:${m} ${ampm}`;
-
-    const newAppt: Appointment = {
-      id: "appt-" + Math.random().toString(36).substr(2, 9),
-      studentName: formStudent,
-      parentEmail: formParentEmail,
-      teacherName: "Counselor Perez",
-      date: displayDate,
-      time: displayTime,
-      purpose: formPurpose,
-      status: formDirection === "teacher-to-parent" ? "Confirmed" : "Pending",
-      direction: formDirection,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    };
-
-    addAppointment(newAppt);
-    resetForm();
-    setIsModalOpen(false);
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "10px 12px", borderRadius: 8,
-    border: `1px solid ${C.borderMed}`, outline: "none",
-    boxSizing: "border-box", fontSize: 13,
-    fontFamily: "'Inter', sans-serif",
-    transition: "border-color 0.2s",
+    if (!form.studentId || !form.date || !form.time) return;
+    
+    try {
+      const res = await apiClient.post('/student-services/appointments', {
+        studentId: form.studentId,
+        parentEmail: form.parentEmail,
+        date: form.date,
+        time: form.time,
+        purpose: form.purpose
+      });
+      if (res) {
+        setForm({ studentId: "", parentEmail: "", date: "", time: "", purpose: "" });
+        setScheduleModal(false);
+        loadData();
+      }
+    } catch (err) { console.error(err); }
   };
 
+  const mailtoHref = (appt: any) =>
+    `mailto:${appt.parent_email || ''}?subject=Counseling%20Session&body=Dear%20Parent%2C%0A%0AWe%20would%20like%20to%20schedule%20a%20counseling%20session%20on%20${new Date(appt.date).toLocaleDateString()}%20at%20${typeof appt.time === 'string' ? appt.time : new Date(appt.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}.%0A%0APurpose%3A%20${encodeURIComponent(appt.purpose)}%0A%0AThank%20you.%0A%0A-%20Guidance%20Office`;
   return (
     <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", paddingBottom: 100 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
@@ -85,6 +82,7 @@ export function GCounselingScreen() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Counseling Sessions</h1>
             <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Manage appointments for student counseling and parent consultations.</div>
           </div>
+<<<<<<< HEAD
           <button
             id="schedule-session-btn"
             onClick={() => setIsModalOpen(true)}
@@ -96,6 +94,12 @@ export function GCounselingScreen() {
             onMouseEnter={e => { e.currentTarget.style.background = C.m600; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = C.m700; e.currentTarget.style.transform = "translateY(0)"; }}
           >
+=======
+          <button onClick={() => setScheduleModal(true)} style={{
+            background: C.m700, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 6,
+            fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8
+          }}>
+>>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
             <Plus size={14} /> Schedule Session
           </button>
         </div>
@@ -132,7 +136,7 @@ export function GCounselingScreen() {
           {/* Pending Requests */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, display: "flex", alignItems: "center", gap: 8 }}>
-              <Clock size={16} color="#f59e0b" /> Pending Requests
+              <Clock size={16} color="#f59e0b" /> Pending Requests ({pending.length})
             </div>
             
             {pending.length === 0 ? (
@@ -145,8 +149,8 @@ export function GCounselingScreen() {
                 <div key={appt.id} style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
-                      <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>{appt.date} • {appt.time}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>{appt.student ? `${appt.student.user.first_name} ${appt.student.user.last_name}` : appt.student_id}</div>
+                      <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>{new Date(appt.date).toLocaleDateString()} • {typeof appt.time === 'string' ? appt.time : new Date(appt.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", background: "#fef3c7", padding: "4px 10px", borderRadius: 12 }}>Pending</span>
                   </div>
@@ -157,18 +161,9 @@ export function GCounselingScreen() {
                     <Mail size={12} /> {appt.parentEmail}
                   </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                    <button
-                      onClick={() => {
-                        const subject = encodeURIComponent(`Counseling Session: ${appt.studentName} — ${appt.date}`);
-                        const body = encodeURIComponent(
-                          `Dear Parent/Guardian,\n\nThis is Counselor Perez from the Guidance Office of Calulut Integrated School.\n\nWe would like to confirm a counseling session for your child, ${appt.studentName}, scheduled on ${appt.date} at ${appt.time}.\n\nPurpose: ${appt.purpose}\n\nPlease reply to confirm your attendance or contact us to reschedule.\n\nRespectfully,\nCounselor Perez\nGuidance Office`
-                        );
-                        window.open(`mailto:${appt.parentEmail}?subject=${subject}&body=${body}`, '_blank');
-                      }}
-                      style={{ flex: 1, padding: "8px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}`, borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                    >
+                    <a href={mailtoHref(appt)} style={{ flex: 1, padding: "8px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}`, borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none" }}>
                       <Mail size={14} /> Email Parent
-                    </button>
+                    </a>
                     <button onClick={() => handleStatus(appt.id, "Confirmed")} style={{ flex: 1, padding: "8px", background: C.green, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                       <CheckCircle size={14} /> Accept
                     </button>
@@ -184,7 +179,7 @@ export function GCounselingScreen() {
           {/* Confirmed Sessions */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, display: "flex", alignItems: "center", gap: 8 }}>
-              <Calendar size={16} color={C.blue} /> Scheduled Sessions
+              <Calendar size={16} color={C.blue} /> Scheduled Sessions ({confirmed.length})
             </div>
             
             {confirmed.length === 0 ? (
@@ -197,8 +192,8 @@ export function GCounselingScreen() {
                 <div key={appt.id} style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
-                      <div style={{ fontSize: 11, color: C.blue, fontWeight: 600, marginTop: 2 }}>{appt.date} • {appt.time}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.t1 }}>{appt.student ? `${appt.student.user.first_name} ${appt.student.user.last_name}` : appt.student_id}</div>
+                      <div style={{ fontSize: 11, marginTop: 2, color: C.blue, fontWeight: 600 }}>{new Date(appt.date).toLocaleDateString()} • {typeof appt.time === 'string' ? appt.time : new Date(appt.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, color: C.blue, background: C.blueBg, padding: "4px 10px", borderRadius: 12 }}>Confirmed</span>
                   </div>
@@ -209,18 +204,9 @@ export function GCounselingScreen() {
                     <Mail size={12} /> {appt.parentEmail}
                   </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                    <button
-                      onClick={() => {
-                        const subject = encodeURIComponent(`Counseling Session Reminder: ${appt.studentName} — ${appt.date}`);
-                        const body = encodeURIComponent(
-                          `Dear Parent/Guardian,\n\nThis is a reminder of the scheduled counseling session for ${appt.studentName} on ${appt.date} at ${appt.time}.\n\nPurpose: ${appt.purpose}\n\nPlease contact us if you need to reschedule.\n\nRespectfully,\nCounselor Perez\nGuidance Office`
-                        );
-                        window.open(`mailto:${appt.parentEmail}?subject=${subject}&body=${body}`, '_blank');
-                      }}
-                      style={{ flex: 1, padding: "8px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}`, borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                    >
+                    <a href={mailtoHref(appt)} style={{ flex: 1, padding: "8px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}`, borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none" }}>
                       <Mail size={14} /> Email Parent
-                    </button>
+                    </a>
                     <button onClick={() => handleStatus(appt.id, "Completed")} style={{ flex: 1, padding: "8px", background: "transparent", color: C.m700, border: `1px solid ${C.m700}`, borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       Mark as Completed
                     </button>
@@ -234,6 +220,7 @@ export function GCounselingScreen() {
       </div>
 
       {/* Schedule Session Modal */}
+<<<<<<< HEAD
       {isModalOpen && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
           <div
@@ -408,6 +395,49 @@ export function GCounselingScreen() {
                 >
                   <Calendar size={14} /> Schedule Session
                 </button>
+=======
+      {scheduleModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(10,4,4,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setScheduleModal(false); }}>
+          <div style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 440, overflow: "hidden", boxShadow: "0 24px 64px rgba(74,10,16,0.25)" }}>
+            <div style={{ background: C.m800, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces',serif" }}>Schedule Counseling Session</div>
+              <button onClick={() => setScheduleModal(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 4, width: 28, height: 28, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={14} />
+              </button>
+            </div>
+            <form onSubmit={handleSchedule} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Student Name</label>
+                <select required value={form.studentId} onChange={e => setForm({ ...form, studentId: e.target.value })} style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }}>
+                  <option value="">Select a student...</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Parent Email</label>
+                <input type="email" value={form.parentEmail} onChange={e => setForm({ ...form, parentEmail: e.target.value })} placeholder="e.g. parent@email.com" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Date</label>
+                  <input required type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Time</label>
+                  <input required type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Purpose / Notes</label>
+                <textarea rows={3} value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="e.g. Discuss academic performance and social behavior..." style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+                <button type="button" onClick={() => setScheduleModal(false)} style={{ padding: "8px 16px", background: C.m50, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: C.t2, cursor: "pointer" }}>Cancel</button>
+                <button type="submit" style={{ padding: "8px 20px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Save Session</button>
+>>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
               </div>
             </form>
           </div>

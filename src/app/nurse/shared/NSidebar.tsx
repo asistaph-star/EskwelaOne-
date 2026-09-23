@@ -19,7 +19,8 @@ const N_NAV_GROUPS = [
     { id:"n-reports",          label:"Medical Reports",   icon:FileText },
   ]},
   { category: "Tools & Growth", items: [
-    { id:"n-ai",               label:"AI Insights & Reports",    icon:Sparkles },
+    { id:"n-ai",               label:"Clinic Analytics",  icon:Sparkles },
+    { id:"n-tools",            label:"Health Tools",      icon:Wrench },
   ]},
 ];
 

@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { useAppContext } from '../../shared/AppContext';
 import { ShieldAlert, CheckCircle, Search, Filter, AlertTriangle, FileText, Mail, X } from 'lucide-react';
-import type { BehaviorLog } from '../../shared/AppContext';
+import { apiClient } from '@/api/client';
 
 export function GBehaviorScreen() {
-  const { behaviorLogs, addBehaviorLog, updateBehaviorLog } = useAppContext();
+  const [behaviorLogs, setBehaviorLogs] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newStudent, setNewStudent] = useState("");
-  const [newSection, setNewSection] = useState("");
   const [newType, setNewType] = useState("Misconduct");
   const [newNote, setNewNote] = useState("");
   const [newStatus, setNewStatus] = useState("Under investigation");
@@ -19,44 +18,69 @@ export function GBehaviorScreen() {
   const [editStatus, setEditStatus] = useState("");
   const [editNote, setEditNote] = useState("");
 
-  const filteredLogs = behaviorLogs.filter(l => 
-    l.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    l.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleAddLog = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newStudent.trim() || !newSection.trim() || !newNote.trim()) return;
-
-    addBehaviorLog({
-      id: "log-" + Math.random().toString(36).substr(2, 9),
-      studentName: newStudent,
-      section: newSection,
-      type: newType,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: newStatus,
-      note: newNote,
-    });
-    
-    setIsModalOpen(false);
-    setNewStudent("");
-    setNewSection("");
-    setNewType("Misconduct");
-    setNewNote("");
-    setNewStatus("Under investigation");
+  const loadData = async () => {
+    try {
+      const [behaviorRes, studentsRes] = await Promise.all([
+        apiClient.get<any>('/student-services/behavior'),
+        apiClient.get<any>('/users?role=Student')
+      ]);
+      setBehaviorLogs(behaviorRes);
+      setStudents(studentsRes);
+    } catch (e) { console.error(e); }
   };
 
-  const openManageModal = (log: BehaviorLog) => {
+  useEffect(() => { loadData(); }, []);
+
+  const filteredLogs = behaviorLogs.filter(l => 
+    (l.studentName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (l.type || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleAddLog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStudent || !newNote.trim()) return;
+
+    try {
+      const res = await apiClient.post('/student-services/behavior', {
+        studentId: newStudent,
+        type: newType,
+        date: new Date().toISOString(),
+        status: newStatus,
+        note: newNote,
+      });
+      if (res) {
+        setIsModalOpen(false);
+        setNewStudent("");
+        setNewType("Misconduct");
+        setNewNote("");
+        setNewStatus("Under investigation");
+        loadData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const openManageModal = (log: any) => {
     setEditingLogId(log.id);
     setEditStatus(log.status);
     setEditNote(log.note);
     setIsManageModalOpen(true);
   };
 
-  const handleUpdateLog = (e: React.FormEvent) => {
+  const handleUpdateLog = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateBehaviorLog(editingLogId, { status: editStatus, note: editNote });
-    setIsManageModalOpen(false);
+    try {
+      const res = await apiClient.patch(`/student-services/behavior/${editingLogId}/status`, {
+        status: editStatus, note: editNote
+      });
+      if (res) {
+        setIsManageModalOpen(false);
+        loadData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   function statusColor(s: string) {
@@ -127,15 +151,14 @@ export function GBehaviorScreen() {
                     onMouseLeave={e => e.currentTarget.style.background = "#fff"}
                   >
                     <td style={{ padding: "16px 20px" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{log.studentName}</div>
-                      <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>{log.section}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{log.studentName || log.student_id}</div>
                     </td>
                     <td style={{ padding: "16px 20px", fontSize: 12, fontWeight: 600, color: C.t2 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <AlertTriangle size={14} color={C.red} /> {log.type}
                       </div>
                     </td>
-                    <td style={{ padding: "16px 20px", fontSize: 12, color: C.t3 }}>{log.date}</td>
+                    <td style={{ padding: "16px 20px", fontSize: 12, color: C.t3 }}>{new Date(log.date).toLocaleDateString()}</td>
                     <td style={{ padding: "16px 20px", fontSize: 12, color: C.t2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{log.note}</td>
                     <td style={{ padding: "16px 20px" }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: statusColor(log.status), background: statusBg(log.status), padding: "4px 10px", borderRadius: 12 }}>
@@ -168,11 +191,12 @@ export function GBehaviorScreen() {
               <div style={{ display: "flex", gap: 16 }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Student Name</label>
-                  <input type="text" value={newStudent} onChange={e => setNewStudent(e.target.value)} required style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: `1px solid ${C.borderMed}`, outline: "none", boxSizing: "border-box" }} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Section</label>
-                  <input type="text" value={newSection} onChange={e => setNewSection(e.target.value)} required style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: `1px solid ${C.borderMed}`, outline: "none", boxSizing: "border-box" }} />
+                  <select value={newStudent} onChange={e => setNewStudent(e.target.value)} required style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: `1px solid ${C.borderMed}`, outline: "none", boxSizing: "border-box" }}>
+                    <option value="">Select a student...</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

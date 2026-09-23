@@ -11,43 +11,24 @@ function Stamp({ label, color, bg }: { label: string; color: string; bg: string 
   );
 }
 
-/* ── Types ── */
-interface LeaveRecord {
-  id: number;
-  type: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  reason: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
-  submittedOn: string;
-  approverNote?: string;
-}
-
-/* ── Seed data ── */
-const INITIAL_LEAVES: LeaveRecord[] = [
-  { id: 1, type: 'Vacation Leave', startDate: '2025-02-14', endDate: '2025-02-14', days: 1, reason: 'Personal errands', status: 'Approved', submittedOn: 'Feb 01, 2025', approverNote: 'Noted. Enjoy your day.' },
-  { id: 2, type: 'Sick Leave', startDate: '2025-06-12', endDate: '2025-06-13', days: 2, reason: 'Fever and body aches', status: 'Pending', submittedOn: 'Jun 11, 2025' },
-  { id: 3, type: 'Emergency Leave', startDate: '2025-04-03', endDate: '2025-04-03', days: 1, reason: 'Family emergency', status: 'Approved', submittedOn: 'Apr 03, 2025', approverNote: 'Approved. Hope everything is okay.' },
-  { id: 4, type: 'Sick Leave', startDate: '2025-01-20', endDate: '2025-01-20', days: 1, reason: 'Medical check-up', status: 'Rejected', submittedOn: 'Jan 18, 2025', approverNote: 'No substitute available. Please reschedule.' },
-];
+import { apiClient } from '../../../api/client';
 
 const LEAVE_TYPES = ['Sick Leave', 'Vacation Leave', 'Emergency Leave', 'Maternity / Paternity Leave', 'Service Incentive Leave'];
 
 const BALANCE = [
-  { type: 'Sick Leave',       icon: Heart,    total: 15, used: 3,  color: C.red,   bg: C.redBg },
-  { type: 'Vacation Leave',   icon: Briefcase, total: 15, used: 1, color: C.m700,  bg: C.m100 },
-  { type: 'Emergency Leave',  icon: Clock,    total: 5,  used: 1,  color: C.amber, bg: C.amberBg },
-  { type: 'Special Privilege',icon: Calendar, total: 3,  used: 0,  color: '#6366f1', bg: '#ede9fe' },
+  { type: 'Sick Leave',       icon: Heart,    color: C.red,   bg: C.redBg },
+  { type: 'Vacation Leave',   icon: Briefcase, color: C.m700,  bg: C.m100 },
+  { type: 'Emergency Leave',  icon: Clock,    color: C.amber, bg: C.amberBg },
+  { type: 'Special Privilege',icon: Calendar, color: '#6366f1', bg: '#ede9fe' },
 ];
 
-function statusColor(s: LeaveRecord['status']) {
+function statusColor(s: 'Pending' | 'Approved' | 'Rejected') {
   if (s === 'Approved') return { color: C.green, bg: C.greenBg };
   if (s === 'Rejected') return { color: C.red, bg: C.redBg };
   return { color: C.amber, bg: C.amberBg };
 }
 
-function StatusIcon({ status }: { status: LeaveRecord['status'] }) {
+function StatusIcon({ status }: { status: 'Pending' | 'Approved' | 'Rejected' }) {
   if (status === 'Approved') return <CheckCircle size={13} color={C.green} />;
   if (status === 'Rejected') return <XCircle size={13} color={C.red} />;
   return <Clock size={13} color={C.amber} />;
@@ -60,11 +41,32 @@ function fmt(d: string) {
 }
 
 export function TLeaveScreen() {
-  const [leaves, setLeaves] = useState<LeaveRecord[]>(INITIAL_LEAVES);
   const [modal, setModal] = useState(false);
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
-  const [detail, setDetail] = useState<LeaveRecord | null>(null);
-  const [nextId, setNextId] = useState(5);
+  const [detail, setDetail] = useState<any | null>(null);
+  
+  const [leaves, setLeaves] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchLeaves = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res: any = await apiClient.get('/admin/leaves/me');
+      setLeaves(Array.isArray(res) ? res : []);
+    } catch (err: any) {
+      setError(err.message || "Failed to load leave requests");
+      setLeaves([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchLeaves();
+  }, []);
 
   /* Form state */
   const [fType, setFType] = useState(LEAVE_TYPES[0]);
@@ -78,22 +80,25 @@ export function TLeaveScreen() {
     return Math.max(0, Math.round(diff) + 1);
   };
 
-  const handleSubmit = () => {
-    if (!fStart || !fEnd || !fReason.trim()) return;
-    const rec: LeaveRecord = {
-      id: nextId,
-      type: fType,
-      startDate: fStart,
-      endDate: fEnd,
-      days: calcDays(),
-      reason: fReason,
-      status: 'Pending',
-      submittedOn: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    };
-    setLeaves(p => [rec, ...p]);
-    setNextId(n => n + 1);
-    setFType(LEAVE_TYPES[0]); setFStart(''); setFEnd(''); setFReason('');
-    setModal(false);
+  const handleSubmit = async () => {
+    if (!fStart || !fEnd || !fReason.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await apiClient.post('/admin/leaves', {
+        type: fType,
+        start_date: fStart,
+        end_date: fEnd,
+        days: calcDays(),
+        reason: fReason,
+      });
+      setFType(LEAVE_TYPES[0]); setFStart(''); setFEnd(''); setFReason('');
+      setModal(false);
+      fetchLeaves();
+    } catch (err: any) {
+      alert("Failed to submit leave request: " + (err.message || "Unknown error"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const filtered = filter === 'All' ? leaves : leaves.filter(l => l.status === filter);
@@ -123,26 +128,21 @@ export function TLeaveScreen() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {BALANCE.map(b => {
           const Icon = b.icon;
-          const remaining = b.total - b.used;
-          const pct = Math.round((remaining / b.total) * 100);
+          const used = leaves.filter(l => l.type === b.type && l.status === 'Approved').reduce((acc, l) => acc + (l.days || 0), 0);
           return (
             <div key={b.type} style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: '14px 16px', borderTop: `3px solid ${b.color}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{b.type}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: b.color, lineHeight: 1 }}>{remaining}</div>
-                  <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>of {b.total} days remaining</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: b.color, lineHeight: 1 }}>{used}</div>
+                  <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>days used</div>
                 </div>
                 <div style={{ background: b.bg, width: 32, height: 32, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon size={15} color={b.color} />
                 </div>
               </div>
-              <div style={{ background: C.border, borderRadius: 6, height: 5, overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: b.color, borderRadius: 6, transition: 'width 0.3s' }} />
-              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                <span style={{ fontSize: 9, color: C.t3 }}>Used: {b.used}</span>
-                <span style={{ fontSize: 9, color: b.color, fontWeight: 700 }}>{pct}% left</span>
+                <span style={{ fontSize: 9, color: C.t3 }}>Policy limit unconfigured</span>
               </div>
             </div>
           );
@@ -164,7 +164,11 @@ export function TLeaveScreen() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: C.t3, fontSize: 13 }}>Loading leave requests...</div>
+        ) : error ? (
+          <div style={{ padding: 40, textAlign: 'center', color: C.red, fontSize: 13 }}>{error}</div>
+        ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: C.t3, fontSize: 13 }}>No {filter.toLowerCase()} leave requests.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -182,10 +186,10 @@ export function TLeaveScreen() {
                   <tr key={l.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : 'none' }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = C.m50}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
-                    <td style={{ padding: '12px 14px', fontSize: 11, color: C.t3 }}>{l.submittedOn}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 11, color: C.t3 }}>{fmt(l.created_at)}</td>
                     <td style={{ padding: '12px 14px', fontSize: 12, fontWeight: 600, color: C.t1 }}>{l.type}</td>
                     <td style={{ padding: '12px 14px', fontSize: 11, color: C.t2, fontFamily: "'JetBrains Mono',monospace" }}>
-                      {fmt(l.startDate)}{l.startDate !== l.endDate ? ` – ${fmt(l.endDate)}` : ''}
+                      {fmt(l.start_date)}{l.start_date !== l.end_date ? ` – ${fmt(l.end_date)}` : ''}
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 12, fontWeight: 700, color: C.t1, textAlign: 'center' }}>{l.days}d</td>
                     <td style={{ padding: '12px 14px' }}>
@@ -212,7 +216,7 @@ export function TLeaveScreen() {
       {modal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(10,4,4,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setModal(false); }}>
-          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 440, overflow: 'hidden', boxShadow: '0 24px 64px rgba(74,10,16,0.35)' }}>
+          <div className="max-h-[90vh] overflow-y-auto" style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 440, overflow: 'hidden', boxShadow: '0 24px 64px rgba(74,10,16,0.35)' }}>
             <div style={{ background: C.m800, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>New Request</div>
@@ -259,9 +263,9 @@ export function TLeaveScreen() {
             <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(false)} style={{ padding: '8px 18px', background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 12, fontWeight: 500, color: C.t2, cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSubmit}
-                disabled={!fStart || !fEnd || !fReason.trim()}
-                style={{ padding: '8px 22px', background: (!fStart || !fEnd || !fReason.trim()) ? C.t3 : C.m700, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: (!fStart || !fEnd || !fReason.trim()) ? 'not-allowed' : 'pointer' }}>
-                Submit Request
+                disabled={!fStart || !fEnd || !fReason.trim() || isSubmitting}
+                style={{ padding: '8px 22px', background: (!fStart || !fEnd || !fReason.trim() || isSubmitting) ? C.t3 : C.m700, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: (!fStart || !fEnd || !fReason.trim() || isSubmitting) ? 'not-allowed' : 'pointer' }}>
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
               </button>
             </div>
           </div>
@@ -272,7 +276,7 @@ export function TLeaveScreen() {
       {detail && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(10,4,4,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={e => { if (e.target === e.currentTarget) setDetail(null); }}>
-          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 24px 64px rgba(74,10,16,0.35)' }}>
+          <div className="max-h-[90vh] overflow-y-auto" style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 24px 64px rgba(74,10,16,0.35)' }}>
             <div style={{ background: C.m800, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Leave Request Detail</div>
@@ -284,9 +288,9 @@ export function TLeaveScreen() {
             </div>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                ['Date Range', `${fmt(detail.startDate)}${detail.startDate !== detail.endDate ? ` – ${fmt(detail.endDate)}` : ''}`],
+                ['Date Range', `${fmt(detail.start_date)}${detail.start_date !== detail.end_date ? ` – ${fmt(detail.end_date)}` : ''}`],
                 ['Days', `${detail.days} day${detail.days !== 1 ? 's' : ''}`],
-                ['Submitted On', detail.submittedOn],
+                ['Submitted On', fmt(detail.created_at)],
                 ['Reason', detail.reason],
               ].map(([label, val]) => (
                 <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: 10 }}>
@@ -301,10 +305,10 @@ export function TLeaveScreen() {
                   <Stamp label={detail.status} {...statusColor(detail.status)} />
                 </div>
               </div>
-              {detail.approverNote && (
+              {detail.approver_note && (
                 <div style={{ background: detail.status === 'Approved' ? C.greenBg : detail.status === 'Rejected' ? C.redBg : C.amberBg, border: `1px solid ${detail.status === 'Approved' ? 'rgba(22,101,52,0.2)' : detail.status === 'Rejected' ? 'rgba(185,28,28,0.2)' : 'rgba(217,119,6,0.2)'}`, borderRadius: 4, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: detail.status === 'Approved' ? C.green : detail.status === 'Rejected' ? C.red : C.amber, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Approver's Note</div>
-                  <div style={{ fontSize: 12, color: C.t1 }}>{detail.approverNote}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: detail.status === 'Approved' ? C.green : detail.status === 'Rejected' ? C.red : C.amber, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Approver's Note ({detail.approverName || 'Admin'})</div>
+                  <div style={{ fontSize: 12, color: C.t1 }}>{detail.approver_note}</div>
                 </div>
               )}
             </div>

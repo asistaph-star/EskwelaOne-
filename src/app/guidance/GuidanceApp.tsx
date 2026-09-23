@@ -10,10 +10,14 @@ import { StubScreen } from '../shared/components/StubScreen';
 import { Settings, HelpCircle, Bell } from 'lucide-react';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { useAppContext } from '../shared/AppContext';
 
 export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<GScreen>("g-dashboard");
   const [notifOpen, setNotifOpen] = useState(false);
+  
+  const { notifications, currentUser } = useAppContext();
+  const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
 
   const TITLES: Record<GScreen, { title: string; sub: string }> = {
     "g-dashboard": { title: "Guidance Dashboard", sub: "Overview of student cases and counseling schedules" },
@@ -27,7 +31,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
   const current = TITLES[screen];
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", background: C.bg, fontFamily: "'Inter', sans-serif", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", width: "100vw", background: "#F7F9FC", fontFamily: "'Inter', sans-serif", overflow: "hidden" }}>
       <GSidebar active={screen} onNav={setScreen} onLogout={onLogout} />
       
       <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
@@ -43,9 +47,11 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
             <div style={{ position: "relative" }}>
               <button onClick={() => setNotifOpen(!notifOpen)} style={{ background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 12, width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2, transition: "all 0.15s" }}>
                 <Bell size={18} />
-                <div style={{ position: "absolute", top: 8, right: 10, width: 8, height: 8, background: C.red, borderRadius: 4, border: "2px solid #fff" }} />
+                {unreadCount > 0 && (
+                  <div style={{ position: "absolute", top: 8, right: 10, width: 8, height: 8, background: C.red, borderRadius: 4, border: "2px solid #fff" }} />
+                )}
               </button>
-              {notifOpen && <NotificationDropdown onClose={() => setNotifOpen(false)} />}
+              {notifOpen && <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />}
             </div>
             <div style={{ width: 1, height: 24, background: C.borderMed }} />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -73,7 +79,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
         )}
       </div>
 
-      <AIAssistantWidget />
+      <AIAssistantWidget role="Guidance Counselor" />
     </div>
   );
 }

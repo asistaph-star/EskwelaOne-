@@ -15,7 +15,8 @@ router.get('/ledger', requirePermissions('grade:read'), async (req: Request, res
   try {
     const { classId } = req.query;
     if (!classId) return res.status(400).json({ success: false, message: 'Missing classId' });
-    const data = await getLedger(classId as string);
+    const actorId = ((req as any).user).id;
+    const data = await getLedger(classId as string, actorId);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -27,7 +28,8 @@ router.post('/ledger', requirePermissions('grade:write'), async (req: Request, r
     const { classId, terms } = req.body;
     if (!classId || !terms) return res.status(400).json({ success: false, message: 'Missing classId or terms' });
     const actorId = ((req as any).user).id;
-    await saveLedger(classId, terms, actorId);
+    const correlationId = (req as any).correlationId;
+    await saveLedger(classId, terms, actorId, correlationId);
     res.json({ success: true });
   } catch (err) {
     next(err);

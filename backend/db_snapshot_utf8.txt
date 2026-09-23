@@ -1,0 +1,410 @@
+﻿table_name | fk_column | references_table | references_column | delete_rule
+announcements | author_id | users | id | RESTRICT
+appointments | student_id | students | id | RESTRICT
+appointments | teacher_id | teachers | id | RESTRICT
+audit_logs | actor_user_id | users | id | RESTRICT
+behavior_logs | reported_by | users | id | RESTRICT
+behavior_logs | student_id | students | id | RESTRICT
+class_attendance | assignment_id | teacher_subject_assignments | id | RESTRICT
+class_attendance | enrollment_id | enrollments | id | RESTRICT
+clinic_referral_diagnoses | clinic_referral_id | clinic_referrals | id | RESTRICT
+clinic_referral_medications | clinic_referral_id | clinic_referrals | id | RESTRICT
+clinic_referral_symptoms | clinic_referral_id | clinic_referrals | id | RESTRICT
+clinic_referral_treatments | clinic_referral_id | clinic_referrals | id | RESTRICT
+clinic_referrals | recorded_by | users | id | RESTRICT
+clinic_referrals | student_id | students | id | RESTRICT
+document_requests | attached_document_id | documents | id | RESTRICT
+document_requests | principal_id | users | id | RESTRICT
+document_requests | student_id | students | id | RESTRICT
+document_requests | teacher_id | teachers | id | RESTRICT
+documents | uploaded_by | users | id | RESTRICT
+enrollments | academic_year_id | academic_years | id | RESTRICT
+enrollments | section_id | sections | id | RESTRICT
+enrollments | student_id | students | id | RESTRICT
+events | created_by_id | users | id | RESTRICT
+excuse_letters | document_id | documents | id | RESTRICT
+excuse_letters | student_id | students | id | RESTRICT
+excuse_letters | teacher_id | teachers | id | RESTRICT
+gate_attendance | student_id | students | id | RESTRICT
+grade_entries | column_id | gradebook_columns | id | RESTRICT
+grade_entries | created_by | users | id | RESTRICT
+grade_entries | enrollment_id | enrollments | id | RESTRICT
+grade_entries | superseded_by_id | grade_entries | id | SET NULL
+gradebook_columns | gradebook_id | gradebooks | id | RESTRICT
+gradebooks | assignment_id | teacher_subject_assignments | id | RESTRICT
+gradebooks | term_id | terms | id | RESTRICT
+grades | academic_year_id | academic_years | id | RESTRICT
+grades | student_id | students | id | RESTRICT
+grades | subject_id | subjects | id | RESTRICT
+guidance_records | counselor_id | users | id | RESTRICT
+guidance_records | student_id | students | id | RESTRICT
+inventory_updates | item_id | inventory_items | id | RESTRICT
+inventory_updates | user_id | users | id | RESTRICT
+leave_requests | approver_id | users | id | RESTRICT
+leave_requests | user_id | users | id | RESTRICT
+messages | receiver_id | users | id | RESTRICT
+messages | sender_id | users | id | RESTRICT
+migration_quarantine | resolved_by | users | id | RESTRICT
+notifications | recipient_id | users | id | RESTRICT
+role_permissions | permission_id | permissions | id | RESTRICT
+role_permissions | role_id | roles | id | RESTRICT
+sections | academic_year_id | academic_years | id | RESTRICT
+staff | user_id | users | id | RESTRICT
+student_allergies | student_id | students | id | RESTRICT
+student_medical_conditions | student_id | students | id | RESTRICT
+students | current_section_id | sections | id | RESTRICT
+students | user_id | users | id | RESTRICT
+teacher_subject_assignments | academic_year_id | academic_years | id | RESTRICT
+teacher_subject_assignments | section_id | sections | id | RESTRICT
+teacher_subject_assignments | subject_id | subjects | id | RESTRICT
+teacher_subject_assignments | teacher_id | teachers | id | RESTRICT
+teachers | user_id | users | id | RESTRICT
+terms | academic_year_id | academic_years | id | RESTRICT
+user_roles | role_id | roles | id | RESTRICT
+user_roles | user_id | users | id | RESTRICT
+---SPLIT---
+table_name | column_name | data_type | is_nullable
+_prisma_migrations | id | character varying | NO
+_prisma_migrations | checksum | character varying | NO
+_prisma_migrations | finished_at | timestamp with time zone | YES
+_prisma_migrations | migration_name | character varying | NO
+_prisma_migrations | logs | text | YES
+_prisma_migrations | rolled_back_at | timestamp with time zone | YES
+_prisma_migrations | started_at | timestamp with time zone | NO
+_prisma_migrations | applied_steps_count | integer | NO
+academic_years | id | character varying | NO
+academic_years | name | character varying | NO
+academic_years | start_date | timestamp without time zone | NO
+academic_years | end_date | timestamp without time zone | NO
+academic_years | is_current | boolean | NO
+academic_years | created_at | timestamp without time zone | NO
+academic_years | updated_at | timestamp without time zone | NO
+announcements | id | character varying | NO
+announcements | title | character varying | NO
+announcements | body | text | NO
+announcements | audience | character varying | NO
+announcements | created_at | timestamp without time zone | NO
+announcements | updated_at | timestamp without time zone | NO
+announcements | author_id | character varying | NO
+appointments | id | character varying | NO
+appointments | student_id | character varying | NO
+appointments | parent_email | character varying | YES
+appointments | teacher_id | character varying | NO
+appointments | date | timestamp without time zone | NO
+appointments | purpose | text | NO
+appointments | status | character varying | NO
+appointments | direction | character varying | NO
+appointments | created_at | timestamp without time zone | NO
+appointments | updated_at | timestamp without time zone | NO
+appointments | time | time without time zone | NO
+audit_logs | id | character varying | NO
+audit_logs | actor_user_id | character varying | YES
+audit_logs | action | character varying | NO
+audit_logs | resource_type | character varying | NO
+audit_logs | resource_id | character varying | YES
+audit_logs | previous_state | jsonb | YES
+audit_logs | new_state | jsonb | YES
+audit_logs | reason | text | YES
+audit_logs | correlation_id | character varying | YES
+audit_logs | created_at | timestamp without time zone | NO
+behavior_logs | id | character varying | NO
+behavior_logs | student_id | character varying | NO
+behavior_logs | type | character varying | NO
+behavior_logs | date | timestamp without time zone | NO
+behavior_logs | status | character varying | NO
+behavior_logs | note | text | YES
+behavior_logs | reported_by | character varying | YES
+behavior_logs | created_at | timestamp without time zone | NO
+behavior_logs | updated_at | timestamp without time zone | NO
+class_attendance | id | character varying | NO
+class_attendance | date | date | NO
+class_attendance | status | character varying | NO
+class_attendance | remarks | text | YES
+class_attendance | created_at | timestamp without time zone | NO
+class_attendance | updated_at | timestamp without time zone | NO
+class_attendance | assignment_id | character varying | NO
+class_attendance | enrollment_id | character varying | NO
+clinic_referral_diagnoses | id | character varying | NO
+clinic_referral_diagnoses | clinic_referral_id | character varying | NO
+clinic_referral_diagnoses | diagnosis | character varying | NO
+clinic_referral_medications | id | character varying | NO
+clinic_referral_medications | clinic_referral_id | character varying | NO
+clinic_referral_medications | medication | character varying | NO
+clinic_referral_symptoms | id | character varying | NO
+clinic_referral_symptoms | clinic_referral_id | character varying | NO
+clinic_referral_symptoms | symptom | character varying | NO
+clinic_referral_treatments | id | character varying | NO
+clinic_referral_treatments | clinic_referral_id | character varying | NO
+clinic_referral_treatments | treatment | character varying | NO
+clinic_referrals | id | character varying | NO
+clinic_referrals | student_id | character varying | NO
+clinic_referrals | date | timestamp without time zone | NO
+clinic_referrals | blood_pressure | character varying | YES
+clinic_referrals | heart_rate | character varying | YES
+clinic_referrals | notes | text | YES
+clinic_referrals | recorded_by | character varying | YES
+clinic_referrals | created_at | timestamp without time zone | NO
+clinic_referrals | updated_at | timestamp without time zone | NO
+clinic_referrals | time | time without time zone | YES
+clinic_referrals | temperature | double precision | YES
+document_requests | id | character varying | NO
+document_requests | student_id | character varying | NO
+document_requests | document_type | character varying | NO
+document_requests | purpose | text | NO
+document_requests | status | character varying | NO
+document_requests | current_stage | integer | NO
+document_requests | submitted_date | timestamp without time zone | NO
+document_requests | teacher_id | character varying | YES
+document_requests | teacher_approved_date | timestamp without time zone | YES
+document_requests | teacher_remarks | text | YES
+document_requests | principal_approved_date | timestamp without time zone | YES
+document_requests | principal_remarks | text | YES
+document_requests | ready_date | timestamp without time zone | YES
+document_requests | attached_document_id | character varying | YES
+document_requests | created_at | timestamp without time zone | NO
+document_requests | updated_at | timestamp without time zone | NO
+document_requests | principal_id | character varying | YES
+documents | id | character varying | NO
+documents | storage_key | character varying | NO
+documents | filename | character varying | NO
+documents | mime_type | character varying | NO
+documents | size_bytes | integer | NO
+documents | uploaded_by | character varying | NO
+documents | created_at | timestamp without time zone | NO
+enrollment_applications | id | character varying | NO
+enrollment_applications | type | character varying | NO
+enrollment_applications | date_applied | timestamp without time zone | NO
+enrollment_applications | status | character varying | NO
+enrollment_applications | birth_cert | boolean | NO
+enrollment_applications | form138 | boolean | NO
+enrollment_applications | good_moral | boolean | NO
+enrollment_applications | medical | boolean | NO
+enrollment_applications | created_at | timestamp without time zone | NO
+enrollment_applications | updated_at | timestamp without time zone | NO
+enrollment_applications | grade_level | integer | NO
+enrollment_applications | first_name | character varying | NO
+enrollment_applications | last_name | character varying | NO
+enrollments | id | character varying | NO
+enrollments | academic_year_id | character varying | NO
+enrollments | student_id | character varying | NO
+enrollments | section_id | character varying | NO
+enrollments | status | character varying | NO
+enrollments | created_at | timestamp without time zone | NO
+enrollments | updated_at | timestamp without time zone | NO
+events | id | character varying | NO
+events | title | character varying | NO
+events | description | text | YES
+events | date | timestamp without time zone | NO
+events | end_date | timestamp without time zone | YES
+events | type | character varying | NO
+events | audience | character varying | YES
+events | created_at | timestamp without time zone | NO
+events | updated_at | timestamp without time zone | NO
+events | created_by_id | character varying | NO
+excuse_letters | id | character varying | NO
+excuse_letters | student_id | character varying | NO
+excuse_letters | teacher_id | character varying | NO
+excuse_letters | reason | text | NO
+excuse_letters | document_id | character varying | YES
+excuse_letters | status | character varying | NO
+excuse_letters | teacher_note | text | YES
+excuse_letters | submitted_date | timestamp without time zone | NO
+excuse_letters | reviewed_at | timestamp without time zone | YES
+excuse_letters | created_at | timestamp without time zone | NO
+excuse_letters | updated_at | timestamp without time zone | NO
+excuse_letters | end_date | date | NO
+excuse_letters | start_date | date | NO
+gate_attendance | id | character varying | NO
+gate_attendance | student_id | character varying | NO
+gate_attendance | date | date | NO
+gate_attendance | status | character varying | NO
+gate_attendance | created_at | timestamp without time zone | NO
+gate_attendance | updated_at | timestamp without time zone | NO
+gate_attendance | time_in | time without time zone | YES
+gate_attendance | time_out | time without time zone | YES
+grade_entries | id | character varying | NO
+grade_entries | column_id | character varying | NO
+grade_entries | score | double precision | NO
+grade_entries | created_at | timestamp without time zone | NO
+grade_entries | created_by | character varying | NO
+grade_entries | is_superseded | boolean | NO
+grade_entries | superseded_by_id | character varying | YES
+grade_entries | correction_reason | text | YES
+grade_entries | enrollment_id | character varying | NO
+gradebook_columns | id | character varying | NO
+gradebook_columns | gradebook_id | character varying | NO
+gradebook_columns | type | character varying | NO
+gradebook_columns | label | character varying | NO
+gradebook_columns | max_score | double precision | NO
+gradebook_columns | sort_order | integer | NO
+gradebook_columns | created_at | timestamp without time zone | NO
+gradebook_columns | updated_at | timestamp without time zone | NO
+gradebooks | id | character varying | NO
+gradebooks | term_id | character varying | NO
+gradebooks | version | integer | NO
+gradebooks | status | character varying | NO
+gradebooks | created_at | timestamp without time zone | NO
+gradebooks | updated_at | timestamp without time zone | NO
+gradebooks | assignment_id | character varying | NO
+grades | id | character varying | NO
+grades | student_id | character varying | NO
+grades | subject_id | character varying | NO
+grades | term | USER-DEFINED | NO
+grades | written_work | double precision | YES
+grades | performance_task | double precision | YES
+grades | term_assessment | double precision | YES
+grades | term_grade | double precision | YES
+grades | created_at | timestamp without time zone | NO
+grades | updated_at | timestamp without time zone | NO
+grades | academic_year_id | character varying | NO
+guidance_records | id | character varying | NO
+guidance_records | student_id | character varying | NO
+guidance_records | counselor_id | character varying | YES
+guidance_records | date | timestamp without time zone | NO
+guidance_records | type | character varying | NO
+guidance_records | reason | text | YES
+guidance_records | notes | text | YES
+guidance_records | action_taken | text | YES
+guidance_records | follow_up_date | timestamp without time zone | YES
+guidance_records | status | character varying | NO
+guidance_records | created_at | timestamp without time zone | NO
+guidance_records | updated_at | timestamp without time zone | NO
+inventory_items | id | character varying | NO
+inventory_items | name | character varying | NO
+inventory_items | category | character varying | NO
+inventory_items | description | text | YES
+inventory_items | quantity | integer | NO
+inventory_items | unit | character varying | NO
+inventory_items | supplier | character varying | YES
+inventory_items | purchase_date | timestamp without time zone | YES
+inventory_items | condition | character varying | NO
+inventory_items | location | character varying | YES
+inventory_items | status | character varying | NO
+inventory_items | created_at | timestamp without time zone | NO
+inventory_items | updated_at | timestamp without time zone | NO
+inventory_updates | id | character varying | NO
+inventory_updates | item_id | character varying | NO
+inventory_updates | action | character varying | NO
+inventory_updates | details | text | NO
+inventory_updates | created_at | timestamp without time zone | NO
+inventory_updates | user_id | character varying | NO
+leave_requests | id | character varying | NO
+leave_requests | user_id | character varying | NO
+leave_requests | type | character varying | NO
+leave_requests | start_date | timestamp without time zone | NO
+leave_requests | end_date | timestamp without time zone | NO
+leave_requests | days | integer | NO
+leave_requests | reason | text | NO
+leave_requests | status | character varying | NO
+leave_requests | submitted_on | timestamp without time zone | NO
+leave_requests | approver_note | text | YES
+leave_requests | created_at | timestamp without time zone | NO
+leave_requests | updated_at | timestamp without time zone | NO
+leave_requests | approver_id | character varying | YES
+messages | id | character varying | NO
+messages | sender_id | character varying | NO
+messages | receiver_id | character varying | YES
+messages | content | text | NO
+messages | is_read | boolean | NO
+messages | created_at | timestamp without time zone | NO
+migration_quarantine | id | character varying | NO
+migration_quarantine | legacy_entity_type | character varying | NO
+migration_quarantine | legacy_id | character varying | NO
+migration_quarantine | original_payload | jsonb | NO
+migration_quarantine | reason | text | NO
+migration_quarantine | detected_at | timestamp without time zone | NO
+migration_quarantine | resolution_status | character varying | NO
+migration_quarantine | resolved_at | timestamp without time zone | YES
+migration_quarantine | resolved_by | character varying | YES
+migration_quarantine | resolution_notes | text | YES
+notifications | id | character varying | NO
+notifications | recipient_id | character varying | NO
+notifications | title | character varying | NO
+notifications | body | text | NO
+notifications | icon_type | character varying | NO
+notifications | is_read | boolean | NO
+notifications | created_at | timestamp without time zone | NO
+permissions | id | character varying | NO
+permissions | key | character varying | NO
+role_permissions | role_id | text | NO
+role_permissions | permission_id | text | NO
+roles | id | character varying | NO
+roles | name | character varying | NO
+sections | id | character varying | NO
+sections | academic_year_id | character varying | NO
+sections | name | character varying | NO
+sections | grade_level | integer | NO
+sections | created_at | timestamp without time zone | NO
+sections | updated_at | timestamp without time zone | NO
+staff | id | character varying | NO
+staff | user_id | character varying | NO
+staff | employee_id | character varying | NO
+staff | department | character varying | YES
+staff | position | character varying | YES
+staff | created_at | timestamp without time zone | NO
+staff | updated_at | timestamp without time zone | NO
+student_allergies | id | character varying | NO
+student_allergies | student_id | character varying | NO
+student_allergies | allergy | character varying | NO
+student_medical_conditions | id | character varying | NO
+student_medical_conditions | student_id | character varying | NO
+student_medical_conditions | condition | character varying | NO
+students | id | character varying | NO
+students | user_id | character varying | NO
+students | lrn | character varying | NO
+students | grade_level | integer | NO
+students | date_of_birth | timestamp without time zone | YES
+students | gender | character varying | YES
+students | guardian_phone | character varying | YES
+students | guardian_email | character varying | YES
+students | blood_type | character varying | YES
+students | created_at | timestamp without time zone | NO
+students | updated_at | timestamp without time zone | NO
+students | current_section_id | character varying | YES
+students | city | character varying | YES
+students | guardian_first_name | character varying | YES
+students | guardian_last_name | character varying | YES
+students | state_province | character varying | YES
+students | street | character varying | YES
+students | zip_code | character varying | YES
+subjects | id | character varying | NO
+subjects | code | character varying | NO
+subjects | name | character varying | NO
+subjects | created_at | timestamp without time zone | NO
+subjects | updated_at | timestamp without time zone | NO
+teacher_subject_assignments | id | character varying | NO
+teacher_subject_assignments | academic_year_id | character varying | NO
+teacher_subject_assignments | teacher_id | character varying | NO
+teacher_subject_assignments | section_id | character varying | NO
+teacher_subject_assignments | subject_id | character varying | NO
+teacher_subject_assignments | created_at | timestamp without time zone | NO
+teacher_subject_assignments | updated_at | timestamp without time zone | NO
+teachers | id | character varying | NO
+teachers | user_id | character varying | NO
+teachers | employee_id | character varying | NO
+teachers | department | character varying | YES
+teachers | position | character varying | YES
+teachers | specialization | character varying | YES
+teachers | date_hired | timestamp without time zone | YES
+teachers | created_at | timestamp without time zone | NO
+teachers | updated_at | timestamp without time zone | NO
+terms | id | character varying | NO
+terms | academic_year_id | character varying | NO
+terms | name | character varying | NO
+terms | start_date | timestamp without time zone | YES
+terms | end_date | timestamp without time zone | YES
+terms | created_at | timestamp without time zone | NO
+terms | updated_at | timestamp without time zone | NO
+terms | key | USER-DEFINED | NO
+user_roles | user_id | text | NO
+user_roles | role_id | text | NO
+user_roles | assigned_at | timestamp without time zone | NO
+users | id | character varying | NO
+users | email | character varying | NO
+users | password_hash | character varying | NO
+users | first_name | character varying | NO
+users | last_name | character varying | NO
+users | middle_name | character varying | YES
+users | status | character varying | NO
+users | created_at | timestamp without time zone | NO
+users | updated_at | timestamp without time zone | NO

@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { useAppContext } from '../../shared/AppContext';
-import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Camera, Upload, Download } from 'lucide-react';
+import { DocumentScanner } from '../../shared/components/scanner/DocumentScanner';
 import type { DocRequestStatus } from '../../shared/AppContext';
 
 export function PDocRequestsScreen() {
-  const { documentRequests, updateDocumentRequest } = useAppContext();
+  const { documentRequests, updateDocumentRequest, addNotification, currentUser, getGenericDocument, saveGenericDocument } = useAppContext();
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [pickupDates, setPickupDates] = useState<Record<string, string>>({});
+  const [scannerReqId, setScannerReqId] = useState<string | null>(null);
+  const [uploadReqId, setUploadReqId] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const pendingRequests = documentRequests.filter(r => r.status === "Teacher Approved");
+  const pendingRequests = documentRequests.filter(r => r.status === "Teacher Approved" || (r.status === "Submitted" && (r.responsibleRole === "REGISTRAR" || r.responsibleRole === "RECORDS_CUSTODIAN")));
   const processedRequests = documentRequests.filter(r => r.status !== "Submitted" && r.status !== "Teacher Approved" && r.status !== "Teacher Rejected");
 
   function handleApprove(id: string) {
@@ -21,16 +25,18 @@ export function PDocRequestsScreen() {
     const dateObj = new Date(pickupDates[id]);
     const formattedDate = dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+    const req = documentRequests.find(r => r.id === id);
+    const requiresPrincipal = req?.requiresPrincipalApproval !== false; // default true if undefined
+
     updateDocumentRequest(id, {
-      status: "Principal Approved",
-      currentStage: 3,
+      status: requiresPrincipal ? "Principal Approved" : "Ready for Pickup",
+      currentStage: requiresPrincipal ? 3 : 4,
       principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      principalRemarks: remarks[id] || "Approved by Principal.",
+      principalRemarks: remarks[id] || (requiresPrincipal ? "Approved by Principal." : "Processed by Registrar."),
       readyDate: formattedDate
     });
     setRemarks(prev => ({ ...prev, [id]: "" }));
     setPickupDates(prev => ({ ...prev, [id]: "" }));
-    alert(`✅ Document request approved! It will be ready on ${formattedDate}.`);
   }
 
   function handleReject(id: string) {
@@ -39,12 +45,58 @@ export function PDocRequestsScreen() {
       return;
     }
     updateDocumentRequest(id, {
-      status: "Principal Rejected",
-      currentStage: 2,
+      status: "Teacher Rejected",
+      currentStage: 1,
       principalRemarks: remarks[id]
     });
     setRemarks(prev => ({ ...prev, [id]: "" }));
-    alert("Request has been rejected.");
+  }
+
+  async function handleDownload(attachmentId: string, attachmentName: string) {
+    try {
+      const doc = await getGenericDocument(attachmentId);
+      if (!doc || !doc.blob) {
+        alert("Student attachment is missing or corrupted.");
+        return;
+      }
+      const url = URL.createObjectURL(doc.blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      console.error("Failed to view attachment:", err);
+      alert("Failed to retrieve the attachment. Please try again.");
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !uploadReqId) return;
+
+    try {
+      const savedDoc = await saveGenericDocument({
+        id: crypto.randomUUID(),
+        name: file.name,
+        mimeType: file.type,
+        size: file.size,
+        createdAt: new Date().toISOString(),
+        blob: file
+      });
+
+      updateDocumentRequest(uploadReqId, {
+        status: "Completed",
+        currentStage: 4,
+        principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        readyDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        principalRemarks: "Document uploaded and attached securely.",
+        attachedDocumentId: savedDoc.id
+      });
+    } catch (err) {
+      console.error("Failed to upload document", err);
+      alert("Failed to upload document. Please try again.");
+    } finally {
+      setUploadReqId(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleMarkCompleted(id: string) {
@@ -52,7 +104,6 @@ export function PDocRequestsScreen() {
       status: "Completed",
       currentStage: 4
     });
-    alert("Document marked as completed (picked up).");
   }
 
   function statusColor(s: DocRequestStatus) {
@@ -69,7 +120,7 @@ export function PDocRequestsScreen() {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px 100px" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "32px 40px 100px" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1200, margin: "0 auto" }}>
         {/* Header */}
         <div>
@@ -129,7 +180,7 @@ export function PDocRequestsScreen() {
               </div>
             ) : (
               pendingRequests.map(req => (
-                <div key={req.id} style={{
+                <div key={req.id} data-purpose={req.purpose} style={{
                   background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "24px 28px",
                   display: "flex", flexDirection: "column", gap: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.03)", transition: "border-color 0.15s"
                 }}
@@ -151,24 +202,67 @@ export function PDocRequestsScreen() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: C.blueBg, padding: "4px 12px", borderRadius: 12, border: `1px solid ${C.blue}20` }}>
-                        Stage 2 · Final Approval Required
+                        {req.status === "Submitted" ? "Stage 1 · Registrar Review" : "Stage 2 · Final Approval Required"}
                       </span>
                     </div>
                   </div>
 
                   {/* Details Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, background: C.paper, padding: 16, borderRadius: 8, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 12, color: C.t2 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Purpose</div>
-                      {req.purpose}
-                    </div>
-                    <div style={{ fontSize: 12, color: C.t2 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Teacher Verification</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.green, marginBottom: 2 }}>
-                        <CheckCircle size={14} /> Verified by {req.teacherName} on {req.teacherApprovedDate}
+                  <div style={{ display: "grid", gridTemplateColumns: req.studentAttachmentId ? "1fr 1fr 1fr" : "1fr 1fr", gap: 16, background: C.paper, padding: 16, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 12, color: C.t2, display: "flex", flexDirection: "column", gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Purpose</div>
+                        {req.purpose}
                       </div>
-                      <div style={{ fontStyle: "italic", fontSize: 11 }}>"{req.teacherRemarks}"</div>
+                      
+                      {req.requiredInformation && Object.keys(req.requiredInformation).length > 0 && (
+                        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Required Information</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+                            {Object.entries(req.requiredInformation).map(([key, value]) => (
+                              <div key={key}>
+                                <span style={{ fontWeight: 600, color: C.t2, marginRight: 6 }}>{key.replace(/([A-Z])/g, ' $1').trim()}:</span> 
+                                <span style={{ color: C.t1 }}>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
+                    {req.studentAttachmentId && (
+                      <div style={{ fontSize: 12, color: C.t2 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Student Attachment</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.t1, marginBottom: 8, wordBreak: "break-word" }}>
+                          <FileText size={14} color={C.t2} /> {req.studentAttachmentName || "Document Attached"}
+                        </div>
+                        <button onClick={() => handleDownload(req.studentAttachmentId!, req.studentAttachmentName || "attachment")} style={{
+                          display: "flex", alignItems: "center", gap: 6, background: C.m700, color: "#fff", border: "none",
+                          padding: "6px 12px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 700, transition: "all 0.15s",
+                        }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
+                          onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                        >
+                          <FileText size={14} /> View Request Letter
+                        </button>
+                      </div>
+                    )}
+                    {!req.responsibleRole || req.responsibleRole === "TEACHER" ? (
+                      <div style={{ fontSize: 12, color: C.t2 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Teacher Verification</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.green, marginBottom: 2 }}>
+                          <CheckCircle size={14} /> Verified by {req.teacherName} on {req.teacherApprovedDate}
+                        </div>
+                        <div style={{ fontStyle: "italic", fontSize: 11 }}>"{req.teacherRemarks}"</div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: C.t2 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Routing</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.m700, marginBottom: 2 }}>
+                          <CheckCircle size={14} /> Routed to {req.responsibleOffice}
+                        </div>
+                        <div style={{ fontStyle: "italic", fontSize: 11 }}>No prior teacher verification required.</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Remarks + Dates + Actions */}
@@ -205,15 +299,33 @@ export function PDocRequestsScreen() {
                       >
                         <XCircle size={14} /> Reject Request
                       </button>
-                      <button onClick={() => handleApprove(req.id)} style={{
-                        display: "flex", alignItems: "center", gap: 6, background: C.m700, color: "#fff", border: "none",
-                        padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
-                        boxShadow: "0 2px 8px rgba(29,78,216,0.25)"
-                      }}
-                        onMouseEnter={e => e.currentTarget.style.background = C.m600}
-                        onMouseLeave={e => e.currentTarget.style.background = C.m700}
+                      <button 
+                        onClick={() => handleApprove(req.id)} 
+                        disabled={!pickupDates[req.id]}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6, background: C.m700, color: "#fff", border: "none",
+                          padding: "10px 20px", borderRadius: 6, cursor: !pickupDates[req.id] ? "not-allowed" : "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
+                          opacity: !pickupDates[req.id] ? 0.5 : 1
+                        }}
+                        onMouseEnter={e => { if (pickupDates[req.id]) e.currentTarget.style.background = C.m600; }}
+                        onMouseLeave={e => { if (pickupDates[req.id]) e.currentTarget.style.background = C.m700; }}
                       >
-                        <CheckCircle size={14} /> Approve & Set Pickup Date
+                        <CheckCircle size={14} /> {req.requiresPrincipalApproval === false ? "Process & Set Pickup Date" : "Approve & Sign"}
+                      </button>
+                    </div>
+                    
+                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 4 }}>
+                      <button onClick={() => { setUploadReqId(req.id); fileInputRef.current?.click(); }} style={{
+                        display: "flex", alignItems: "center", gap: 6, background: C.paper, color: C.t2, border: `1px solid ${C.borderMed}`,
+                        padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
+                      }}>
+                        <Upload size={14} /> Upload PDF/Image
+                      </button>
+                      <button onClick={() => setScannerReqId(req.id)} style={{
+                        display: "flex", alignItems: "center", gap: 6, background: C.blue, color: "#fff", border: "none",
+                        padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
+                      }}>
+                        <Camera size={14} /> Scan & Attach Digital Copy
                       </button>
                     </div>
                   </div>
@@ -239,7 +351,7 @@ export function PDocRequestsScreen() {
                   <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", fontSize: 12, color: C.t3 }}>No processed requests yet.</td></tr>
                 ) : (
                   processedRequests.map(req => (
-                    <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.1s" }}
+                    <tr key={req.id} data-purpose={req.purpose} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.1s" }}
                       onMouseEnter={e => e.currentTarget.style.background = C.paper}
                       onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
                       <td style={{ padding: "14px 20px", fontSize: 12.5, fontWeight: 700, color: C.t1 }}>
@@ -270,6 +382,50 @@ export function PDocRequestsScreen() {
           </div>
         )}
       </div>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="image/*,application/pdf"
+        style={{ display: "none" }}
+      />
+
+      {scannerReqId && (
+        <DocumentScanner
+          onClose={() => setScannerReqId(null)}
+          onSaveScan={async (file) => {
+            try {
+              // Convert dataUrl back to Blob for persistent binary storage
+              const res = await fetch(file.dataUrl);
+              const blob = await res.blob();
+              
+              const savedDoc = await saveGenericDocument({
+                id: crypto.randomUUID(),
+                name: file.name,
+                mimeType: file.type,
+                size: blob.size,
+                createdAt: new Date().toISOString(),
+                blob: blob
+              });
+
+              updateDocumentRequest(scannerReqId, {
+                status: "Completed",
+                currentStage: 4,
+                principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+                readyDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+                principalRemarks: "Document digitized and attached securely.",
+                attachedDocumentId: savedDoc.id
+              });
+            } catch (err) {
+              console.error("Failed to save scanned document blob", err);
+              alert("Failed to save scanned document. Please try again.");
+            } finally {
+              setScannerReqId(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

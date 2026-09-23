@@ -1,35 +1,16 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { Search, Filter, CheckCircle, XCircle, FileText, AlertTriangle, UserPlus } from 'lucide-react';
-
-type EnrollmentStatus = "Pending Review" | "Missing Documents" | "Enrolled" | "Rejected";
-
-type Applicant = {
-  id: string;
-  name: string;
-  gradeLevel: string;
-  type: "New Student" | "Transferee" | "Returning";
-  dateApplied: string;
-  status: EnrollmentStatus;
-  documents: {
-    birthCert: boolean;
-    form138: boolean; // Report card
-    goodMoral: boolean;
-    medical: boolean;
-  };
-};
-
-const MOCK_APPLICANTS: Applicant[] = [
-  { id: "APP-001", name: "Dela Cruz, Mateo", gradeLevel: "Grade 7", type: "New Student", dateApplied: "2026-06-15", status: "Pending Review", documents: { birthCert: true, form138: true, goodMoral: true, medical: true } },
-  { id: "APP-002", name: "Reyes, Sofia", gradeLevel: "Grade 8", type: "Transferee", dateApplied: "2026-06-18", status: "Missing Documents", documents: { birthCert: true, form138: false, goodMoral: true, medical: false } },
-  { id: "APP-003", name: "Bautista, Liam", gradeLevel: "Grade 7", type: "New Student", dateApplied: "2026-06-20", status: "Enrolled", documents: { birthCert: true, form138: true, goodMoral: true, medical: true } },
-  { id: "APP-004", name: "Mendoza, Isabella", gradeLevel: "Grade 9", type: "Returning", dateApplied: "2026-06-21", status: "Pending Review", documents: { birthCert: true, form138: true, goodMoral: true, medical: true } },
-];
+import { Search, Filter, CheckCircle, XCircle, FileText, AlertTriangle, UserPlus, X } from 'lucide-react';
+import { useAppContext, EnrollmentStatus, Applicant } from '../../shared/AppContext';
 
 export function REnrollmentScreen() {
-  const [applicants, setApplicants] = useState<Applicant[]>(MOCK_APPLICANTS);
+  const { enrollmentApplications: applicants, enrollmentError, updateEnrollmentApplication, addEnrollmentApplication } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"All" | "Pending Review" | "Missing Documents" | "Enrolled">("All");
+  
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newApp, setNewApp] = useState({ name: "", gradeLevel: "Grade 7", type: "New Student" as Applicant["type"] });
 
   const filtered = applicants.filter(a => {
     const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || a.id.toLowerCase().includes(searchTerm.toLowerCase());
@@ -38,22 +19,40 @@ export function REnrollmentScreen() {
   });
 
   function handleStatusChange(id: string, newStatus: EnrollmentStatus) {
-    setApplicants(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    updateEnrollmentApplication(id, { status: newStatus });
   }
 
   function toggleDocument(id: string, doc: keyof Applicant["documents"]) {
-    setApplicants(prev => prev.map(a => {
-      if (a.id !== id) return a;
-      const updatedDocs = { ...a.documents, [doc]: !a.documents[doc] };
-      // Auto-update status if all docs are now present and it was previously missing docs
-      const allPresent = Object.values(updatedDocs).every(v => v);
-      let newStatus = a.status;
-      if (allPresent && a.status === "Missing Documents") newStatus = "Pending Review";
-      else if (!allPresent && a.status !== "Enrolled") newStatus = "Missing Documents";
-      
-      return { ...a, documents: updatedDocs, status: newStatus };
-    }));
+    const applicant = applicants.find(a => a.id === id);
+    if (!applicant) return;
+    
+    const updatedDocs = { ...applicant.documents, [doc]: !applicant.documents[doc] };
+    const allPresent = Object.values(updatedDocs).every(v => v);
+    let newStatus = applicant.status;
+    
+    if (allPresent && applicant.status === "Missing Documents") newStatus = "Pending Review";
+    else if (!allPresent && applicant.status !== "Enrolled") newStatus = "Missing Documents";
+    
+    updateEnrollmentApplication(id, { documents: updatedDocs, status: newStatus });
   }
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newApp.name.trim()) return;
+    
+    addEnrollmentApplication({
+      id: `APP-${Math.floor(1000 + Math.random() * 9000)}`,
+      name: newApp.name,
+      gradeLevel: newApp.gradeLevel,
+      type: newApp.type,
+      dateApplied: new Date().toISOString().split('T')[0],
+      status: "Missing Documents",
+      documents: { birthCert: false, form138: false, goodMoral: false, medical: false }
+    });
+    
+    setIsModalOpen(false);
+    setNewApp({ name: "", gradeLevel: "Grade 7", type: "New Student" });
+  };
 
   function statusColor(s: EnrollmentStatus) {
     if (s === "Enrolled") return C.green;
@@ -69,7 +68,7 @@ export function REnrollmentScreen() {
   }
 
   return (
-    <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", paddingBottom: 100 }}>
+    <div style={{ flex: 1, minHeight: 0, padding: "32px 40px", overflowY: "auto", paddingBottom: 100 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
         
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
@@ -77,13 +76,20 @@ export function REnrollmentScreen() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Student Enrollment & Admissions</h1>
             <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Process applications, track submitted forms, and finalize enrollments.</div>
           </div>
-          <button style={{
+          <button onClick={() => setIsModalOpen(true)} style={{
             background: C.m700, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 6,
             fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8
           }}>
             <UserPlus size={14} /> Add Manual Application
           </button>
         </div>
+
+        {enrollmentError && (
+          <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 8, padding: "16px", display: "flex", gap: 12, alignItems: "center" }}>
+            <AlertTriangle size={20} color={C.red} />
+            <div style={{ color: C.red, fontSize: 13, fontWeight: 500 }}>{enrollmentError}</div>
+          </div>
+        )}
 
         {/* Toolbar & Tabs */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
@@ -222,6 +228,51 @@ export function REnrollmentScreen() {
         </div>
 
       </div>
+
+      {/* Add Manual Application Modal */}
+      {isModalOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(10,4,4,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 400, overflow: "hidden", boxShadow: "0 24px 64px rgba(74,10,16,0.25)" }}>
+            <div style={{ background: C.m800, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces',serif" }}>Add Manual Application</div>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 4, width: 28, height: 28, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={14} />
+              </button>
+            </div>
+            <form onSubmit={handleAddSubmit} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Student Name</label>
+                <input required value={newApp.name} onChange={e => setNewApp({ ...newApp, name: e.target.value })} placeholder="Last Name, First Name" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Grade Level</label>
+                <select value={newApp.gradeLevel} onChange={e => setNewApp({ ...newApp, gradeLevel: e.target.value })} style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }}>
+                  <option>Grade 7</option>
+                  <option>Grade 8</option>
+                  <option>Grade 9</option>
+                  <option>Grade 10</option>
+                  <option>Grade 11</option>
+                  <option>Grade 12</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Application Type</label>
+                <select value={newApp.type} onChange={e => setNewApp({ ...newApp, type: e.target.value as Applicant["type"] })} style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }}>
+                  <option value="New Student">New Student</option>
+                  <option value="Transferee">Transferee</option>
+                  <option value="Returning">Returning</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: "8px 16px", background: C.m50, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: C.t2, cursor: "pointer" }}>Cancel</button>
+                <button type="submit" style={{ padding: "8px 20px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, color: "#fff", cursor: "pointer" }}>Create Application</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

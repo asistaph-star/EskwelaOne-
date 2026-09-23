@@ -3,9 +3,13 @@ import { Search, Bell, ChevronDown } from 'lucide-react';
 import { C } from '../../shared/constants/tokens';
 import { ROLE_USER } from '../../App';
 import { NotificationDropdown } from '../../shared/components/NotificationDropdown';
+import { useAppContext } from '../../shared/AppContext';
 
 export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { title:string; sub?:string; onMenu?:()=>void; onLogout?:()=>void; onSettings?:()=>void }) {
   const [notifOpen, setNotifOpen] = useState(false);
+  
+  const { notifications, currentUser } = useAppContext();
+  const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
 
   return (
     <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
@@ -74,22 +78,24 @@ export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { titl
                 }}
               >
                 <Bell size={18} color={notifOpen ? C.m700 : C.t2} />
-                <div style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
-                  background: C.red,
-                  color: "#fff",
-                  fontSize: 8,
-                  fontWeight: 700,
-                  borderRadius: 10,
-                  width: 14,
-                  height: 14,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1.5px solid #fff"
-                }}>8</div>
+                {unreadCount > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    background: C.red,
+                    color: "#fff",
+                    fontSize: 8,
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    width: 14,
+                    height: 14,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1.5px solid #fff"
+                  }}>{unreadCount}</div>
+                )}
               </button>
               <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>

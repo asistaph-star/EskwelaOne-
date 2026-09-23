@@ -1,82 +1,65 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { QKey, QData, GbItem, GbGrades } from '../../shared/types';
+import { TermKey, TermData, GbItem, GbGrades } from '../../shared/types';
 import { ChevronDown, FileText, ChevronLeft, Plus, Download, Eye, Save, Trash2 } from 'lucide-react';
-import { Q_SEED, GB_ROSTER } from '../../shared/constants/seedData';
-import { MY_CLASSES } from '../../App';
 import { Stamp } from '../../shared/components/Stamp';
-export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ classId?:number, onBack:()=>void, hideBack?:boolean }) {
-  /* ── per-quarter data (each quarter has its own activities + scores) ── */
-  const ROSTER = (() => {
-    try {
-      const saved = localStorage.getItem('hub_students');
-      if (saved) {
-        const stored = JSON.parse(saved);
-        // Start from GB_ROSTER (the original 8 students with numeric IDs)
-        // then append any extra students that were added via the form
-        const newStudents = stored
-          .filter((s:any) => typeof s.id === 'string' && s.id.startsWith('s'))
-          .map((s:any, i:number) => ({
-            id: 100 + i,
-            surname: s.surname || s.name || '',
-            first: s.first || ''
-          }));
-        return [...GB_ROSTER, ...newStudents];
-      }
-    } catch(e) {}
-    return GB_ROSTER;
-  })();
-
-  const [allData, setAllData] = useState<Record<QKey,QData>>(() => {
-    try {
-      const saved = localStorage.getItem('eskwela_grades');
-      if (saved) return JSON.parse(saved);
-    } catch(e) {}
-    return Q_SEED;
-  });
-  const [quarter, setQuarter] = useState<QKey>("Q1");
+import { useMyClasses } from '../shared/useMyClasses';
+export function GradebookFullScreen({ classId, onBack, hideBack=false }:{ classId?:string, onBack:()=>void, hideBack?:boolean }) {
+  /* ── per-term data (each term has its own activities + scores) ── */
+  const [ROSTER, setRoster] = useState<any[]>([]);
+  const [allData, setAllData] = useState<Record<TermKey,TermData>>({} as any);
+  const [term, setTerm] = useState<TermKey>("T1");
   const [view,    setView]    = useState<"ledger"|"summary">("ledger");
-  const [qCount, setQCount] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem('eskwela_grades');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const qs = Object.keys(parsed).filter(k => k.startsWith('Q')).map(k => parseInt(k.substring(1))).filter(n => !isNaN(n));
-        if (qs.length > 0) return Math.max(...qs);
-      }
-    } catch(e) {}
-    return 3;
-  });
-  const activeQuarters = Array.from({length: qCount}, (_, i) => `Q${i+1}`);
+  const [tCount, setTCount] = useState<number>(3);
+  const activeTerms = Array.from({length: tCount}, (_, i) => `T${i+1}`);
+  const [isLoading, setIsLoading] = useState(true);
+  const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
+
+  React.useEffect(() => {
+    if (!classId) return;
+    setIsLoading(true);
+    import('../../../api/client').then(({ apiClient }) => {
+      apiClient.get(`/gradebooks/ledger?classId=${classId}`)
+        .then((res: any) => {
+          if (res) {
+            setAllData(res.terms || {});
+            setRoster(res.roster || []);
+            const ts = Object.keys(res.terms || {}).filter(k => k.startsWith('T')).map(k => parseInt(k.substring(1))).filter(n => !isNaN(n));
+            if (ts.length > 0) setTCount(Math.max(...ts, 3));
+          }
+        })
+        .finally(() => setIsLoading(false));
+    });
+  }, [classId]);
   
-  function getQAccent(q: string) {
+  function getTAccent(t: string) {
     return C.m700;
   }
 
   /* ── shared settings ── */
   const [weights, setWeights] = useState({ww:25,pt:50,qa:25});
-  const cls = MY_CLASSES.find(c=>c.id===classId) ?? MY_CLASSES[0];
-  const section = `Gr. ${cls.grade} ${cls.section}`;
+  const cls = myClasses.find(c=>c.id===classId) ?? myClasses[0];
+  const section = cls ? `Gr. ${cls.grade} ${cls.section}` : '';
 
   /* ── edit states ── */
   const [activeCell, setActiveCell] = useState<string|null>(null);
   const [editMaxId,  setEditMaxId]  = useState<string|null>(null);
 
-  /* ── convenience accessors for the active quarter ── */
-  const qd       = allData[quarter] || { wwItems: [], ptItems: [], qaMax: 100, grades: {} };
+  /* ── convenience accessors for the active term ── */
+  const qd       = allData[term] || { wwItems: [], ptItems: [], qaMax: 100, grades: {} };
   const wwItems  = qd.wwItems;
   const ptItems  = qd.ptItems;
   const qaMax    = qd.qaMax;
   const grades   = qd.grades;
 
-  /* ── computation (accepts any QData so summary can compute all quarters) ── */
+  /* ── computation (accepts any TermData so summary can compute all terms) ── */
   function psFor(sid:number|string, items:GbItem[], g:GbGrades) {
     const sg = g[sid] ?? {};
     const sumS = items.reduce((s,it)=>s+(parseFloat(sg[it.id])||0), 0);
     const sumM = items.reduce((s,it)=>s+it.max, 0);
     return sumM>0 ? Math.round((sumS/sumM)*1000)/10 : 0;
   }
-  function qGradeFor(sid:number|string, d:QData) {
+  function tGradeFor(sid:number|string, d:TermData) {
     if (!d) return 0;
     const g = d.grades[sid] ?? {};
     const wwPS = psFor(sid, d.wwItems, d.grades);
@@ -84,44 +67,44 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
     const qaPS = d.qaMax>0 ? Math.round(((parseFloat(g.qa)||0)/d.qaMax)*1000)/10 : 0;
     return Math.round((wwPS*(weights.ww/100)+ptPS*(weights.pt/100)+qaPS*(weights.qa/100))*10)/10;
   }
-  /* active quarter shortcuts */
+  /* active term shortcuts */
   const getPS      = (sid:number|string, items:GbItem[]) => psFor(sid, items, grades);
-  const getQGrade  = (sid:number|string)                 => qGradeFor(sid, qd);
+  const getQGrade  = (sid:number|string)                 => tGradeFor(sid, qd);
 
-  /* ── update cell value (writes into active quarter) ── */
+  /* ── update cell value (writes into active term) ── */
   function setCell(sid:number|string, iid:string, val:string) {
     setAllData(prev=>({
       ...prev,
-      [quarter]:{
-        ...prev[quarter],
-        grades:{...prev[quarter].grades,[sid]:{...(prev[quarter].grades[sid]??{}),[iid]:val.replace(/[^\d.]/g,"")}}
+      [term]:{
+        ...prev[term],
+        grades:{...prev[term].grades,[sid]:{...(prev[term].grades[sid]??{}),[iid]:val.replace(/[^\d.]/g,"")}}
       }
     }));
   }
 
-  /* ── add activity columns (adds to active quarter only) ── */
+  /* ── add activity columns (adds to active term only) ── */
   function addWW() {
     const n = wwItems.length+1;
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:[...prev[quarter].wwItems,{id:`ww${n}`,label:`WW ${n}`,max:100}]}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],wwItems:[...prev[term].wwItems,{id:`ww${n}`,label:`WW ${n}`,max:100}]}}));
   }
   function deleteWW(id:string) {
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:prev[quarter].wwItems.filter(x=>x.id!==id)}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],wwItems:prev[term].wwItems.filter(x=>x.id!==id)}}));
   }
 
   function addPT() {
     const n = ptItems.length+1;
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],ptItems:[...prev[quarter].ptItems,{id:`pt${n}`,label:`PT ${n}`,max:100}]}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],ptItems:[...prev[term].ptItems,{id:`pt${n}`,label:`PT ${n}`,max:100}]}}));
   }
-  /* ── update max for an activity in the active quarter ── */
+  /* ── update max for an activity in the active term ── */
   function deletePT(id:string) {
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],ptItems:prev[quarter].ptItems.filter(x=>x.id!==id)}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],ptItems:prev[term].ptItems.filter(x=>x.id!==id)}}));
   }
 
   function updateWWMax(id:string, max:number) {
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],wwItems:prev[quarter].wwItems.map(x=>x.id===id?{...x,max}:x)}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],wwItems:prev[term].wwItems.map(x=>x.id===id?{...x,max}:x)}}));
   }
   function updatePTMax(id:string, max:number) {
-    setAllData(prev=>({...prev,[quarter]:{...prev[quarter],ptItems:prev[quarter].ptItems.map(x=>x.id===id?{...x,max}:x)}}));
+    setAllData(prev=>({...prev,[term]:{...prev[term],ptItems:prev[term].ptItems.map(x=>x.id===id?{...x,max}:x)}}));
   }
 
   /* ── summary stats ── */
@@ -205,11 +188,26 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
     </th>
   );
 
-  /* ── quarter color palette (WW/PT/QA header colors match per-quarter accent) ── */
-  const activeAccent = getQAccent(quarter);
+  /* ── term color palette (WW/PT/QA header colors match per-term accent) ── */
+  const activeAccent = getTAccent(term);
+
+  if (isLoadingClasses || !cls) {
+    return (
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color: C.t3, fontSize: 14 }}>
+        {isLoadingClasses ? "Loading metadata..." : "Classroom not found"}
+      </div>
+    );
+  }
 
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",background: "transparent"}}>
+      {isLoading && (
+        <div style={{position:"absolute",inset:0,background:"rgba(255,255,255,0.7)",zIndex:50,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{padding:"12px 24px",background:"#fff",border:`1px solid ${C.borderMed}`,borderRadius:8,fontSize:14,fontWeight:600,color:C.m700,boxShadow:"0 4px 20px rgba(0,0,0,0.1)"}}>
+            Loading Gradebook Data...
+          </div>
+        </div>
+      )}
 
       {/* ── Controls bar ── */}
       <div style={{background:"#fff",borderBottom:`1px solid ${C.borderMed}`,padding:"9px 18px",
@@ -224,7 +222,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           <div style={{width:1,height:22,background:C.border}}/>
         </>}
 
-        {/* View toggle: Grade entry / Quarterly summary */}
+        {/* View toggle: Grade entry / Termly summary */}
         <div style={{display:"flex",gap:1,background:C.m50,borderRadius:5,padding:2,border:`1px solid ${C.borderMed}`}}>
           {(["ledger","summary"] as const).map(v=>(
             <button key={v} onClick={()=>setView(v)}
@@ -233,7 +231,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 background:view===v?C.m700:"transparent",
                 color:view===v?"#fff":C.t2,
                 transition:"all 0.12s"}}>
-              {v==="ledger" ? "Grade entry" : "Quarterly summary"}
+              {v==="ledger" ? "Grade entry" : "Termly summary"}
             </button>
           ))}
         </div>
@@ -256,13 +254,13 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           </div>
         </div>
 
-        {/* Quarter tabs - always visible; active quarter = which ledger OR which column is highlighted in summary */}
+        {/* Term tabs - always visible; active term = which ledger OR which column is highlighted in summary */}
         <div style={{display:"flex",gap:2}}>
-          {activeQuarters.map(q=>{
-            const isAct = quarter===q;
-            const acc = getQAccent(q);
+          {activeTerms.map(q=>{
+            const isAct = term===q;
+            const acc = getTAccent(q);
             return (
-              <button key={q} onClick={()=>setQuarter(q)}
+              <button key={q} onClick={()=>setTerm(q as any)}
                 style={{padding:"4px 13px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,
                   transition:"all 0.12s",
                   border:isAct?`1.5px solid ${acc}`:`1px solid ${C.borderMed}`,
@@ -274,17 +272,17 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
           })}
           {true && (
             <button onClick={() => {
-              const next = qCount + 1;
-              const q = `Q${next}`;
+              const next = tCount + 1;
+              const q = `T${next}`;
               setAllData(prev => prev[q] ? prev : { ...prev, [q]: { wwItems: [], ptItems: [], qaMax: 100, grades: {} } });
-              setQCount(next);
-            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Add Quarter">+</button>
+              setTCount(next);
+            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Add Term">+</button>
           )}
-          {qCount > 1 && (
+          {tCount > 1 && (
             <button onClick={() => {
-              if (quarter === `Q${qCount}`) setQuarter(`Q${qCount-1}` as QKey);
-              setQCount(c => c-1);
-            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Remove Quarter">-</button>
+              if (term === `T${tCount}`) setTerm(`T${tCount-1}` as TermKey);
+              setTCount(c => c-1);
+            }} style={{padding:"4px 8px",borderRadius:4,cursor:"pointer",fontSize:12,fontWeight:700,border:`1px solid ${C.borderMed}`,background:"#fff",color:C.t2}} title="Remove Term">-</button>
           )}
         </div>
 
@@ -318,7 +316,15 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
         )}
 
         <div style={{marginLeft:"auto", display:"flex", gap:10}}>
-          <button onClick={() => { localStorage.setItem('eskwela_grades', JSON.stringify(allData)); alert("Grades saved successfully!"); }} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",
+          <button onClick={() => { 
+            setIsLoading(true);
+            import('../../../api/client').then(({ apiClient }) => {
+              apiClient.post('/gradebooks/ledger', { classId: classId.toString(), terms: allData })
+                .then(() => alert("Grades saved successfully!"))
+                .catch((err: any) => alert("Failed to save grades: " + err.message))
+                .finally(() => setIsLoading(false));
+            });
+          }} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",
             background:C.m600,color:"#fff",borderRadius:4,border:"none",cursor:"pointer",
             fontSize:12,fontWeight:700}}>
             <Save size={13}/> Save
@@ -332,7 +338,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
       </div>
 
       {/* ══════════════════════════════════════════════════════════
-          QUARTERLY SUMMARY VIEW
+          Term summary VIEW
           ══════════════════════════════════════════════════════════ */}
       {view==="summary" && (
         <div style={{flex:1,overflow:"auto"}}>
@@ -341,7 +347,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             display:"flex",alignItems:"center",gap:10}}>
             <FileText size={13} color={C.m700}/>
             <span style={{fontSize:11,color:C.t2}}>
-              Quarterly summary - read-only reference for <strong>Form 138 (Report Card)</strong>.
+              Termly summary - read-only reference for <strong>Form 138 (Report Card)</strong>.
               Edit scores in <button onClick={()=>setView("ledger")} style={{color:C.m700,background:"none",border:"none",cursor:"pointer",fontSize:11,fontWeight:700,padding:0,textDecoration:"underline"}}>Grade entry</button>.
             </span>
             <span style={{marginLeft:"auto",fontSize:10,color:C.t3}}>
@@ -353,7 +359,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
             <colgroup>
               <col style={{width:36}}/>{/* # */}
               <col style={{width:200}}/>{/* Name */}
-              {activeQuarters.map(q => <col key={q} style={{width:90}}/>)}
+              {activeTerms.map(q => <col key={q} style={{width:90}}/>)}
               <col style={{width:110}}/>{/* Final Avg */}
               <col style={{width:90}}/>{/* Status */}
             </colgroup>
@@ -367,15 +373,15 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                   color:"#fff",fontSize:11,fontWeight:700,padding:"7px 10px",textAlign:"left",
                   position:"sticky",top:0,left:36,zIndex:6,
                   fontFamily:"'Fraunces',serif",letterSpacing:"0.04em"}}>STUDENT NAME</th>
-                {/* Quarter column headers */}
-                {activeQuarters.map(q=>(
+                {/* Term column headers */}
+                {activeTerms.map(q=>(
                   <th key={q} style={{border:`1px solid rgba(255,255,255,0.15)`,
-                    background: quarter===q ? getQAccent(q) : `${getQAccent(q)}CC`,
+                    background: term===q ? getTAccent(q) : `${getTAccent(q)}CC`,
                     color:"#fff",fontSize:11,fontWeight:700,padding:"7px 4px",textAlign:"center",
                     position:"sticky",top:0,zIndex:4,letterSpacing:"0.08em",
-                    outline: quarter===q ? `2px solid ${getQAccent(q)}` : "none",
+                    outline: term===q ? `2px solid ${getTAccent(q)}` : "none",
                     outlineOffset:-2}}>
-                    {q}{quarter===q && <span style={{fontSize:9,marginLeft:5,opacity:0.7}}>▲</span>}
+                    {q}{term===q && <span style={{fontSize:9,marginLeft:5,opacity:0.7}}>▲</span>}
                   </th>
                 ))}
                 <th style={{border:`1px solid rgba(255,255,255,0.15)`,background:C.gold,
@@ -388,11 +394,11 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
               </tr>
               {/* Sub-header: labels */}
               <tr>
-                {activeQuarters.map(q=>(
+                {activeTerms.map(q=>(
                   <th key={q} style={{border:`0.5px solid ${C.border}`,
-                    background: quarter===q ? `${getQAccent(q)}22` : C.m50,
+                    background: term===q ? `${getTAccent(q)}22` : C.m50,
                     padding:"4px 4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
-                    <span style={{fontSize:9,color:quarter===q?getQAccent(q):C.t3,fontWeight:600,
+                    <span style={{fontSize:9,color:term===q?getTAccent(q):C.t3,fontWeight:600,
                       textTransform:"uppercase",letterSpacing:"0.07em"}}>
                       Qrtly Grade
                     </span>
@@ -401,7 +407,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                 <th style={{border:`0.5px solid ${C.border}`,background:C.goldLight,
                   padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}>
                   <span style={{fontSize:9,color:C.gold,fontWeight:600,
-                    textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{activeQuarters.join('+')} ÷ {qCount}</span>
+                    textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{activeTerms.join('+')} ÷ {tCount}</span>
                 </th>
                 <th style={{border:`0.5px solid ${C.border}`,background:C.m50,
                   padding:"4px",textAlign:"center",position:"sticky",top:34,zIndex:3}}/>
@@ -410,7 +416,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
 
             <tbody>
               {ROSTER.map((student,idx)=>{
-                const grades = activeQuarters.map(q => qGradeFor(student.id, allData[q]));
+                const grades = activeTerms.map(q => tGradeFor(student.id, allData[q]));
                 const allFilled = !grades.some(g => g <= 0);
                 const sum = grades.reduce((acc, val) => acc + val, 0);
                 const finalAvg = allFilled ? Math.round((sum/grades.length)*10)/10 : 0;
@@ -422,8 +428,8 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                   const high = g>=90;
                   return (
                     <td style={{border:`0.5px solid ${C.border}`,padding:"9px 6px",textAlign:"center",
-                      background: isActive ? (failing?C.redBg:`${getQAccent(quarter)}10`) : (failing?C.redBg:rowBg),
-                      outline: isActive ? `1.5px solid ${getQAccent(quarter)}50` : "none",
+                      background: isActive ? (failing?C.redBg:`${getTAccent(term)}10`) : (failing?C.redBg:rowBg),
+                      outline: isActive ? `1.5px solid ${getTAccent(term)}50` : "none",
                       outlineOffset:-1}}>
                       <span style={{fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
                         color: g<=0?"#ccc" : failing?C.red : high?C.green : C.t1}}>
@@ -449,8 +455,8 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
                       borderRight:`2px solid ${C.borderMed}`,whiteSpace:"nowrap"}}>
                       {student.surname}, {student.first}
                     </td>
-                    {activeQuarters.map((q, i) => {
-                      return <React.Fragment key={q}>{gradeCell(grades[i], quarter===q)}</React.Fragment>;
+                    {activeTerms.map((q, i) => {
+                      return <React.Fragment key={q}>{gradeCell(grades[i], term===q)}</React.Fragment>;
                     })}
                     {/* Final Average */}
                     <td style={{border:`1px solid ${C.borderMed}`,padding:"9px 6px",textAlign:"center",
@@ -479,7 +485,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
               textTransform:"uppercase",letterSpacing:"0.1em"}}>Final Average Summary</span>
             {(()=>{
               const finals = ROSTER.map(s=>{
-                const grades = activeQuarters.map(q => qGradeFor(s.id, allData[q]));
+                const grades = activeTerms.map(q => tGradeFor(s.id, allData[q]));
                 if (grades.some(g => g <= 0)) return 0;
                 const sum = grades.reduce((acc, val) => acc + val, 0);
                 return Math.round((sum/grades.length)*10)/10;
@@ -707,7 +713,7 @@ export function GradebookFullScreen({ classId=1, onBack, hideBack=false }:{ clas
         ))}
         <div style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.35)"}}>
           <span style={{fontWeight:700,color:"rgba(255,255,255,0.7)"}}>
-            {quarter} · {cls.subject} · Grade {cls.grade} {cls.section} · SY 2025–2026
+            {term} · {cls.subject} · Grade {cls.grade} {cls.section} · SY 2025–2026
           </span>
         </div>
       </div>

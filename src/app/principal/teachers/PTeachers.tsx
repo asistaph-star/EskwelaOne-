@@ -2,20 +2,37 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { teacherTraffic } from '../../shared/utils/helpers';
-import { P_TEACHERS } from '../../shared/constants/seedData';
+import { useAppContext } from '../../shared/AppContext';
 import { Stamp } from '../../shared/components/Stamp';
 import { UserPlus, Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
 import { TeacherProfileModal } from "./TeacherProfileModal";
+import PRankingScreen from "../ranking/PRankingScreen";
 
 export function PTeachers() {
-  const [tab, setTab] = useState<"overview"|"leaves">("overview");
+  const { teachers, addTeacher } = useAppContext();
+  const [tab, setTab] = useState<"overview"|"ranking">("overview");
   const [createModal, setCreateModal] = useState(false);
   const [assignModal, setAssignModal] = useState(false);
   const [days, setDays] = useState<string[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
 
+  const [newTeacherName, setNewTeacherName] = useState("");
+  const [newTeacherEmail, setNewTeacherEmail] = useState("");
+
+  const handleCreateTeacher = async () => {
+    if (!newTeacherName.trim()) return;
+    await addTeacher({
+      name: newTeacherName,
+      role: "Teacher",
+      section: "Unassigned"
+    });
+    setCreateModal(false);
+    setNewTeacherName("");
+    setNewTeacherEmail("");
+  };
+
   return (
-    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24, display:"flex", flexDirection:"column" }}>
+    <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24, display:"flex", flexDirection:"column" }}>
       
       {/* Top Header & Actions */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:20 }}>
@@ -37,7 +54,7 @@ export function PTeachers() {
       <div style={{ display:"flex", gap:20, borderBottom:`1px solid ${C.borderMed}`, marginBottom:20 }}>
         {[
           { id:"overview", label:"Overview & Subject Load" },
-          { id:"leaves", label:"Leave Approvals (2 Pending)" }
+          { id:"ranking", label:"Career Progression (Evaluations)" }
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
             style={{ padding:"10px 4px", border:"none", background:"none", cursor:"pointer", fontSize:12, fontWeight:tab === t.id ? 700 : 500, color:tab === t.id ? C.m700 : C.t3, borderBottom:tab === t.id ? `2px solid ${C.m700}` : "2px solid transparent", marginBottom:-1 }}>
@@ -60,16 +77,16 @@ export function PTeachers() {
               <table style={{ width:"100%", borderCollapse:"collapse" }}>
                 <thead><PTableHeader cols={["Teacher","Rank","Status","Time In"]} /></thead>
                 <tbody>
-                  {P_TEACHERS.map((t,i)=>{
+                  {teachers.map((t,i)=>{
                     const statuses = ["Present","Present","Late","Present","Present","Late","Present","Present"];
                     const times = ["7:05","7:08","7:42","7:10","7:07","7:38","7:12","7:09"];
-                    const s = statuses[i], time = times[i];
+                    const s = statuses[i % statuses.length], time = times[i % times.length];
                     return (
-                      <tr key={t.name} style={{ borderBottom:`0.5px solid ${C.border}` }}
+                      <tr key={t.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
                         onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                         onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
                         <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                        <td style={{ padding:"9px 14px", fontSize:10, color:C.t3 }}>{t.rank}</td>
+                        <td style={{ padding:"9px 14px", fontSize:10, color:C.t3 }}>{"Teacher I"}</td>
                         <td style={{ padding:"9px 14px" }}><Stamp label={s} color={s==="Present"?C.green:s==="Late"?C.amber:C.red} bg={s==="Present"?C.greenBg:s==="Late"?C.amberBg:C.redBg} /></td>
                         <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>{time} AM</td>
                       </tr>
@@ -101,15 +118,15 @@ export function PTeachers() {
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead><PTableHeader cols={["Teacher","Rank","Years","Status","Profile"]} /></thead>
                   <tbody>
-                    {P_TEACHERS.map((t,i)=>{
-                      const tr = teacherTraffic(t.status);
+                    {teachers.map((t,i)=>{
+                      const tr = teacherTraffic("Good");
                       return (
-                        <tr key={t.name} style={{ borderBottom:i<P_TEACHERS.length-1?`0.5px solid ${C.border}`:"none" }}
+                        <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
                           onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                           onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
                           <td style={{ padding:"8px 14px", fontSize:11, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                          <td style={{ padding:"8px 14px", fontSize:10, color:C.t3 }}>{t.rank}</td>
-                          <td style={{ padding:"8px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.t2 }}>{t.years}</td>
+                          <td style={{ padding:"8px 14px", fontSize:10, color:C.t3 }}>{"Teacher I"}</td>
+                          <td style={{ padding:"8px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.t2 }}>{"3 Yrs"}</td>
                           <td style={{ padding:"8px 14px" }}><Stamp label={tr.label} color={tr.color} bg={tr.bg} /></td>
                           <td style={{ padding:"8px 14px", textAlign: "right" }}>
                             <button onClick={() => setSelectedProfile(t.name)} style={{ padding: "4px 8px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 10, fontWeight: 600, color: C.m700, cursor: "pointer" }}>View Profile</button>
@@ -128,15 +145,15 @@ export function PTeachers() {
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Total Load"]} /></thead>
               <tbody>
-                {P_TEACHERS.map((t: any,i)=>(
-                  <tr key={t.name} style={{ borderBottom:i<P_TEACHERS.length-1?`0.5px solid ${C.border}`:"none" }}
+                {teachers.map((t: any,i)=>(
+                  <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
                     <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{t.days || "M/W/F"}</td>
-                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{t.sections.join(", ")}</td>
-                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{t.subjects.join(", ")}</td>
-                    <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{t.sections.length * 5}h/wk</td>
+                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{"M/W/F"}</td>
+                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{t.section || "Grade 10 - Pilot"}</td>
+                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{"Mathematics"}</td>
+                    <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{15}h/wk</td>
                   </tr>
                 ))}
               </tbody>
@@ -145,36 +162,12 @@ export function PTeachers() {
         </div>
       )}
 
-      {tab === "leaves" && (
-        <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <PTableHeader cols={["Date Requested", "Teacher", "Leave Type", "Duration", "Status", "Action"]} />
-            </thead>
-            <tbody>
-              {[
-                { date:"2025-06-11", name:"Soriano, Ana R.", type:"Sick Leave", duration:"2 days (Jun 12-13)", status:"Pending" },
-                { date:"2025-06-10", name:"Gomez, Maria L.", type:"Vacation Leave", duration:"1 day (Jun 18)", status:"Pending" }
-              ].map((l, i) => (
-                <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}` }}>
-                  <td style={{ padding:"12px 14px", fontSize:11, color:C.t3 }}>{l.date}</td>
-                  <td style={{ padding:"12px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{l.name}</td>
-                  <td style={{ padding:"12px 14px", fontSize:11, color:C.t2 }}>{l.type}</td>
-                  <td style={{ padding:"12px 14px", fontSize:11, color:C.t2 }}>{l.duration}</td>
-                  <td style={{ padding:"12px 14px" }}><Stamp label={l.status} color={C.amber} bg={C.amberBg} /></td>
-                  <td style={{ padding:"12px 14px" }}>
-                    <div style={{ display:"flex", gap:6 }}>
-                      <button onClick={() => alert("Leave Approved")} style={{ padding:"6px", borderRadius:4, background:C.greenBg, border:"none", color:C.green, cursor:"pointer" }}><CheckCircle size={14}/></button>
-                      <button onClick={() => alert("Leave Rejected")} style={{ padding:"6px", borderRadius:4, background:C.redBg, border:"none", color:C.red, cursor:"pointer" }}><XCircle size={14}/></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+
       {selectedProfile && <TeacherProfileModal teacherName={selectedProfile} onClose={() => setSelectedProfile(null)} />}
+      
+      {tab === "ranking" && (
+        <PRankingScreen inTab={true} />
+      )}
       
       {/* Create Teacher Modal */}
       {createModal && (
@@ -187,11 +180,11 @@ export function PTeachers() {
             <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Full Name</label>
-                <input type="text" placeholder="e.g. Dela Cruz, Juan M." style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                <input value={newTeacherName} onChange={(e) => setNewTeacherName(e.target.value)} type="text" placeholder="e.g. Dela Cruz, Juan M." style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
               </div>
               <div>
                 <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Email</label>
-                <input type="email" placeholder="e.g. jdelacruz@eskwelaone.edu.ph" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
+                <input value={newTeacherEmail} onChange={(e) => setNewTeacherEmail(e.target.value)} type="email" placeholder="e.g. jdelacruz@eskwelaone.edu.ph" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
@@ -210,7 +203,7 @@ export function PTeachers() {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
                 <button onClick={() => setCreateModal(false)} style={{ padding: "8px 16px", background: C.m50, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: C.t2, cursor: "pointer" }}>Cancel</button>
-                <button onClick={() => { alert("Account created."); setCreateModal(false); }} style={{ padding: "8px 16px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>Create Account</button>
+                <button onClick={handleCreateTeacher} style={{ padding: "8px 16px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>Create Account</button>
               </div>
             </div>
           </div>
@@ -257,7 +250,7 @@ export function PTeachers() {
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
                 <button onClick={() => setAssignModal(false)} style={{ padding: "8px 16px", background: C.m50, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: C.t2, cursor: "pointer" }}>Cancel</button>
-                <button onClick={() => { alert("Schedule assigned."); setAssignModal(false); }} style={{ padding: "8px 16px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>Assign Schedule</button>
+                <button onClick={() => setAssignModal(false)} style={{ padding: "8px 16px", background: C.m700, border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, color: "#fff", cursor: "pointer" }}>Assign Schedule</button>
               </div>
             </div>
           </div>

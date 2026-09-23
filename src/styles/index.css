@@ -48,10 +48,10 @@
   position: absolute;
   inset: 0;
   background-image: url('/school_seal.png');
-  background-size: 650px;
+  background-size: 850px;
   background-repeat: no-repeat;
   background-position: center calc(50% + 28px);
-  opacity: 0.05;
+  opacity: 0.04;
   pointer-events: none;
   z-index: -1;
 }

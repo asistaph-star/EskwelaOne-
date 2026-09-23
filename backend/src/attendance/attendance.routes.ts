@@ -102,6 +102,101 @@ router.post('/gate', requirePermissions('attendance:write'), async (req: Request
 });
 
 /**
+ * GET /api/attendance/classes/:classId/records
+ * Fetch all attendance records for a specific class (assignment) in the current academic year.
+ */
+router.get('/classes/:classId/records', requirePermissions('attendance:read'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const classId = req.params.classId as string;
+    const actorId = ((req as any).user as AuthenticatedUser).id;
+
+    // 1. Enforce ownership: Does this teacher actually own this class assignment?
+    const assignment = await prisma.teacherSubjectAssignment.findUnique({
+      where: { id: classId },
+      include: { teacher: true }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Class not found' });
+    }
+
+    if (assignment.teacher.user_id !== actorId) {
+      const authUser = (req as any).user as AuthenticatedUser;
+      if (!authUser.permissions.includes('attendance:read_all')) {
+        return res.status(403).json({ success: false, message: 'You do not have permission to view attendance for this class.' });
+      }
+    }
+
+    // 2. Fetch the records
+    const records = await prisma.classAttendance.findMany({
+      where: { assignment_id: classId },
+      include: { enrollment: { include: { student: true } } }
+    });
+
+    res.json({ success: true, data: records });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/attendance/classes/:classId/roster
+ * Fetch all enrolled students for a specific class (assignment).
+ */
+router.get('/classes/:classId/roster', requirePermissions('attendance:read'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const classId = req.params.classId as string;
+    const actorId = ((req as any).user as AuthenticatedUser).id;
+
+    // 1. Enforce ownership
+    const assignment = await prisma.teacherSubjectAssignment.findUnique({
+      where: { id: classId },
+      include: { teacher: true }
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Class not found' });
+    }
+
+    if (assignment.teacher.user_id !== actorId) {
+      const authUser = (req as any).user as AuthenticatedUser;
+      if (!authUser.permissions.includes('attendance:read_all')) {
+        return res.status(403).json({ success: false, message: 'You do not have permission to view the roster for this class.' });
+      }
+    }
+
+    // 2. Fetch enrollments for the section tied to this assignment
+    const enrollments = await prisma.enrollment.findMany({
+      where: { 
+        section_id: assignment.section_id,
+        academic_year_id: assignment.academic_year_id,
+        status: 'Enrolled'
+      },
+      include: { student: { include: { user: true } } },
+      orderBy: [
+        { student: { user: { last_name: 'asc' } } },
+        { student: { user: { first_name: 'asc' } } }
+      ]
+    });
+
+    const mapped = enrollments.map(e => ({
+      id: e.id,
+      student_id: e.student_id,
+      student: {
+        id: e.student.id,
+        lrn: e.student.lrn,
+        first_name: e.student.user.first_name,
+        last_name: e.student.user.last_name
+      }
+    }));
+
+    res.json({ success: true, data: mapped });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
  * POST /api/attendance/class
  */
 router.post('/class', requirePermissions('attendance:write'), async (req: Request, res: Response, next: NextFunction) => {
@@ -126,6 +221,20 @@ router.post('/class', requirePermissions('attendance:write'), async (req: Reques
       if (!authUser.permissions.includes('attendance:write_all')) {
          throw new AppError(403, 'FORBIDDEN', 'You cannot record attendance for a class you do not teach.');
       }
+    }
+
+    // LAYER 3: Verify the student belongs to that class through a valid enrollment
+    const validEnrollment = await prisma.enrollment.findFirst({
+      where: {
+        id: input.studentEnrollmentId,
+        section_id: assignment.section_id,
+        academic_year_id: assignment.academic_year_id,
+        status: 'Enrolled'
+      }
+    });
+
+    if (!validEnrollment) {
+      throw new AppError(400, 'BAD_REQUEST', 'Student enrollment is not valid for this class.');
     }
 
     const existing = await prisma.classAttendance.findUnique({
@@ -175,6 +284,108 @@ router.post('/class', requirePermissions('attendance:write'), async (req: Reques
   }
 });
 
+const bulkClassAttendanceSchema = z.object({
+  records: z.array(z.object({
+    studentEnrollmentId: z.string().min(1),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+    status: z.enum(['P', 'A', 'L', 'E']),
+    remarks: z.string().optional(),
+  }))
+});
+
+/**
+ * POST /api/attendance/classes/:classId/records/bulk
+ */
+router.post('/classes/:classId/records/bulk', requirePermissions('attendance:write'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const classId = req.params.classId as string;
+    const input = bulkClassAttendanceSchema.parse(req.body);
+    const actorId = ((req as any).user as AuthenticatedUser).id;
+
+    // 1. Ownership check
+    const assignment = await prisma.teacherSubjectAssignment.findUnique({
+      where: { id: classId },
+      include: { teacher: true }
+    });
+
+    if (!assignment) {
+      throw new AppError(404, 'NOT_FOUND', 'Class not found.');
+    }
+
+    if ((assignment as any).teacher.user_id !== actorId) {
+      const authUser = (req as any).user as AuthenticatedUser;
+      if (!authUser.permissions.includes('attendance:write_all')) {
+         throw new AppError(403, 'FORBIDDEN', 'You cannot record attendance for a class you do not teach.');
+      }
+    }
+
+    // 1.5. Validate all enrollments belong to this class
+    const validEnrollments = await prisma.enrollment.findMany({
+      where: {
+        section_id: assignment.section_id,
+        academic_year_id: assignment.academic_year_id,
+        status: 'Enrolled'
+      },
+      select: { id: true }
+    });
+    const validIds = new Set(validEnrollments.map(e => e.id));
+    
+    for (const rec of input.records) {
+      if (!validIds.has(rec.studentEnrollmentId)) {
+        throw new AppError(400, 'BAD_REQUEST', `Student enrollment ${rec.studentEnrollmentId} is not valid for this class.`);
+      }
+    }
+
+    // 2. Perform upserts in a transaction
+    const results = await prisma.$transaction(async (tx) => {
+      const updated = [];
+      for (const rec of input.records) {
+        const dateObj = new Date(rec.date);
+        const existing = await tx.classAttendance.findUnique({
+          where: {
+            assignment_id_enrollment_id_date: {
+              assignment_id: classId,
+              enrollment_id: rec.studentEnrollmentId,
+              date: dateObj,
+            }
+          }
+        });
+        
+        if (existing) {
+          updated.push(await tx.classAttendance.update({
+            where: { id: existing.id },
+            data: { status: rec.status, remarks: rec.remarks }
+          }));
+        } else {
+          updated.push(await tx.classAttendance.create({
+            data: {
+              id: generateId(),
+              assignment_id: classId,
+              enrollment_id: rec.studentEnrollmentId,
+              date: dateObj,
+              status: rec.status,
+              remarks: rec.remarks
+            }
+          }));
+        }
+      }
+      return updated;
+    });
+
+    await createAuditLog({
+      actorUserId: actorId,
+      action: 'CLASS_ATTENDANCE_BULK_UPDATED',
+      resourceType: 'class_attendance',
+      resourceId: classId,
+      newState: { count: results.length }
+    });
+
+    res.json({ success: true, count: results.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /**
  * GET /api/attendance/gate/:studentId
  * Allows students or parents to fetch their gate attendance records
@@ -184,7 +395,12 @@ router.get('/gate/:studentId', async (req: Request, res: Response, next: NextFun
     const authUser = (req as any).user as AuthenticatedUser;
     const studentId = req.params.studentId as string;
     
-    // In a full implementation, check if the authenticated user IS the student, parent, or has read_all permissions
+    if (authUser.roles.includes('Student')) {
+      const student = await prisma.student.findUnique({ where: { user_id: authUser.id } });
+      if (!student || student.id !== studentId) {
+        throw new AppError(403, 'FORBIDDEN', 'You can only view your own gate attendance records.');
+      }
+    }
     
     const records = await prisma.gateAttendance.findMany({
       where: { student_id: studentId },
@@ -207,7 +423,12 @@ router.get('/class/:studentId', async (req: Request, res: Response, next: NextFu
     const authUser = (req as any).user as AuthenticatedUser;
     const studentId = req.params.studentId as string;
     
-    // Check permissions...
+    if (authUser.roles.includes('Student')) {
+      const student = await prisma.student.findUnique({ where: { user_id: authUser.id } });
+      if (!student || student.id !== studentId) {
+        throw new AppError(403, 'FORBIDDEN', 'You can only view your own class attendance records.');
+      }
+    }
     
     const records = await prisma.classAttendance.findMany({
       where: {
@@ -239,6 +460,16 @@ router.get('/class/:studentId', async (req: Request, res: Response, next: NextFu
  */
 router.get('/excuses/:studentId', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const studentId = req.params.studentId as string;
+
+    if (authUser.roles.includes('Student')) {
+      const student = await prisma.student.findUnique({ where: { user_id: authUser.id } });
+      if (!student || student.id !== studentId) {
+        throw new AppError(403, 'FORBIDDEN', 'You can only view your own excuse letters.');
+      }
+    }
+
     const records = await prisma.excuseLetter.findMany({
       where: { student_id: req.params.studentId as string },
       orderBy: { submitted_date: 'desc' }
@@ -250,18 +481,11 @@ router.get('/excuses/:studentId', async (req: Request, res: Response, next: Next
 });
 
 const createExcuseSchema = z.object({
-  studentId: z.string(),
-  studentName: z.string(),
-  teacherId: z.string(),
-  teacherName: z.string(),
-  section: z.string(),
+  teacherId: z.string().min(1, 'Teacher selection is required'),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  reason: z.string(),
+  reason: z.string().min(5, 'Reason must be at least 5 characters long').max(1000),
   documentId: z.string().optional(),
-  documentName: z.string().optional(),
-  documentType: z.string().optional(),
-  documentSize: z.number().optional(),
 });
 
 /**
@@ -270,22 +494,162 @@ const createExcuseSchema = z.object({
 router.post('/excuses', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createExcuseSchema.parse(req.body);
-    const actorId = ((req as any).user as AuthenticatedUser).id;
+    const user = (req as any).user as AuthenticatedUser;
+
+    const student = await prisma.student.findUnique({
+      where: { user_id: user.id }
+    });
+
+    if (!student) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized: Only students can submit excuse letters.');
+    }
+
+    const currentAcademicYear = await prisma.academicYear.findFirst({ where: { is_current: true }});
+    if (!currentAcademicYear) throw new AppError(400, 'BAD_REQUEST', 'No active academic year found.');
+
+    // Validate that the requested teacher is actually assigned to a section the student is enrolled in
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        student_id: student.id,
+        academic_year_id: currentAcademicYear.id,
+        section: {
+          assignments: {
+            some: {
+              teacher_id: input.teacherId
+            }
+          }
+        }
+      }
+    });
+
+    if (!enrollment) {
+      throw new AppError(403, 'FORBIDDEN', 'Invalid teacher selected. The teacher must be assigned to your current section.');
+    }
+
+    if (new Date(input.endDate) < new Date(input.startDate)) {
+      throw new AppError(400, 'BAD_REQUEST', 'End date cannot be before start date.');
+    }
 
     const record = await prisma.excuseLetter.create({
       data: {
         id: generateId(),
-        student_id: input.studentId,
+        student_id: student.id,
         teacher_id: input.teacherId,
         start_date: new Date(input.startDate),
         end_date: new Date(input.endDate),
         reason: input.reason,
+        status: 'Pending Review',
         document_id: input.documentId,
-        status: 'Pending Review'
       }
     });
 
+    const correlationId = (req as any).correlationId;
+    await createAuditLog({
+      actorUserId: user.id,
+      action: 'EXCUSE_LETTER_CREATED',
+      resourceType: 'excuse_letter',
+      resourceId: record.id,
+      newState: { teacherId: input.teacherId, startDate: input.startDate, endDate: input.endDate },
+      correlationId,
+    });
+
     res.status(201).json({ success: true, data: record });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/attendance/excuses/teacher/me
+ * Allows a teacher to fetch all excuse letters submitted to them
+ */
+router.get('/excuses/teacher/me', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user as AuthenticatedUser;
+    
+    const teacher = await prisma.teacher.findUnique({
+      where: { user_id: user.id }
+    });
+
+    if (!teacher) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized: Only teachers can access this route.');
+    }
+
+    const records = await prisma.excuseLetter.findMany({
+      where: { teacher_id: teacher.id },
+      include: {
+        student: {
+          include: {
+            current_section: true,
+            user: true
+          }
+        }
+      },
+      orderBy: { submitted_date: 'desc' }
+    });
+    
+    res.json({ success: true, data: records });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const patchExcuseStatusSchema = z.object({
+  status: z.enum(['Pending Review', 'Approved', 'Rejected']),
+  teacherNote: z.string().optional()
+});
+
+/**
+ * PATCH /api/attendance/excuses/:id/status
+ * Allows a teacher to approve or reject an excuse letter
+ */
+router.patch('/excuses/:id/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id);
+    const input = patchExcuseStatusSchema.parse(req.body);
+    const user = (req as any).user as AuthenticatedUser;
+    
+    const teacher = await prisma.teacher.findUnique({
+      where: { user_id: user.id }
+    });
+
+    if (!teacher) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized: Only teachers can approve excuse letters.');
+    }
+
+
+    const excuse = await prisma.excuseLetter.findUnique({
+      where: { id }
+    });
+
+    if (!excuse) {
+      throw new AppError(404, 'NOT_FOUND', 'Excuse letter not found.');
+    }
+
+    if (excuse.teacher_id !== teacher.id) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized: You can only update excuse letters assigned to you.');
+    }
+
+    const updated = await prisma.excuseLetter.update({
+      where: { id },
+      data: {
+        status: input.status,
+        teacher_note: input.teacherNote || null,
+        reviewed_at: new Date()
+      }
+    });
+    
+    const correlationId = (req as any).correlationId;
+    await createAuditLog({
+      actorUserId: user.id,
+      action: 'EXCUSE_LETTER_STATUS_UPDATED',
+      resourceType: 'excuse_letter',
+      resourceId: id,
+      newState: { status: input.status, teacherNote: input.teacherNote },
+      correlationId,
+    });
+    
+    res.json({ success: true, data: updated });
   } catch (err) {
     next(err);
   }

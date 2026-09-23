@@ -10,7 +10,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
   
   const dynamicSubs = getDynamicGrades(student.surname, student.avg);
   const subjectGrades = dynamicSubs.map(sg=>({
-    name:sg.short, full:sg.name, avg: Math.round((sg.q1+sg.q2+sg.q3)/3*10)/10,
+    name:sg.short, full:sg.name, avg: Math.round((sg.term1+sg.term2+sg.term3)/3*10)/10,
   }));
 
   return (

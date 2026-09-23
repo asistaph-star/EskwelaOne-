@@ -1,10 +1,18 @@
-import { UserPlus, Package, Users } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { UserPlus, Package, Users, Activity, Clock } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { AdminScreen } from "../AdminApp";
-
-
+import { apiClient } from "../../../api/client";
 
 export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) => void }) {
+  const [stats, setStats] = useState<{ totalUsers: number, newUsersLast7Days: number, recentSystemEvents: number } | null>(null);
+
+  useEffect(() => {
+    apiClient.get('/admin/system-stats')
+      .then((res: any) => setStats(res.data || res))
+      .catch(err => console.error("Failed to load admin stats", err));
+  }, []);
+
   return (
     <div style={{ padding: "40px", maxWidth: 1000, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32, alignItems: "stretch", minHeight: "100%", overflowY: "auto" }}>
       
@@ -12,10 +20,45 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
       <div style={{ textAlign: "center" }}>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>Welcome to the IT Operations Portal</h1>
         <p style={{ margin: "8px 0 0", fontSize: 14, color: C.t3, maxWidth: 500, lineHeight: 1.5, marginLeft: "auto", marginRight: "auto" }}>
-          Manage system access, oversee physical assets, and retrieve specific student data from the school database.
+          Manage system access, oversee physical assets, and monitor system health and activity.
         </p>
       </div>
 
+      {/* KPI Cards */}
+      {stats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.t3, marginBottom: 12 }}>
+              <Users size={16} />
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Registered Accounts</div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {stats.totalUsers}
+            </div>
+          </div>
+          <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.t3, marginBottom: 12 }}>
+              <Clock size={16} />
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>New Accounts (7 Days)</div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.green, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              +{stats.newUsersLast7Days}
+            </div>
+          </div>
+          <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: C.t3, marginBottom: 12 }}>
+              <Activity size={16} />
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recent System Events (24h)</div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: C.m700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              {stats.recentSystemEvents}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Areas */}
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: C.t2, borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 12, marginTop: 16 }}>Quick Actions</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, width: "100%" }}>
         
         <button 
@@ -76,7 +119,6 @@ export function AdminDashboard({ onNavigate }: { onNavigate: (s: AdminScreen) =>
         </button>
 
       </div>
-
 
     </div>
   );

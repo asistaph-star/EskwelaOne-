@@ -14,31 +14,7 @@ function Stamp({ label, color, bg }: { label: string; color: string; bg: string 
 /* ── Types ── */
 type LStatus = 'Pending' | 'Approved' | 'Rejected';
 
-interface LeaveRequest {
-  id: number;
-  teacher: string;
-  position: string;
-  section: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  days: number;
-  reason: string;
-  submittedOn: string;
-  status: LStatus;
-  approverNote?: string;
-}
-
-/* ── Seed data ── */
-const SEED_REQUESTS: LeaveRequest[] = [
-  { id: 1, teacher: 'Navarro, Pedro M.',  position: 'Master Teacher II', section: '7 Makulay', type: 'Vacation Leave',   startDate: '2026-07-11', endDate: '2026-07-11', days: 1, reason: 'Family occasion out of town', submittedOn: 'Jul 09, 2026', status: 'Pending' },
-  { id: 2, teacher: 'Batac, Lara B.',     position: 'Teacher III',       section: '7 Masaya',  type: 'Sick Leave',        startDate: '2026-07-14', endDate: '2026-07-15', days: 2, reason: 'Hypertension and dizziness', submittedOn: 'Jul 10, 2026', status: 'Pending' },
-  { id: 3, teacher: 'Soriano, Ana R.',    position: 'Teacher I',         section: '8 Rizal',   type: 'Sick Leave',        startDate: '2026-06-25', endDate: '2026-06-25', days: 1, reason: 'Medical check-up', submittedOn: 'Jun 24, 2026', status: 'Approved', approverNote: 'Approved. Please submit medical certificate upon return.' },
-  { id: 4, teacher: 'Santiago, Ramon F.', position: 'Teacher III',       section: '9 Einstein',type: 'Emergency Leave',   startDate: '2026-06-20', endDate: '2026-06-20', days: 1, reason: 'Family emergency', submittedOn: 'Jun 20, 2026', status: 'Approved', approverNote: 'Approved. Hope all is well.' },
-  { id: 5, teacher: 'Reyes, Maria C.',    position: 'Teacher II',        section: '9 Newton',  type: 'Vacation Leave',    startDate: '2026-06-10', endDate: '2026-06-11', days: 2, reason: 'Province trip', submittedOn: 'Jun 05, 2026', status: 'Rejected', approverNote: 'Examination week. No substitution available.' },
-  { id: 6, teacher: 'Dela Cruz, Cynthia', position: 'Master Teacher I',  section: '10 Pilot',  type: 'Sick Leave',        startDate: '2026-07-03', endDate: '2026-07-04', days: 2, reason: 'Flu symptoms', submittedOn: 'Jul 02, 2026', status: 'Approved', approverNote: 'Approved. Get well soon.' },
-  { id: 7, teacher: 'Panlilio, Jose L.',  position: 'Teacher II',        section: '8 Aguinaldo', type: 'Maternity / Paternity Leave', startDate: '2026-08-01', endDate: '2026-09-30', days: 60, reason: 'Paternity leave filing', submittedOn: 'Jul 08, 2026', status: 'Pending' },
-];
+import { useAppContext, TeacherLeave } from '../../shared/AppContext';
 
 function statusStyle(s: LStatus) {
   if (s === 'Approved') return { color: C.green, bg: C.greenBg };
@@ -58,37 +34,77 @@ function fmt(d: string) {
 }
 
 export function PLeaveManagement() {
-  const [requests, setRequests] = useState<LeaveRequest[]>(SEED_REQUESTS);
+  const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'All' | LStatus>('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [rejectModal, setRejectModal] = useState<LeaveRequest | null>(null);
+  const [rejectModal, setRejectModal] = useState<any | null>(null);
   const [rejectNote, setRejectNote] = useState('');
-  const [detail, setDetail] = useState<LeaveRequest | null>(null);
+  const [detail, setDetail] = useState<any | null>(null);
+
+  React.useEffect(() => {
+    fetchLeaves();
+  }, []);
+
+  const fetchLeaves = async () => {
+    try {
+      setIsLoading(true);
+      const { apiClient } = await import('../../../api/client');
+      const res = await apiClient.get<any[]>('/admin/leaves?limit=100'); // Simple fetch for UI
+      const raw = res || [];
+      const mapped = raw.map((l: any) => ({
+        ...l,
+        userName: l.user ? `${l.user.first_name} ${l.user.last_name}` : 'Unknown',
+        teacherPosition: l.user?.teacher?.position || 'Teacher',
+      }));
+      setTeacherLeaves(mapped);
+    } catch (err) {
+      console.error('Failed to fetch leaves', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   /* Summary counts */
-  const pending = requests.filter(r => r.status === 'Pending').length;
-  const approvedMonth = requests.filter(r => r.status === 'Approved').length;
-  const totalDays = requests.filter(r => r.status === 'Approved').reduce((s, r) => s + r.days, 0);
+  const pending = teacherLeaves.filter(r => r.status === 'Pending').length;
+  const approvedMonth = teacherLeaves.filter(r => r.status === 'Approved').length;
+  const totalDays = teacherLeaves.filter(r => r.status === 'Approved').reduce((s, r) => s + r.days, 0);
 
   /* Actions */
-  const approve = (id: number) => {
-    setRequests(p => p.map(r => r.id === id ? { ...r, status: 'Approved', approverNote: 'Approved by the School Head.' } : r));
+  const approve = async (id: string) => {
+    try {
+      const { apiClient } = await import('../../../api/client');
+      await apiClient.patch(`/admin/leaves/${id}/status`, { status: 'Approved' });
+      await fetchLeaves();
+      setDetail(null);
+    } catch (err) {
+      console.error('Failed to approve leave', err);
+    }
   };
-  const reject = (id: number, note: string) => {
-    setRequests(p => p.map(r => r.id === id ? { ...r, status: 'Rejected', approverNote: note || 'Rejected by the School Head.' } : r));
-    setRejectModal(null);
-    setRejectNote('');
+  
+  const reject = async (id: string, note: string) => {
+    try {
+      const { apiClient } = await import('../../../api/client');
+      await apiClient.patch(`/admin/leaves/${id}/status`, { status: 'Rejected', approver_note: note || 'Rejected by the School Head.' });
+      await fetchLeaves();
+      setRejectModal(null);
+      setRejectNote('');
+      setDetail(null);
+    } catch (err) {
+      console.error('Failed to reject leave', err);
+    }
   };
 
   const LEAVE_TYPES = ['All', 'Sick Leave', 'Vacation Leave', 'Emergency Leave', 'Maternity / Paternity Leave', 'Service Incentive Leave'];
 
-  const visible = requests.filter(r => {
+  const visible = teacherLeaves.filter(r => {
     if (filter !== 'All' && r.status !== filter) return false;
     if (typeFilter !== 'All' && r.type !== typeFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      if (!r.teacher.toLowerCase().includes(q) && !r.type.toLowerCase().includes(q)) return false;
+      const tName = r.user ? `${r.user.first_name} ${r.user.last_name}` : ""; 
+      if (!tName.toLowerCase().includes(q) && !r.type.toLowerCase().includes(q)) return false;
     }
     return true;
   });
@@ -159,7 +175,7 @@ export function PLeaveManagement() {
           </div>
 
           <span style={{ fontSize: 11, color: C.t3, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
-            {visible.length} of {requests.length} requests
+            {visible.length} of {teacherLeaves.length} requests
           </span>
         </div>
 
@@ -183,15 +199,15 @@ export function PLeaveManagement() {
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fafafa'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}>
                     <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{r.teacher}</div>
-                      <div style={{ fontSize: 10, color: C.t3 }}>{r.position} · {r.section}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginBottom: 2 }}>{(r as any).userName}</div>
+                      <div style={{ fontSize: 11, color: C.t3 }}>{(r as any).teacherPosition}</div>
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 12, color: C.t2 }}>{r.type}</td>
                     <td style={{ padding: '12px 14px', fontSize: 11, color: C.t2, fontFamily: "'JetBrains Mono',monospace" }}>
-                      {fmt(r.startDate)}{r.startDate !== r.endDate ? <><br /><span style={{ color: C.t3 }}>→ {fmt(r.endDate)}</span></> : ''}
+                      {fmt((r as any).start_date)}{(r as any).start_date !== (r as any).end_date ? <><br /><span style={{ color: C.t3 }}>→ {fmt((r as any).end_date)}</span></> : ''}
                     </td>
                     <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: C.t1, textAlign: 'center' }}>{r.days}d</td>
-                    <td style={{ padding: '12px 14px', fontSize: 11, color: C.t3 }}>{r.submittedOn}</td>
+                    <td style={{ padding: '12px 14px', fontSize: 11, color: C.t3 }}>{fmt((r as any).submitted_on)}</td>
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <StatusIcon status={r.status} />
@@ -232,7 +248,7 @@ export function PLeaveManagement() {
             <div style={{ background: '#7f1d1d', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Leave Request</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',serif" }}>Reject: {rejectModal.teacher}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',serif" }}>Reject: {(rejectModal as any)?.userName}</div>
               </div>
               <button onClick={() => setRejectModal(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4, width: 28, height: 28, cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={14} />
@@ -241,7 +257,7 @@ export function PLeaveManagement() {
             <div style={{ padding: 20 }}>
               <div style={{ background: C.redBg, border: `1px solid rgba(185,28,28,0.15)`, borderRadius: 4, padding: '10px 14px', marginBottom: 14 }}>
                 <div style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{rejectModal.type} · {rejectModal.days} day{rejectModal.days !== 1 ? 's' : ''}</div>
-                <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{fmt(rejectModal.startDate)}{rejectModal.startDate !== rejectModal.endDate ? ` – ${fmt(rejectModal.endDate)}` : ''}</div>
+                <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{fmt((rejectModal as any).start_date)}{(rejectModal as any).start_date !== (rejectModal as any).end_date ? ' - ' + fmt((rejectModal as any).end_date) : ''}</div>
               </div>
               <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                 <MessageSquare size={10} style={{ marginRight: 4 }} />Reason for Rejection (optional)
@@ -269,7 +285,7 @@ export function PLeaveManagement() {
             <div style={{ background: C.m800, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>Leave Request Detail</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',serif" }}>{detail.teacher}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',serif" }}>{(detail as any)?.userName}</div>
               </div>
               <button onClick={() => setDetail(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 4, width: 28, height: 28, cursor: 'pointer', color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={14} />
@@ -277,11 +293,11 @@ export function PLeaveManagement() {
             </div>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
-                ['Position', `${detail.position} · ${detail.section}`],
+                ['Position', (detail as any).teacherPosition],
                 ['Leave Type', detail.type],
-                ['Date Range', `${fmt(detail.startDate)}${detail.startDate !== detail.endDate ? ` – ${fmt(detail.endDate)}` : ''}`],
+                ['Date Range', `${fmt((detail as any).start_date)}{(detail as any).start_date !== (detail as any).end_date ? ' - ' + fmt((detail as any).end_date) : ''}`],
                 ['Duration', `${detail.days} day${detail.days !== 1 ? 's' : ''}`],
-                ['Submitted On', detail.submittedOn],
+                ['Submitted On', fmt((detail as any).submitted_on)],
                 ['Reason', detail.reason],
               ].map(([label, val]) => (
                 <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: 10 }}>
@@ -296,10 +312,10 @@ export function PLeaveManagement() {
                   <Stamp label={detail.status} {...statusStyle(detail.status)} />
                 </div>
               </div>
-              {detail.approverNote && (
+              {(detail as any).approver_note && (
                 <div style={{ background: detail.status === 'Approved' ? C.greenBg : C.redBg, border: `1px solid ${detail.status === 'Approved' ? 'rgba(22,101,52,0.2)' : 'rgba(185,28,28,0.2)'}`, borderRadius: 4, padding: '10px 14px' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: detail.status === 'Approved' ? C.green : C.red, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Approver's Note</div>
-                  <div style={{ fontSize: 12, color: C.t1 }}>{detail.approverNote}</div>
+                  <div style={{ fontSize: 12, color: C.t1 }}>{(detail as any).approver_note}</div>
                 </div>
               )}
               {detail.status === 'Pending' && (

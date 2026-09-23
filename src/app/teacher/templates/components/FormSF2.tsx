@@ -1,6 +1,6 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens';
-import { ATT_DATES, ATT_STATUS_SEED, SECTION_GRADES } from '../../../shared/constants/seedData';
+import { SECTION_GRADES } from '../../../shared/constants/seedData';
 
 interface FormSF2Props {
   section: string;
@@ -35,13 +35,8 @@ export function FormSF2({ section, month, sy }: FormSF2Props) {
   const males = studentsWithGender.filter(s => s.gender === "Male").sort((a, b) => a.surname.localeCompare(b.surname));
   const females = studentsWithGender.filter(s => s.gender === "Female").sort((a, b) => a.surname.localeCompare(b.surname));
 
-  // Attendance lookup logic (with deterministic mock generator for grades 9 and 10)
+  // Attendance lookup logic (with deterministic mock generator)
   function getStatus(studentId: number, date: number): "P" | "A" | "L" {
-    // Grade 8 Rizal (ids 1-8) has seed data
-    if (studentId >= 1 && studentId <= 8) {
-      return (ATT_STATUS_SEED[studentId]?.[date]) ?? "P";
-    }
-    // Gr 9 (9-12) & Gr 10 (13-16) have deterministic generated values
     const hash = (studentId * 13 + date * 37) % 100;
     if (hash < 4) return "A";
     if (hash < 9) return "L";
@@ -49,6 +44,8 @@ export function FormSF2({ section, month, sy }: FormSF2Props) {
   }
 
   // Count attendance stats
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const ATT_DATES = Array.from({length: daysInMonth}, (_, i) => i + 1);
   const totalDays = ATT_DATES.length;
 
   const getStats = (stList: typeof studentsWithGender) => {

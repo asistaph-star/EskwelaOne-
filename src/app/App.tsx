@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { authApi } from "../api/auth.api";
 import { X, Search, Bell, ChevronDown, BookMarked } from "lucide-react";
 import { Role, TScreen, GradeCardInfo } from "./shared/types";
 import { C } from "./shared/constants/tokens";
@@ -28,11 +29,6 @@ export const ROLE_USER = {
   Guidance: { initials: "GC", name: "Counselor Perez", sub: "School Guidance Counselor" },
 };
 
-export const MY_CLASSES = [
-  { id: 1, grade: 8, section: "Rizal", subject: "Mathematics 8", students: 39, completion: 72, semester: "1st Semester", adviser: true, imgHue: "hsl(220,60%,34%)" },
-  { id: 2, grade: 9, section: "Einstein", subject: "Science 9", students: 36, completion: 85, semester: "1st Semester", adviser: false, imgHue: "hsl(160,55%,28%)" },
-  { id: 3, grade: 10, section: "Pilot", subject: "Filipino 10", students: 32, completion: 91, semester: "1st Semester", adviser: true, imgHue: "hsl(345,55%,32%)" },
-];
 
 export const TODAY_SCHED = [
   { time: "7:30–8:30", subject: "Mathematics 8", section: "Gr. 8 Rizal", room: "Rm 101", status: "done" },
@@ -111,7 +107,7 @@ import { TSidebar } from "./teacher/shared/TSidebar";
 import { DashboardScreen } from "./teacher/dashboard/DashboardScreen";
 import { ClassroomHub } from "./teacher/classroom/ClassroomHub";
 import { GradebookFullScreen } from "./teacher/grades/GradebookFullScreen";
-import { QuarterlySummaryScreen } from "./teacher/grades/QuarterlySummaryScreen";
+import { TermSummaryScreen } from "./teacher/grades/TermSummaryScreen";
 import { GradesDirectScreen } from "./teacher/grades/GradesDirectScreen";
 import { AttendanceDirectScreen } from "./teacher/attendance/AttendanceDirectScreen";
 import { ClinicVisitsScreen } from "./teacher/clinic/ClinicVisitsScreen";
@@ -133,34 +129,48 @@ import { RegistrarApp } from "./principal/RegistrarApp";
 import { AdminApp } from "./admin/AdminApp";
 import { GuidanceApp } from "./guidance/GuidanceApp";
 
+import { useAppContext } from "./shared/AppContext";
+
 export default function App() {
-  const [role, setRole] = useState<Role | null>(null);
+  const { currentUser, setCurrentUser } = useAppContext();
 
-  if (!role) {
-    return <LoginScreen onLogin={setRole} />;
+  if (!currentUser) {
+    return <LoginScreen />;
   }
 
+  const role = currentUser.role;
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (err) {
+      console.error("Logout failed on backend", err);
+    }
+    setCurrentUser(null);
+    localStorage.removeItem('currentUser');
+  };
+
+  if (role === "Principal") {
+    return <PrincipalApp onLogout={handleLogout} />;
+  }
   if (role === "Admin") {
-    return <PrincipalApp onLogout={() => setRole(null)} />;
-  }
-  if (role === "ITAdmin") {
-    return <AdminApp onLogout={() => setRole(null)} />;
+    return <AdminApp onLogout={handleLogout} />;
   }
   if (role === "Registrar") {
-    return <RegistrarApp onLogout={() => setRole(null)} />;
+    return <RegistrarApp onLogout={handleLogout} />;
   }
   if (role === "Student") {
-    return <StudentPortal onLogout={() => setRole(null)} />;
+    return <StudentPortal onLogout={handleLogout} />;
   }
   if (role === "Parent") {
-    return <SimpleShell role={role} onLogout={() => setRole(null)} />;
+    return <SimpleShell role={role as any} onLogout={handleLogout} />;
   }
   if (role === "Nurse") {
-    return <NurseApp onLogout={() => setRole(null)} />;
+    return <NurseApp onLogout={handleLogout} />;
   }
   if (role === "Guidance") {
-    return <GuidanceApp onLogout={() => setRole(null)} />;
+    return <GuidanceApp onLogout={handleLogout} />;
   }
   
-  return <TeacherApp onLogout={() => setRole(null)} />;
+  return <TeacherApp onLogout={handleLogout} />;
 }

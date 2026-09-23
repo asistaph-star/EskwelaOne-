@@ -2,85 +2,170 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { useAppContext } from '../../shared/AppContext';
 import { CalendarCheck, Clock, Mail, User, Send, CheckCircle, XCircle, ChevronDown, Users, FileText, Filter, Search, Eye } from 'lucide-react';
-import type { AppointmentStatus } from '../../shared/AppContext';
+import { apiClient } from '../../../api/client';
 
-const AVAILABLE_STUDENTS = [
-  { name: "Juan Miguel Santos", section: "Grade 10 - Pilot", parentEmail: "maria.santos@email.com" },
-  { name: "Trisha Ann Cruz", section: "Grade 10 - Pilot", parentEmail: "elena.cruz@email.com" },
-  { name: "Mark Anthony Reyes", section: "Grade 10 - Pilot", parentEmail: "jose.reyes@email.com" },
-  { name: "Maria Clara Gonzales", section: "Grade 8 - Rizal", parentEmail: "pedro.gonzales@email.com" },
-  { name: "Carlos Rivera Jr.", section: "Grade 9 - Mabini", parentEmail: "ana.rivera@email.com" },
-];
+type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed" | "Cancelled";
 
 export function AppointmentsScreen() {
-  const { appointments, addAppointment, updateAppointment, parentEmail } = useAppContext();
+  const { addNotification } = useAppContext();
+  
   const [activeTab, setActiveTab] = useState<"incoming" | "outgoing" | "history">("incoming");
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<"all" | AppointmentStatus>("all");
+  
+  const [apiAppointments, setApiAppointments] = useState<any[]>([]);
+  const [apiStudents, setApiStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Request form state
   const [selStudent, setSelStudent] = useState("");
   const [reqDate, setReqDate] = useState("");
   const [reqTime, setReqTime] = useState("");
   const [reqPurpose, setReqPurpose] = useState("");
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
 
-  const selectedStudentData = AVAILABLE_STUDENTS.find(s => s.name === selStudent);
+  const fetchData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [apptsRes, studentsRes] = await Promise.all([
+        apiClient.get('/student-services/appointments/me'),
+        apiClient.get('/student-services/appointments/students')
+      ]);
 
-  const incomingAppointments = appointments.filter(a => a.direction === "parent-to-teacher" && a.teacherName === "Ana R. Soriano");
-  const outgoingAppointments = appointments.filter(a => a.direction === "teacher-to-parent" && a.teacherName === "Ana R. Soriano");
-  const allTeacherAppointments = appointments.filter(a => a.teacherName === "Ana R. Soriano");
+      const formatted = (apptsRes || []).map((a: any) => {
+        const d = new Date(a.time);
+        let hr = d.getUTCHours();
+        const min = d.getUTCMinutes();
+        const ampm = hr >= 12 ? 'PM' : 'AM';
+        hr = hr % 12 || 12;
+        const timeStr = `${hr}:${min.toString().padStart(2, '0')} ${ampm}`;
+        
+        return {
+          id: a.id,
+          direction: a.direction,
+          teacherId: a.teacher_id,
+          studentId: a.student_id,
+          teacherName: a.teacher?.user?.first_name ? `${a.teacher.user.first_name} ${a.teacher.user.last_name}` : "Teacher",
+          studentName: a.student?.user?.first_name ? `${a.student.user.first_name} ${a.student.user.last_name}` : "Student",
+          parentEmail: a.parent_email,
+          date: new Date(a.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+          time: timeStr,
+          purpose: a.purpose,
+          status: a.status
+        };
+      });
+      setApiAppointments(formatted);
+      
+      const st = (studentsRes || []);
+      const mappedStudents = st.map((s: any) => ({
+        id: s.id,
+        name: `${s.user.first_name} ${s.user.last_name}`,
+        parentEmail: s.guardian_email,
+        section: s.current_section?.name || "Unassigned"
+      }));
+      setApiStudents(mappedStudents);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load appointments and students.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  const selectedStudentData = apiStudents.find(s => s.id === selStudent);
+
+  const incomingAppointments = apiAppointments.filter(a => a.direction === "parent-to-teacher");
+  const outgoingAppointments = apiAppointments.filter(a => a.direction === "teacher-to-parent");
+  const allTeacherAppointments = apiAppointments;
 
   const filteredHistory = filterStatus === "all" ? allTeacherAppointments : allTeacherAppointments.filter(a => a.status === filterStatus);
 
-  function handleSendRequest(e: React.FormEvent) {
+  async function handleSendRequest(e: React.FormEvent) {
     e.preventDefault();
-    if (!selStudent || !reqDate || !reqTime || !reqPurpose) {
-      alert("Please fill in all fields.");
-      return;
+    if (isSendingRequest) return;
+    if (!selStudent || !reqDate || !reqTime || !reqPurpose) return;
+    
+    const student = apiStudents.find(s => s.id === selStudent);
+    if (!student) return;
+
+    setIsSendingRequest(true);
+    try {
+      await apiClient.post('/student-services/appointments', {
+        studentId: student.id,
+        date: reqDate,
+        time: reqTime,
+        purpose: reqPurpose
+      });
+
+      await fetchData();
+      addNotification(`Appointment request sent to ${student.name}'s parent.`, "success");
+
+      setSelStudent("");
+      setReqDate("");
+      setReqTime("");
+      setReqPurpose("");
+      setShowRequestForm(false);
+    } catch (err: any) {
+      console.error("Failed to send appointment request:", err);
+      addNotification(err.message || "Failed to send request", "error");
+    } finally {
+      setIsSendingRequest(false);
     }
-    const dateObj = new Date(reqDate);
-    const formattedDate = dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
-    const [h, m] = reqTime.split(":");
-    let hr = parseInt(h);
-    const ampm = hr >= 12 ? "PM" : "AM";
-    hr = hr % 12 || 12;
-    const formattedTime = `${hr}:${m} ${ampm}`;
-
-    addAppointment({
-      id: "appt-" + Date.now(),
-      studentName: selStudent,
-      parentEmail: selectedStudentData?.parentEmail || "",
-      teacherName: "Ana R. Soriano",
-      date: formattedDate,
-      time: formattedTime,
-      purpose: reqPurpose,
-      status: "Pending",
-      direction: "teacher-to-parent",
-      createdAt: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-    });
-
-    setShowRequestForm(false);
-    setSelStudent("");
-    setReqDate("");
-    setReqTime("");
-    setReqPurpose("");
-    alert("✅ Appointment request sent! A notification email has been simulated to the parent.");
   }
 
-  function statusColor(s: AppointmentStatus) {
-    return s === "Confirmed" ? C.green : s === "Pending" ? "#f59e0b" : s === "Declined" ? C.red : C.blue;
+  async function handleUpdateStatus(id: string, status: string) {
+    try {
+      await apiClient.patch(`/student-services/appointments/${id}/status`, { status });
+      await fetchData();
+      addNotification(`Appointment ${status.toLowerCase()}.`, "success");
+    } catch (err: any) {
+      console.error(err);
+      addNotification(err.message || `Failed to update appointment.`, "error");
+    }
   }
-  function statusBg(s: AppointmentStatus) {
-    return s === "Confirmed" ? C.greenBg : s === "Pending" ? "#fef3c7" : s === "Declined" ? C.redBg : C.blueBg;
+
+  function statusColor(s: AppointmentStatus | string) {
+    return s === "Confirmed" ? C.green : s === "Pending" ? "#f59e0b" : s === "Declined" || s === "Rejected" ? C.red : C.blue;
+  }
+  function statusBg(s: AppointmentStatus | string) {
+    return s === "Confirmed" ? C.greenBg : s === "Pending" ? "#fef3c7" : s === "Declined" || s === "Rejected" ? C.redBg : C.blueBg;
   }
 
   const pendingIncoming = incomingAppointments.filter(a => a.status === "Pending");
   const pendingOutgoing = outgoingAppointments.filter(a => a.status === "Pending");
 
+  if (isLoading) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 40, height: 40, border: `3px solid ${C.border}`, borderTopColor: C.m700, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.t2, marginTop: 16 }}>Loading appointments...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 64, height: 64, borderRadius: 32, background: C.redBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <XCircle size={32} color={C.red} />
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", marginBottom: 8 }}>Unable to Load Data</h2>
+        <p style={{ fontSize: 13, color: C.t3, maxWidth: 300, lineHeight: 1.5, textAlign: "center" }}>{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px 100px" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 32px 100px" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Header */}
@@ -91,16 +176,16 @@ export function AppointmentsScreen() {
           </div>
           <button
             onClick={() => setShowRequestForm(true)}
+            disabled={apiStudents.length === 0}
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              background: C.m700, color: "#fff", border: "none",
-              padding: "10px 20px", borderRadius: 6, cursor: "pointer",
+              background: apiStudents.length === 0 ? C.borderMed : C.m700, color: apiStudents.length === 0 ? C.t3 : "#fff", border: "none",
+              padding: "10px 20px", borderRadius: 6, cursor: apiStudents.length === 0 ? "not-allowed" : "pointer",
               fontSize: 12, fontWeight: 700,
-              boxShadow: "0 2px 8px rgba(29,78,216,0.25)",
+              boxShadow: apiStudents.length === 0 ? "none" : "0 2px 8px rgba(29,78,216,0.25)",
               transition: "all 0.15s"
             }}
-            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-1px)"}
-            onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
+            title={apiStudents.length === 0 ? "No Students Available" : ""}
           >
             <CalendarCheck size={15} />
             Request Appointment with Parent
@@ -162,235 +247,213 @@ export function AppointmentsScreen() {
               {t.label}
               {t.count > 0 && (
                 <span style={{
-                  fontSize: 9, fontWeight: 700, color: "#fff",
-                  background: C.red, borderRadius: 10,
-                  padding: "1px 6px", minWidth: 16, textAlign: "center"
+                  background: activeTab === t.id ? C.m700 : C.m100,
+                  color: activeTab === t.id ? "#fff" : C.m700,
+                  fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 10
                 }}>{t.count}</span>
               )}
             </button>
           ))}
         </div>
 
-        {/* Incoming Requests Tab */}
+        {/* INCOMING TAB */}
         {activeTab === "incoming" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="fade-in">
             {incomingAppointments.length === 0 ? (
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
-                <CalendarCheck size={32} color={C.t3} style={{ opacity: 0.4, marginBottom: 8 }} />
-                <div style={{ fontSize: 13, color: C.t3 }}>No incoming appointment requests from parents.</div>
+              <div style={{ padding: "60px 20px", textAlign: "center", background: "#fff", border: `1.5px dashed ${C.border}`, borderRadius: 12, marginTop: 10 }}>
+                <Mail size={32} color={C.border} style={{ marginBottom: 12 }} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.t2 }}>No Incoming Requests</div>
+                <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>You don't have any appointment requests from parents.</div>
               </div>
             ) : (
-              incomingAppointments.map(appt => (
-                <div key={appt.id} style={{
-                  background: "#fff", border: `1.5px solid ${C.borderMed}`,
-                  borderRadius: 8, padding: "18px 22px",
-                  display: "flex", flexDirection: "column", gap: 14,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
-                  transition: "border-color 0.15s"
-                }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = C.m700}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.borderMed}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 20, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1.5px solid ${C.borderMed}` }}>
-                        <User size={18} color={C.m700} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16, marginTop: 10 }}>
+                {incomingAppointments.map(appt => (
+                  <div key={appt.id} style={{
+                    background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 10,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.03)", overflow: "hidden", display: "flex", flexDirection: "column"
+                  }}>
+                    <div style={{ padding: "16px 18px", borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 16, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <User size={16} color={C.m700} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Parent of</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, color: statusColor(appt.status),
+                          background: statusBg(appt.status), padding: "3px 10px",
+                          borderRadius: 10, border: `1px solid ${statusColor(appt.status)}20`
+                        }}>{appt.status}</span>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
-                        <div style={{ fontSize: 11, color: C.t3, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                          <Mail size={10} /> {appt.parentEmail}
+                      <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.t2 }}>
+                          <CalendarCheck size={14} />
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>{appt.date}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.t2 }}>
+                          <Clock size={14} />
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>{appt.time}</span>
                         </div>
                       </div>
                     </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: statusColor(appt.status),
-                      background: statusBg(appt.status), padding: "3px 10px",
-                      borderRadius: 10, border: `1px solid ${statusColor(appt.status)}20`
-                    }}>{appt.status}</span>
+                    <div style={{ padding: "14px 18px", flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.t3, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose</div>
+                      <p style={{ fontSize: 12, color: C.t1, margin: 0, lineHeight: 1.5 }}>"{appt.purpose}"</p>
+                    </div>
+                    
+                    <div style={{ padding: "12px 18px", background: C.paper, borderTop: `1px solid ${C.border}`, display: "flex", gap: 8 }}>
+                      {appt.status === "Pending" ? (
+                        <>
+                          <button onClick={() => handleUpdateStatus(appt.id, "Confirmed")} style={{ flex: 1, padding: "8px 0", background: C.green, color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                            <CheckCircle size={14} /> Accept
+                          </button>
+                          <button onClick={() => handleUpdateStatus(appt.id, "Rejected")} style={{ flex: 1, padding: "8px 0", background: "#fff", color: C.red, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                            <XCircle size={14} /> Decline
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: 600, color: C.t3 }}>
+                          This request has been {appt.status.toLowerCase()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.t2 }}>
-                      <CalendarCheck size={12} color={C.m700} />
-                      <span><strong>Date:</strong> {appt.date}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.t2 }}>
-                      <Clock size={12} color={C.m700} />
-                      <span><strong>Time:</strong> {appt.time}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: C.t2 }}>
-                      <strong>Purpose:</strong> {appt.purpose}
-                    </div>
-                  </div>
-
-                  {appt.status === "Pending" && (
-                    <div style={{ display: "flex", gap: 8, paddingTop: 4, borderTop: `1px solid ${C.border}` }}>
-                      <button
-                        onClick={() => {
-                          updateAppointment(appt.id, "Confirmed");
-                          alert(`✅ Appointment confirmed! A confirmation email has been simulated to ${appt.parentEmail}.`);
-                        }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6,
-                          background: C.green, color: "#fff", border: "none",
-                          padding: "8px 16px", borderRadius: 4, cursor: "pointer",
-                          fontSize: 11, fontWeight: 700, transition: "all 0.15s"
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
-                        onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                      >
-                        <CheckCircle size={13} /> Confirm
-                      </button>
-                      <button
-                        onClick={() => {
-                          updateAppointment(appt.id, "Declined");
-                          alert(`Appointment declined. A notification email has been simulated to ${appt.parentEmail}.`);
-                        }}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6,
-                          background: "#fff", color: C.red, border: `1.5px solid ${C.red}`,
-                          padding: "8px 16px", borderRadius: 4, cursor: "pointer",
-                          fontSize: 11, fontWeight: 700, transition: "all 0.15s"
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = C.redBg}
-                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                      >
-                        <XCircle size={13} /> Decline
-                      </button>
-                      <button
-                        onClick={() => setShowEmailPreview(appt.id)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 6,
-                          background: "#fff", color: C.t2, border: `1.5px solid ${C.borderMed}`,
-                          padding: "8px 16px", borderRadius: 4, cursor: "pointer",
-                          fontSize: 11, fontWeight: 600, marginLeft: "auto", transition: "all 0.15s"
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = C.m700}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = C.borderMed}
-                      >
-                        <Eye size={13} /> Preview Email
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* Outgoing Requests Tab */}
+        {/* OUTGOING TAB */}
         {activeTab === "outgoing" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="fade-in">
             {outgoingAppointments.length === 0 ? (
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 40, textAlign: "center" }}>
-                <Send size={32} color={C.t3} style={{ opacity: 0.4, marginBottom: 8 }} />
-                <div style={{ fontSize: 13, color: C.t3, marginBottom: 12 }}>No outgoing appointment requests yet.</div>
-                <button onClick={() => setShowRequestForm(true)} style={{
-                  background: C.m700, color: "#fff", border: "none",
-                  padding: "8px 18px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 700
-                }}>Send an Appointment Request</button>
+              <div style={{ padding: "60px 20px", textAlign: "center", background: "#fff", border: `1.5px dashed ${C.border}`, borderRadius: 12, marginTop: 10 }}>
+                <Send size={32} color={C.border} style={{ marginBottom: 12 }} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.t2 }}>No Sent Requests</div>
+                <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>You haven't requested any appointments with parents.</div>
+                <button
+                  onClick={() => setShowRequestForm(true)}
+                  disabled={apiStudents.length === 0}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    background: apiStudents.length === 0 ? C.borderMed : C.m700, color: apiStudents.length === 0 ? C.t3 : "#fff", border: "none",
+                    padding: "10px 20px", borderRadius: 6, cursor: apiStudents.length === 0 ? "not-allowed" : "pointer",
+                    fontSize: 12, fontWeight: 700, marginTop: 16
+                  }}
+                >
+                  <CalendarCheck size={15} /> Request Appointment
+                </button>
               </div>
             ) : (
-              outgoingAppointments.map(appt => (
-                <div key={appt.id} style={{
-                  background: "#fff", border: `1.5px solid ${C.borderMed}`,
-                  borderRadius: 8, padding: "18px 22px",
-                  display: "flex", flexDirection: "column", gap: 14,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 20, background: C.purpleBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: `1.5px solid ${C.purple}20` }}>
-                        <Send size={16} color={C.purple} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16, marginTop: 10 }}>
+                {outgoingAppointments.map(appt => (
+                  <div key={appt.id} style={{
+                    background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 10,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.03)", overflow: "hidden", display: "flex", flexDirection: "column"
+                  }}>
+                    <div style={{ padding: "16px 18px", borderBottom: `1px solid ${C.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 16, background: C.blueBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Mail size={16} color={C.blue} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>To Parent of</div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, color: statusColor(appt.status),
+                          background: statusBg(appt.status), padding: "3px 10px",
+                          borderRadius: 10, border: `1px solid ${statusColor(appt.status)}20`
+                        }}>{appt.status}</span>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>To Parent of: {appt.studentName}</div>
-                        <div style={{ fontSize: 11, color: C.t3, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                          <Mail size={10} /> {appt.parentEmail}
+                      <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.t2 }}>
+                          <CalendarCheck size={14} />
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>{appt.date}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.t2 }}>
+                          <Clock size={14} />
+                          <span style={{ fontSize: 12, fontWeight: 600 }}>{appt.time}</span>
                         </div>
                       </div>
                     </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: statusColor(appt.status),
-                      background: statusBg(appt.status), padding: "3px 10px",
-                      borderRadius: 10, border: `1px solid ${statusColor(appt.status)}20`
-                    }}>{appt.status}</span>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 2fr", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.t2 }}>
-                      <CalendarCheck size={12} color={C.m700} />
-                      <span><strong>Date:</strong> {appt.date}</span>
+                    <div style={{ padding: "14px 18px", flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.t3, marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose</div>
+                      <p style={{ fontSize: 12, color: C.t1, margin: 0, lineHeight: 1.5 }}>"{appt.purpose}"</p>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.t2 }}>
-                      <Clock size={12} color={C.m700} />
-                      <span><strong>Time:</strong> {appt.time}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: C.t2 }}>
-                      <strong>Purpose:</strong> {appt.purpose}
+                    
+                    <div style={{ padding: "12px 18px", background: C.paper, borderTop: `1px solid ${C.border}`, display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 10, color: C.t3, fontWeight: 600 }}>Sent to: {appt.parentEmail}</span>
+                      <button onClick={() => setShowEmailPreview(appt.id)} style={{ background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                        <Eye size={12} /> View Email
+                      </button>
                     </div>
                   </div>
-
-                  <div style={{ fontSize: 10, color: C.t3, display: "flex", alignItems: "center", gap: 4 }}>
-                    Requested on {appt.createdAt}
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* History Tab */}
+        {/* HISTORY TAB */}
         {activeTab === "history" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.t2 }}>
-                <Filter size={12} />
-                <span style={{ fontWeight: 600 }}>Filter:</span>
+          <div className="fade-in">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", padding: "6px 12px", borderRadius: 6, border: `1.5px solid ${C.borderMed}` }}>
+                <Filter size={14} color={C.t3} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.t2 }}>Filter Status:</span>
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value as any)}
+                  style={{ background: "transparent", border: "none", fontSize: 12, fontWeight: 600, color: C.t1, outline: "none", cursor: "pointer" }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Declined">Declined</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Completed">Completed</option>
+                </select>
               </div>
-              {(["all", "Pending", "Confirmed", "Declined", "Completed"] as const).map(f => (
-                <button key={f} onClick={() => setFilterStatus(f)} style={{
-                  padding: "4px 12px", borderRadius: 12,
-                  background: filterStatus === f ? C.m700 : "#fff",
-                  color: filterStatus === f ? "#fff" : C.t2,
-                  border: `1px solid ${filterStatus === f ? C.m700 : C.borderMed}`,
-                  fontSize: 10, fontWeight: 600, cursor: "pointer",
-                  transition: "all 0.15s", textTransform: "capitalize"
-                }}>{f === "all" ? "All" : f}</button>
-              ))}
             </div>
 
-            <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ background: "#fff", borderRadius: 10, border: `1.5px solid ${C.borderMed}`, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-                    {["Student", "Parent Email", "Date & Time", "Purpose", "Direction", "Status"].map(h => (
-                      <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
-                    ))}
+                  <tr style={{ background: C.m50, borderBottom: `1px solid ${C.borderMed}` }}>
+                    <th style={{ textAlign: "left", padding: "12px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Direction</th>
+                    <th style={{ textAlign: "left", padding: "12px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Student</th>
+                    <th style={{ textAlign: "left", padding: "12px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date & Time</th>
+                    <th style={{ textAlign: "left", padding: "12px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose</th>
+                    <th style={{ textAlign: "left", padding: "12px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredHistory.length === 0 ? (
-                    <tr><td colSpan={6} style={{ padding: 30, textAlign: "center", fontSize: 11, color: C.t3 }}>No appointments match the current filter.</td></tr>
+                    <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", fontSize: 12, color: C.t3 }}>No appointments match the current filter.</td></tr>
                   ) : (
-                    filteredHistory.map(appt => (
-                      <tr key={appt.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.1s" }}
-                        onMouseEnter={e => e.currentTarget.style.background = C.paper}
-                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
-                        <td style={{ padding: "10px 14px", fontSize: 11.5, fontWeight: 600, color: C.t1 }}>{appt.studentName}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t2 }}>{appt.parentEmail}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t2 }}>{appt.date} · {appt.time}</td>
-                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t2, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{appt.purpose}</td>
+                    filteredHistory.map((appt, i) => (
+                      <tr key={appt.id} style={{ borderBottom: i === filteredHistory.length - 1 ? "none" : `1px solid ${C.border}` }}>
                         <td style={{ padding: "10px 14px" }}>
-                          <span style={{
-                            fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10,
-                            color: appt.direction === "parent-to-teacher" ? C.blue : C.purple,
-                            background: appt.direction === "parent-to-teacher" ? C.blueBg : C.purpleBg
-                          }}>
-                            {appt.direction === "parent-to-teacher" ? "← From Parent" : "→ To Parent"}
-                          </span>
+                          {appt.direction === "parent-to-teacher" ? (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: C.blueBg, color: C.blue, padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700 }}><Users size={12} /> Incoming</div>
+                          ) : (
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: C.m100, color: C.m700, padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700 }}><User size={12} /> Outgoing</div>
+                          )}
                         </td>
+                        <td style={{ padding: "10px 14px", fontSize: 11.5, fontWeight: 600, color: C.t1 }}>{appt.studentName}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <div style={{ fontSize: 11.5, fontWeight: 600, color: C.t1 }}>{appt.date}</div>
+                          <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{appt.time}</div>
+                        </td>
+                        <td style={{ padding: "10px 14px", fontSize: 11, color: C.t2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{appt.purpose}</td>
                         <td style={{ padding: "10px 14px" }}>
                           <span style={{
                             fontSize: 10, fontWeight: 700, color: statusColor(appt.status),
@@ -408,7 +471,7 @@ export function AppointmentsScreen() {
         )}
       </div>
 
-      {/* ── Request Appointment Modal ── */}
+      {/* Request Form Modal */}
       {showRequestForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
           <div onClick={e => e.stopPropagation()} style={{
@@ -434,10 +497,14 @@ export function AppointmentsScreen() {
                   onChange={e => setSelStudent(e.target.value)}
                   style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, background: "#fff", color: C.t1, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
                 >
-                  <option value="">— Choose a student —</option>
-                  {AVAILABLE_STUDENTS.map(s => (
-                    <option key={s.name} value={s.name}>{s.name} ({s.section})</option>
-                  ))}
+                  <option value="">- Choose a student -</option>
+                  {apiStudents.length === 0 ? (
+                    <option value="" disabled>No Students Available (No Assigned Sections)</option>
+                  ) : (
+                    apiStudents.map(s => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.section})</option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -446,7 +513,7 @@ export function AppointmentsScreen() {
                   <Mail size={14} color={C.m700} />
                   <div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Parent's Email</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginTop: 1 }}>{selectedStudentData.parentEmail}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginTop: 1 }}>{selectedStudentData.parentEmail || "No email on record"}</div>
                   </div>
                 </div>
               )}
@@ -454,12 +521,12 @@ export function AppointmentsScreen() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Preferred Date</label>
-                  <input type="date" value={reqDate} onChange={e => setReqDate(e.target.value)}
+                  <input type="date" value={reqDate} onChange={e => setReqDate(e.target.value)} required
                     style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, boxSizing: "border-box", outline: "none" }} />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Preferred Time</label>
-                  <input type="time" value={reqTime} onChange={e => setReqTime(e.target.value)}
+                  <input type="time" value={reqTime} onChange={e => setReqTime(e.target.value)} required
                     style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, boxSizing: "border-box", outline: "none" }} />
                 </div>
               </div>
@@ -470,7 +537,7 @@ export function AppointmentsScreen() {
                   value={reqPurpose}
                   onChange={e => setReqPurpose(e.target.value)}
                   placeholder="Describe the purpose of this meeting..."
-                  rows={3}
+                  rows={3} required
                   style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 6, resize: "vertical", boxSizing: "border-box", outline: "none", fontFamily: "'Inter', sans-serif" }}
                 />
               </div>
@@ -481,16 +548,14 @@ export function AppointmentsScreen() {
                   border: `1.5px solid ${C.borderMed}`, borderRadius: 6, cursor: "pointer",
                   fontSize: 12, fontWeight: 600
                 }}>Cancel</button>
-                <button type="submit" style={{
+                <button type="submit" disabled={isSendingRequest} style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  padding: "9px 20px", background: C.m700, color: "#fff",
-                  border: "none", borderRadius: 6, cursor: "pointer",
+                  padding: "9px 20px", background: isSendingRequest ? C.borderMed : C.m700, color: "#fff",
+                  border: "none", borderRadius: 6, cursor: isSendingRequest ? "not-allowed" : "pointer",
                   fontSize: 12, fontWeight: 700, transition: "all 0.15s"
                 }}
-                  onMouseEnter={e => e.currentTarget.style.background = C.m600}
-                  onMouseLeave={e => e.currentTarget.style.background = C.m700}
                 >
-                  <Send size={14} /> Send Request & Notify Parent
+                  <Send size={14} /> {isSendingRequest ? "Sending..." : "Send Request & Notify"}
                 </button>
               </div>
             </form>
@@ -498,9 +563,9 @@ export function AppointmentsScreen() {
         </div>
       )}
 
-      {/* ── Email Preview Modal ── */}
+      {/* Email Preview Modal */}
       {showEmailPreview && (() => {
-        const appt = appointments.find(a => a.id === showEmailPreview);
+        const appt = apiAppointments.find(a => a.id === showEmailPreview);
         if (!appt) return null;
         return (
           <div onClick={() => setShowEmailPreview(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
@@ -519,7 +584,7 @@ export function AppointmentsScreen() {
               <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>To:</span>
-                  <span style={{ fontSize: 11, color: C.t1 }}>{appt.parentEmail}</span>
+                  <span style={{ fontSize: 11, color: C.t1 }}>{appt.parentEmail || "N/A"}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>From:</span>
@@ -527,7 +592,7 @@ export function AppointmentsScreen() {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>Subject:</span>
-                  <span style={{ fontSize: 11, color: C.t1, fontWeight: 600 }}>Appointment Request — Calulut Integrated School</span>
+                  <span style={{ fontSize: 11, color: C.t1, fontWeight: 600 }}>Appointment Request - Calulut Integrated School</span>
                 </div>
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 4 }}>
                   <div style={{ fontSize: 12, color: C.t1, lineHeight: 1.7, background: C.paper, padding: "16px 18px", borderRadius: 8, border: `1px solid ${C.border}` }}>
@@ -548,7 +613,7 @@ export function AppointmentsScreen() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 600, color: C.t3, background: C.amberBg, padding: "4px 12px", borderRadius: 10, border: `1px solid ${C.amber}30` }}>
-                    ⚠ This is a preview — email sending is simulated
+                    ⚠️ This is a preview - email sending is simulated
                   </span>
                 </div>
               </div>

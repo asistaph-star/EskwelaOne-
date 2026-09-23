@@ -13,7 +13,7 @@ export function ProDevScreen() {
   const totalPoints = CERTS.reduce((s,c)=>s+c.points, 0);
 
   return (
-    <div style={{ flex:1, overflowY:"auto", padding:24, background: "transparent" }}>
+    <div style={{ flex:1, minHeight: 0, overflowY:"auto", padding:24, background: "transparent" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontSize:18, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Professional Development</div>
@@ -186,7 +186,7 @@ export function ProDevScreen() {
                     <div style={{ fontSize: 11, color: C.t2, fontWeight: 600 }}>Click to browse or drag file here</div>
                   </div>
                 </div>
-                <button onClick={() => { setUploadModal(false); alert("Certificate uploaded successfully! Pending verification."); }} style={{ background: C.m700, color: "#fff", border: "none", padding: "10px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 10 }}>
+                <button onClick={() => { setUploadModal(false); }} style={{ background: C.m700, color: "#fff", border: "none", padding: "10px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontWeight: 700, marginTop: 10 }}>
                   Submit Certificate
                 </button>
               </div>

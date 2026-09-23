@@ -1,15 +1,69 @@
 import React from 'react';
 import { C } from '../../shared/constants/tokens';
-import { User, Award, BookOpen, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-
+import { User, Award, BookOpen, AlertCircle, CheckCircle, Clock, Camera, Lock } from 'lucide-react';
+import { useAppContext } from '../../shared/AppContext';
 export function TProfileScreen() {
+  const { currentUser, updateUser, addNotification, getGenericDocument, saveGenericDocument } = useAppContext();
+  const [photoUrl, setPhotoUrl] = React.useState<string|null>(null);
+  const [pwInput, setPwInput] = React.useState('');
+
+
+  React.useEffect(() => {
+    if (currentUser?.photoDocId) {
+      getGenericDocument(currentUser.photoDocId).then(doc => {
+        if (doc && doc.blob) setPhotoUrl(URL.createObjectURL(doc.blob as Blob));
+      });
+    }
+  }, [currentUser?.photoDocId]);
+  
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !currentUser) return;
+    const file = e.target.files[0];
+    const docId = "photo-" + Date.now();
+    await saveGenericDocument({
+      id: docId,
+      blob: file,
+      filename: file.name
+    });
+    setPhotoUrl(URL.createObjectURL(file));
+    await updateUser(currentUser.id, { photoDocId: docId });
+    addNotification({
+      id: "notif-photo-" + Date.now(),
+      recipientId: currentUser.id,
+      title: "Profile Updated",
+      body: "Your profile picture has been updated.",
+      timestamp: "Just now",
+      isRead: false,
+      iconType: "alert"
+    });
+  };
+
+  const handlePasswordChange = async () => {
+    if (!pwInput) return;
+    if (currentUser) {
+      // We would normally hash this, but for prototype we just store it in the user object or just show success
+      await updateUser(currentUser.id, { password: pwInput } as any);
+      addNotification({
+        id: "notif-pw-" + Date.now(),
+        recipientId: currentUser.id,
+        title: "Security Update",
+        body: "Your password has been changed successfully.",
+        timestamp: "Just now",
+        isRead: false,
+        iconType: "alert"
+      });
+      setPwInput('');
+      alert("Password updated successfully.");
+    }
+  };
+
   const teacher = {
-    name: "Soriano, Ana R.",
+    name: currentUser?.name || "Teacher User",
     age: 34,
     address: "B12 L4, Villa Rosario, Sindalan, San Fernando, Pampanga",
-    position: "Adviser, Grade 10 - Pilot",
+    position: currentUser?.section ? `Adviser, ${currentUser.section}` : currentUser?.role || "Teacher",
     course: "BSED Major in Mathematics",
-    rank: "Teacher II",
+    rank: currentUser?.role || "Teacher II",
     lastPromoted: "2023-11-15", // yyyy-mm-dd
   };
 
@@ -58,18 +112,30 @@ export function TProfileScreen() {
         <div style={{ fontSize: 13, color: C.t3 }}>Personal Data Sheet and Promotion Tracking</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
         
         {/* LEFT COLUMN: PDS & Trainings */}
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           
           {/* Personal Data Sheet */}
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <User size={16} color={C.m700} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <User size={16} color={C.m700} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.t1 }}>Personal Data Sheet</h3>
               </div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.t1 }}>Personal Data Sheet</h3>
+              <label style={{ cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+                <div style={{ width:64, height:64, borderRadius:32, background:C.m50, border:`2px solid ${C.borderMed}`, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                  {photoUrl ? <img src={photoUrl} style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <User size={24} color={C.m700} />}
+                  <div style={{ position:"absolute", bottom:0, width:"100%", height:20, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <Camera size={12} color="#fff" />
+                  </div>
+                </div>
+                <span style={{ fontSize:9, fontWeight:600, color:C.m700, textTransform:"uppercase" }}>Update Photo</span>
+                <input type="file" style={{ display:"none" }} accept="image/*" onChange={handlePhotoUpload} />
+              </label>
             </div>
             
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 16px" }}>
@@ -169,6 +235,18 @@ export function TProfileScreen() {
             
           </div>
         </div>
+          <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 24, marginTop: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Lock size={16} color={C.m700} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: C.t1 }}>Security</h3>
+            </div>
+            <div style={{ fontSize: 11, color: C.t2, marginBottom: 12 }}>Change your account password</div>
+            <input type="password" placeholder="New Password" value={pwInput} onChange={e=>setPwInput(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 4, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, marginBottom: 12, boxSizing: "border-box" }} />
+            <button onClick={handlePasswordChange} style={{ width: "100%", padding: "8px", background: C.m700, color: "#fff", border: "none", borderRadius: 4, fontWeight: 700, cursor: "pointer" }}>Update Password</button>
+          </div>
+
 
       </div>
     </div>

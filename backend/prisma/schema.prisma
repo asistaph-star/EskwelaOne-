@@ -19,26 +19,27 @@ model User {
   status                         String                @default("active") @db.VarChar(20)
   created_at                     DateTime              @default(now())
   updated_at                     DateTime              @updatedAt
+  must_change_password           Boolean               @default(true)
+  announcements                  Announcement[]
   audit_logs                     AuditLog[]
+  behaviorLogs                   BehaviorLog[]
+  clinic_referrals_recorded      ClinicReferral[]
+  document_requests_approved     DocumentRequest[]     @relation("PrincipalApprover")
   documents_uploaded             Document[]
+  events                         Event[]
+  grade_entries_created          grade_entries[]
+  guidance_records_counseled     GuidanceRecord[]
+  inventoryUpdates               InventoryUpdate[]
+  leave_requests_approved        LeaveRequest[]        @relation("LeaveApprover")
+  leave_requests_made            LeaveRequest[]        @relation("LeaveRequester")
   received_messages              Message[]             @relation("MessageReceiver")
   sent_messages                  Message[]             @relation("MessageSender")
+  migration_quarantines_resolved MigrationQuarantine[]
   notifications                  Notification[]
   staff                          Staff?
   student                        Student?
   teacher                        Teacher?
   user_roles                     UserRole[]
-  behaviorLogs                   BehaviorLog[]
-  announcements                  Announcement[]
-  events                         Event[]
-  inventoryUpdates               InventoryUpdate[]
-  document_requests_approved     DocumentRequest[]     @relation("PrincipalApprover")
-  clinic_referrals_recorded      ClinicReferral[]
-  guidance_records_counseled     GuidanceRecord[]
-  leave_requests_made            LeaveRequest[]        @relation("LeaveRequester")
-  leave_requests_approved        LeaveRequest[]        @relation("LeaveApprover")
-  migration_quarantines_resolved MigrationQuarantine[]
-  grade_entries_created          grade_entries[]
 
   @@map("users")
 }
@@ -63,8 +64,8 @@ model Permission {
 model RolePermission {
   role_id       String
   permission_id String
-  permission    Permission @relation(fields: [permission_id], references: [id], onDelete: Restrict)
-  role          Role       @relation(fields: [role_id], references: [id], onDelete: Restrict)
+  permission    Permission @relation(fields: [permission_id], references: [id])
+  role          Role       @relation(fields: [role_id], references: [id])
 
   @@id([role_id, permission_id])
   @@map("role_permissions")
@@ -74,54 +75,53 @@ model UserRole {
   user_id     String
   role_id     String
   assigned_at DateTime @default(now())
-  role        Role     @relation(fields: [role_id], references: [id], onDelete: Restrict)
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  role        Role     @relation(fields: [role_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
 
   @@id([user_id, role_id])
   @@map("user_roles")
 }
 
 model Student {
-  id                  String                    @id(map: "student_profiles_pkey") @db.VarChar(36)
-  user_id             String                    @unique(map: "student_profiles_user_id_key") @db.VarChar(36)
-  lrn                 String                    @unique(map: "student_profiles_lrn_key") @db.VarChar(20)
-  // Intentionally denormalized. Confirmed two reasons:
-  // (1) Read-performance cache — avoids joining through Enrollment/Section
-  //     on every read that needs a student's grade level.
-  // (2) A Student record can be created via registration before any
-  //     Section assignment exists (see user.service.ts student.create —
-  //     no section_id at creation time), so grade_level cannot always be
-  //     derived from a Section relation at that point.
-  // NOT used in JWT payload generation (auth.service.ts only signs
-  // { userId }). Reviewed in Phase 3 normalization audit.
+  id                  String            @id(map: "student_profiles_pkey") @db.VarChar(36)
+  user_id             String            @unique(map: "student_profiles_user_id_key") @db.VarChar(36)
+  /// @encrypted?mode=strict
+  lrn                 String            @unique(map: "student_profiles_lrn_key")
   grade_level         Int
   date_of_birth       DateTime?
-  gender              String?                   @db.VarChar(10)
-  street              String?                   @db.VarChar(255)
-  city                String?                   @db.VarChar(100)
-  state_province      String?                   @db.VarChar(100)
-  zip_code            String?                   @db.VarChar(20)
-  guardian_first_name String?                   @db.VarChar(100)
-  guardian_last_name  String?                   @db.VarChar(100)
-  guardian_phone      String?                   @db.VarChar(20)
-  guardian_email      String?                   @db.VarChar(255)
-  blood_type          String?                   @db.VarChar(5)
-  allergies           StudentAllergy[]
-  medical_conditions  StudentMedicalCondition[]
-  created_at          DateTime                  @default(now())
-  updated_at          DateTime                  @updatedAt
+  gender              String?           @db.VarChar(10)
+  /// @encrypted?mode=strict
+  guardian_phone      String?
+  /// @encrypted?mode=strict
+  guardian_email      String?
+  /// @encrypted?mode=strict
+  blood_type          String?
+  created_at          DateTime          @default(now())
+  updated_at          DateTime          @updatedAt
+  current_section_id  String?           @db.VarChar(36)
+  city                String?           @db.VarChar(100)
+  guardian_first_name String?           @db.VarChar(100)
+  guardian_last_name  String?           @db.VarChar(100)
+  state_province      String?           @db.VarChar(100)
+  street              String?           @db.VarChar(255)
+  zip_code            String?           @db.VarChar(20)
+  /// @encrypted?mode=strict
+  allergies           String?
+  /// @encrypted?mode=strict
+  medical_conditions  String?
+  /// @encryption:hash(lrn)
+  lrn_hash            String?           @unique
+  appointments        Appointment[]
   behavior_logs       BehaviorLog[]
   clinic_referrals    ClinicReferral[]
-  enrollments         Enrollment[]
-  grades              Grade[]
-  gate_attendance     GateAttendance[]
-  guidance_records    GuidanceRecord[]
-  user                User                      @relation(fields: [user_id], references: [id], map: "student_profiles_user_id_fkey", onDelete: Restrict)
-  current_section_id  String?                   @db.VarChar(36)
-  current_section     Section?                  @relation(fields: [current_section_id], references: [id], onDelete: Restrict)
   documentRequests    DocumentRequest[]
-  appointments        Appointment[]
+  enrollments         Enrollment[]
   excuseLetters       ExcuseLetter[]
+  gate_attendance     GateAttendance[]
+  grades              Grade[]
+  guidance_records    GuidanceRecord[]
+  user                User              @relation(fields: [user_id], references: [id], map: "student_profiles_user_id_fkey")
+  current_section     Section?          @relation(fields: [current_section_id], references: [id], onDelete: Restrict)
 
   @@map("students")
 }
@@ -136,41 +136,45 @@ model Teacher {
   date_hired       DateTime?
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt
-  assignments      TeacherSubjectAssignment[]
-  user             User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey", onDelete: Restrict)
-  documentRequests DocumentRequest[]
   appointments     Appointment[]
+  documentRequests DocumentRequest[]
   excuseLetters    ExcuseLetter[]
+  teacherRankings  TeacherRanking[]
+  assignments      TeacherSubjectAssignment[]
+  user             User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey")
 
   @@map("teachers")
 }
 
 model Staff {
-  id          String   @id(map: "staff_profiles_pkey") @db.VarChar(36)
-  user_id     String   @unique(map: "staff_profiles_user_id_key") @db.VarChar(36)
-  employee_id String   @unique(map: "staff_profiles_employee_id_key") @db.VarChar(50)
-  department  String?  @db.VarChar(100)
-  position    String?  @db.VarChar(100)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  user        User     @relation(fields: [user_id], references: [id], map: "staff_profiles_user_id_fkey", onDelete: Restrict)
+  id           String        @id(map: "staff_profiles_pkey") @db.VarChar(36)
+  user_id      String        @unique(map: "staff_profiles_user_id_key") @db.VarChar(36)
+  employee_id  String        @unique(map: "staff_profiles_employee_id_key") @db.VarChar(50)
+  department   String?       @db.VarChar(100)
+  position     String?       @db.VarChar(100)
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  appointments Appointment[]
+  user         User          @relation(fields: [user_id], references: [id], map: "staff_profiles_user_id_fkey")
 
   @@map("staff")
 }
 
 model AcademicYear {
-  id          String                     @id @db.VarChar(36)
-  name        String                     @unique @db.VarChar(50)
-  start_date  DateTime
-  end_date    DateTime
-  is_current  Boolean                    @default(false)
-  created_at  DateTime                   @default(now())
-  updated_at  DateTime                   @updatedAt
-  enrollments Enrollment[]
-  sections    Section[]
-  assignments TeacherSubjectAssignment[]
-  terms       Term[]
-  grades      Grade[]
+  id                String                     @id @db.VarChar(36)
+  name              String                     @unique @db.VarChar(50)
+  start_date        DateTime
+  end_date          DateTime
+  is_current        Boolean                    @default(false)
+  created_at        DateTime                   @default(now())
+  updated_at        DateTime                   @updatedAt
+  target_enrollment Int?
+  enrollments       Enrollment[]
+  grades            Grade[]
+  sections          Section[]
+  teacherRankings   TeacherRanking[]
+  assignments       TeacherSubjectAssignment[]
+  terms             Term[]
 
   @@map("academic_years")
 }
@@ -184,8 +188,8 @@ model Term {
   created_at       DateTime     @default(now())
   updated_at       DateTime     @updatedAt
   key              TermKey
-  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
   gradebooks       gradebooks[]
+  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id])
 
   @@unique([academic_year_id, key])
   @@map("terms")
@@ -197,8 +201,8 @@ model Subject {
   name        String                     @db.VarChar(100)
   created_at  DateTime                   @default(now())
   updated_at  DateTime                   @updatedAt
-  assignments TeacherSubjectAssignment[]
   grades      Grade[]
+  assignments TeacherSubjectAssignment[]
 
   @@map("subjects")
 }
@@ -211,9 +215,9 @@ model Section {
   created_at       DateTime                   @default(now())
   updated_at       DateTime                   @updatedAt
   enrollments      Enrollment[]
-  academic_year    AcademicYear               @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
-  assignments      TeacherSubjectAssignment[]
+  academic_year    AcademicYear               @relation(fields: [academic_year_id], references: [id])
   students         Student[]
+  assignments      TeacherSubjectAssignment[]
 
   @@unique([academic_year_id, name, grade_level])
   @@map("sections")
@@ -227,12 +231,12 @@ model TeacherSubjectAssignment {
   subject_id        String            @db.VarChar(36)
   created_at        DateTime          @default(now())
   updated_at        DateTime          @updatedAt
-  academic_year     AcademicYear      @relation(fields: [academic_year_id], references: [id], map: "assignments_academic_year_id_fkey", onDelete: Restrict)
-  section           Section           @relation(fields: [section_id], references: [id], map: "assignments_section_id_fkey", onDelete: Restrict)
-  subject           Subject           @relation(fields: [subject_id], references: [id], map: "assignments_subject_id_fkey", onDelete: Restrict)
-  teacher           Teacher           @relation(fields: [teacher_id], references: [id], map: "assignments_teacher_id_fkey", onDelete: Restrict)
   class_attendances ClassAttendance[]
   gradebooks        gradebooks[]
+  academic_year     AcademicYear      @relation(fields: [academic_year_id], references: [id], map: "assignments_academic_year_id_fkey")
+  section           Section           @relation(fields: [section_id], references: [id], map: "assignments_section_id_fkey")
+  subject           Subject           @relation(fields: [subject_id], references: [id], map: "assignments_subject_id_fkey")
+  teacher           Teacher           @relation(fields: [teacher_id], references: [id], map: "assignments_teacher_id_fkey")
 
   @@unique([academic_year_id, teacher_id, section_id, subject_id], map: "assignments_academic_year_id_teacher_id_section_id__key")
   @@index([teacher_id, academic_year_id], map: "assignments_teacher_id_academic_year_id_idx")
@@ -247,10 +251,10 @@ model Enrollment {
   status            String            @db.VarChar(20)
   created_at        DateTime          @default(now())
   updated_at        DateTime          @updatedAt
-  academic_year     AcademicYear      @relation(fields: [academic_year_id], references: [id], map: "student_enrollments_academic_year_id_fkey", onDelete: Restrict)
-  section           Section           @relation(fields: [section_id], references: [id], map: "student_enrollments_section_id_fkey", onDelete: Restrict)
-  student           Student           @relation(fields: [student_id], references: [id], map: "student_enrollments_student_id_fkey", onDelete: Restrict)
   class_attendances ClassAttendance[]
+  academic_year     AcademicYear      @relation(fields: [academic_year_id], references: [id], map: "student_enrollments_academic_year_id_fkey")
+  section           Section           @relation(fields: [section_id], references: [id], map: "student_enrollments_section_id_fkey")
+  student           Student           @relation(fields: [student_id], references: [id], map: "student_enrollments_student_id_fkey")
   grade_entries     grade_entries[]
 
   @@index([academic_year_id, student_id], map: "student_enrollments_academic_year_id_student_id_idx")
@@ -262,45 +266,45 @@ model GateAttendance {
   id         String    @id @db.VarChar(36)
   student_id String    @db.VarChar(36)
   date       DateTime  @db.Date
-  time_in    DateTime? @db.Time(3)
-  time_out   DateTime? @db.Time(3)
   status     String    @db.VarChar(20)
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
-  student    Student   @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  time_in    DateTime? @db.Time(3)
+  time_out   DateTime? @db.Time(3)
+  student    Student   @relation(fields: [student_id], references: [id])
 
   @@unique([student_id, date])
   @@map("gate_attendance")
 }
 
 model ClassAttendance {
-  id            String   @id @db.VarChar(36)
-  date          DateTime @db.Date
-  status        String   @db.VarChar(5)
+  id            String                   @id @db.VarChar(36)
+  date          DateTime                 @db.Date
+  status        String                   @db.VarChar(5)
   remarks       String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  assignment_id String   @db.VarChar(36)
-  enrollment_id String   @db.VarChar(36)
-
-  assignment TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id], onDelete: Restrict)
-  enrollment Enrollment               @relation(fields: [enrollment_id], references: [id], onDelete: Restrict)
+  created_at    DateTime                 @default(now())
+  updated_at    DateTime                 @updatedAt
+  assignment_id String                   @db.VarChar(36)
+  enrollment_id String                   @db.VarChar(36)
+  assignment    TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id])
+  enrollment    Enrollment               @relation(fields: [enrollment_id], references: [id])
 
   @@unique([assignment_id, enrollment_id, date])
   @@map("class_attendance")
 }
 
 model Document {
-  id                String            @id @db.VarChar(36)
-  storage_key       String            @db.VarChar(500)
-  filename          String            @db.VarChar(255)
-  mime_type         String            @db.VarChar(100)
-  size_bytes        Int
-  uploaded_by       String            @db.VarChar(36)
-  created_at        DateTime          @default(now())
-  document_requests DocumentRequest[] @relation("AttachedDocument")
-  uploader          User              @relation(fields: [uploaded_by], references: [id], onDelete: Restrict)
-  excuseLetters     ExcuseLetter[]
+  id                      String                   @id @db.VarChar(36)
+  storage_key             String                   @db.VarChar(500)
+  filename                String                   @db.VarChar(255)
+  mime_type               String                   @db.VarChar(100)
+  size_bytes              Int
+  uploaded_by             String                   @db.VarChar(36)
+  created_at              DateTime                 @default(now())
+  document_requests       DocumentRequest[]        @relation("AttachedDocument")
+  uploader                User                     @relation(fields: [uploaded_by], references: [id])
+  excuseLetters           ExcuseLetter[]
+  teacherRankingDocuments TeacherRankingDocument[]
 
   @@map("documents")
 }
@@ -316,39 +320,44 @@ model DocumentRequest {
   teacher_id              String?   @db.VarChar(36)
   teacher_approved_date   DateTime?
   teacher_remarks         String?
-  principal_id            String?   @db.VarChar(36)
   principal_approved_date DateTime?
   principal_remarks       String?
   ready_date              DateTime?
   attached_document_id    String?   @db.VarChar(36)
   created_at              DateTime  @default(now())
   updated_at              DateTime  @updatedAt
+  principal_id            String?   @db.VarChar(36)
   attached_document       Document? @relation("AttachedDocument", fields: [attached_document_id], references: [id], onDelete: Restrict)
-  student                 Student   @relation(fields: [student_id], references: [id], onDelete: Restrict)
-  teacher                 Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
   principal               User?     @relation("PrincipalApprover", fields: [principal_id], references: [id], onDelete: Restrict)
+  student                 Student   @relation(fields: [student_id], references: [id])
+  teacher                 Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
 
   @@map("document_requests")
 }
 
 model ClinicReferral {
-  id             String                     @id @db.VarChar(36)
-  student_id     String                     @db.VarChar(36)
+  id             String    @id @db.VarChar(36)
+  student_id     String    @db.VarChar(36)
   date           DateTime
-  time           DateTime?                  @db.Time(3)
-  symptoms       ClinicReferralSymptom[]
-  diagnosis      ClinicReferralDiagnosis[]
-  medications    ClinicReferralMedication[]
-  treatments     ClinicReferralTreatment[]
-  temperature    Float?
-  blood_pressure String?                    @db.VarChar(20)
-  heart_rate     String?                    @db.VarChar(10)
+  blood_pressure String?   @db.VarChar(20)
+  heart_rate     String?   @db.VarChar(10)
+  /// @encrypted?mode=strict
   notes          String?
-  recorded_by    String?                    @db.VarChar(36)
-  created_at     DateTime                   @default(now())
-  updated_at     DateTime                   @updatedAt
-  student        Student                    @relation(fields: [student_id], references: [id], map: "clinic_referrals_student_id_fkey", onDelete: Restrict)
-  recorder       User?                      @relation(fields: [recorded_by], references: [id], onDelete: Restrict)
+  recorded_by    String?   @db.VarChar(36)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  time           DateTime? @db.Time(3)
+  temperature    Float?
+  /// @encrypted?mode=strict
+  diagnosis      String?
+  /// @encrypted?mode=strict
+  medications    String?
+  /// @encrypted?mode=strict
+  symptoms       String?
+  /// @encrypted?mode=strict
+  treatments     String?
+  recorder       User?     @relation(fields: [recorded_by], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id], map: "clinic_referrals_student_id_fkey")
 
   @@map("clinic_referrals")
 }
@@ -359,15 +368,18 @@ model GuidanceRecord {
   counselor_id   String?   @db.VarChar(36)
   date           DateTime
   type           String    @db.VarChar(50)
+  /// @encrypted?mode=strict
   reason         String?
+  /// @encrypted?mode=strict
   notes          String?
+  /// @encrypted?mode=strict
   action_taken   String?
   follow_up_date DateTime?
   status         String    @default("Open") @db.VarChar(20)
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
-  student        Student   @relation(fields: [student_id], references: [id], onDelete: Restrict)
   counselor      User?     @relation(fields: [counselor_id], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id])
 
   @@map("guidance_records")
 }
@@ -382,8 +394,8 @@ model BehaviorLog {
   reported_by String?  @db.VarChar(36)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-  student     Student  @relation(fields: [student_id], references: [id], onDelete: Restrict)
   reporter    User?    @relation(fields: [reported_by], references: [id], onDelete: Restrict)
+  student     Student  @relation(fields: [student_id], references: [id])
 
   @@map("behavior_logs")
 }
@@ -391,21 +403,19 @@ model BehaviorLog {
 model Appointment {
   id           String   @id @db.VarChar(36)
   student_id   String   @db.VarChar(36)
-  // Intentionally NOT derived from Student.guardian_email — this is a
-  // per-appointment contact override the parent/guardian can set when
-  // booking, may differ from their profile email. Reviewed in Phase 3
-  // normalization audit.
   parent_email String?  @db.VarChar(255)
-  teacher_id   String   @db.VarChar(36)
+  teacher_id   String?  @db.VarChar(36)
   date         DateTime
-  time         DateTime @db.Time(3)
   purpose      String
   status       String   @default("Pending") @db.VarChar(20)
   direction    String   @db.VarChar(30)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
-  student      Student  @relation(fields: [student_id], references: [id], onDelete: Restrict)
-  teacher      Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+  time         DateTime @db.Time(3)
+  staff_id     String?  @db.VarChar(36)
+  staff        Staff?   @relation(fields: [staff_id], references: [id], onDelete: Restrict)
+  student      Student  @relation(fields: [student_id], references: [id])
+  teacher      Teacher? @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
 
   @@map("appointments")
 }
@@ -420,12 +430,12 @@ model LeaveRequest {
   reason        String
   status        String   @default("Pending") @db.VarChar(20)
   submitted_on  DateTime @default(now())
-  approver_id   String?  @db.VarChar(36)
   approver_note String?
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
-  user          User     @relation("LeaveRequester", fields: [user_id], references: [id], onDelete: Restrict)
+  approver_id   String?  @db.VarChar(36)
   approver      User?    @relation("LeaveApprover", fields: [approver_id], references: [id], onDelete: Restrict)
+  user          User     @relation("LeaveRequester", fields: [user_id], references: [id])
 
   @@map("leave_requests")
 }
@@ -434,8 +444,6 @@ model ExcuseLetter {
   id             String    @id @db.VarChar(36)
   student_id     String    @db.VarChar(36)
   teacher_id     String    @db.VarChar(36)
-  start_date     DateTime  @db.Date
-  end_date       DateTime  @db.Date
   reason         String
   document_id    String?   @db.VarChar(36)
   status         String    @default("Pending Review") @db.VarChar(30)
@@ -444,18 +452,17 @@ model ExcuseLetter {
   reviewed_at    DateTime?
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
-  student        Student   @relation(fields: [student_id], references: [id], onDelete: Restrict)
-  teacher        Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+  end_date       DateTime  @db.Date
+  start_date     DateTime  @db.Date
   document       Document? @relation(fields: [document_id], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id])
+  teacher        Teacher   @relation(fields: [teacher_id], references: [id])
 
   @@map("excuse_letters")
 }
 
 model EnrollmentApplication {
   id           String   @id @db.VarChar(36)
-  first_name   String   @db.VarChar(100)
-  last_name    String   @db.VarChar(100)
-  grade_level  Int
   type         String   @db.VarChar(30)
   date_applied DateTime @default(now())
   status       String   @default("Pending Review") @db.VarChar(30)
@@ -465,19 +472,22 @@ model EnrollmentApplication {
   medical      Boolean  @default(false)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
+  grade_level  Int
+  first_name   String   @db.VarChar(100)
+  last_name    String   @db.VarChar(100)
 
   @@map("enrollment_applications")
 }
 
 model Announcement {
   id         String   @id @db.VarChar(36)
-  author_id  String   @db.VarChar(36)
   title      String   @db.VarChar(255)
   body       String
   audience   String   @db.VarChar(50)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  author     User     @relation(fields: [author_id], references: [id], onDelete: Restrict)
+  author_id  String   @db.VarChar(36)
+  author     User     @relation(fields: [author_id], references: [id])
 
   @@map("announcements")
 }
@@ -490,7 +500,7 @@ model Message {
   is_read     Boolean  @default(false)
   created_at  DateTime @default(now())
   receiver    User?    @relation("MessageReceiver", fields: [receiver_id], references: [id], onDelete: Restrict)
-  sender      User     @relation("MessageSender", fields: [sender_id], references: [id], onDelete: Restrict)
+  sender      User     @relation("MessageSender", fields: [sender_id], references: [id])
 
   @@index([sender_id])
   @@index([receiver_id])
@@ -505,7 +515,7 @@ model Notification {
   icon_type    String   @default("alert") @db.VarChar(20)
   is_read      Boolean  @default(false)
   created_at   DateTime @default(now())
-  recipient    User     @relation(fields: [recipient_id], references: [id], onDelete: Restrict)
+  recipient    User     @relation(fields: [recipient_id], references: [id])
 
   @@index([recipient_id])
   @@map("notifications")
@@ -519,10 +529,10 @@ model Event {
   end_date      DateTime?
   type          String    @db.VarChar(50)
   audience      String?   @db.VarChar(50)
-  created_by_id String    @db.VarChar(36)
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
-  creator       User      @relation(fields: [created_by_id], references: [id], onDelete: Restrict)
+  created_by_id String    @db.VarChar(36)
+  creator       User      @relation(fields: [created_by_id], references: [id])
 
   @@map("events")
 }
@@ -541,6 +551,8 @@ model InventoryItem {
   status        String            @default("Good") @db.VarChar(20)
   created_at    DateTime          @default(now())
   updated_at    DateTime          @updatedAt
+  expiry_date   DateTime?
+  reorder_level Int?
   updates       InventoryUpdate[]
 
   @@map("inventory_items")
@@ -549,12 +561,12 @@ model InventoryItem {
 model InventoryUpdate {
   id         String        @id @db.VarChar(36)
   item_id    String        @db.VarChar(36)
-  user_id    String        @db.VarChar(36)
   action     String        @db.VarChar(100)
   details    String
   created_at DateTime      @default(now())
-  item       InventoryItem @relation(fields: [item_id], references: [id], onDelete: Restrict)
-  user       User          @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  user_id    String        @db.VarChar(36)
+  item       InventoryItem @relation(fields: [item_id], references: [id])
+  user       User          @relation(fields: [user_id], references: [id])
 
   @@index([item_id])
   @@map("inventory_updates")
@@ -599,17 +611,17 @@ model MigrationQuarantine {
 model grade_entries {
   id                String            @id @db.VarChar(36)
   column_id         String            @db.VarChar(36)
-  enrollment_id     String            @db.VarChar(36)
   score             Float
   created_at        DateTime          @default(now())
   created_by        String            @db.VarChar(36)
   is_superseded     Boolean           @default(false)
   superseded_by_id  String?           @db.VarChar(36)
   correction_reason String?
-  column            gradebook_columns @relation(fields: [column_id], references: [id], onDelete: Restrict)
-  enrollment        Enrollment        @relation(fields: [enrollment_id], references: [id], onDelete: Restrict)
-  creator           User              @relation(fields: [created_by], references: [id], onDelete: Restrict)
-  supersededBy      grade_entries?    @relation("SupersededGrades", fields: [superseded_by_id], references: [id], onDelete: SetNull)
+  enrollment_id     String            @db.VarChar(36)
+  column            gradebook_columns @relation(fields: [column_id], references: [id])
+  creator           User              @relation(fields: [created_by], references: [id])
+  enrollment        Enrollment        @relation(fields: [enrollment_id], references: [id])
+  supersededBy      grade_entries?    @relation("SupersededGrades", fields: [superseded_by_id], references: [id])
   supersedes        grade_entries[]   @relation("SupersededGrades")
 
   @@index([column_id])
@@ -625,25 +637,77 @@ model gradebook_columns {
   sort_order   Int             @default(0)
   created_at   DateTime        @default(now())
   updated_at   DateTime
-  gradebook    gradebooks      @relation(fields: [gradebook_id], references: [id], onDelete: Restrict)
   entries      grade_entries[]
+  gradebook    gradebooks      @relation(fields: [gradebook_id], references: [id])
 
   @@index([gradebook_id])
 }
 
 model gradebooks {
   id            String                   @id @db.VarChar(36)
-  assignment_id String                   @db.VarChar(36)
   term_id       String                   @db.VarChar(36)
   version       Int                      @default(1)
   status        String                   @default("Draft") @db.VarChar(20)
   created_at    DateTime                 @default(now())
   updated_at    DateTime
-  assignment    TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id], onDelete: Restrict)
-  term          Term                     @relation(fields: [term_id], references: [id], onDelete: Restrict)
+  assignment_id String                   @db.VarChar(36)
   columns       gradebook_columns[]
+  assignment    TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id])
+  term          Term                     @relation(fields: [term_id], references: [id])
 
   @@unique([assignment_id, term_id])
+}
+
+model Grade {
+  id               String       @id @db.VarChar(36)
+  student_id       String       @db.VarChar(36)
+  subject_id       String       @db.VarChar(36)
+  term             TermKey
+  written_work     Float?
+  performance_task Float?
+  term_assessment  Float?
+  term_grade       Float?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  academic_year_id String       @db.VarChar(36)
+  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id])
+  student          Student      @relation(fields: [student_id], references: [id])
+  subject          Subject      @relation(fields: [subject_id], references: [id])
+
+  @@index([student_id])
+  @@index([subject_id])
+  @@map("grades")
+}
+
+model TeacherRanking {
+  id                   String                   @id @db.VarChar(36)
+  teacher_id           String                   @db.VarChar(36)
+  academic_year_id     String                   @db.VarChar(36)
+  current_position     String                   @db.VarChar(100)
+  target_position      String                   @db.VarChar(100)
+  total_score          Float                    @default(0)
+  status               String                   @default("Pending") @db.VarChar(50)
+  remarks              String?
+  assessment_info      String?
+  criteria_scores      Json                     @default("[]")
+  created_at           DateTime                 @default(now())
+  updated_at           DateTime                 @updatedAt
+  supporting_documents TeacherRankingDocument[]
+  academic_year        AcademicYear             @relation(fields: [academic_year_id], references: [id])
+  teacher              Teacher                  @relation(fields: [teacher_id], references: [id])
+
+  @@unique([teacher_id, academic_year_id, target_position])
+  @@map("teacher_rankings")
+}
+
+model TeacherRankingDocument {
+  ranking_id  String         @db.VarChar(36)
+  document_id String         @db.VarChar(36)
+  document    Document       @relation(fields: [document_id], references: [id])
+  ranking     TeacherRanking @relation(fields: [ranking_id], references: [id], onDelete: Cascade)
+
+  @@id([ranking_id, document_id])
+  @@map("teacher_ranking_documents")
 }
 
 enum TermKey {
@@ -651,80 +715,4 @@ enum TermKey {
   T2
   T3
   T4
-}
-
-model Grade {
-  id               String   @id @db.VarChar(36)
-  student_id       String   @db.VarChar(36)
-  subject_id       String   @db.VarChar(36)
-  term             TermKey
-  written_work     Float?
-  performance_task Float?
-  term_assessment  Float?
-  term_grade       Float?
-  academic_year_id String   @db.VarChar(36)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  student       Student      @relation(fields: [student_id], references: [id], onDelete: Restrict)
-  subject       Subject      @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
-
-  @@index([student_id])
-  @@index([subject_id])
-  @@map("grades")
-}
-
-model StudentAllergy {
-  id         String  @id @db.VarChar(36)
-  student_id String  @db.VarChar(36)
-  allergy    String  @db.VarChar(200)
-  student    Student @relation(fields: [student_id], references: [id], onDelete: Restrict)
-
-  @@map("student_allergies")
-}
-
-model StudentMedicalCondition {
-  id         String  @id @db.VarChar(36)
-  student_id String  @db.VarChar(36)
-  condition  String  @db.VarChar(200)
-  student    Student @relation(fields: [student_id], references: [id], onDelete: Restrict)
-
-  @@map("student_medical_conditions")
-}
-
-model ClinicReferralSymptom {
-  id                 String         @id @db.VarChar(36)
-  clinic_referral_id String         @db.VarChar(36)
-  symptom            String         @db.VarChar(200)
-  clinic_referral    ClinicReferral @relation(fields: [clinic_referral_id], references: [id], onDelete: Restrict)
-
-  @@map("clinic_referral_symptoms")
-}
-
-model ClinicReferralDiagnosis {
-  id                 String         @id @db.VarChar(36)
-  clinic_referral_id String         @db.VarChar(36)
-  diagnosis          String         @db.VarChar(200)
-  clinic_referral    ClinicReferral @relation(fields: [clinic_referral_id], references: [id], onDelete: Restrict)
-
-  @@map("clinic_referral_diagnoses")
-}
-
-model ClinicReferralMedication {
-  id                 String         @id @db.VarChar(36)
-  clinic_referral_id String         @db.VarChar(36)
-  medication         String         @db.VarChar(200)
-  clinic_referral    ClinicReferral @relation(fields: [clinic_referral_id], references: [id], onDelete: Restrict)
-
-  @@map("clinic_referral_medications")
-}
-
-model ClinicReferralTreatment {
-  id                 String         @id @db.VarChar(36)
-  clinic_referral_id String         @db.VarChar(36)
-  treatment          String         @db.VarChar(200)
-  clinic_referral    ClinicReferral @relation(fields: [clinic_referral_id], references: [id], onDelete: Restrict)
-
-  @@map("clinic_referral_treatments")
 }

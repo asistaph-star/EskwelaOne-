@@ -11,10 +11,16 @@ router.use(authMiddleware);
  * GET /api/users
  * Requires user:read permission.
  */
-router.get('/', requirePermissions('user:read'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const authUser = (req as any).user as AuthenticatedUser;
     const status = req.query.status as string | undefined;
     const role = req.query.role as string | undefined;
+
+    if (!authUser.permissions.includes('user:read')) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
+    }
+
     const users = await getUsers({ status, role });
     res.json({ success: true, data: users });
   } catch (err) {
@@ -52,8 +58,8 @@ router.post('/', requirePermissions('user:write'), async (req: Request, res: Res
     const correlationId = (req as any).correlationId;
     const actorId = ((req as any).user as AuthenticatedUser).id;
     
-    const user = await createUser(input, actorId, correlationId);
-    res.status(201).json({ success: true, data: user });
+    const result = await createUser(input, actorId, correlationId);
+    res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

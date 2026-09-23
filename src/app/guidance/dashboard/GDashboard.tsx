@@ -1,14 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { ShieldAlert, HeartHandshake, Users, TrendingUp, AlertCircle, Clock } from 'lucide-react';
-import { useAppContext } from '../../shared/AppContext';
+import { apiClient } from '@/api/client';
 
 export function GDashboard() {
-  const { behaviorLogs, appointments } = useAppContext();
+  const [behaviorLogs, setBehaviorLogs] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [behaviorRes, apptRes, studentsRes] = await Promise.all([
+          apiClient.get<any>('/student-services/behavior'),
+          apiClient.get<any>('/student-services/appointments/me'),
+          apiClient.get<any>('/users?role=Student')
+        ]);
+
+        setBehaviorLogs(behaviorRes || []);
+        setAppointments(apptRes || []);
+        setStudents(studentsRes || []);
+      } catch (e) {
+        console.error("Failed to load dashboard data", e);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Simple KPI data
   const pendingCases = behaviorLogs.filter(b => b.status !== "Resolved").length;
-  const todayAppointments = appointments.filter(a => a.status === "Confirmed").length; // Mock metric
+  const todayAppointments = appointments.filter(a => a.status === "Confirmed").length; 
+  const totalStudents = students.length;
   
   return (
     <div style={{ padding: "32px 40px", overflowY: "auto", flex: 1, paddingBottom: 100 }}>
@@ -24,7 +46,7 @@ export function GDashboard() {
           {[
             { label: "Active Behavioral Cases", val: pendingCases.toString(), icon: ShieldAlert, color: C.red, bg: C.redBg },
             { label: "Upcoming Sessions", val: todayAppointments.toString(), icon: Clock, color: C.blue, bg: C.blueBg },
-            { label: "Total Students Guided", val: "142", icon: Users, color: C.green, bg: C.greenBg },
+            { label: "Total Students Guided", val: totalStudents.toString(), icon: Users, color: C.green, bg: C.greenBg },
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
             return (
@@ -58,8 +80,8 @@ export function GDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{log.studentName}</div>
-                      <div style={{ fontSize: 11, color: C.t3 }}>{log.date}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{log.studentName || log.student_id}</div>
+                      <div style={{ fontSize: 11, color: C.t3 }}>{new Date(log.date).toLocaleDateString()}</div>
                     </div>
                     <div style={{ fontSize: 12, color: C.t2, marginTop: 4 }}>{log.type} - {log.status}</div>
                   </div>
@@ -77,12 +99,20 @@ export function GDashboard() {
               {appointments.filter(a => a.status === "Confirmed").slice(0, 3).map(appt => (
                 <div key={appt.id} style={{ display: "flex", gap: 12 }}>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 50, flexShrink: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.m700, textTransform: "uppercase" }}>{appt.date.split(" ")[0]}</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: C.t1 }}>{appt.date.split(" ")[1]?.replace(",", "")}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.m700, textTransform: "uppercase" }}>
+                      {new Date(appt.date).toLocaleDateString('en-US', { month: 'short' })}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: C.t1 }}>
+                      {new Date(appt.date).getDate()}
+                    </div>
                   </div>
                   <div style={{ flex: 1, padding: 12, background: C.blueBg, borderRadius: 8, border: `1px solid ${C.blue}30` }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{appt.studentName}</div>
-                    <div style={{ fontSize: 11, color: C.t2, marginTop: 4 }}>{appt.time} • Counseling</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
+                      {appt.student ? `${appt.student.user.first_name} ${appt.student.user.last_name}` : appt.student_id}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.t2, marginTop: 4 }}>
+                      {typeof appt.time === 'string' ? appt.time : new Date(appt.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} • Counseling
+                    </div>
                   </div>
                 </div>
               ))}

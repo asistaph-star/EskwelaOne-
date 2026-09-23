@@ -142,7 +142,7 @@ export function CapstoneForm137({ student }: { student?: { name:string; lrn:stri
                 <thead>
                   <tr>
                     <th rowSpan={2} style={{ width:"35%", borderLeft: "none" }}>LEARNING AREAS</th>
-                    <th colSpan={4}>Quarterly Rating</th>
+                    <th colSpan={4}>Term Rating</th>
                     <th rowSpan={2} style={{ width:"10%" }}>FINAL<br/>RATING</th>
                     <th rowSpan={2} style={{ width:"15%", borderRight: "none" }}>REMARKS</th>
                   </tr>

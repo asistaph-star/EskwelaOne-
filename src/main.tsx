@@ -17,10 +17,15 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 20, background: "#fee", color: "#900", fontFamily: "monospace" }}>
-          <h1>React Crashed</h1>
-          <pre>{this.state.error?.toString()}</pre>
-          <pre>{this.state.info?.componentStack}</pre>
+        <div style={{ flex: 1, height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#1e293b", marginBottom: 16 }}>Something went wrong.</h1>
+          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 24 }}>An unexpected application error occurred.</p>
+          {this.state.error && (
+            <pre style={{ maxWidth: "80%", background: "#f1f5f9", padding: 16, borderRadius: 8, overflow: "auto", fontSize: 12, color: "#ef4444" }}>
+              {this.state.error.message}{"\n"}{this.state.error.stack}
+            </pre>
+          )}
+          <button onClick={() => window.location.reload()} style={{ padding: "10px 20px", background: "#0f172a", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600, marginTop: 16 }}>Refresh Page</button>
         </div>
       );
     }

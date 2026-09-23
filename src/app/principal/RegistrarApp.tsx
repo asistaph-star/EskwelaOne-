@@ -9,6 +9,7 @@ import { REnrollmentScreen } from './enrollment/REnrollmentScreen';
 import { RDocRequestsScreen } from './documents/RDocRequestsScreen';
 import { RAcademicRecordsScreen } from './records/RAcademicRecordsScreen';
 import { RDocDeficiencyScreen } from './records/RDocDeficiencyScreen';
+import { StudentDataSearch } from './records/StudentDataSearch';
 import { StubScreen } from '../shared/components/StubScreen';
 import { Settings, HelpCircle, FolderOpen } from 'lucide-react';
 import { X } from 'lucide-react';
@@ -25,6 +26,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
     "r-records": "Academic Records (SF10)",
     "r-doc-requests": "Document Requests",
     "r-deficiency": "Document Deficiency Tracker",
+    "r-search": "Student Data Search",
     "r-settings": "Settings",
     "r-help": "Help & Feedback",
   };
@@ -41,7 +43,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           </button>
         </div>
       )}
-      <div className="watermark-bg" style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <PHeaderBand
           title={TITLES[screen]}
           sub="Registrar Office"
@@ -55,6 +57,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="r-doc-requests" && <RDocRequestsScreen />}
           {screen==="r-records" && <RAcademicRecordsScreen />}
           {screen==="r-deficiency" && <RDocDeficiencyScreen />}
+          {screen==="r-search" && <StudentDataSearch />}
           {(screen==="r-settings"||screen==="r-help") && (
             <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>

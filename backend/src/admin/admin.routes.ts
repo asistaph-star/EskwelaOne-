@@ -4,9 +4,18 @@ import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { authMiddleware, requirePermissions, AuthenticatedUser } from '../common/middleware/auth.js';
 import { createAuditLog } from '../audit/audit.service.js';
+import { AppError } from '../common/middleware/errorHandler.js';
+
+import inventoryRoutes from './inventory.routes.js';
+import leavesRoutes from './leaves.routes.js';
+import rankingRoutes from './ranking.routes.js';
 
 const router = Router();
 router.use(authMiddleware);
+
+router.use('/inventory', inventoryRoutes);
+router.use('/leaves', leavesRoutes);
+router.use('/rankings', rankingRoutes);
 
 // ─── Announcements ───────────────────────────────────────────
 
@@ -21,9 +30,9 @@ const createAnnouncementSchema = z.object({
  */
 router.get('/announcements', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // In a full implementation, filter by audience based on current user role
     const announcements = await prisma.announcement.findMany({
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
+      include: { author: { select: { id: true, first_name: true, last_name: true } } }
     });
     res.json({ success: true, data: announcements });
   } catch (err) {
@@ -34,7 +43,7 @@ router.get('/announcements', async (req: Request, res: Response, next: NextFunct
 /**
  * POST /api/admin/announcements
  */
-router.post('/announcements', requirePermissions('announcement:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/announcements', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createAnnouncementSchema.parse(req.body);
     const correlationId = (req as any).correlationId;
@@ -43,11 +52,12 @@ router.post('/announcements', requirePermissions('announcement:write'), async (r
     const announcement = await prisma.announcement.create({
       data: {
         id: generateId(),
-        title: req.body.title,
-        body: req.body.content,
-        audience: req.body.audience,
-        author_id: (req as any).user.id,
-      }
+        title: input.title,
+        body: input.body,
+        audience: input.audience,
+        author_id: authUser.id,
+      },
+      include: { author: { select: { id: true, first_name: true, last_name: true } } }
     });
 
     await createAuditLog({
@@ -65,98 +75,203 @@ router.post('/announcements', requirePermissions('announcement:write'), async (r
   }
 });
 
-// ─── Appointments ────────────────────────────────────────────
+// ─── Events ───────────────────────────────────────────
+
+const eventBaseObject = z.object({
+  title: z.string().min(1),
+  type: z.string().min(1),
+  audience: z.enum(['all', 'teachers', 'students']).nullable().optional(),
+  date: z.string().datetime(),
+  end_date: z.string().datetime().nullable().optional()
+});
+
+const eventBaseSchema = eventBaseObject.refine(data => {
+  if (data.end_date) {
+    return new Date(data.end_date) >= new Date(data.date);
+  }
+  return true;
+}, {
+  message: "end_date must be after or equal to date",
+  path: ["end_date"]
+});
 
 /**
- * GET /api/admin/appointments/me
- * Gets appointments where the user is either the teacher or the student/parent
+ * GET /api/admin/events
  */
-router.get('/appointments/me', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const authUser = (req as any).user as AuthenticatedUser;
-    
-    const appointments = await prisma.appointment.findMany({
-      where: {
-        OR: [
-          { teacher_id: authUser.id },
-          { student_id: authUser.id }
-        ]
-      },
-      orderBy: { date: 'desc' }
-    });
-    
-    res.json({ success: true, data: appointments });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ─── Events ────────────────────────────────────────────────
 router.get('/events', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const events = await prisma.event.findMany({ orderBy: { date: 'asc' } });
-    res.json({ success: true, data: events });
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isPrincipalOrAdmin = authUser.roles.includes('Principal') || authUser.roles.includes('Admin');
+    const isTeacher = authUser.roles.includes('Teacher');
+    const isStudent = authUser.roles.includes('Student');
+
+    let whereClause: any = {};
+
+    if (!isPrincipalOrAdmin) {
+      if (isTeacher) {
+        whereClause = {
+          OR: [
+            { audience: 'all' },
+            { audience: 'teachers' },
+            { created_by_id: authUser.id }
+          ]
+        };
+      } else if (isStudent) {
+        whereClause = {
+          OR: [
+            { audience: 'all' },
+            { audience: 'students' },
+            { created_by_id: authUser.id }
+          ]
+        };
+      } else {
+        whereClause = { created_by_id: authUser.id };
+      }
+    }
+
+    const events = await prisma.event.findMany({
+      where: whereClause,
+      orderBy: { date: 'asc' }
+    });
+    // Teacher Calendar and Principal Calendar expect raw array wrapped in data
+    res.json({ success: true, data: events }); 
   } catch (err) {
     next(err);
   }
 });
 
+/**
+ * POST /api/admin/events
+ */
 router.post('/events', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const record = await prisma.event.create({
+    const input = eventBaseSchema.parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+    
+    const isPrincipalOrAdmin = authUser.roles.includes('Principal') || authUser.roles.includes('Admin');
+    const isStudent = authUser.roles.includes('Student');
+    
+    if (isStudent && !isPrincipalOrAdmin) {
+      throw new AppError(403, 'FORBIDDEN', 'Students cannot create events.');
+    }
+    
+    if (!isPrincipalOrAdmin && input.audience === 'all') {
+      throw new AppError(403, 'FORBIDDEN', 'Only administrators can create school-wide events.');
+    }
+
+    const event = await prisma.event.create({
       data: {
         id: generateId(),
-        ...req.body,
-        date: new Date(req.body.date),
-        end_date: req.body.end_date ? new Date(req.body.end_date) : null
+        title: input.title,
+        type: input.type,
+        audience: input.audience || null,
+        date: new Date(input.date),
+        end_date: input.end_date ? new Date(input.end_date) : null,
+        created_by_id: authUser.id,
       }
     });
-    res.status(201).json({ success: true, data: record });
+
+    res.status(201).json({ success: true, data: event });
   } catch (err) {
     next(err);
   }
 });
 
-// ─── Leave Requests ──────────────────────────────────────────
-router.get('/leaves', async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * PATCH /api/admin/events/:id
+ */
+router.patch('/events/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const rawLeaves = await prisma.leaveRequest.findMany({ 
-      orderBy: { created_at: 'desc' },
-      include: { user: true, approver: true }
+    const input = eventBaseObject.partial().parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isPrincipalOrAdmin = authUser.roles.includes('Principal') || authUser.roles.includes('Admin');
+    const isStudent = authUser.roles.includes('Student');
+
+    if (isStudent && !isPrincipalOrAdmin) {
+      throw new AppError(403, 'FORBIDDEN', 'Students cannot modify events.');
+    }
+
+    const id = String(req.params.id);
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) throw new AppError(404, 'NOT_FOUND', 'Event not found');
+
+    if (!isPrincipalOrAdmin && event.created_by_id !== authUser.id) {
+      throw new AppError(403, 'FORBIDDEN', 'You do not have permission to modify this event.');
+    }
+    
+    if (!isPrincipalOrAdmin && input.audience === 'all') {
+      throw new AppError(403, 'FORBIDDEN', 'Only administrators can create school-wide events.');
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: {
+        title: input.title !== undefined ? input.title : undefined,
+        type: input.type !== undefined ? input.type : undefined,
+        audience: input.audience !== undefined ? input.audience : undefined,
+        date: input.date !== undefined ? new Date(input.date) : undefined,
+        end_date: input.end_date !== undefined ? (input.end_date ? new Date(input.end_date) : null) : undefined,
+      }
     });
-    const leaves = rawLeaves.map(l => ({
-      ...l,
-      userName: `${l.user.first_name} ${l.user.last_name}`,
-      approverName: l.approver ? `${l.approver.first_name} ${l.approver.last_name}` : null
+    res.json({ success: true, data: updatedEvent });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * DELETE /api/admin/events/:id
+ */
+router.delete('/events/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isPrincipalOrAdmin = authUser.roles.includes('Principal') || authUser.roles.includes('Admin');
+    const isStudent = authUser.roles.includes('Student');
+
+    if (isStudent && !isPrincipalOrAdmin) {
+      throw new AppError(403, 'FORBIDDEN', 'Students cannot delete events.');
+    }
+
+    const id = String(req.params.id);
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) throw new AppError(404, 'NOT_FOUND', 'Event not found');
+
+    if (!isPrincipalOrAdmin && event.created_by_id !== authUser.id) {
+      throw new AppError(403, 'FORBIDDEN', 'You do not have permission to delete this event.');
+    }
+
+    await prisma.event.delete({ where: { id } });
+    res.json({ success: true, data: { success: true } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/admin/enrollment-applications
+ */
+router.get('/enrollment-applications', requirePermissions('enrollment:read'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const apps = await prisma.enrollmentApplication.findMany({
+      orderBy: { created_at: 'desc' }
+    });
+    
+    const mapped = apps.map(app => ({
+      id: app.id,
+      name: `${app.first_name} ${app.last_name}`,
+      gradeLevel: `Grade ${app.grade_level}`,
+      type: app.type,
+      dateApplied: app.date_applied.toISOString().split('T')[0],
+      status: app.status,
+      documents: {
+        birthCert: app.birth_cert,
+        form138: app.form138,
+        goodMoral: app.good_moral,
+        medical: app.medical
+      }
     }));
-    res.json({ success: true, data: leaves });
-  } catch (err) {
-    next(err);
-  }
-});
 
-router.post('/leaves', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const record = await prisma.leaveRequest.create({
-      data: {
-        id: generateId(),
-        user_id: (req as any).user.id,
-        ...req.body,
-        start_date: new Date(req.body.start_date || req.body.startDate),
-        end_date: new Date(req.body.end_date || req.body.endDate)
-      }
-    });
-    res.status(201).json({ success: true, data: record });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ─── Enrollment Applications ───────────────────────────────
-router.get('/enrollment-applications', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const apps = await prisma.enrollmentApplication.findMany({ orderBy: { created_at: 'desc' } });
-    res.json({ success: true, data: apps });
+    res.json({ success: true, data: mapped });
   } catch (err) {
     next(err);
   }

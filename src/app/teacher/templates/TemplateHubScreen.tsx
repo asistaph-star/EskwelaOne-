@@ -1,148 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight, X, ChevronDown } from 'lucide-react';
-import { CapstoneForm137 } from './components/CapstoneForm137';
+import { BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight, X, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
 import { Form138 } from '../../shared/components/Form138';
-import { FormSF2 } from './components/FormSF2';
-
-export type CurriculumType = "new" | "old";  /* new = Q1-Q3, old = Q1-Q4 */
-export interface GradeRecord { q1:number; q2:number; q3:number; q4?:number; curriculum:CurriculumType; }
-export interface SubjectHistory {
-  name: string;
-  gr7?: GradeRecord;
-  gr8?: GradeRecord;
-  gr9?: GradeRecord;
-  gr10?: GradeRecord;
-}
-
-export const FULL_ACADEMIC_HISTORY: SubjectHistory[] = [
-  { name:"Filipino",                      gr7:{q1:88,q2:86,q3:89,q4:87,curriculum:"old"}, gr8:{q1:89,q2:90,q3:88,q4:89,curriculum:"old"}, gr9:{q1:91,q2:92,q3:90,q4:91,curriculum:"old"}, gr10:{q1:92,q2:94,q3:93,curriculum:"new"} },
-  { name:"English",                       gr7:{q1:85,q2:84,q3:86,q4:88,curriculum:"old"}, gr8:{q1:87,q2:88,q3:87,q4:89,curriculum:"old"}, gr9:{q1:88,q2:90,q3:89,q4:91,curriculum:"old"}, gr10:{q1:90,q2:91,q3:89,curriculum:"new"} },
-  { name:"Mathematics",                   gr7:{q1:74,q2:76,q3:73,q4:75,curriculum:"old"}, gr8:{q1:76,q2:78,q3:75,q4:79,curriculum:"old"}, gr9:{q1:78,q2:80,q3:79,q4:82,curriculum:"old"}, gr10:{q1:83,q2:85,q3:82,curriculum:"new"} },
-  { name:"Science",                       gr7:{q1:91,q2:90,q3:92,q4:93,curriculum:"old"}, gr8:{q1:92,q2:93,q3:91,q4:94,curriculum:"old"}, gr9:{q1:93,q2:94,q3:95,q4:96,curriculum:"old"}, gr10:{q1:95,q2:96,q3:94,curriculum:"new"} },
-  { name:"Araling Panlipunan",            gr7:{q1:90,q2:89,q3:91,q4:90,curriculum:"old"}, gr8:{q1:91,q2:92,q3:90,q4:92,curriculum:"old"}, gr9:{q1:92,q2:93,q3:94,q4:95,curriculum:"old"}, gr10:{q1:95,q2:96,q3:94,curriculum:"new"} },
-  { name:"Technology & Livelihood Educ.", gr7:{q1:88,q2:87,q3:89,q4:88,curriculum:"old"}, gr8:{q1:89,q2:90,q3:88,q4:90,curriculum:"old"}, gr9:{q1:90,q2:91,q3:92,q4:93,curriculum:"old"}, gr10:{q1:92,q2:94,q3:93,curriculum:"new"} },
-  { name:"MAPEH",                         gr7:{q1:92,q2:91,q3:93,q4:94,curriculum:"old"}, gr8:{q1:93,q2:94,q3:92,q4:95,curriculum:"old"}, gr9:{q1:94,q2:95,q3:96,q4:97,curriculum:"old"}, gr10:{q1:96,q2:97,q3:95,curriculum:"new"} },
-  { name:"Edukasyon sa Pagpapakatao",     gr7:{q1:95,q2:94,q3:96,q4:95,curriculum:"old"}, gr8:{q1:96,q2:97,q3:95,q4:96,curriculum:"old"}, gr9:{q1:97,q2:98,q3:96,q4:98,curriculum:"old"}, gr10:{q1:98,q2:99,q3:97,curriculum:"new"} }
-];
+import { apiClient } from '../../../api/client';
 
 export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "registrar" }) {
-  const [modal, setModal]     = useState<"rc"|"f137"|"sf2"|null>(null);
-  const [student, setStudent] = useState("Santos, Juan Miguel");
-  const [sy, setSy]           = useState("SY 2025–2026");
-  const [section, setSection] = useState("Grade 8 - Rizal");
-  const [month, setMonth]     = useState("June 2025");
-  /* viewing = the document is being shown full-screen inside the app */
-  const [viewing, setViewing] = useState<"rc"|"f137"|"sf2"|null>(null);
+  const [modal, setModal] = useState<"rc"|null>(null);
+  
+  // Real workflow: fetch authorized students
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  
+  // Report Card State
+  const [rcData, setRcData] = useState<any>(null);
+  const [loadingRc, setLoadingRc] = useState(false);
+  const [rcError, setRcError] = useState<string|null>(null);
+  
+  const [viewing, setViewing] = useState<"rc"|null>(null);
 
   const TEMPLATES = [
     {
       id:"rc" as const, emoji:"📋",
       title:"Report Card",
-      desc:"Form 138 - Complete academic history across Grade 7–10. Auto-detects Old Curriculum (Q1–Q4) for Grade 7 and New Curriculum (Q1–Q3) for Grade 8–10.",
-    },
-    {
-      id:"sf2" as const, emoji:"📅",
-      title:"School Form 2 (SF2)",
-      desc:"Daily Attendance Record - Monthly class document used to track the daily attendance of learners, calculate attendance averages, and evaluate attendance rates.",
-    },
-    ...(false /* Hidden for now: role === "registrar" */ ? [{
-      id:"f137" as const, emoji:"📄",
-      title:"Form 137",
-      desc:"Permanent Record - Official transfer document containing the student's complete scholastic record and personal information.",
-    }] : []),
+      desc:"Form 138 - Complete academic history across Grade 7–10. Shows authorized grades from the backend database.",
+    }
   ];
 
-  function handleView() {
-    /* Show the document full-screen inside the app */
-    setViewing(modal);
+  useEffect(() => {
+    // Fetch authorized students for this teacher
+    async function fetchStudents() {
+      setLoadingStudents(true);
+      try {
+        const data = await apiClient.get<any[]>('/student-services/appointments/students');
+        setStudents(data);
+        if (data.length > 0) {
+          setSelectedStudentId(data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load students", err);
+      } finally {
+        setLoadingStudents(false);
+      }
+    }
+    fetchStudents();
+  }, []);
+
+  async function handleView() {
+    if (!selectedStudentId) return;
+    
+    setLoadingRc(true);
+    setRcError(null);
+    setRcData(null);
+    setViewing("rc");
     setModal(null);
+
+    try {
+      const data = await apiClient.get<any>(`/academic/report-card/${selectedStudentId}`);
+      setRcData(data);
+    } catch (err: any) {
+      setRcError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoadingRc(false);
+    }
   }
 
-  /* ── Full-screen document view ── */
   if (viewing) {
     return (
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"transparent" }}>
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            body * {
-              visibility: hidden;
-            }
-            .printable-doc-area, .printable-doc-area * {
-              visibility: visible;
-            }
+            body * { visibility: hidden; }
+            .printable-doc-area, .printable-doc-area * { visibility: visible; }
             .printable-doc-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              background: #fff !important;
+              position: absolute; left: 0; top: 0; width: 100% !important; height: auto !important;
+              overflow: visible !important; padding: 0 !important; margin: 0 !important; background: #fff !important;
             }
-            .printable-doc-area > div {
-              box-shadow: none !important;
-              border: none !important;
-              margin: 0 !important;
-              max-width: 100% !important;
-            }
-            .no-print {
-              display: none !important;
-            }
+            .printable-doc-area > div { box-shadow: none !important; border: none !important; margin: 0 !important; max-width: 100% !important; }
+            .no-print { display: none !important; }
           }
         ` }} />
 
-        {/* Document topbar - looks like a screen inside the app */}
         <div className="no-print" style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-          <button onClick={()=>setViewing(null)}
+          <button onClick={()=>{ setViewing(null); setRcData(null); setRcError(null); }}
             style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:4, cursor:"pointer" }}>
             <ChevronLeft size={13}/> Back to Forms and Records
           </button>
           <div style={{ width:1, height:22, background:C.borderMed }} />
           <div style={{ flex:1 }}>
             <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>
-              {viewing==="rc" ? "Report Card - Form 138" : viewing==="sf2" ? "School Form 2 (SF2) - Learner Attendance Record" : "Form 137 - Permanent Record"}
+              DigiSkwela SF9 / Form 138 Report Card
             </div>
             <div style={{ fontSize:10, color:C.t3 }}>
-              {viewing==="sf2" ? `${section} · ${month} · ${sy}` : `${student} · ${sy}`}
+              {rcData ? `${rcData.student.name} · ${rcData.school.academicYear}` : "Loading..."}
             </div>
           </div>
-          <button onClick={() => window.print()} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"6px 12px", cursor:"pointer" }}>
+          <button onClick={() => window.print()} disabled={!rcData} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:rcData ? C.t2 : C.borderMed, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"6px 12px", cursor:rcData ? "pointer" : "default" }}>
             <Printer size={13}/> Print
-          </button>
-          <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"6px 14px", cursor:"pointer" }}>
-            <Download size={13}/> Download PDF
           </button>
         </div>
 
-        {/* Document content */}
-        <div className="printable-doc-area" style={{ flex:1, overflowY:"auto", padding:24 }}>
-          {viewing==="rc" ? (
-            <Form138 
-              student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano", age: 16, gender: "Male" }}
-              quarter={1}
-              sy="2025–2026"
-              grades={{
-                generalAverage: 88.5,
-                subjects: [
-                  { name: "Filipino", grade: 88, remarks: "PASSED" },
-                  { name: "English", grade: 90, remarks: "PASSED" },
-                  { name: "Mathematics", grade: 84, remarks: "PASSED" },
-                  { name: "Science", grade: 89, remarks: "PASSED" },
-                  { name: "Araling Panlipunan", grade: 91, remarks: "PASSED" },
-                  { name: "Technology and Livelihood Education", grade: 87, remarks: "PASSED" },
-                  { name: "MAPEH", grade: 90, remarks: "PASSED" },
-                  { name: "Edukasyon sa Pagpapakatao", grade: 92, remarks: "PASSED" }
-                ]
-              }}
-              attendance={{ daysOfSchool: 54, daysPresent: 53, daysAbsent: 1 }}
-            />
-          ) : viewing==="sf2" ? (
-            <FormSF2 section={section} month={month} sy={sy} />
-          ) : (
-            <CapstoneForm137 student={{ name:student, lrn:"100001", grade:10, section:"Pilot", adviser:"Ana R. Soriano" }} />
+        <div className="printable-doc-area" style={{ flex:1, minHeight: 0, overflowY:"auto", padding:24 }}>
+          {loadingRc && (
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:C.t3 }}>
+              <Loader2 className="animate-spin" size={24} style={{ marginBottom: 12 }} />
+              <div>Fetching authoritative scholastic records...</div>
+            </div>
+          )}
+          
+          {rcError && (
+            <div style={{ maxWidth: 500, margin: "40px auto", padding: 24, background: "#fff", border: `1px solid ${C.borderMed}`, borderTop: `4px solid ${C.red}`, borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, color:C.red, fontWeight:700, fontSize:16, marginBottom: 8 }}>
+                <AlertCircle size={20} /> Authorization / Data Error
+              </div>
+              <div style={{ color: C.t2, fontSize: 14, lineHeight: 1.5 }}>
+                {rcError}
+              </div>
+            </div>
+          )}
+
+          {rcData && (
+            <Form138 data={rcData} />
           )}
         </div>
       </div>
@@ -150,15 +128,16 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   }
 
   return (
-    <div style={{ flex:1, overflowY:"auto", background:"transparent" }}>
+    <div style={{ flex:1, minHeight: 0, overflowY:"auto", background:"transparent" }}>
       <div style={{ maxWidth:700, margin:"0 auto", padding:40 }}>
-        {/* Header */}
         <div style={{ marginBottom:32 }}>
           <div style={{ fontSize:20, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:6 }}>Forms and Records</div>
-          <div style={{ fontSize:13, color:C.t3 }}>Select a document template to view the official DepEd form for a student.</div>
+          <div style={{ fontSize:13, color:C.t3 }}>Select a document template to view the official record for a student.</div>
+          <div style={{ marginTop:8, padding:"8px 12px", background:C.m50, borderRadius:4, border:`1px solid ${C.m200}`, fontSize:11, color:C.m700 }}>
+            <strong>Note:</strong> The DigiSkwela SF9 / Form 138 is a system-generated representation of scholastic records and does not replace official LIS-issued forms.
+          </div>
         </div>
 
-        {/* Template cards */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:20 }}>
           {TEMPLATES.map(t=>(
             <button key={t.id} onClick={()=>setModal(t.id)}
@@ -178,84 +157,45 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
         </div>
       </div>
 
-      {/* Modal - appears when a template card is clicked */}
       {modal && (
         <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(15,8,8,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
           onClick={e=>{ if(e.target===e.currentTarget) setModal(null); }}>
           <div style={{ background:"#fff", borderRadius:4, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 20px 60px rgba(74,10,16,0.4)" }}>
-            {/* Modal header */}
             <div style={{ background:C.m800, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
                 <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:2 }}>Generate document</div>
-                <div style={{ fontSize:15, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif" }}>
-                  {modal==="rc" ? "Report Card" : modal==="sf2" ? "School Form 2 (SF2)" : "Form 137"}
-                </div>
+                <div style={{ fontSize:15, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif" }}>Report Card</div>
               </div>
               <button onClick={()=>setModal(null)} style={{ width:28, height:28, borderRadius:4, background:"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <X size={15}/>
               </button>
             </div>
 
-            {/* Modal body */}
             <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
-              {modal==="rc" && (
-                <div style={{ padding:"8px 12px", background:C.m50, border:`0.5px solid ${C.borderMed}`, borderRadius:4, fontSize:11, color:C.t2 }}>
-                  <span style={{ fontWeight:600, color:C.m700 }}>Auto curriculum:</span>{" "}Grade 7 = Old (Q1–Q4) · Grade 8–10 = New (Q1–Q3)
-                </div>
-              )}
-              {modal==="sf2" && (
-                <div style={{ padding:"8px 12px", background:C.m50, border:`0.5px solid ${C.borderMed}`, borderRadius:4, fontSize:11, color:C.t2 }}>
-                  <span style={{ fontWeight:600, color:C.m700 }}>Class Record:</span> Generates daily attendance grid and calculates monthly averages.
-                </div>
-              )}
-
-              {modal === "sf2" ? (
-                <>
-                  {[
-                    { label:"Grade & Section", value:section, setter:setSection, opts:["Grade 8 - Rizal", "Grade 9 - Einstein", "Grade 10 - Pilot"] },
-                    { label:"Month", value:month, setter:setMonth, opts:["June 2025", "July 2025", "August 2025"] },
-                    { label:"School Year", value:sy, setter:setSy, opts:["SY 2025–2026","SY 2024–2025","SY 2023–2024","SY 2022–2023"] },
-                  ].map(f=>(
-                    <div key={f.label}>
-                      <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>{f.label}</label>
-                      <div style={{ position:"relative" }}>
-                        <select value={f.value} onChange={e=>f.setter(e.target.value)}
-                          style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
-                          {f.opts.map(o=><option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {[
-                    { label:"Student", value:student, setter:setStudent, opts:["Santos, Juan Miguel","Garcia, Ana Kristine","Cruz, Trisha Ann","Espino, Hannah Grace","Ferrer, Joshua","Bondoc, Ramon Jr.","Ocampo, Renz Adrian","Hernandez, Mark Ryan"] },
-                    { label:"School Year", value:sy, setter:setSy, opts:["SY 2025–2026","SY 2024–2025","SY 2023–2024","SY 2022–2023"] },
-                  ].map(f=>(
-                    <div key={f.label}>
-                      <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>{f.label}</label>
-                      <div style={{ position:"relative" }}>
-                        <select value={f.value} onChange={e=>f.setter(e.target.value)}
-                          style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
-                          {f.opts.map(o=><option key={o}>{o}</option>)}
-                        </select>
-                        <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
+              <div>
+                <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>Select Authorized Student</label>
+                {loadingStudents ? (
+                  <div style={{ fontSize: 13, color: C.t3, padding: "9px 10px" }}>Loading students...</div>
+                ) : (
+                  <div style={{ position:"relative" }}>
+                    <select value={selectedStudentId} onChange={e=>setSelectedStudentId(e.target.value)}
+                      style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
+                      {students.map(s=>(
+                        <option key={s.id} value={s.id}>{s.user?.last_name}, {s.user?.first_name} ({s.current_section?.name})</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Modal footer */}
             <div style={{ padding:"14px 20px", borderTop:`1px solid ${C.borderMed}`, display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button onClick={()=>setModal(null)} style={{ padding:"9px 18px", background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, cursor:"pointer", fontSize:13, fontWeight:500, color:C.t2 }}>
                 Cancel
               </button>
-              <button onClick={handleView} style={{ padding:"9px 22px", background:C.m700, color:"#fff", border:"none", borderRadius:4, cursor:"pointer", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6 }}>
-                <Eye size={14}/> View
+              <button onClick={handleView} disabled={!selectedStudentId} style={{ padding:"9px 22px", background: selectedStudentId ? C.m700 : C.borderMed, color:"#fff", border:"none", borderRadius:4, cursor:selectedStudentId ? "pointer" : "default", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6 }}>
+                <Eye size={14}/> Generate Report Card
               </button>
             </div>
           </div>

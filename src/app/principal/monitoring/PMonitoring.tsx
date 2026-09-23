@@ -11,13 +11,13 @@ export function PMonitoring() {
   const [chartView, setChartView] = useState("Weekly");
   const { gateAttendance } = useAppContext();
   return (
-    <div style={{ flex:1, overflowY:"auto", background: "transparent", padding:24 }}>
+    <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24 }}>
       {/* Redesigned Gate Cards Grid */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
         {[
-          { v: "319", l: "Inside Campus", color: C.green, bg: C.greenBg, icon: Users, desc: "Live student presence" },
+          { v: gateAttendance.length.toString(), l: "Inside Campus", color: C.green, bg: C.greenBg, icon: Users, desc: "Live student presence" },
           { v: "23", l: "Already Left", color: C.teal, bg: C.tealBg, icon: LogOut, desc: "Checked out of gate" },
-          { v: "14", l: "Late Today", color: C.amber, bg: C.amberBg, icon: Clock, desc: "Arrived after 7:30 AM" }
+          { v: gateAttendance.filter(g => g.time > "07:30 AM").length.toString(), l: "Late Today", color: C.amber, bg: C.amberBg, icon: Clock, desc: "Arrived after 7:30 AM" }
         ].map((card) => {
           const Icon = card.icon;
           return (

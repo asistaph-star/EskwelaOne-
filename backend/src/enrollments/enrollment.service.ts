@@ -10,6 +10,12 @@ export const transferStudentSchema = z.object({
   reason: z.string().min(1, 'Transfer reason is required.'),
 });
 
+export const initialEnrollmentSchema = z.object({
+  studentId: z.string().min(1),
+  sectionId: z.string().min(1),
+  academicYearId: z.string().min(1),
+});
+
 /**
  * Transfer a student mid-year.
  * 
@@ -104,9 +110,98 @@ export async function getStudentEnrollmentHistory(studentId: string, academicYea
       status: 'asc',
     },
     include: {
-      section: true,
+      section: {
+        include: {
+          assignments: {
+            include: {
+              teacher: {
+                include: {
+                  user: true
+                }
+              },
+              subject: true
+            }
+          }
+        }
+      },
     },
   });
 
   return history;
+}
+
+/**
+ * Initial enrollment for a student.
+ */
+export async function createInitialEnrollment(
+  input: z.infer<typeof initialEnrollmentSchema>,
+  actorId: string,
+  correlationId?: string
+) {
+  return withTransaction(async (tx) => {
+    // Verify student exists and has student profile
+    const student = await tx.student.findUnique({
+      where: { id: input.studentId },
+      include: { user: { include: { user_roles: { include: { role: true } } } } }
+    });
+
+    if (!student) {
+      throw new AppError(404, 'NOT_FOUND', 'Student profile not found.');
+    }
+
+    const hasStudentRole = student.user?.user_roles?.some((ur: any) => ur.role.name === 'Student');
+    if (!hasStudentRole) {
+      throw new AppError(403, 'FORBIDDEN', 'User does not have a Student role.');
+    }
+
+    // Verify Section and AcademicYear
+    const section = await tx.section.findUnique({
+      where: { id: input.sectionId },
+    });
+
+    if (!section) {
+      throw new AppError(404, 'NOT_FOUND', 'Section not found.');
+    }
+
+    if (section.academic_year_id !== input.academicYearId) {
+      throw new AppError(400, 'INVALID_RELATION', 'Section does not belong to the specified academic year.');
+    }
+
+    // Check for duplicate active enrollment
+    const activeEnrollment = await tx.enrollment.findFirst({
+      where: {
+        student_id: input.studentId,
+        academic_year_id: input.academicYearId,
+        status: 'Enrolled',
+      }
+    });
+
+    if (activeEnrollment) {
+      throw new AppError(400, 'DUPLICATE', 'Student already has an active enrollment for this academic year.');
+    }
+
+    // Create enrollment
+    const enrollmentId = generateId();
+    const enrollment = await tx.enrollment.create({
+      data: {
+        id: enrollmentId,
+        student_id: input.studentId,
+        section_id: input.sectionId,
+        academic_year_id: input.academicYearId,
+        status: 'Enrolled',
+      }
+    });
+
+    // Audit log
+    await createAuditLog({
+      actorUserId: actorId,
+      action: 'ENROLLMENT_CREATED',
+      resourceType: 'student_enrollment',
+      resourceId: enrollmentId,
+      newState: input,
+      correlationId,
+    }, tx);
+
+    return enrollment;
+  });
 }

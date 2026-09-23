@@ -1,23 +1,28 @@
 import React, { useState } from "react";
 import { Search, Printer, FileText, User, Award, BookOpen } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
-import { STUDENTS_GR8, STUDENTS_GR9, STUDENTS_GR10 } from "../../App";
+import { usersApi, UserProfile } from "../../../api/users.api";
 
 export function StudentDataSearch() {
   const [query, setQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-  const ALL_STUDENTS = [
-    ...STUDENTS_GR8.map(s => ({ ...s, gradeLevel: 8, section: "Rizal" })),
-    ...STUDENTS_GR9.map(s => ({ ...s, gradeLevel: 9, section: "Einstein" })),
-    ...STUDENTS_GR10.map(s => ({ ...s, gradeLevel: 10, section: "Pilot" })),
-  ];
+  const [students, setStudents] = React.useState<UserProfile[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    usersApi.getUsers({ role: 'Student' })
+      .then(res => {
+        if (res) setStudents(res);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const results = query.trim().length > 0 
-    ? ALL_STUDENTS.filter(s => 
-        s.surname.toLowerCase().includes(query.toLowerCase()) || 
-        s.first.toLowerCase().includes(query.toLowerCase()) ||
-        s.lrn.includes(query)
+    ? students.filter(s => 
+        s.last_name.toLowerCase().includes(query.toLowerCase()) || 
+        s.first_name.toLowerCase().includes(query.toLowerCase()) ||
+        (s.student_profile?.lrn && s.student_profile.lrn.includes(query))
       )
     : [];
 
@@ -62,8 +67,8 @@ export function StudentDataSearch() {
                   onMouseLeave={e => e.currentTarget.style.background = "#fff"}
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{s.surname}, {s.first}</div>
-                    <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>LRN: {s.lrn} &bull; Grade {s.gradeLevel} - {s.section}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{s.last_name}, {s.first_name}</div>
+                    <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>LRN: {s.student_profile?.lrn} &bull; Grade {s.student_profile?.grade_level}</div>
                   </div>
                 </button>
               ))}
@@ -99,11 +104,11 @@ export function StudentDataSearch() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Learner Permanent Record</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>{selectedStudent.surname}, {selectedStudent.first}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>{selectedStudent.last_name}, {selectedStudent.first_name}</div>
                 <div style={{ display: "flex", gap: 24, marginTop: 12 }}>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>LRN:</strong> {selectedStudent.lrn}</div>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Gender:</strong> {selectedStudent.gender === 'M' ? 'Male' : 'Female'}</div>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Current Grade:</strong> {selectedStudent.gradeLevel} - {selectedStudent.section}</div>
+                  <div style={{ fontSize: 13, color: C.t2 }}><strong>LRN:</strong> {selectedStudent.student_profile?.lrn}</div>
+                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Gender:</strong> {selectedStudent.student_profile?.gender === 'M' ? 'Male' : selectedStudent.student_profile?.gender === 'F' ? 'Female' : 'Not Specified'}</div>
+                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Current Grade:</strong> {selectedStudent.student_profile?.grade_level}</div>
                 </div>
               </div>
             </div>
@@ -115,8 +120,8 @@ export function StudentDataSearch() {
                   <Award size={18} color={C.m700} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Academic Standing</span>
                 </div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: selectedStudent.avg >= 75 ? "#16a34a" : "#dc2626", fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>
-                  {selectedStudent.avg.toFixed(2)}
+                <div style={{ fontSize: 32, fontWeight: 800, color: "#16a34a", fontFamily: "'Plus Jakarta Sans',sans-serif", marginBottom: 4 }}>
+                  N/A
                 </div>
                 <div style={{ fontSize: 12, color: C.t3 }}>General Weighted Average</div>
               </div>
@@ -129,7 +134,7 @@ export function StudentDataSearch() {
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.t2, marginBottom: 4 }}>
                   {selectedStudent.status}
                 </div>
-                <div style={{ fontSize: 12, color: C.t3 }}>Attendance: {selectedStudent.att}</div>
+                <div style={{ fontSize: 12, color: C.t3 }}>Attendance: N/A</div>
               </div>
             </div>
             

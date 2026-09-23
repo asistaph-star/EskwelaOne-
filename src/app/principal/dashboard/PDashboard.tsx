@@ -3,6 +3,7 @@ import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { TRAFFIC } from '../../shared/utils/helpers';
+import { useAppContext } from '../../shared/AppContext';
 import { BarChart as RBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Users, CalendarCheck, BarChart2, Sparkles, Building2, AlertCircle, Activity, GraduationCap, BookMarked, Stethoscope } from 'lucide-react';
 import { P_TEACHERS, P_GATE_LOG, P_WELFARE } from '../../shared/constants/seedData';
@@ -15,8 +16,13 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
 }
 
 export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void; onShowGradeCard:(info:GradeCardInfo)=>void }) {
+  const { gateAttendance, clinicReferrals, teacherLeaves } = useAppContext();
   const [aiDone, setAiDone] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
+  
+  const pendingLeaves = teacherLeaves.filter(l => l.status === "Pending").length;
+  const activeClinic = clinicReferrals.filter(c => c.status === "Pending").length;
+  const scansToday = gateAttendance.length;
 
   const KPI_CARDS = [
     {
@@ -70,7 +76,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       dest: "p-monitoring"
     },
     {
-      v: "319 Inside",
+      v: `${scansToday} Inside`,
       l: "Students Currently Inside School",
       sub: "Live QR Feed verified",
       subColor: C.green,
@@ -90,9 +96,9 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       dest: "p-teachers"
     },
     {
-      v: "6 Active",
+      v: `${activeClinic} Active`,
       l: "Active Clinic Cases",
-      sub: "2 resting in clinic",
+      sub: "Needs attention",
       subColor: C.teal,
       color: C.teal,
       bg: C.tealBg,
@@ -112,7 +118,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: "transparent", padding: "20px 24px" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent", padding: "20px 24px" }}>
       
       {/* 1. TOP KPI CARDS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
@@ -254,7 +260,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => alert("Approved successfully!")} style={{ fontSize: 10, padding: "5px 10px", background: C.greenBg, border: `1px solid ${C.green}30`, color: C.green, cursor: "pointer", fontWeight: 700, borderRadius: 3 }}>Approve</button>
-                    <button onClick={() => onNav("p-reports")} style={{ fontSize: 10, padding: "5px 10px", background: "#f3f4f6", border: `1px solid #d1d5db`, color: C.t2, cursor: "pointer", fontWeight: 600, borderRadius: 3 }}>View</button>
+                    <button onClick={() => onNav("p-analytics" as any)} style={{ fontSize: 10, padding: "5px 10px", background: "#f3f4f6", border: `1px solid #d1d5db`, color: C.t2, cursor: "pointer", fontWeight: 600, borderRadius: 3 }}>View</button>
                   </div>
                 </div>
               ))}
@@ -343,10 +349,10 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
             <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 16 }}>
               {[
-                { label: "School Average", val: "82.1%", sub: "SY 2025–2026 Q1 average", col: C.t1 },
+                { label: "School Average", val: "82.1%", sub: "SY 2025–2026 T1 average", col: C.t1 },
                 { label: "Passing Rate", val: "83.9%", sub: "287 of 342 students passing", col: C.green },
                 { label: "Students At Risk", val: "4 Students", sub: "Averages currently below 75%", col: C.red },
-                { label: "Quarterly Performance Trend", val: "▲ +0.8%", sub: "Compared to Q1 last school year", col: C.green }
+                { label: "Term Performance Trend", val: "▲ +0.8%", sub: "Compared to T1 last school year", col: C.green }
               ].map((item, idx) => (
                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: idx < 3 ? `1px solid ${C.border}` : "none", paddingBottom: idx < 3 ? 12 : 0 }}>
                   <div>
@@ -366,7 +372,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
             <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
               {[
-                { date: "Jul 02", title: "Quarterly Examination", desc: "School-wide exam schedules" },
+                { date: "Jul 02", title: "Term Examination", desc: "School-wide exam schedules" },
                 { date: "Jul 04", title: "PTA Meeting", desc: "General conference room" },
                 { date: "Jul 07", title: "Faculty Meeting", desc: "Grade level team leads" },
                 { date: "Jul 10", title: "Recognition Day", desc: "Gymnasium setup details" },

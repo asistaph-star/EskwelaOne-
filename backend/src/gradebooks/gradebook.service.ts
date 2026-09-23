@@ -36,6 +36,24 @@ export async function upsertGrade(
     if (!academicYear) throw new AppError(404, 'NOT_FOUND', 'Academic year not found');
     const academic_year_id = academicYear.id;
 
+    // Enforce ownership: The teacher must be assigned to the student's section for this subject
+    const enrollment = await tx.enrollment.findFirst({
+      where: { student_id: input.studentId, academic_year_id, status: 'Enrolled' }
+    });
+    if (!enrollment) throw new AppError(404, 'NOT_FOUND', 'Student enrollment not found');
+
+    const assignment = await tx.teacherSubjectAssignment.findFirst({
+      where: {
+        section_id: enrollment.section_id,
+        subject_id: input.subjectId,
+        teacher: { user_id: actorId }
+      }
+    });
+
+    if (!assignment) {
+      throw new AppError(403, 'FORBIDDEN', 'You are not assigned to teach this subject for this student\'s section.');
+    }
+
     const existing = await tx.grade.findFirst({
       where: {
         student_id: input.studentId,
@@ -103,8 +121,18 @@ export async function getGradesForSectionAndSubject(
   schoolYear: string,
   requestingUserId: string,
 ) {
-  // Check authorization (e.g., is this the teacher of the section?)
-  // For brevity, we assume the route layer handles basic role checks.
+  // Enforce ownership check
+  const assignment = await prisma.teacherSubjectAssignment.findFirst({
+    where: {
+      section_id: sectionId,
+      subject_id: subjectId,
+      teacher: { user_id: requestingUserId }
+    }
+  });
+
+  if (!assignment) {
+    throw new AppError(403, 'FORBIDDEN', 'You are not assigned to teach this subject for this section.');
+  }
 
   const academicYear = await prisma.academicYear.findUnique({
     where: { name: schoolYear }

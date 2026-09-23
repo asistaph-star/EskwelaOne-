@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import crypto from 'crypto';
 import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { AppError } from '../common/middleware/errorHandler.js';
@@ -9,7 +10,7 @@ import { createAuditLog } from '../audit/audit.service.js';
 
 export const createUserSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.').optional(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   middleName: z.string().optional(),
@@ -66,7 +67,9 @@ export async function createUser(
   }
 
   const userId = generateId();
-  const passwordHash = await hashPassword(input.password);
+  const generatedPassword = input.password ? null : crypto.randomBytes(4).toString('hex'); // 8 chars
+  const finalPassword = input.password || generatedPassword!;
+  const passwordHash = await hashPassword(finalPassword);
 
   const user = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
@@ -82,6 +85,7 @@ export async function createUser(
             role_id: r.id,
           })),
         },
+        must_change_password: !!generatedPassword, // Force change if auto-generated
       },
     });
 
@@ -142,7 +146,7 @@ export async function createUser(
     return created;
   });
 
-  return user;
+  return { user, temporaryPassword: generatedPassword };
 }
 
 export async function getUsers(filters?: { role?: string; status?: string }) {
@@ -167,9 +171,12 @@ export async function getUsers(filters?: { role?: string; status?: string }) {
       },
       student: {
         include: {
-          allergies: true,
-          medical_conditions: true,
-        },
+          enrollments: {
+            include: { section: true },
+            orderBy: { created_at: 'desc' },
+            take: 1
+          }
+        }
       },
       teacher: true,
       staff: true,
@@ -183,8 +190,8 @@ export async function getUsers(filters?: { role?: string; status?: string }) {
         ...u,
         student: {
           ...u.student,
-          allergies: u.student.allergies.map((a) => a.allergy),
-          medical_conditions: u.student.medical_conditions.map((m) => m.condition),
+          allergies: u.student.allergies,
+          medical_conditions: u.student.medical_conditions,
         },
       };
     }
@@ -207,12 +214,7 @@ export async function getUserById(id: string) {
       user_roles: {
         include: { role: true },
       },
-      student: {
-        include: {
-          allergies: true,
-          medical_conditions: true,
-        },
-      },
+      student: true,
       teacher: true,
       staff: true,
     },
@@ -227,8 +229,8 @@ export async function getUserById(id: string) {
       ...user,
       student: {
         ...user.student,
-        allergies: user.student.allergies.map((a) => a.allergy),
-        medical_conditions: user.student.medical_conditions.map((m) => m.condition),
+        allergies: user.student.allergies,
+        medical_conditions: user.student.medical_conditions,
       },
     };
   }

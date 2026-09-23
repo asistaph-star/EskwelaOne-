@@ -6,8 +6,11 @@ import {
   GraduationCap, Building2, Users, ShieldCheck, Clock, ChevronDown
 } from 'lucide-react';
 
-export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
-  const [role, setRole] = useState<Role>("Teacher");
+import { authApi } from '../../../api/auth.api';
+import { useAppContext } from '../../shared/AppContext';
+
+export function LoginScreen() {
+  const { setCurrentUser } = useAppContext();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
@@ -15,12 +18,42 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
   const [focused, setFocused] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
-  function handleSignIn(e: React.FormEvent) {
-    e.preventDefault();
+  const [error, setError] = useState("");
+
+  async function handleDirectLogin(loginEmail: string, loginPass: string) {
     setLoading(true);
-    setTimeout(() => { setLoading(false); onLogin(role); }, 900);
+    setError("");
+    try {
+      const { user } = await authApi.login({ email: loginEmail, password: loginPass });
+      setCurrentUser({
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        role: user.roles?.[0] || 'Teacher',
+        permissions: user.permissions || [],
+        rawRoles: user.roles || [],
+        studentProfile: user.studentProfile
+      });
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials.");
+    } finally {
+      setLoading(false);
+    }
   }
 
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !pass) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    await handleDirectLogin(email, pass);
+  }
+
+  const handleDemoLogin = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPass("password123");
+    handleDirectLogin(demoEmail, "password123");
+  };
 
   return (
     <div style={{ minHeight: "100vh", width: "100vw", display: "flex", fontFamily: "'Inter',sans-serif", position: "relative", overflow: "hidden" }}>
@@ -95,29 +128,13 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
             <div style={{ flex: 1, height: 0.5, background: C.borderMed }} />
           </div>
 
-          {/* Role selector */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Portal Role</label>
-            <div style={{ position: "relative" }}>
-              <select 
-                value={role} 
-                onChange={e => setRole(e.target.value as Role)} 
-                style={{ width: "100%", padding: "10px 12px", fontSize: 12.5, border: `1px solid ${C.borderMed}`, borderRadius: 6, background: C.m50, outline: "none", cursor: "pointer", color: C.t1, appearance: "none", fontFamily: "'Inter',sans-serif" }}
-              >
-                <option value="Student">Student Portal</option>
-                <option value="Teacher">Teacher Portal</option>
-                <option value="Guidance">Guidance Counselor</option>
-                <option value="Registrar">Registrar Office</option>
-                <option value="Nurse">School Nurse</option>
-                <option value="ITAdmin">Admin (IT)</option>
-                <option value="Admin">Principal</option>
-              </select>
-              <ChevronDown size={14} color={C.t3} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-            </div>
-          </div>
-
           {/* Form */}
           <form onSubmit={handleSignIn}>
+            {error && (
+              <div style={{ marginBottom: 16, padding: "10px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#b91c1c", fontSize: 12, fontWeight: 500 }}>
+                {error}
+              </div>
+            )}
             {/* Email */}
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5 }}>Email Address</label>
@@ -172,13 +189,13 @@ export function LoginScreen({ onLogin }: { onLogin: (r: Role) => void }) {
           </div>
 
           {/* Security Key */}
-          <button onClick={() => onLogin(role)}
-            style={{ width: "100%", padding: "9px", background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: C.t1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = C.m700; e.currentTarget.style.background = C.m50; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderMed; e.currentTarget.style.background = "#fff"; }}
+          <button type="button"
+            style={{ width: "100%", padding: "9px", background: "#fff", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, cursor: "not-allowed", fontSize: 12.5, fontWeight: 600, color: C.t3, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s" }}
           >
-            <Shield size={13} style={{ color: C.m700 }} /> Use Security Key
+            <Shield size={13} style={{ color: C.t3 }} /> Use Security Key (Unavailable)
           </button>
+
+
 
           {/* Authorized banner */}
           <div style={{ marginTop: 18, background: "#f9fafb", border: "1px solid #f3f4f6", padding: 12, borderRadius: 6, display: "flex", gap: 10, alignItems: "flex-start", textAlign: "left" }}>

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { EXTENDED_P_INVENTORY } from '../../shared/constants/seedData';
 import { InventoryItem, InventoryUpdate } from '../../shared/types';
 import { X, Plus, Edit2, Trash2, Eye, Package, Calendar, MapPin, Tag, FileText, Info, History } from 'lucide-react';
 
@@ -51,7 +50,7 @@ function InventoryForm({
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "20px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Item Name</label>
@@ -157,7 +156,7 @@ function InventoryDetailsDrawer({ item, onClose }: { item: InventoryItem, onClos
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <div style={{ padding: 20, borderBottom: `1px solid ${C.borderMed}`, background: C.paper }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
               <Stamp label={item.status} color={getStatusColor(item.status)} bg={getStatusBg(item.status)} />
@@ -223,11 +222,29 @@ function InventoryDetailsDrawer({ item, onClose }: { item: InventoryItem, onClos
 }
 
 export function PInventory() {
-  const [inventory, setInventory] = useState<InventoryItem[]>(EXTENDED_P_INVENTORY);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [viewingItem, setViewingItem] = useState<InventoryItem | null>(null);
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      setIsLoading(true);
+      const { apiClient } = await import('../../../api/client');
+      const res = await apiClient.get<InventoryItem[]>('/admin/inventory');
+      setInventory(res || []);
+    } catch (err) {
+      console.error('Failed to fetch inventory', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const shown = filter === "All" ? inventory : inventory.filter(i => i.status === filter);
 
@@ -237,48 +254,33 @@ export function PInventory() {
   const borrowedCount = inventory.filter(i => i.status === "Borrowed").length;
   const lostCount = inventory.filter(i => i.status === "Lost" || i.status === "Damaged").length;
 
-  const handleSave = (itemData: Omit<InventoryItem, 'id' | 'updates'>) => {
-    const dateStr = new Date().toISOString().split('T')[0];
-    
-    if (editingItem) {
-      const updatedItem: InventoryItem = {
-        ...editingItem,
-        ...itemData,
-        updates: [
-          ...editingItem.updates,
-          {
-            id: `u-${Date.now()}`,
-            date: dateStr,
-            user: "Admin",
-            action: "Updated",
-            details: `Updated details (Status: ${itemData.status}, Qty: ${itemData.quantity}).`
-          }
-        ]
-      };
-      setInventory(inventory.map(i => i.id === editingItem.id ? updatedItem : i));
+  const handleSave = async (itemData: Omit<InventoryItem, 'id' | 'updates'>) => {
+    try {
+      const { apiClient } = await import('../../../api/client');
+      if (editingItem) {
+        await apiClient.patch(`/admin/inventory/${editingItem.id}`, itemData);
+      } else {
+        await apiClient.post('/admin/inventory', itemData);
+      }
+      await fetchInventory();
+      setIsAddFormOpen(false);
       setEditingItem(null);
-    } else {
-      const newItem: InventoryItem = {
-        ...itemData,
-        id: `INV-${1000 + inventory.length + 1}`,
-        updates: [
-          {
-            id: `u-${Date.now()}`,
-            date: dateStr,
-            user: "Admin",
-            action: "Added",
-            details: `Initial entry of ${itemData.quantity} ${itemData.unit}.`
-          }
-        ]
-      };
-      setInventory([...inventory, newItem]);
+    } catch (err) {
+      console.error('Failed to save inventory item', err);
+      alert('Failed to save inventory item. Please check the inputs.');
     }
-    setIsAddFormOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this item? This action cannot be undone.")) {
-      setInventory(inventory.filter(i => i.id !== id));
+  const handleDelete = async (id: string) => {
+    if (confirm("Are you sure you want to mark this item as Lost? This preserves its history.")) {
+      try {
+        const { apiClient } = await import('../../../api/client');
+        await apiClient.patch(`/admin/inventory/${id}`, { status: 'Lost' });
+        await fetchInventory();
+      } catch (err) {
+        console.error('Failed to mark item as lost', err);
+        alert('Failed to update inventory item.');
+      }
     }
   };
 
@@ -286,7 +288,7 @@ export function PInventory() {
   const getStatusBg = (s:string) => s==="Good"?C.greenBg:s==="Repair"?C.amberBg:s==="Borrowed"?C.blueBg:C.redBg;
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: "transparent", padding: 24 }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent", padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>Inventory Management</h2>

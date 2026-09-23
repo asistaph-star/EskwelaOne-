@@ -1,0 +1,2512 @@
+﻿--- 2. ALL LIVE FOREIGN KEYS ---
+[
+  {
+    "table_name": "announcements",
+    "fk_column": "author_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "appointments",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "appointments",
+    "fk_column": "teacher_id",
+    "references_table": "teachers",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "audit_logs",
+    "fk_column": "actor_user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "behavior_logs",
+    "fk_column": "reported_by",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "behavior_logs",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "class_attendance",
+    "fk_column": "assignment_id",
+    "references_table": "teacher_subject_assignments",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "class_attendance",
+    "fk_column": "enrollment_id",
+    "references_table": "enrollments",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referral_diagnoses",
+    "fk_column": "clinic_referral_id",
+    "references_table": "clinic_referrals",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referral_medications",
+    "fk_column": "clinic_referral_id",
+    "references_table": "clinic_referrals",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referral_symptoms",
+    "fk_column": "clinic_referral_id",
+    "references_table": "clinic_referrals",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referral_treatments",
+    "fk_column": "clinic_referral_id",
+    "references_table": "clinic_referrals",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "fk_column": "recorded_by",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "document_requests",
+    "fk_column": "attached_document_id",
+    "references_table": "documents",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "document_requests",
+    "fk_column": "principal_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "document_requests",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "document_requests",
+    "fk_column": "teacher_id",
+    "references_table": "teachers",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "documents",
+    "fk_column": "uploaded_by",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "enrollments",
+    "fk_column": "academic_year_id",
+    "references_table": "academic_years",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "enrollments",
+    "fk_column": "section_id",
+    "references_table": "sections",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "enrollments",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "events",
+    "fk_column": "created_by_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "excuse_letters",
+    "fk_column": "document_id",
+    "references_table": "documents",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "excuse_letters",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "excuse_letters",
+    "fk_column": "teacher_id",
+    "references_table": "teachers",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "gate_attendance",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grade_entries",
+    "fk_column": "column_id",
+    "references_table": "gradebook_columns",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grade_entries",
+    "fk_column": "created_by",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grade_entries",
+    "fk_column": "enrollment_id",
+    "references_table": "enrollments",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grade_entries",
+    "fk_column": "superseded_by_id",
+    "references_table": "grade_entries",
+    "references_column": "id",
+    "delete_rule": "SET NULL"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "fk_column": "gradebook_id",
+    "references_table": "gradebooks",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "gradebooks",
+    "fk_column": "assignment_id",
+    "references_table": "teacher_subject_assignments",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "gradebooks",
+    "fk_column": "term_id",
+    "references_table": "terms",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grades",
+    "fk_column": "academic_year_id",
+    "references_table": "academic_years",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grades",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "grades",
+    "fk_column": "subject_id",
+    "references_table": "subjects",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "guidance_records",
+    "fk_column": "counselor_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "guidance_records",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "inventory_updates",
+    "fk_column": "item_id",
+    "references_table": "inventory_items",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "inventory_updates",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "leave_requests",
+    "fk_column": "approver_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "leave_requests",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "messages",
+    "fk_column": "receiver_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "messages",
+    "fk_column": "sender_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "fk_column": "resolved_by",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "notifications",
+    "fk_column": "recipient_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "role_permissions",
+    "fk_column": "permission_id",
+    "references_table": "permissions",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "role_permissions",
+    "fk_column": "role_id",
+    "references_table": "roles",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "sections",
+    "fk_column": "academic_year_id",
+    "references_table": "academic_years",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "staff",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "student_allergies",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "student_medical_conditions",
+    "fk_column": "student_id",
+    "references_table": "students",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "students",
+    "fk_column": "current_section_id",
+    "references_table": "sections",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "students",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "fk_column": "academic_year_id",
+    "references_table": "academic_years",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "fk_column": "section_id",
+    "references_table": "sections",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "fk_column": "subject_id",
+    "references_table": "subjects",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "fk_column": "teacher_id",
+    "references_table": "teachers",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "teachers",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "terms",
+    "fk_column": "academic_year_id",
+    "references_table": "academic_years",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "user_roles",
+    "fk_column": "role_id",
+    "references_table": "roles",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  },
+  {
+    "table_name": "user_roles",
+    "fk_column": "user_id",
+    "references_table": "users",
+    "references_column": "id",
+    "delete_rule": "RESTRICT"
+  }
+]
+
+--- 3. ALL TABLES AND COLUMNS ---
+[
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "checksum",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "finished_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "migration_name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "logs",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "rolled_back_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "started_at",
+    "data_type": "timestamp with time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "_prisma_migrations",
+    "column_name": "applied_steps_count",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "start_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "end_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "is_current",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "academic_years",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "title",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "body",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "audience",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "announcements",
+    "column_name": "author_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "parent_email",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "teacher_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "purpose",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "direction",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "appointments",
+    "column_name": "time",
+    "data_type": "time without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "actor_user_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "action",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "resource_type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "resource_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "previous_state",
+    "data_type": "jsonb",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "new_state",
+    "data_type": "jsonb",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "reason",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "correlation_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "audit_logs",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "note",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "reported_by",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "behavior_logs",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "date",
+    "data_type": "date",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "remarks",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "assignment_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "class_attendance",
+    "column_name": "enrollment_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_diagnoses",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_diagnoses",
+    "column_name": "clinic_referral_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_diagnoses",
+    "column_name": "diagnosis",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_medications",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_medications",
+    "column_name": "clinic_referral_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_medications",
+    "column_name": "medication",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_symptoms",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_symptoms",
+    "column_name": "clinic_referral_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_symptoms",
+    "column_name": "symptom",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_treatments",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_treatments",
+    "column_name": "clinic_referral_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referral_treatments",
+    "column_name": "treatment",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "blood_pressure",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "heart_rate",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "notes",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "recorded_by",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "time",
+    "data_type": "time without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "clinic_referrals",
+    "column_name": "temperature",
+    "data_type": "double precision",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "document_type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "purpose",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "current_stage",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "submitted_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "teacher_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "teacher_approved_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "teacher_remarks",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "principal_approved_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "principal_remarks",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "ready_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "attached_document_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "document_requests",
+    "column_name": "principal_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "storage_key",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "filename",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "mime_type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "size_bytes",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "uploaded_by",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "documents",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "date_applied",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "birth_cert",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "form138",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "good_moral",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "medical",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "grade_level",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "first_name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollment_applications",
+    "column_name": "last_name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "academic_year_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "section_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "enrollments",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "title",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "events",
+    "column_name": "date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "end_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "events",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "audience",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "events",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "events",
+    "column_name": "created_by_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "teacher_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "reason",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "document_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "teacher_note",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "submitted_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "reviewed_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "end_date",
+    "data_type": "date",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "excuse_letters",
+    "column_name": "start_date",
+    "data_type": "date",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "date",
+    "data_type": "date",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "time_in",
+    "data_type": "time without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "gate_attendance",
+    "column_name": "time_out",
+    "data_type": "time without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "column_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "score",
+    "data_type": "double precision",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "created_by",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "is_superseded",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "superseded_by_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "correction_reason",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grade_entries",
+    "column_name": "enrollment_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "gradebook_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "label",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "max_score",
+    "data_type": "double precision",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "sort_order",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebook_columns",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "term_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "version",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "gradebooks",
+    "column_name": "assignment_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "subject_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "term",
+    "data_type": "USER-DEFINED",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "written_work",
+    "data_type": "double precision",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "performance_task",
+    "data_type": "double precision",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "term_assessment",
+    "data_type": "double precision",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "term_grade",
+    "data_type": "double precision",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "grades",
+    "column_name": "academic_year_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "counselor_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "reason",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "notes",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "action_taken",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "follow_up_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "guidance_records",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "category",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "description",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "quantity",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "unit",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "supplier",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "purchase_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "condition",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "location",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_items",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "item_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "action",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "details",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "inventory_updates",
+    "column_name": "user_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "user_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "start_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "end_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "days",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "reason",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "submitted_on",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "approver_note",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "leave_requests",
+    "column_name": "approver_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "sender_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "receiver_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "content",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "is_read",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "legacy_entity_type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "legacy_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "original_payload",
+    "data_type": "jsonb",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "reason",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "detected_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "resolution_status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "resolved_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "resolved_by",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "migration_quarantine",
+    "column_name": "resolution_notes",
+    "data_type": "text",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "recipient_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "title",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "body",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "icon_type",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "is_read",
+    "data_type": "boolean",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "permissions",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "permissions",
+    "column_name": "key",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "role_permissions",
+    "column_name": "role_id",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "role_permissions",
+    "column_name": "permission_id",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "roles",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "roles",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "academic_year_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "grade_level",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "sections",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "user_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "employee_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "department",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "position",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "staff",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_allergies",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_allergies",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_allergies",
+    "column_name": "allergy",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_medical_conditions",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_medical_conditions",
+    "column_name": "student_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "student_medical_conditions",
+    "column_name": "condition",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "user_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "lrn",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "grade_level",
+    "data_type": "integer",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "date_of_birth",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "gender",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "guardian_phone",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "guardian_email",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "blood_type",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "students",
+    "column_name": "current_section_id",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "city",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "guardian_first_name",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "guardian_last_name",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "state_province",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "street",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "students",
+    "column_name": "zip_code",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "subjects",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "subjects",
+    "column_name": "code",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "subjects",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "subjects",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "subjects",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "academic_year_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "teacher_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "section_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "subject_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teacher_subject_assignments",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "user_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "employee_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "department",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "position",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "specialization",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "date_hired",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "teachers",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "academic_year_id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "start_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "end_date",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "terms",
+    "column_name": "key",
+    "data_type": "USER-DEFINED",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "user_roles",
+    "column_name": "user_id",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "user_roles",
+    "column_name": "role_id",
+    "data_type": "text",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "user_roles",
+    "column_name": "assigned_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "id",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "email",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "password_hash",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "first_name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "last_name",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "middle_name",
+    "data_type": "character varying",
+    "is_nullable": "YES"
+  },
+  {
+    "table_name": "users",
+    "column_name": "status",
+    "data_type": "character varying",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "created_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  },
+  {
+    "table_name": "users",
+    "column_name": "updated_at",
+    "data_type": "timestamp without time zone",
+    "is_nullable": "NO"
+  }
+]

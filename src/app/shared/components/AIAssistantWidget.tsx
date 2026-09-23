@@ -1,9 +1,34 @@
-import React, { useState } from "react";
-import { Sparkles, X, Send } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Sparkles, X, Send, GripHorizontal } from "lucide-react";
 import { C } from "../constants/tokens";
 
 export function AIAssistantWidget({ role }: { role: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 24, y: 24 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, startPos: { x: 24, y: 24 } });
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDragging.current = true;
+    dragStart.current = { x: e.clientX, y: e.clientY, startPos: { ...position } };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    e.preventDefault(); // prevent text selection
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    setPosition({
+      x: dragStart.current.startPos.x - dx,
+      y: dragStart.current.startPos.y - dy,
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDragging.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
   // Customize initial message based on role
   let initialMessage = "How can I help you today?";
@@ -21,7 +46,7 @@ export function AIAssistantWidget({ role }: { role: string }) {
   }
 
   return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 900, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+    <div style={{ position: "fixed", bottom: position.y, right: position.x, zIndex: 390, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
       {isOpen && (
         <div style={{ width: 320, background: "#fff", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", border: `1px solid ${C.m700}`, overflow: "hidden", animation: "popIn 0.2s ease-out" }}>
           <div style={{ background: "#fff", borderBottom: `1px solid ${C.borderMed}`, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -57,15 +82,32 @@ export function AIAssistantWidget({ role }: { role: string }) {
           </div>
         </div>
       )}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        style={{ padding: "0 20px", height: 48, borderRadius: 24, background: C.m700, border: "none", color: "#fff", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 6px 16px rgba(139,30,30,0.3)", cursor: "pointer", transition: "transform 0.15s" }}
-        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
-        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+      <div 
+        style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
       >
-        <Sparkles size={18} color="#fff" />
-        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.02em" }}>AI Assistant</span>
-      </button>
+        <div style={{ cursor: "grab", padding: "4px 8px", background: "rgba(0,0,0,0.05)", borderRadius: "12px 12px 0 0", marginBottom: -4, display: "flex", justifyContent: "center" }}>
+          <GripHorizontal size={14} color={C.t3} />
+        </div>
+        <button 
+          onClick={(e) => {
+            // Only toggle if we didn't drag significantly
+            const dx = Math.abs(e.clientX - dragStart.current.x);
+            const dy = Math.abs(e.clientY - dragStart.current.y);
+            if (dx < 5 && dy < 5) {
+              setIsOpen(!isOpen);
+            }
+          }}
+          style={{ padding: "0 20px", height: 48, borderRadius: 24, background: C.m700, border: "none", color: "#fff", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 6px 16px rgba(139,30,30,0.3)", cursor: "pointer", transition: "transform 0.15s" }}
+          onMouseEnter={e => e.currentTarget.style.transform = "scale(1.03)"}
+          onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+        >
+          <Sparkles size={18} color="#fff" />
+          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.02em" }}>AI Assistant</span>
+        </button>
+      </div>
     </div>
   );
 }

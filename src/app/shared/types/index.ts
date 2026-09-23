@@ -17,7 +17,7 @@ export type GScreen =
   | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";
 
 export type RScreen =
-  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-deficiency" | "r-settings" | "r-help";
+  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-deficiency" | "r-search" | "r-settings" | "r-help";
 
 export interface RCStudent {
   surname: string;
@@ -40,8 +40,8 @@ export interface GradeCardInfo {
 
 export type GbItem = { id: string; label: string; max: number };
 export type GbGrades = Record<string | number, Record<string, string>>;
-export type QKey = string;
-export interface QData {
+export type TermKey = "T1" | "T2" | "T3" | "T4";
+export interface TermData {
   wwItems: GbItem[];
   ptItems: GbItem[];
   qaMax: number;

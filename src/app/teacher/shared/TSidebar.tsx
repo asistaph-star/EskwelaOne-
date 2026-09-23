@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { TScreen, Role } from '../../shared/types';
+import { useAppContext } from '../../shared/AppContext';
 import { C } from '../../shared/constants/tokens';
 import {
-  LayoutDashboard, Calendar, Users, FileText, Stethoscope, BookMarked,
-  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert, CalendarCheck, Scan
+  LayoutDashboard, Calendar, Users, FileText, Megaphone, Stethoscope, BookMarked,
+  Wrench, Sparkles, GraduationCap, HelpCircle, LogOut, Archive, ChevronDown, Settings, MessageSquare, User, ShieldAlert, CalendarCheck, Scan, Award
 } from 'lucide-react';
 
 const T_NAV_GROUPS = [
@@ -26,6 +27,7 @@ const T_NAV_GROUPS = [
     { id:"templates",          label:"Forms and Records", icon:BookMarked },
   ]},
   { category: "Tools & Growth", items: [
+    { id:"t-ranking",          label:"Career Progression", icon:Award },
     { id:"pro-dev",            label:"Professional Development", icon:GraduationCap },
     { id:"ai-tools",           label:"AI Insights & Reports",    icon:Sparkles },
     { id:"leave-requests",     label:"My Leave Requests",        icon:Calendar },
@@ -39,8 +41,10 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
   collapsed?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
-  const user = { name: "Ana R. Soriano", sub: "Adviser, Grade 10 - Pilot" };
-  const initials = "AS";
+  const { currentUser } = useAppContext();
+  const showName = currentUser?.name || "Teacher User";
+  const showSub = currentUser?.section ? `Adviser, ${currentUser.section}` : currentUser?.role || "Teacher";
+  const initials = showName.split(" ").map(n => n[0]).join("").substring(0, 2) || "T";
 
   return (
     <div style={{ width: collapsed ? 70 : 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden" }}>
@@ -101,8 +105,8 @@ export function TSidebar({ active, onNav, onLogout, collapsed=false }: {
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.name}</div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.sub}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{showName}</div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{showSub}</div>
             </div>
             <ChevronDown size={14} style={{ color: "rgba(255,255,255,0.4)", transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
           </div>

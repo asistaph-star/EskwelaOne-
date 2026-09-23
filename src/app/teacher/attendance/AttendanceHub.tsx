@@ -1,37 +1,153 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { AStatus, AttSub } from '../../shared/types';
 import { sColor, sBg } from '../../shared/utils/helpers';
-import { CalendarCheck, QrCode, FileDown, Plus, Search, Download, Printer, CheckCircle, FileSpreadsheet, Clock, UserCheck, Calendar, Activity, FileText } from 'lucide-react';
+import { CalendarCheck, QrCode, FileDown, Plus, Search, Download, Printer, CheckCircle, FileSpreadsheet, Clock, UserCheck, Calendar, Activity, FileText, Loader2, Paperclip } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { DocPanel } from '../../shared/components/DocPanel';
-import { ATT_DATES, ATT_STATUS_SEED, QR_LOG } from '../../shared/constants/seedData';
-import { STUDENTS_GR8 } from '../../App';
 import { useAppContext } from '../../shared/AppContext';
-export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
-  const { gateAttendance, excuseLetters } = useAppContext();
+import { useAttendance } from '../shared/useAttendance';
+import { useBlocker } from 'react-router';
+import { academicApi } from '../../../api/academic.api';
+import { studentApi } from '../../../api/student.api';
+import { EmptyState } from '../../shared/components/EmptyState';
+
+export function AttendanceHub({ classId }: { classId: string }) {
+  const { gateAttendance } = useAppContext();
+  const { records, roster, isLoading, isSaving, saveBulkAttendance } = useAttendance(classId);
+
   const [sub, setSub] = useState<AttSub>("daily");
 
-  /* per-student per-date status - starts from seed */
-  const [attData, setAttData] = useState<Record<number,Record<number,AStatus>>>(ATT_STATUS_SEED as any);
-  const [selectedDate, setSelectedDate] = useState(10); /* June 10 */
-  const [month, setMonth] = useState(0); /* 0 = June 2025 */
+  /* per-student per-date status: { enrollmentId: { dateNumber: status } } */
+  const [attData, setAttData] = useState<Record<string,Record<number,AStatus>>>({});
+  
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth(); 
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const ATT_DATES = Array.from({length: daysInMonth}, (_, i) => i + 1);
+  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthNameOnly = currentDate.toLocaleString('default', { month: 'long' });
+  const monthStr = (month + 1).toString().padStart(2, '0');
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return (today.getFullYear() === year && today.getMonth() === month) ? today.getDate() : 1;
+  });
   const [sf2Exported, setSf2Exported] = useState(false);
 
-  function setStatus(sid:number, date:number, s:AStatus) {
-    setAttData(p=>({...p,[sid]:{...(p[sid]||{}),[date]:s}}));
+  const [excuses, setExcuses] = useState<any[]>([]);
+  const [loadingExcuses, setLoadingExcuses] = useState(false);
+  const [excuseError, setExcuseError] = useState("");
+
+  useEffect(() => {
+    if (sub === "excuses") {
+      setLoadingExcuses(true);
+      academicApi.getMyExcuseLetters()
+        .then(data => setExcuses(data))
+        .catch(err => setExcuseError(err?.response?.data?.error || "Failed to load excuse letters"))
+        .finally(() => setLoadingExcuses(false));
+    }
+  }, [sub]);
+
+  const handleUpdateExcuse = async (id: string, newStatus: string) => {
+    try {
+      await academicApi.updateExcuseStatus(id, newStatus);
+      setExcuses(prev => prev.map(e => e.id === id ? { ...e, status: newStatus } : e));
+    } catch (err) {
+      alert("Failed to update status");
+    }
+  };
+
+  useEffect(() => {
+    const newData: Record<string,Record<number,AStatus>> = {};
+    records.forEach(r => {
+      // Assuming r.date is ISO format like 2025-06-10T00:00:00.000Z
+      const day = new Date(r.date).getUTCDate(); 
+      if (!newData[r.enrollment_id]) newData[r.enrollment_id] = {};
+      newData[r.enrollment_id][day] = r.status;
+    });
+    setAttData(newData);
+  }, [records]);
+
+  function setStatus(enrollmentId:string, date:number, s:AStatus) {
+    // Optimistic UI update
+    setAttData(p=>({...p,[enrollmentId]:{...(p[enrollmentId]||{}),[date]:s}}));
+    
+    // Auto-save silently in background
+    const dateStr = `${year}-${monthStr}-${date.toString().padStart(2,'0')}`;
+    saveBulkAttendance([{ studentEnrollmentId: enrollmentId, date: dateStr, status: s }], true)
+      .catch(e => console.error("Auto-save failed", e));
   }
-  function getStatus(sid:number, date:number): AStatus {
-    return (attData[sid]?.[date]) ?? "P";
+  function getStatus(enrollmentId:string, date:number): AStatus {
+    return (attData[enrollmentId]?.[date]) ?? "P";
   }
-  function countFor(sid:number, s:AStatus) {
-    return ATT_DATES.filter(d=>getStatus(sid,d)===s).length;
+  function countFor(enrollmentId:string, s:AStatus) {
+    return ATT_DATES.filter(d=>getStatus(enrollmentId,d)===s).length;
   }
   function classCount(s:AStatus) {
-    return students.filter(st=>getStatus(st.id,selectedDate)===s).length;
+    return roster.filter(st=>getStatus(st.id,selectedDate)===s).length;
   }
 
-  const MONTHS = ["June 2025","July 2025","August 2025"];
+  const handleSaveDaily = async () => {
+    const updates = roster.map(st => ({
+      studentEnrollmentId: st.id,
+      date: `${year}-${monthStr}-${selectedDate.toString().padStart(2,'0')}`,
+      status: getStatus(st.id, selectedDate)
+    }));
+    await saveBulkAttendance(updates);
+    alert('Attendance saved successfully!');
+  };
+
+  const handleSaveManual = async () => {
+    const updates: {studentEnrollmentId:string, date:string, status:AStatus}[] = [];
+    roster.forEach(st => {
+      ATT_DATES.forEach(d => {
+        updates.push({
+          studentEnrollmentId: st.id,
+          date: `${year}-${monthStr}-${d.toString().padStart(2,'0')}`,
+          status: getStatus(st.id, d)
+        });
+      });
+    });
+    await saveBulkAttendance(updates);
+    alert('Monthly attendance saved successfully!');
+  };
+
+  const nextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+
+  const handleExportSF2 = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Learner's Name,";
+    for (let i = 1; i <= 31; i++) csvContent += `${i},`;
+    csvContent += "Total Absent,Total Tardy\n";
+    
+    roster.forEach(st => {
+      let row = `"${st.student.last_name}, ${st.student.first_name}",`;
+      let aCount = 0;
+      let lCount = 0;
+      for (let i = 1; i <= daysInMonth; i++) {
+        // For mockup, if day is not in ATT_DATES, we might just put blank or standard P. 
+        // We'll put the recorded status or blank if not recorded.
+        const s = attData[st.id]?.[i] || "";
+        if (s === "A") aCount++;
+        if (s === "L") lCount++;
+        row += `${s},`;
+      }
+      row += `${aCount},${lCount}\n`;
+      csvContent += row;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `SF2_Export_${monthName.replace(" ", "")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setSf2Exported(true);
+  };
 
   const SUB_BTNS: {id:AttSub, label:string, icon:React.ElementType}[] = [
     { id:"daily",  label:"Daily Attendance",    icon:CalendarCheck },
@@ -42,9 +158,12 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
     { id:"excuses" as any, label:"Excuse Letters", icon:FileText },
   ];
 
+  if (isLoading) {
+    return <div style={{ padding: 40, display:"flex", justifyContent:"center" }}><Loader2 className="animate-spin text-gray-400" size={24}/></div>;
+  }
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
-
       {/* ── Sub-module nav bar ── */}
       <div style={{ display:"flex", gap:6, marginBottom:14, flexWrap:"wrap" }}>
         {SUB_BTNS.map(b=>{
@@ -65,12 +184,12 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
       {/* ══════════════════════════════════════════ 1. DAILY ATTENDANCE */}
       {sub==="daily" && (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 240px", gap:14 }}>
-          <DocPanel title={`Daily Attendance - June ${selectedDate}, 2025`} icon={CalendarCheck}
+          <DocPanel title={`Daily Attendance - ${monthNameOnly} ${selectedDate}, ${year}`} icon={CalendarCheck}
             action={
               <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                 <button onClick={()=>setSelectedDate(d=>Math.max(2,d-1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>‹</button>
-                <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontFamily:"'JetBrains Mono',monospace" }}>Jun {selectedDate}</span>
-                <button onClick={()=>setSelectedDate(d=>Math.min(31,d+1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>›</button>
+                <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontFamily:"'JetBrains Mono',monospace" }}>{monthNameOnly.substring(0,3)} {selectedDate}</span>
+                <button onClick={()=>setSelectedDate(d=>Math.min(daysInMonth,d+1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>›</button>
               </div>
             }>
             {/* Quick stats bar */}
@@ -92,13 +211,13 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                 </tr>
               </thead>
               <tbody>
-                {students.map((st,i)=>{
+                {roster.map((st,i)=>{
                   const cur = getStatus(st.id, selectedDate);
                   return (
                     <tr key={st.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}>
                       <td style={{ padding:"8px 12px", textAlign:"center", fontSize:10, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{i+1}</td>
-                      <td style={{ padding:"8px 12px", fontSize:12, fontWeight:600, color:C.t1 }}>{st.surname}, {st.first}</td>
-                      <td style={{ padding:"8px 12px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{st.lrn}</td>
+                      <td style={{ padding:"8px 12px", fontSize:12, fontWeight:600, color:C.t1 }}>{st.student.last_name}, {st.student.first_name}</td>
+                      <td style={{ padding:"8px 12px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{st.student.lrn}</td>
                       <td style={{ padding:"8px 12px", textAlign:"center" }}>
                         <Stamp label={cur} color={sColor(cur)} bg={sBg(cur)} />
                       </td>
@@ -120,24 +239,26 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                 })}
               </tbody>
             </table>
-            <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"flex-end", gap:8 }}>
-              <button style={{ fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"6px 16px", cursor:"pointer" }}>
-                Save attendance
-              </button>
+            <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontSize:10, color:C.t3 }}>Changes are saved automatically.</span>
+              <div style={{ fontSize:11, fontWeight:600, color:isSaving ? C.amber : C.green, display:"flex", alignItems:"center", gap:6 }}>
+                {isSaving && <Loader2 size={12} className="animate-spin" />}
+                {isSaving ? "Saving..." : "All changes saved"}
+              </div>
             </div>
           </DocPanel>
 
           {/* Right: monthly mini-calendar */}
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-            <DocPanel title="June 2025" icon={Calendar}>
+            <DocPanel title={monthName} icon={Calendar}>
               <div style={{ padding:12 }}>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:3, marginBottom:4 }}>
                   {["M","T","W","T","F"].map((d,i)=><div key={i} style={{ textAlign:"center", fontSize:9, fontWeight:700, color:C.t3 }}>{d}</div>)}
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:3 }}>
                   {ATT_DATES.map(d=>{
-                    const classP = students.filter(st=>getStatus(st.id,d)==="P").length;
-                    const pct = Math.round(classP/students.length*100);
+                    const classP = roster.filter(st=>getStatus(st.id,d)==="P").length;
+                    const pct = roster.length > 0 ? Math.round(classP/roster.length*100) : 0;
                     const dotCol = pct>=90?C.green:pct>=75?C.amber:C.red;
                     return (
                       <button key={d} onClick={()=>setSelectedDate(d)}
@@ -148,83 +269,10 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                     );
                   })}
                 </div>
-                <div style={{ display:"flex", gap:10, marginTop:10, justifyContent:"center" }}>
-                  {[[C.green,"≥90%"],[C.amber,"≥75%"],[C.red,"<75%"]].map(([c,l])=>(
-                    <div key={l} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <div style={{ width:7, height:7, borderRadius:10, background:c }} />
-                      <span style={{ fontSize:9, color:C.t3 }}>{l}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </DocPanel>
-            <DocPanel title="June Summary" icon={Activity}>
-              {[["Present","18",C.green],["Absent","4",C.red],["Late","5",C.amber],["Excused","0",C.teal]].map(([l,v,c])=>(
-                <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 14px", borderBottom:`0.5px solid ${C.border}` }}>
-                  <span style={{ fontSize:12, color:C.t2 }}>{l}</span>
-                  <span style={{ fontSize:14, fontWeight:700, color:c, fontFamily:"'JetBrains Mono',monospace" }}>{v}</span>
-                </div>
-              ))}
-              <div style={{ padding:"10px 14px" }}>
-                <div style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:4 }}>Class rate</div>
-                <div style={{ fontSize:22, fontWeight:700, color:C.green, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>91.0%</div>
-                <Stamp label="Good Standing" color={C.green} bg={C.greenBg} />
               </div>
             </DocPanel>
           </div>
         </div>
-      )}
-
-      {/* ══════════════════════════════════════════ 2. QR ATTENDANCE RECORDS */}
-      {sub==="qr" && (
-        <DocPanel title="QR Attendance Records - June 10, 2025" icon={QrCode}
-          action={<span style={{ fontSize:10, color:"rgba(255,255,255,0.6)" }}>{gateAttendance.length} scans today</span>}>
-          <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
-              <Search size={12} color={C.t3} />
-              <input placeholder="Search by name or LRN…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
-            </div>
-            <div style={{ display:"flex", gap:4 }}>
-              {(["All","Tap in","Tap out"] as const).map(f=>(
-                <button key={f} style={{ padding:"4px 10px", borderRadius:4, fontSize:11, fontWeight:500, cursor:"pointer", border:`1px solid ${C.borderMed}`, background:"#fff", color:C.t2 }}>
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                {["Time","Student Name","LRN","Scan Type","Status"].map(h=>(
-                  <th key={h} style={{ textAlign:"left", padding:"8px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {QR_LOG.map((r,i)=>(
-                <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
-                  <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.t2, whiteSpace:"nowrap" }}>{r.time}</td>
-                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{r.name}</td>
-                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{r.lrn}</td>
-                  <td style={{ padding:"9px 14px" }}>
-                    <Stamp label={r.type} color={r.type==="Tap in"?C.blue:C.t2} bg={r.type==="Tap in"?C.blueBg:C.ledger} />
-                  </td>
-                  <td style={{ padding:"9px 14px" }}>
-                    <Stamp label={r.status} color={sColor(r.status)} bg={sBg(r.status)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:11, color:C.t3 }}>{gateAttendance.length} scan entries today</span>
-            <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"5px 12px", cursor:"pointer" }}>
-              <Download size={12}/> Export log
-            </button>
-          </div>
-        </DocPanel>
       )}
 
       {/* ══════════════════════════════════════════ 3. MANUAL ATTENDANCE */}
@@ -232,9 +280,9 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
         <DocPanel title="Manual Attendance - Monthly Grid" icon={UserCheck}
           action={
             <div style={{ display:"flex", gap:5, alignItems:"center" }}>
-              <button onClick={()=>setMonth(m=>Math.max(0,m-1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>‹</button>
-              <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11 }}>{MONTHS[month]}</span>
-              <button onClick={()=>setMonth(m=>Math.min(MONTHS.length-1,m+1))} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>›</button>
+              <button onClick={prevMonth} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>‹</button>
+              <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11 }}>{monthName}</span>
+              <button onClick={nextMonth} style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:3, padding:"3px 7px", cursor:"pointer", color:"#fff", fontSize:11 }}>›</button>
             </div>
           }>
           <div style={{ overflowX:"auto" }}>
@@ -256,13 +304,13 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                 </tr>
               </thead>
               <tbody>
-                {students.map((st,i)=>{
+                {roster.map((st,i)=>{
                   const p=countFor(st.id,"P"), a=countFor(st.id,"A"), l=countFor(st.id,"L");
                   const rate=Math.round((p/(ATT_DATES.length))*100);
                   return (
                     <tr key={st.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}>
                       <td style={{ padding:"6px 10px", fontSize:11, fontWeight:600, color:C.t1, position:"sticky", left:0, background:i%2===0?"#fff":C.paper, whiteSpace:"nowrap", borderRight:`1px solid ${C.borderMed}` }}>
-                        {st.surname}, {st.first.split(" ")[0]}
+                        {st.student.last_name}, {st.student.first_name.split(" ")[0]}
                       </td>
                       {ATT_DATES.map(d=>{
                         const s=getStatus(st.id,d);
@@ -286,21 +334,24 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
             </table>
           </div>
           <div style={{ padding:"10px 14px", borderTop:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <span style={{ fontSize:10, color:C.t3 }}>Click any cell to cycle: P → A → L → E → P</span>
-            <button style={{ fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"6px 16px", cursor:"pointer" }}>Save changes</button>
+            <span style={{ fontSize:10, color:C.t3 }}>Click any cell to cycle: P → A → L → E → P (Saved automatically)</span>
+            <div style={{ fontSize:11, fontWeight:600, color:isSaving ? C.amber : C.green, display:"flex", alignItems:"center", gap:6 }}>
+                {isSaving && <Loader2 size={12} className="animate-spin" />}
+                {isSaving ? "Saving..." : "All changes saved"}
+            </div>
           </div>
         </DocPanel>
       )}
 
       {/* ══════════════════════════════════════════ 4. LATE MONITORING */}
       {sub==="late" && (
-        <DocPanel title="Late Monitoring - June 2025" icon={Clock}>
+        <DocPanel title={`Late Monitoring - ${monthName}`} icon={Clock}>
           <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:10, alignItems:"center" }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background: "transparent", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"5px 10px", flex:1 }}>
               <Search size={12} color={C.t3} />
               <input placeholder="Search student…" style={{ border:"none", background:"transparent", outline:"none", fontSize:12, color:C.t1, flex:1 }} />
             </div>
-            <Stamp label={`${students.filter(s=>countFor(s.id,"L")>0).length} students late this month`} color={C.amber} bg={C.amberBg} />
+            <Stamp label={`${roster.filter(s=>countFor(s.id,"L")>0).length} students late this month`} color={C.amber} bg={C.amberBg} />
           </div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
@@ -311,7 +362,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
               </tr>
             </thead>
             <tbody>
-              {students.map((st,i)=>{
+              {roster.map((st,i)=>{
                 const lateCount = countFor(st.id,"L");
                 const lateDates = ATT_DATES.filter(d=>getStatus(st.id,d)==="L");
                 const threshold = lateCount>=5?"Critical":lateCount>=3?"Warning":"Good";
@@ -319,8 +370,8 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                   <tr key={st.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}
                     onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                     onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background=i%2===0?"#fff":C.paper;}}>
-                    <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{st.surname}, {st.first}</td>
-                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{st.lrn}</td>
+                    <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{st.student.last_name}, {st.student.first_name}</td>
+                    <td style={{ padding:"9px 14px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{st.student.lrn}</td>
                     <td style={{ padding:"9px 14px" }}>
                       <span style={{ fontSize:16, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:lateCount>=3?C.amber:lateCount>0?"#D97706":C.t3 }}>{lateCount}</span>
                     </td>
@@ -329,7 +380,7 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
                         {lateDates.length===0
                           ? <span style={{ fontSize:11, color:C.t3 }}>-</span>
                           : lateDates.map(d=>(
-                              <span key={d} style={{ fontSize:10, background:C.amberBg, color:C.amber, padding:"1px 6px", borderRadius:3, fontFamily:"'JetBrains Mono',monospace" }}>Jun {d}</span>
+                              <span key={d} style={{ fontSize:10, background:C.amberBg, color:C.amber, padding:"1px 6px", borderRadius:3, fontFamily:"'JetBrains Mono',monospace" }}>{monthNameOnly.substring(0,3)} {d}</span>
                             ))
                         }
                       </div>
@@ -360,131 +411,130 @@ export function AttendanceHub({ students }: { students: typeof STUDENTS_GR8 }) {
 
       {/* ══════════════════════════════════════════ 5. SF2 EXPORT */}
       {sub==="sf2" && (
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          {/* SF2 header */}
-          <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <DocPanel title="School Form 2 (SF2) - Daily Attendance Report" icon={FileDown}>
+          <div style={{ padding:"20px", display:"flex", flexDirection:"column", gap:16, alignItems:"center", textAlign:"center", background:C.m50 }}>
+            <FileSpreadsheet size={48} color={C.m700} style={{ opacity:0.8 }} />
             <div>
-              <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Form 2 (SF2) - Learner's Attendance Record</div>
-              <div style={{ fontSize:12, color:C.t3, marginTop:2 }}>Grade 8 - Rizal · Mathematics 8 · June 2025 · Q1</div>
+              <h2 style={{ fontSize:16, fontWeight:700, color:C.t1, margin:0, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>DepEd SF2 Generation Ready</h2>
+              <p style={{ fontSize:12, color:C.t2, margin:"4px 0 0 0", maxWidth:400 }}>
+                This tool automatically compiles the daily attendance logs into the standard DepEd School Form 2 format. You can export it as a CSV file to open in Excel.
+              </p>
             </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:600, color:C.t2, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"7px 14px", cursor:"pointer" }}>
-                <Printer size={13}/> Print preview
-              </button>
-              <button onClick={()=>setSf2Exported(true)} style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, fontWeight:700, color:C.m900, background:C.gold, border:"none", borderRadius:4, padding:"8px 18px", cursor:"pointer" }}>
-                <FileDown size={14}/> Export SF2
-              </button>
-            </div>
-          </div>
-
-          {sf2Exported && (
-            <div style={{ background:C.greenBg, border:`1px solid rgba(22,101,52,0.25)`, borderRadius:4, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
-              <CheckCircle size={14} color={C.green} />
-              <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>SF2 exported successfully · June 2025 · Grade 8 Rizal</span>
-              <button onClick={()=>setSf2Exported(false)} style={{ marginLeft:"auto", fontSize:10, color:C.green, background:"none", border:"none", cursor:"pointer" }}>✕</button>
-            </div>
-          )}
-
-          {/* SF2 document preview */}
-          <DocPanel title="SF2 Document Preview" icon={FileSpreadsheet}>
-            <div style={{ padding:"16px 20px 12px", borderBottom:`1px solid ${C.border}`, textAlign:"center" }}>
-              <div style={{ fontSize:10, fontWeight:700, color:C.t2, textTransform:"uppercase", letterSpacing:"0.07em" }}>Republic of the Philippines · Department of Education</div>
-              <div style={{ fontSize:15, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginTop:3 }}></div>
-              <div style={{ fontSize:11, color:C.t2 }}>School Form 2 (SF2) - Learner's Attendance Record</div>
-              <div style={{ display:"flex", justifyContent:"center", gap:24, marginTop:8, fontSize:11, color:C.t2 }}>
-                {[["School Year","SY 2025–2026"],["Grade & Section","Grade 8 - Rizal"],["Month","June 2025"],["Subject","Mathematics 8"]].map(([l,v])=>(
-                  <div key={l} style={{ borderBottom:`1px solid ${C.borderMed}`, paddingBottom:4 }}>
-                    <div style={{ fontSize:9, color:C.t3, textTransform:"uppercase", letterSpacing:"0.06em" }}>{l}</div>
-                    <div style={{ fontSize:12, fontWeight:600, color:C.t1 }}>{v}</div>
-                  </div>
-                ))}
+            
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, width:"100%", maxWidth:400, marginTop:10 }}>
+              <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:6, padding:"12px" }}>
+                <div style={{ fontSize:24, fontWeight:800, color:C.t1, fontFamily:"'JetBrains Mono',monospace" }}>{roster.length}</div>
+                <div style={{ fontSize:10, color:C.t3, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:700 }}>Total Learners</div>
+              </div>
+              <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:6, padding:"12px" }}>
+                <div style={{ fontSize:24, fontWeight:800, color:C.t1, fontFamily:"'JetBrains Mono',monospace" }}>{monthNameOnly}</div>
+                <div style={{ fontSize:10, color:C.t3, textTransform:"uppercase", letterSpacing:"0.05em", fontWeight:700 }}>Report Month</div>
               </div>
             </div>
-            <div style={{ overflowX:"auto", padding:"8px 0" }}>
-              <table style={{ borderCollapse:"collapse", fontSize:10, margin:"0 12px" }}>
-                <colgroup>
-                  <col style={{ width:30 }}/><col style={{ width:160 }}/>
-                  {ATT_DATES.map(d=><col key={d} style={{ width:26 }}/>)}
-                  <col style={{ width:36 }}/><col style={{ width:36 }}/><col style={{ width:36 }}/><col style={{ width:46 }}/>
-                </colgroup>
-                <thead>
-                  <tr style={{ background:C.m800 }}>
-                    <th style={{ padding:"5px 3px", color:"rgba(255,255,255,0.7)", textAlign:"center", fontSize:8 }}>#</th>
-                    <th style={{ padding:"5px 8px", color:"rgba(255,255,255,0.7)", textAlign:"left", fontSize:8, letterSpacing:"0.06em" }}>LEARNER'S NAME</th>
-                    {ATT_DATES.map(d=><th key={d} style={{ padding:"5px 1px", color:"rgba(255,255,255,0.7)", textAlign:"center", fontSize:8, borderLeft:`0.5px solid rgba(255,255,255,0.1)` }}>{d}</th>)}
-                    {["P","A","L","RATE"].map(h=><th key={h} style={{ padding:"5px 3px", color:h==="P"?"#86efac":h==="A"?"#fca5a5":h==="L"?"#fcd34d":"rgba(255,255,255,0.7)", textAlign:"center", fontSize:8, borderLeft:`1px solid rgba(255,255,255,0.2)` }}>{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((st,i)=>{
-                    const p=countFor(st.id,"P"), a=countFor(st.id,"A"), l=countFor(st.id,"L");
-                    const rate=Math.round((p/ATT_DATES.length)*100);
-                    return (
-                      <tr key={st.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}>
-                        <td style={{ padding:"5px 3px", textAlign:"center", fontSize:9, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{i+1}</td>
-                        <td style={{ padding:"5px 8px", fontSize:10, fontWeight:600, color:C.t1, whiteSpace:"nowrap" }}>{st.surname}, {st.first}</td>
-                        {ATT_DATES.map(d=>{
-                          const s=getStatus(st.id,d);
-                          return <td key={d} style={{ textAlign:"center", borderLeft:`0.5px solid ${C.border}`, padding:"3px 1px" }}>
-                            <span style={{ fontSize:8, fontWeight:700, color:sColor(s) }}>{s}</span>
-                          </td>;
-                        })}
-                        <td style={{ textAlign:"center", borderLeft:`1px solid ${C.borderMed}`, padding:"5px 3px", fontSize:10, fontWeight:600, color:C.green, fontFamily:"'JetBrains Mono',monospace" }}>{p}</td>
-                        <td style={{ textAlign:"center", borderLeft:`0.5px solid ${C.border}`, padding:"5px 3px", fontSize:10, fontWeight:600, color:a>0?C.red:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{a}</td>
-                        <td style={{ textAlign:"center", borderLeft:`0.5px solid ${C.border}`, padding:"5px 3px", fontSize:10, fontWeight:600, color:l>0?C.amber:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{l}</td>
-                        <td style={{ textAlign:"center", borderLeft:`1px solid ${C.borderMed}`, padding:"5px 3px", fontSize:10, fontWeight:700, color:rate>=90?C.green:rate>=75?C.amber:C.red, fontFamily:"'JetBrains Mono',monospace" }}>{rate}%</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ padding:"10px 20px", borderTop:`1px solid ${C.border}`, display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
-              {[["Prepared by","Ana R. Soriano","Class Adviser"],["Noted by","Dr. Maria Santos","Principal"]].map(([lbl,name,role])=>(
-                <div key={lbl}>
-                  <div style={{ fontSize:9, color:C.t3, marginBottom:16 }}>{lbl}:</div>
-                  <div style={{ borderTop:`1px solid ${C.t1}`, paddingTop:4 }}>
-                    <div style={{ fontSize:11, fontWeight:700, color:C.t1 }}>{name}</div>
-                    <div style={{ fontSize:10, color:C.t3 }}>{role}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </DocPanel>
-        </div>
+
+            <button onClick={handleExportSF2} style={{ marginTop:10, display:"flex", alignItems:"center", gap:8, fontSize:13, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:6, padding:"10px 24px", cursor:"pointer", transition:"all 0.15s", boxShadow:"0 4px 12px rgba(37,99,235,0.2)" }}
+              onMouseEnter={e=>(e.currentTarget.style.transform="translateY(-1px)")}
+              onMouseLeave={e=>(e.currentTarget.style.transform="translateY(0)")}>
+              <Download size={16}/> Download SF2 (CSV)
+            </button>
+            
+            {sf2Exported && (
+              <div style={{ display:"flex", alignItems:"center", gap:6, color:C.green, fontSize:12, fontWeight:600, marginTop:4 }}>
+                <CheckCircle size={14} /> Download initiated successfully!
+              </div>
+            )}
+          </div>
+        </DocPanel>
       )}
 
       {/* ══════════════════════════════════════════ 6. EXCUSE LETTERS */}
-      {sub==="excuses" as any && (
-        <DocPanel title="Submitted Excuse Letters" icon={FileText}>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead>
-              <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                {["Date Submitted","Student Name","Dates Covered","Attachment","Status"].map(h=>(
-                  <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {excuseLetters.map((exc, i) => (
-                <tr key={exc.id} style={{ borderBottom:`0.5px solid ${C.border}`, background:i%2===0?"#fff":C.paper }}>
-                  <td style={{ padding:"10px 14px", fontSize:11, color:C.t3, fontFamily:"'JetBrains Mono',monospace" }}>{exc.submittedDate}</td>
-                  <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{exc.studentName}</td>
-                  <td style={{ padding:"10px 14px", fontSize:11, color:C.t2 }}>{exc.dates}</td>
-                  <td style={{ padding:"10px 14px", fontSize:11, color:C.m700, fontWeight:600, cursor:"pointer", textDecoration:"underline" }}>{exc.filename}</td>
-                  <td style={{ padding:"10px 14px" }}>
-                    <Stamp label={exc.status} color={exc.status==="Approved"?C.green:exc.status==="Pending Review"?C.amber:C.red} bg={exc.status==="Approved"?C.greenBg:exc.status==="Pending Review"?C.amberBg:C.redBg} />
-                  </td>
-                </tr>
-              ))}
-              {excuseLetters.length === 0 && (
-                <tr><td colSpan={5} style={{ padding:"20px", textAlign:"center", fontSize:12, color:C.t3 }}>No excuse letters submitted.</td></tr>
-              )}
-            </tbody>
-          </table>
+      {sub==="excuses" && (
+        <DocPanel title="Excuse Letters" icon={FileText}>
+          {loadingExcuses ? (
+            <div style={{ padding: 40, display:"flex", justifyContent:"center" }}><Loader2 className="animate-spin text-gray-400" size={24}/></div>
+          ) : excuseError ? (
+            <div style={{ padding: 20, textAlign: "center", color: C.red, fontSize: 12 }}>{excuseError}</div>
+          ) : excuses.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="No excuse letters"
+              description="There are no excuse letters submitted to you at this time."
+            />
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: C.m50, borderBottom: `1px solid ${C.borderMed}` }}>
+                    {["Student", "Dates", "Reason", "Status", "Actions"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "10px 14px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {excuses.map((excuse, i) => (
+                    <tr key={excuse.id} style={{ borderBottom: `1px solid ${C.borderMed}`, background: i % 2 === 0 ? "#fff" : C.paper }}>
+                      <td style={{ padding: "12px 14px" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
+                          {excuse.student?.user?.last_name}, {excuse.student?.user?.first_name}
+                        </div>
+                        <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{excuse.student?.current_section?.name || "N/A"}</div>
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 11, color: C.t1 }}>
+                        {new Date(excuse.start_date).toLocaleDateString()} to {new Date(excuse.end_date).toLocaleDateString()}
+                      </td>
+                      <td style={{ padding: "12px 14px", fontSize: 11, color: C.t2, maxWidth: 300, whiteSpace: "normal" }}>
+                        {excuse.reason}
+                        {excuse.document_id && (
+                          <div style={{ marginTop: 8 }}>
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  const presignRes: any = await studentApi.getPresignedDownloadUrl(excuse.document_id);
+                                  const url = presignRes?.url || presignRes?.data?.url;
+                                  if (url) {
+                                    window.open(url.startsWith('http') ? url : `http://localhost:5000${url}`, '_blank');
+                                  } else {
+                                    alert("Failed to load attachment");
+                                  }
+                                } catch (e) {
+                                  alert("Failed to load attachment");
+                                }
+                              }}
+                              type="button"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "none", border: "none", color: C.blue, fontSize: 10, fontWeight: 600, padding: 0, cursor: "pointer" }}
+                            >
+                              <Paperclip size={10} /> View Attachment
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        <Stamp
+                          label={excuse.status}
+                          color={excuse.status === 'Approved' ? C.green : excuse.status === 'Rejected' ? C.red : C.amber}
+                          bg={excuse.status === 'Approved' ? C.greenBg : excuse.status === 'Rejected' ? C.redBg : C.amberBg}
+                        />
+                      </td>
+                      <td style={{ padding: "12px 14px" }}>
+                        {excuse.status === "Pending Review" && (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => handleUpdateExcuse(excuse.id, "Approved")} style={{ background: C.greenBg, color: C.green, border: `1px solid ${C.green}30`, padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 600 }}>
+                              Approve
+                            </button>
+                            <button onClick={() => handleUpdateExcuse(excuse.id, "Rejected")} style={{ background: C.redBg, color: C.red, border: `1px solid ${C.red}30`, padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 10, fontWeight: 600 }}>
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </DocPanel>
       )}
     </div>
   );
 }
-

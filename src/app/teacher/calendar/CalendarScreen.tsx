@@ -3,6 +3,7 @@ import { C } from '../../shared/constants/tokens';
 import { CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
 import { useAppContext } from '../../shared/AppContext';
 import { Calendar, ChevronLeft, ChevronRight, Lock, Plus, X, Save, Trash2 } from 'lucide-react';
+import { apiClient } from '../../../api/client';
 
 export function CalendarScreen() {
   function formatTimeDisplay(timeStr?: string) {
@@ -14,43 +15,121 @@ export function CalendarScreen() {
     return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
   }
 
-  const { events, addEvent, deleteEvent } = useAppContext();
+  const { currentUser } = useAppContext();
+  const [backendEvents, setBackendEvents] = React.useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<{ title: string, date: string, time: string, endTime: string, type: CalendarEvent["type"], audience: CalendarEvent["audience"] }>({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const allEvents = events.filter(e => e.audience === "all" || e.audience === "teachers" || e.id.startsWith('tp-'));
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  React.useEffect(() => {
+    fetchEvents();
+  }, []);
 
-  function handleAddPersonal() {
-    if (!form.title || !form.date) return;
-    const colors: Record<string, string> = { academic: "#15803d", meeting: "#1e40af", holiday: "#b91c1c", exam: "#9333ea", personal: "#0ea5e9" };
-    const ev: CalendarEvent = { 
-      id: `tp-${Date.now()}`, 
-      title: form.title, 
-      date: form.date, 
-      time: form.time,
-      endTime: form.endTime,
-      type: form.type, 
-      color: colors[form.type] || "#0ea5e9", 
-      locked: form.audience === "students" || form.audience === "all",
-      audience: form.audience
-    };
-    addEvent(ev);
-    setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
-    setShowForm(false);
+  async function fetchEvents() {
+    setLoading(true);
+    try {
+      const res = await apiClient.get('/admin/events');
+      if (Array.isArray(res)) setBackendEvents(res);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to load events");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleRemovePersonal(id: string) {
-    deleteEvent(id);
+  const allEvents = backendEvents
+    .filter(e => e.audience === "all" || e.audience === "teachers" || e.audience === "students" || e.created_by_id === currentUser?.id)
+    .map(dbEv => {
+      const colors: Record<string, string> = { academic: "#15803d", meeting: "#1e40af", holiday: "#b91c1c", exam: "#9333ea", personal: "#0ea5e9" };
+      const d = new Date(dbEv.date);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const dateStrLocal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      
+      let endTimeStr = "";
+      if (dbEv.end_date) {
+        const ed = new Date(dbEv.end_date);
+        endTimeStr = `${pad(ed.getHours())}:${pad(ed.getMinutes())}`;
+      }
+      
+      return {
+        id: dbEv.id,
+        title: dbEv.title,
+        date: dateStrLocal,
+        time: timeStr,
+        endTime: endTimeStr,
+        type: dbEv.type,
+        color: colors[dbEv.type] || "#0ea5e9",
+        locked: dbEv.created_by_id !== currentUser?.id,
+        audience: dbEv.audience
+      } as CalendarEvent;
+    });
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  let startingDayIndex = firstDay.getDay() - 1;
+  if (startingDayIndex === -1) startingDayIndex = 6;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const numRows = Math.ceil((startingDayIndex + daysInMonth) / 7);
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const monthYearStr = `${monthNames[month]} ${year}`;
+
+  function handlePrevMonth() {
+    setCurrentMonth(new Date(year, month - 1, 1));
+  }
+  function handleNextMonth() {
+    setCurrentMonth(new Date(year, month + 1, 1));
+  }
+
+  async function handleAddPersonal() {
+    if (!form.title || !form.date) return;
+    
+    const dateTime = new Date(`${form.date}T${form.time || "00:00"}:00`);
+    const endDateTime = form.endTime ? new Date(`${form.date}T${form.endTime}:00`) : null;
+    
+    const payload = {
+      title: form.title,
+      type: form.type,
+      audience: form.audience,
+      date: dateTime.toISOString(),
+      end_date: endDateTime ? endDateTime.toISOString() : null,
+    };
+    
+    try {
+      await apiClient.post('/admin/events', payload);
+      await fetchEvents();
+      setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
+      setShowForm(false);
+    } catch(err: any) {
+      console.error("EVENT SAVE ERROR:", err);
+      alert(`Error: ${err.message}`);
+    }
+  }
+
+  async function handleRemovePersonal(id: string) {
+    if (!confirm('Are you sure you want to delete this event?')) return;
+    try {
+      await apiClient.delete(`/admin/events/${id}`);
+      setBackendEvents(prev => prev.filter(e => e.id !== id));
+    } catch(err: any) {
+      console.error(err);
+      alert(`Error deleting event: ${err.message}`);
+    }
   }
 
   const sorted = [...allEvents].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: 28, background: "transparent" }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 28, background: "transparent" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar - June 2025</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>School events (🔒) are set by admin. Your personal events are editable.</div>
         </div>
         <button onClick={() => { setShowForm(true); setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" }); }}
@@ -63,22 +142,28 @@ export function CalendarScreen() {
       </div>
 
 
+      {error && (
+        <div style={{ background: '#fef2f2', color: '#ef4444', padding: 16, borderRadius: 8, marginBottom: 24, fontSize: 13, border: '1px solid #fecaca' }}>
+          <strong>Error loading events:</strong> {error}
+        </div>
+      )}
+
       {/* Calendar Grid */}
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", marginBottom: 24, boxShadow: "0 4px 20px rgba(139,30,30,0.05)" }}>
         <div style={{ background: C.m800, padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.2)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}><ChevronLeft size={14} color="#fff" /></button>
-          <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>June 2025</span>
-          <button style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.2)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}><ChevronRight size={14} color="#fff" /></button>
+          <button onClick={handlePrevMonth} style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.2)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}><ChevronLeft size={14} color="#fff" /></button>
+          <span style={{ color: "#fff", fontSize: 14, fontWeight: 700, fontFamily: "'Fraunces',serif" }}>{monthYearStr}</span>
+          <button onClick={handleNextMonth} style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.2)"} onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.1)"}><ChevronRight size={14} color="#fff" /></button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", borderBottom: `1px solid ${C.borderMed}`, background: "#fafafa" }}>
           {days.map(d => <div key={d} style={{ textAlign: "center", padding: "10px 4px", fontSize: 10, fontWeight: 700, color: C.t3, letterSpacing: "0.07em", textTransform: "uppercase", borderRight: `1px solid ${C.border}` }}>{d}</div>)}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
-          {[...Array(5)].map((_, r) =>
+          {[...Array(numRows)].map((_, r) =>
             days.map((_, col) => {
-              const day = r * 7 + col - 1;
-              const valid = day >= 1 && day <= 30;
-              const dayStr = `2025-06-${String(day).padStart(2, "0")}`;
+              const day = r * 7 + col - startingDayIndex + 1;
+              const valid = day >= 1 && day <= daysInMonth;
+              const dayStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
               const dayEvents = allEvents.filter(e => e.date === dayStr);
               return (
                 <div key={`${r}-${col}`} 
@@ -103,6 +188,7 @@ export function CalendarScreen() {
                   {valid && <>
                     <div style={{ fontSize: 12, fontWeight: 700, color: col >= 5 ? C.t3 : C.t1, marginBottom: 8, padding: "2px 4px" }}>{day}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {loading && dayEvents.length === 0 && day === 1 ? <div style={{fontSize: 9, color: C.t3}}>Loading...</div> : null}
                       {dayEvents.map(ev => {
                         const timeStr = formatTimeDisplay(ev.time);
                         const endStr = formatTimeDisplay(ev.endTime);

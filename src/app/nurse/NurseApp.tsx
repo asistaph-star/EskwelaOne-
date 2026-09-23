@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { C } from '../shared/constants/tokens';
-import { CLINIC_STUDENTS, CLINIC_VISITS_SEED } from '../shared/constants/seedData';
 import { ClinicVisit, ClinicStudent } from '../shared/types';
-import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse, Bell } from 'lucide-react';
+import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse, Bell, AlertCircle } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { NSidebar, NScreen } from './shared/NSidebar';
 import { useLayout } from '../App';
 import { PrintableClinicReport } from './PrintableClinicReport';
 import { ClinicInventory } from './inventory/ClinicInventory';
-import { NAiInsights } from './ai/NAiInsights';
+import { NAnalytics } from './ai/NAnalytics';
+import { useAppContext } from '../shared/AppContext';
+import { apiClient } from '../../api/client';
 
 function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) {
   return (
@@ -20,7 +21,7 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
 }
 
 // ── Medical History Drawer ──
-function MedicalHistoryDrawer({ student, visits, onClose }: { student: ClinicStudent, visits: ClinicVisit[], onClose: () => void }) {
+function MedicalHistoryDrawer({ student, apiVisits, onClose }: { student: ClinicStudent, apiVisits: ClinicVisit[], onClose: () => void }) {
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(10,5,5,0.45)" }} />
@@ -39,7 +40,7 @@ function MedicalHistoryDrawer({ student, visits, onClose }: { student: ClinicStu
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", background: "transparent" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent" }}>
           {/* Medical Profile */}
           <div style={{ padding: 20, background: "#fff", borderBottom: `1px solid ${C.borderMed}` }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>Medical Profile</div>
@@ -68,10 +69,10 @@ function MedicalHistoryDrawer({ student, visits, onClose }: { student: ClinicStu
             <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 16 }}>Clinic Visit History</div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {visits.length === 0 ? (
-                <div style={{ fontSize: 13, color: C.t3, fontStyle: "italic" }}>No previous clinic visits recorded.</div>
+              {apiVisits.length === 0 ? (
+                <div style={{ fontSize: 13, color: C.t3, fontStyle: "italic" }}>No previous clinic apiVisits recorded.</div>
               ) : (
-                visits.map((v, i) => (
+                apiVisits.map((v, i) => (
                   <div key={v.id} style={{ borderLeft: `2px solid ${C.borderMed}`, paddingLeft: 16, position: "relative" }}>
                     <div style={{ position: "absolute", left: -6, top: 0, width: 10, height: 10, borderRadius: 5, background: C.m600, border: "2px solid #fff" }} />
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
@@ -124,11 +125,11 @@ function MedicalHistoryDrawer({ student, visits, onClose }: { student: ClinicStu
 }
 
 // ── New Visit Form Drawer ──
-function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStudent[], onSave: (v: ClinicVisit) => void, onClose: () => void }) {
+function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStudent[], onSave: (v: ClinicVisit) => Promise<void>, onClose: () => void }) {
   const [formData, setFormData] = useState({
     studentId: "",
     date: new Date().toISOString().split('T')[0],
-    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+    time: new Date().toTimeString().slice(0, 5),
     symptoms: "",
     diagnoses: "",
     medications: "None",
@@ -138,13 +139,45 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
     bp: "",
     hr: ""
   });
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === "studentId") setFormError(""); // clear error when student selected
   };
 
-  const handleSave = () => {
-    if (!formData.studentId) return alert("Please select a student.");
+  const handleSave = async () => {
+    if (!formData.studentId) {
+      setFormError("Please select a student before saving.");
+      return;
+    }
+    if (!formData.date) {
+      setFormError("Please select a date for the visit.");
+      return;
+    }
+    if (!formData.time) {
+      setFormError("Please select a time for the visit.");
+      return;
+    }
+    if (!formData.symptoms.trim()) {
+      setFormError("Please enter the Chief Complaint / Symptoms.");
+      return;
+    }
+    if (!formData.diagnoses.trim()) {
+      setFormError("Please enter a Diagnosis / Assessment.");
+      return;
+    }
+    if (formData.temp && isNaN(Number(formData.temp))) {
+      setFormError("Please enter a valid temperature number (e.g., 36.5).");
+      return;
+    }
+    if (formData.hr && isNaN(Number(formData.hr))) {
+      setFormError("Please enter a valid heart rate number (e.g., 80).");
+      return;
+    }
+    setFormError("");
+    setSaving(true);
     const newVisit: ClinicVisit = {
       id: `V-${Date.now()}`,
       studentId: formData.studentId,
@@ -161,7 +194,12 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
         heartRate: formData.hr ? `${formData.hr} bpm` : ""
       }
     };
-    onSave(newVisit);
+    try {
+      await onSave(newVisit);
+    } catch (e: any) {
+      setSaving(false);
+      setFormError(e.message || "An unexpected error occurred while saving.");
+    }
   };
 
   return (
@@ -176,13 +214,45 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 20 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             
+            <style>{`
+              @keyframes slideDownShake {
+                0% { opacity: 0; transform: translateY(-10px); }
+                30% { opacity: 1; transform: translateY(0) translateX(-4px); }
+                50% { transform: translateX(4px); }
+                70% { transform: translateX(-4px); }
+                90% { transform: translateX(4px); }
+                100% { transform: translateX(0); }
+              }
+            `}</style>
+            
+            {/* Error banner */}
+            {formError && (
+              <div style={{ 
+                padding: "12px 16px", 
+                background: "#fef2f2", 
+                border: "1px solid #fca5a5", 
+                borderRadius: 8, 
+                color: "#b91c1c", 
+                fontSize: 13, 
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.1)",
+                animation: "slideDownShake 0.4s ease-out forwards"
+              }}>
+                <AlertCircle size={18} color="#dc2626" />
+                {formError}
+              </div>
+            )}
+
             {/* Student Select */}
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Select Student</label>
-              <select name="studentId" value={formData.studentId} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none", background: "#fff" }}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: formError ? "#dc2626" : C.t2, marginBottom: 4, transition: "color 0.3s ease" }}>Select Student <span style={{ color: "#dc2626" }}>*</span></label>
+              <select name="studentId" value={formData.studentId} onChange={handleChange} style={{ width: "100%", padding: "10px 12px", border: `1px solid ${formError ? "#fca5a5" : C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: formError ? "#fef2f2" : "#fff", transition: "all 0.3s ease", boxShadow: formError ? "0 0 0 3px rgba(220, 38, 38, 0.1)" : "none" }}>
                 <option value="">-- Choose Student --</option>
                 {students.map(s => (
                   <option key={s.id} value={s.id}>{s.name} (Gr. {s.grade} - {s.section})</option>
@@ -251,11 +321,11 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
           </div>
         </div>
 
-        <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "flex-end", gap: 12, background: C.paper }}>
-          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 4, border: `1px solid ${C.borderMed}`, background: "#fff", color: C.t2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-          <button onClick={handleSave} style={{ padding: "8px 16px", borderRadius: 4, border: "none", background: C.m700, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-            Save Visit Record
+        <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.borderMed}`, display: "flex", gap: 12, background: C.paper, position: "relative", zIndex: 9999 }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 1, padding: "12px 24px", borderRadius: 6, border: "none", background: saving ? C.t3 : C.m700, color: "#fff", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", position: "relative", zIndex: 9999, pointerEvents: "auto" }}>
+            {saving ? "Saving..." : "Save Visit Record"}
           </button>
+          <button onClick={onClose} disabled={saving} style={{ padding: "12px 20px", borderRadius: 6, border: `1px solid ${C.borderMed}`, background: "#fff", color: C.t2, fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", position: "relative", zIndex: 9999, pointerEvents: "auto", opacity: saving ? 0.5 : 1 }}>Cancel</button>
         </div>
       </div>
     </>
@@ -265,13 +335,65 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
 
 // ── Main Nurse App Shell ──
 export function NurseApp({ onLogout }: { onLogout: () => void }) {
+
+  const [apiVisits, setApiVisits] = useState<any[]>([]);
+  const [apiStudents, setApiStudents] = useState<ClinicStudent[]>([]);
   const [screen, setScreen] = useState<NScreen>("n-dashboard");
-  const [visits, setVisits] = useState<ClinicVisit[]>(CLINIC_VISITS_SEED);
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<ClinicStudent | null>(null);
   const [search, setSearch] = useState("");
+  const [showWalkinModal, setShowWalkinModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const { notifications, currentUser } = useAppContext();
+  const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    
+    Promise.all([
+      apiClient.get('/student-services/clinic'),
+      apiClient.get('/users?role=Student')
+    ])
+    .then(([visitsRes, studentsRes]: [any, any]) => {
+        const mapped = visitsRes.map((r: any) => ({
+          ...r,
+          studentId: r.student_id,
+          diagnoses: r.diagnosis || "",
+          vitalSigns: {
+            temperature: r.temperature ? `${r.temperature}°C` : "",
+            bloodPressure: r.blood_pressure || "",
+            heartRate: r.heart_rate ? `${r.heart_rate} bpm` : ""
+          }
+        }));
+        setApiVisits(mapped);
+
+        const students = studentsRes.map((u: any) => ({
+          id: u.student?.id || u.id,
+          name: `${u.last_name}, ${u.first_name}`,
+          grade: u.student?.grade_level?.toString() || "N/A",
+          section: "Student Section", // Since section name might not be included directly
+          bloodType: u.student?.blood_type || "Not recorded",
+          allergies: u.student?.allergies || "Not recorded",
+          emergencyContact: u.student?.guardian_first_name ? `${u.student.guardian_first_name} ${u.student.guardian_last_name} (${u.student.guardian_phone || "No phone"})` : "Not recorded",
+          medicalConditions: u.student?.medical_conditions || "Not recorded"
+        }));
+        setApiStudents(students);
+    })
+    .catch(err => {
+      console.error("Failed to load clinic data", err);
+      const msg = err?.message || 'An unexpected error occurred while loading clinic data.';
+      setErrorMsg(err.status === 403 ? "Access Denied: You do not have permission to view clinic records." : msg);
+    })
+    .finally(() => {
+      setIsLoading(false);
+    });
+  }, []);
 
   // Report Filters
   const [reportGrade, setReportGrade] = useState("All");
@@ -282,22 +404,79 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
   const { isMobile, isTablet } = useLayout();
   const nav = (s: NScreen) => { setScreen(s); setMenuOpen(false); };
 
-  const reportFilteredStudents = CLINIC_STUDENTS.filter(s => {
+  const reportFilteredStudents = apiStudents.filter(s => {
     const matchGrade = reportGrade === "All" || s.grade.toString() === reportGrade;
     const matchSection = reportSection === "All" || s.section === reportSection;
     const matchName = s.name.toLowerCase().includes(reportStudentName.toLowerCase());
     return matchGrade && matchSection && matchName;
   });
 
-  const handleAddVisit = (v: ClinicVisit) => {
-    setVisits([v, ...visits]); // Add to top
-    setIsRecordOpen(false);
+  const handleAddVisit = async (v: ClinicVisit) => {
+    try {
+      // Normalize time to HH:mm (24-hour) — handles "5:48 PM", "17:48", "05:48 pm", etc.
+      let normalizedTime: string | undefined = undefined;
+      if (v.time) {
+        const raw = v.time.trim();
+        // If already HH:mm or HH:mm:ss format, use as-is
+        if (/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(raw)) {
+          normalizedTime = raw.slice(0, 5);
+        } else {
+          // Try to parse AM/PM format like "5:48 PM" or "05:48 pm"
+          const match = raw.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+          if (match) {
+            let hours = parseInt(match[1], 10);
+            const mins = match[2];
+            const period = match[3].toLowerCase();
+            if (period === 'pm' && hours !== 12) hours += 12;
+            if (period === 'am' && hours === 12) hours = 0;
+            normalizedTime = `${hours.toString().padStart(2, '0')}:${mins}`;
+          }
+        }
+      }
+
+      // Parse temperature — strip non-numeric chars like "°C"
+      let temp: number | undefined = undefined;
+      if (v.vitalSigns?.temperature) {
+        const parsed = parseFloat(v.vitalSigns.temperature.replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed)) temp = parsed;
+      }
+
+      await apiClient.post('/student-services/clinic', {
+         studentId: v.studentId,
+         date: v.date,
+         time: normalizedTime,
+         symptoms: v.symptoms,
+         diagnosis: v.diagnoses,
+         medications: v.medications,
+         treatments: v.treatments,
+         notes: v.notes,
+         temperature: temp,
+         bloodPressure: v.vitalSigns?.bloodPressure || undefined,
+      });
+      const res: any = await apiClient.get('/student-services/clinic');
+      const mapped = res.map((r: any) => ({
+        ...r,
+        studentId: r.student_id,
+        diagnoses: r.diagnosis || "",
+        vitalSigns: {
+          temperature: r.temperature ? `${r.temperature}°C` : "",
+          bloodPressure: r.blood_pressure || "",
+          heartRate: r.heart_rate ? `${r.heart_rate} bpm` : ""
+        }
+      }));
+      setApiVisits(mapped);
+      setIsRecordOpen(false);
+    } catch (err: any) {
+      console.error('Clinic save error:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Unknown error';
+      throw new Error(`Backend Error: ${msg}`);
+    }
   };
 
-  const getStudent = (id: string) => CLINIC_STUDENTS.find(s => s.id === id);
+  const getStudent = (id: string) => apiStudents.find(s => s.id === id);
 
-  // Filter visits based on search
-  const filteredVisits = visits.filter(v => {
+  // Filter apiVisits based on search
+  const filteredVisits = apiVisits.filter(v => {
     const s = getStudent(v.studentId);
     if (!s) return false;
     const term = search.toLowerCase();
@@ -391,22 +570,24 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                     }}
                   >
                     <Bell size={18} color={notifOpen ? C.m700 : C.t2} />
-                    <div style={{
-                      position: "absolute",
-                      top: 2,
-                      right: 2,
-                      background: C.red,
-                      color: "#fff",
-                      fontSize: 8,
-                      fontWeight: 700,
-                      borderRadius: 10,
-                      width: 14,
-                      height: 14,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      border: "1.5px solid #fff"
-                    }}>5</div>
+                    {unreadCount > 0 && (
+                      <div style={{
+                        position: "absolute",
+                        top: 2,
+                        right: 2,
+                        background: C.red,
+                        color: "#fff",
+                        fontSize: 8,
+                        fontWeight: 700,
+                        borderRadius: 10,
+                        width: 14,
+                        height: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "1.5px solid #fff"
+                      }}>{unreadCount}</div>
+                    )}
                   </button>
                   <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
                 </div>
@@ -415,7 +596,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24, display: "flex", flexDirection: "column", gap: 24 }}>
           
           {(screen === "n-dashboard") ? (
             <>
@@ -423,7 +604,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Dashboard Overview</h2>
-            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Overview of clinic operations and recent student visits.</p>
+            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Overview of clinic operations and recent student apiVisits.</p>
           </div>
           <button onClick={() => setIsRecordOpen(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 6, background: C.m700, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 12px rgba(153,27,27,0.2)" }}>
             <Plus size={16} /> Record New Visit
@@ -432,9 +613,9 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
 
         <div style={{ display: "flex", gap: 16 }}>
           {[
-            { label: "Total Visits (Today)", value: visits.filter(v => v.date === new Date().toISOString().split('T')[0]).length, icon: Activity, color: C.m700 },
+            { label: "Total apiVisits (Today)", value: apiVisits.filter(v => v.date === new Date().toISOString().split('T')[0]).length, icon: Activity, color: C.m700 },
             { label: "Active Consultations", value: 0, icon: Stethoscope, color: C.amber },
-            { label: "Total Records", value: visits.length, icon: FileText, color: C.blue }
+            { label: "Total Records", value: apiVisits.length, icon: FileText, color: C.blue }
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: 24, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -472,7 +653,11 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredVisits.length === 0 ? (
+                {isLoading ? (
+                  <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: C.t3, fontSize: 13 }}>Loading clinic records...</td></tr>
+                ) : errorMsg ? (
+                  <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: C.red, fontSize: 13 }}>{errorMsg}</td></tr>
+                ) : filteredVisits.length === 0 ? (
                   <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: C.t3, fontSize: 13 }}>No clinic records found.</td></tr>
                 ) : filteredVisits.map((v, i) => {
                   const s = getStudent(v.studentId);
@@ -492,7 +677,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                         <div style={{ fontSize: 10, color: C.t3 }}>Gr. {s.grade} - {s.section}</div>
                       </td>
                       <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.symptoms}</td>
-                      <td style={{ padding: "14px 20px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{v.diagnoses}</td>
+                      <td style={{ padding: "14px 20px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{v.diagnosis}</td>
                       <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.treatments}</td>
                       <td style={{ padding: "14px 20px" }}>
                         <button onClick={(e) => { e.stopPropagation(); setViewingStudent(s); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: C.m700, fontSize: 11, fontWeight: 700, cursor: "pointer", textTransform: "uppercase" }}>
@@ -586,7 +771,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
               )}
             </div>
           ) : screen === "n-ai" ? (
-            <NAiInsights />
+            <NAnalytics />
           ) : screen === "n-inventory" ? (
             <ClinicInventory />
           ) : (
@@ -608,12 +793,11 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      {isRecordOpen && <RecordVisitDrawer students={CLINIC_STUDENTS} onSave={handleAddVisit} onClose={() => setIsRecordOpen(false)} />}
-      {viewingStudent && <MedicalHistoryDrawer student={viewingStudent} visits={visits.filter(v => v.studentId === viewingStudent.id)} onClose={() => setViewingStudent(null)} />}
-      <AIAssistantWidget role="Nurse" />
+      {isRecordOpen && <RecordVisitDrawer students={apiStudents} onSave={handleAddVisit} onClose={() => setIsRecordOpen(false)} />}
+      {viewingStudent && <MedicalHistoryDrawer student={viewingStudent} apiVisits={apiVisits.filter(v => v.studentId === viewingStudent.id)} onClose={() => setViewingStudent(null)} />}
       
       {/* Hidden printable report component */}
-      <PrintableClinicReport student={selectedReportStudent} visits={selectedReportStudent ? visits.filter(v => v.studentId === selectedReportStudent.id) : []} />
+      <PrintableClinicReport student={selectedReportStudent} visits={selectedReportStudent ? apiVisits.filter(v => v.studentId === selectedReportStudent.id) : []} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { AdminDashboard } from "./dashboard/AdminDashboard";
 import { CreateTeacher } from "./operations/CreateTeacher";
 import { InventoryManagement } from "./operations/InventoryManagement";
 import { AccountManagement } from "./operations/AccountManagement";
-import { AttendanceSummary } from "./reports/AttendanceSummary";
+import { AttendanceSummary } from "../principal/reports/AttendanceSummary";
 import { PHeaderBand } from "../principal/shared/PHeaderBand";
 import { C } from "../shared/constants/tokens";
 
@@ -32,7 +32,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
         
         <PHeaderBand title={getTitle()} />
         
-        <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: "auto", position: "relative" }}>
           
           {screen === "dashboard" && <AdminDashboard onNavigate={setScreen} />}
           {screen === "teacher-create" && <CreateTeacher />}

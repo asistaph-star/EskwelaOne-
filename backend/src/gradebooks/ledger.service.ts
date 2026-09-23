@@ -2,6 +2,7 @@ import { z } from 'zod';
 import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { createAuditLog } from '../audit/audit.service.js';
 
 export const ledgerSchema = z.object({
   classId: z.string(),
@@ -13,7 +14,7 @@ export const ledgerSchema = z.object({
   }))
 });
 
-export async function getLedger(classId: string) {
+export async function getLedger(classId: string, actorId: string) {
   const termsData: any = {};
   
   for (const t of ['T1', 'T2', 'T3', 'T4']) {
@@ -51,10 +52,58 @@ export async function getLedger(classId: string) {
     termsData[t] = { wwItems, ptItems, qaMax, grades };
   }
 
-  return termsData;
+  // Fetch the roster (enrollments for the section) and check authorization
+  const assignment = await prisma.teacherSubjectAssignment.findUnique({
+    where: { id: classId },
+    include: { section: true }
+  });
+
+  if (!assignment) {
+    throw new AppError(404, 'NOT_FOUND', 'Class assignment not found');
+  }
+
+  // Row-level authorization check: Verify the requesting user owns this assignment
+  // TODO: Principal/Admin/Registrar gradebook read access is not yet
+  // implemented. This will need to extend the authorization check when
+  // Principal Portal work begins. Currently ONLY the assigned teacher
+  // can view this gradebook.
+  if (assignment.teacher_id !== actorId) {
+    throw new AppError(403, 'FORBIDDEN', 'You do not have access to this class gradebook');
+  }
+
+  let rosterData: any[] = [];
+  if (assignment && assignment.section_id) {
+    const enrollments = await prisma.enrollment.findMany({
+      where: { section_id: assignment.section_id, status: 'Enrolled' },
+      include: { student: { include: { user: true } } },
+      orderBy: { student: { user: { last_name: 'asc' } } }
+    });
+
+    rosterData = enrollments.map(e => ({
+      id: e.id,
+      surname: e.student.user.last_name,
+      first: e.student.user.first_name
+    }));
+  }
+
+  return { terms: termsData, roster: rosterData };
 }
 
-export async function saveLedger(classId: string, terms: any, actorId: string) {
+export async function saveLedger(classId: string, terms: any, actorId: string, correlationId?: string) {
+  // Row-level authorization check
+  const assignment = await prisma.teacherSubjectAssignment.findUnique({
+    where: { id: classId },
+    include: { section: true, teacher: true }
+  });
+
+  if (!assignment) {
+    throw new AppError(404, 'NOT_FOUND', 'Class assignment not found');
+  }
+
+  if (assignment.teacher.user_id !== actorId) {
+    throw new AppError(403, 'FORBIDDEN', 'You do not have access to modify this class gradebook');
+  }
+
   for (const t of ['T1', 'T2', 'T3', 'T4']) {
     const termData = terms[t];
     if (!termData) continue;
@@ -132,4 +181,12 @@ export async function saveLedger(classId: string, terms: any, actorId: string) {
       }
     }
   }
+
+  await createAuditLog({
+    actorUserId: actorId,
+    action: 'GRADEBOOK_LEDGER_SAVED',
+    resourceType: 'gradebook_ledger',
+    resourceId: classId,
+    correlationId,
+  });
 }

@@ -3,18 +3,21 @@ import { X, Search, Bell, BookMarked } from "lucide-react";
 import { TScreen, GradeCardInfo } from "../shared/types";
 import { C } from "../shared/constants/tokens";
 
-import { useLayout, MY_CLASSES, STUDENTS_GR8 } from "../App"; 
+import { useLayout } from "../App"; 
+import { useHashRouter } from "../shared/utils/useHashRouter";
+import { useAppContext } from "../shared/AppContext";
 
 import { TSidebar } from "./shared/TSidebar";
 import { DashboardScreen } from "./dashboard/DashboardScreen";
 import { ClassroomHub } from "./classroom/ClassroomHub";
 import { GradebookFullScreen } from "./grades/GradebookFullScreen";
-import { QuarterlySummaryScreen } from "./grades/QuarterlySummaryScreen";
+import { TermSummaryScreen } from "./grades/TermSummaryScreen";
 import { GradesDirectScreen } from "./grades/GradesDirectScreen";
 import { AttendanceDirectScreen } from "./attendance/AttendanceDirectScreen";
 import { ClinicVisitsScreen } from "./clinic/ClinicVisitsScreen";
 import { AIToolsScreen } from "./ai-tools/AIToolsScreen";
 import { ProDevScreen } from "./pro-dev/ProDevScreen";
+import TRankingScreen from "./ranking/TRankingScreen";
 import { CalendarScreen } from "./calendar/CalendarScreen";
 import { TemplateHubScreen } from "./templates/TemplateHubScreen";
 import { TLeaveScreen } from "./leaves/TLeaveScreen";
@@ -28,29 +31,37 @@ import { AppointmentsScreen } from "./appointments/AppointmentsScreen";
 import { DocRequestsScreen } from "./documents/DocRequestsScreen";
 import { CamScannerScreen } from "../shared/components/CamScannerScreen";
 import { CreateStudent } from "./classroom/CreateStudent";
+import { TAnnouncements } from "./announcements/TAnnouncements";
 
 export function TeacherApp({ onLogout }: { onLogout: () => void }) {
-  const [screen, setScreen] = useState<TScreen>("dashboard");
-  const [classId, setClassId] = useState<number | null>(null);
+  const [screen, setScreen] = useHashRouter<TScreen>("teacher", "dashboard");
+  const [classId, setClassId] = useState<string | null>(null);
   const [gradeCard, setGradeCard] = useState<GradeCardInfo | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
   const { isMobile, isTablet } = useLayout();
-  const nav = (s: TScreen) => { setScreen(s); setMenuOpen(false); };
+  const { notifications, currentUser } = useAppContext();
+  const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
+
+  const nav = (s: TScreen) => { 
+    setScreen(s); 
+    setMenuOpen(false); 
+  };
   const showGradeCard = (info: GradeCardInfo) => setGradeCard(info);
 
   const topbars: Record<TScreen, { title: string, sub?: string }> = {
     dashboard: { title: "Teacher Dashboard", sub: "Overview & Quick Actions" },
     classroom: { title: "Classroom Hub", sub: "Manage sections & grades" },
     gradebook: { title: "Gradebook Entry", sub: "Class activity records" },
-    "quarterly-summary": { title: "Quarterly Summary", sub: "Final ratings overview" },
+    "term-summary": { title: "Term Summary", sub: "Final ratings overview" },
     "grades-direct": { title: "Gradebooks Quick Access" },
     "attendance-direct": { title: "Attendance Quick Access" },
     "clinic-visits": { title: "Student Clinic Logs", sub: " Health Unit" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
     "ai-tools": { title: "AI Assistant Tools", sub: "Smart teaching aids" },
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
+    "t-ranking": { title: "Career Progression", sub: "Teacher Ranking & Comparative Assessment" },
     calendar: { title: "Calendar & Schedule" },
     templates: { title: "Forms & Records", sub: "School Document Templates" },
     "leave-requests": { title: "My Leave Requests", sub: "Track absences & approvals" },
@@ -60,6 +71,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     settings: { title: "My Profile", sub: "Personal Data Sheet & Tracking" },
     appointments: { title: "Appointments", sub: "Parent-Teacher Meeting Requests" },
     "doc-requests": { title: "Document Requests", sub: "Student Certificate Approvals" },
+    announcements: { title: "School Announcements", sub: "Broadcast Messages" },
     "scanner": { title: "Document Scanner", sub: "Scan and digitize documents" },
     "student-create": { title: "Student Account Creator", sub: "Register a new student and provision system access" },
   };
@@ -93,7 +105,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
             )}
             <div>
               <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
-                {classId && screen === "classroom" ? `Classroom: Gr. ${MY_CLASSES.find(c => c.id === classId)?.grade} - ${MY_CLASSES.find(c => c.id === classId)?.section}` : bar.title}
+                {classId && screen === "classroom" ? `Classroom Hub` : bar.title}
               </h1>
               {bar.sub && <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>{bar.sub}</div>}
             </div>
@@ -117,9 +129,13 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
 
               <div style={{ display:"flex", alignItems:"center", gap:16 }}>
                 <div style={{ textAlign:"right" }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>Ms. Ana R. Soriano</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>
+                    {currentUser?.name || "Teacher User"}
+                  </div>
                   <div style={{ marginTop:3 }}>
-                    <span style={{ fontSize:9, fontWeight:700, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:10, border:"1px solid #bbf7d0", letterSpacing:"0.05em" }}>Teacher I</span>
+                    <span style={{ fontSize:9, fontWeight:700, color:"#16a34a", background:"#dcfce7", padding:"2px 8px", borderRadius:10, border:"1px solid #bbf7d0", letterSpacing:"0.05em", textTransform: "uppercase" }}>
+                      {currentUser?.role || "Teacher"}
+                    </span>
                   </div>
                 </div>
                 <div style={{ width:1, height:32, background:C.border }} />
@@ -127,7 +143,9 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
                   <button onClick={() => setNotifOpen(true)}
                     style={{ background: notifOpen ? C.m50 : "transparent", border: "none", borderRadius: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, position: "relative", transition: "background 0.2s" }}>
                     <Bell size={18} color={notifOpen ? C.m700 : C.t2} />
-                    <div style={{ position: "absolute", top: 2, right: 2, background: C.red, color: "#fff", fontSize: 8, fontWeight: 700, borderRadius: 10, width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>5</div>
+                    {unreadCount > 0 && (
+                      <div style={{ position: "absolute", top: 2, right: 2, background: C.red, color: "#fff", fontSize: 8, fontWeight: 700, borderRadius: 10, width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{unreadCount}</div>
+                    )}
                   </button>
                   <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
                 </div>
@@ -146,14 +164,15 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           />}
           {screen === "classroom" && <ClassroomHub classId={classId || 1} onBack={() => setScreen("dashboard")} onShowGradeCard={showGradeCard} />}
           {screen === "gradebook" && <GradebookFullScreen classId={classId || 1} onBack={() => setScreen("dashboard")} />}
-          {screen === "quarterly-summary" && <QuarterlySummaryScreen />}
+          {screen === "term-summary" && <TermSummaryScreen />}
           {screen === "grades-direct" && <GradesDirectScreen />}
           {screen === "attendance-direct" && <AttendanceDirectScreen />}
           {screen === "clinic-visits" && <ClinicVisitsScreen />}
-          {screen === "behavior" && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
+          {screen === "behavior" && <div style={{ flex: 1, minHeight: 0, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
           {screen === "scanner" && <CamScannerScreen />}
           {screen === "ai-tools" && <AIToolsScreen />}
           {screen === "pro-dev" && <ProDevScreen />}
+          {screen === "t-ranking" && <TRankingScreen />}
           {screen === "calendar" && <CalendarScreen />}
           {screen === "templates" && <TemplateHubScreen />}
           {screen === "leave-requests" && <TLeaveScreen />}
@@ -161,6 +180,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           {screen === "appointments" && <AppointmentsScreen />}
           {screen === "doc-requests" && <DocRequestsScreen />}
           {screen === "student-create" && <CreateStudent />}
+          {screen === "announcements" && <TAnnouncements />}
           {(screen === "tutorials" || screen === "tools" || screen === "help") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />
           )}
@@ -168,7 +188,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
       </div>
 
       {gradeCard && (
-        <StudentDetailOverlay student={{ id: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.id || 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.avg || 85, status: STUDENTS_GR8.find(s => s.first.includes(gradeCard.name.split(',')[1]?.trim() || ''))?.status || 'Passed' }} onClose={() => setGradeCard(null)} />
+        <StudentDetailOverlay student={{ id: 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: 85, status: 'Passed' }} onClose={() => setGradeCard(null)} />
       )}
       <AIAssistantWidget role="Teacher" />
     </div>

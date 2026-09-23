@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PScreen, GradeCardInfo } from '../shared/types';
 import { C } from '../shared/constants/tokens';
 import { useLayout } from '../App';
+import { useHashRouter } from '../shared/utils/useHashRouter';
 import { PSidebar } from './shared/PSidebar';
 import { PHeaderBand } from './shared/PHeaderBand';
 import { ReadOnlyBanner } from '../shared/components/ReadOnlyBanner';
@@ -12,15 +13,16 @@ import { PTeachers } from './teachers/PTeachers';
 import { PInventory } from './inventory/PInventory';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
-import { PBehaviorScreen } from './student-services/PBehaviorScreen';
+
 import { CamScannerScreen } from '../shared/components/CamScannerScreen';
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
+import { PAnnouncementsScreen } from './announcements/PAnnouncementsScreen';
 
 export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
-  const [screen, setScreen]   = useState<PScreen>("p-dashboard");
+  const [screen, setScreen] = useHashRouter<PScreen>("principal", "p-dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const { isMobile, isTablet }  = useLayout();
   const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for admin */
@@ -29,10 +31,10 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-inventory": "Inventory",          "p-behavior":  "Behavioral Reports",
-    "p-reports":  "Reports",             "p-templates": "Template Hub",
-    "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
-    "p-scanner": "Document Scanner",
+    "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
+    "p-scanner": "Document Scanner",     "p-doc-requests": "Document Requests",
+    "p-leaves": "Leave Management",      "p-announcements": "Announcements"
   };
 
   if (screen === "p-faculty-attendance") {
@@ -51,7 +53,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           </button>
         </div>
       )}
-      <div className="watermark-bg" style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <PHeaderBand
           title={TITLES[screen]}
           sub="Tuesday, June 10, 2025"
@@ -67,14 +69,12 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
           {screen==="p-inventory"  && <PInventory   />}
-          {screen==="p-reports"    && <PReports     />}
-          {screen==="p-templates"  && <TemplateHubScreen role="principal" />}
           {screen==="p-events"     && <PEventsScreen />}
-          {screen==="p-behavior"   && <div style={{ flex: 1, overflowY: "auto", position: "relative" }}><BehavioralReports /></div>}
           {screen==="p-scanner"    && <CamScannerScreen />}
           {screen==="p-leaves"     && <PLeaveManagement />}
           {screen==="p-doc-requests" && <PDocRequestsScreen />}
-          {(screen==="p-settings"||screen==="p-help") && (
+          {screen==="p-announcements" && <PAnnouncementsScreen />}
+          {(screen==="p-help"||screen==="p-settings"||screen==="p-behavior") && (
             <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 36, background: C.m100, border: `2px solid ${C.m700}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, boxShadow: "0 4px 12px rgba(139,30,30,0.1)" }}>

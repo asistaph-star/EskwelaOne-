@@ -1,21 +1,77 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+export type StoredDocument = { id: string; [key: string]: any };
 import { SCHOOL_EVENTS, TEACHER_PERSONAL_EVENTS, CalendarEvent } from "./data/calendarData";
+import { TeacherRankingRecord, TermKey, TermData } from "./types";
+import { apiClient } from "../../api/client";
+import { toast } from "sonner";
 
 // --- Types --
+export type User = { id: string; name: string; role: string; section?: string; photoDocId?: string; parentEmail?: string; smsAlerts?: boolean; emailAlerts?: boolean; };
 export type GradeStatus = "Draft" | "Submitted" | "Published" | "Returned";
 export type ExcuseStatus = "Pending Review" | "Approved" | "Rejected";
+export type ExcuseLetter = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  teacherId: string;
+  teacherName: string;
+  section: string;
+  dates: string;
+  reason: string;
+  // Document reference — empty string means no document attached
+  documentId: string;
+  documentName: string;
+  documentType: string;
+  documentSize: number;
+  // Timestamps
+  submittedDate: string;
+  // Review
+  status: ExcuseStatus;
+  teacherNote?: string;
+  reviewedAt?: string;
+};
+
+/** Represents the currently logged-in user identity */
+export interface CurrentUser {
+  id: string;
+  name: string;
+  role: string;
+  section?: string;
+  photoDocId?: string;
+  parentEmail?: string;
+  smsAlerts?: boolean;
+  emailAlerts?: boolean;
+  permissions?: string[];
+  rawRoles?: string[];
+  studentProfile?: any;
+}
 export type Message = { id: string; senderId: string; senderName: string; receiverId?: string; receiverName?: string; text?: string; content?: string; timestamp: string; isAI?: boolean; read?: boolean; };
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
-export type ExcuseLetter = { id: string; studentName: string; section: string; dates: string; filename: string; submittedDate: string; status: ExcuseStatus; reason?: string };
-export type GateAttendance = { studentName: string; time: string };
+export type Assignment = { id: string; section?: string; subject: string; title: string; dueDate: string; type: string; gradebookColumnId?: string; };
+export type AssignmentSubmission = { id: string; assignmentId: string; studentId: string; genericDocId?: string; status: "Submitted" | "Graded" | "Returned"; grade?: number; feedback?: string; submittedAt: string; };
+export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
+export type TeacherLeave = { id: string; type: string; startDate: string; endDate: string; days: number; reason: string; status: "Pending" | "Approved" | "Rejected"; submittedOn: string; approverNote?: string };
+export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
 export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
+export type EnrollmentStatus = "Pending Review" | "Missing Documents" | "Enrolled" | "Rejected";
+export type Applicant = {
+  id: string;
+  name: string;
+  gradeLevel: string;
+  type: "New Student" | "Transferee" | "Returning";
+  dateApplied: string;
+  status: EnrollmentStatus;
+  documents: { birthCert: boolean; form138: boolean; goodMoral: boolean; medical: boolean; };
+};
 export type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed";
 export type AppointmentDirection = "parent-to-teacher" | "teacher-to-parent";
 export type Appointment = {
   id: string;
+  studentId: string;
   studentName: string;
   parentEmail: string;
+  teacherId: string;
   teacherName: string;
   date: string;
   time: string;
@@ -52,6 +108,7 @@ export type StudentRecord = {
 export type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Principal Rejected" | "Ready for Pickup" | "Completed";
 export type DocumentRequest = {
   id: string;
+  studentId: string;
   studentName: string;
   section: string;
   documentType: string;
@@ -59,12 +116,20 @@ export type DocumentRequest = {
   status: DocRequestStatus;
   currentStage: number; // 1=Submitted, 2=Teacher Approved, 3=Principal Approved, 4=Ready for Pickup
   submittedDate: string;
-  teacherName: string;
+  teacherId?: string;
+  teacherName?: string;
+  responsibleRole?: "TEACHER" | "REGISTRAR" | "RECORDS_CUSTODIAN" | "GUIDANCE";
+  responsibleOffice?: string;
+  requiredInformation?: Record<string, string>;
+  requiresPrincipalApproval?: boolean;
   teacherApprovedDate?: string;
   teacherRemarks?: string;
   principalApprovedDate?: string;
   principalRemarks?: string;
   readyDate?: string; // estimated pickup date
+  attachedDocumentId?: string; // ID of the document stored in IndexedDB (Principal's attachment)
+  studentAttachmentId?: string; // ID of the document stored in IndexedDB (Student's requirement upload)
+  studentAttachmentName?: string; // Filename of the student's upload
 };
 
 export type SystemAccountRole = "Teacher" | "Student" | "Parent" | "Staff";
@@ -80,18 +145,51 @@ export type SystemAccount = {
 };
 
 type AppContextType = {
-  // Grades
-  gradesStatus: Record<string, GradeStatus>; // key: "section-quarter", e.g., "Gr10-Rizal-Q1"
-  setGradeStatus: (key: string, status: GradeStatus) => void;
+  // Current User
+  currentUser: CurrentUser | null;
+  setCurrentUser: (user: CurrentUser | null) => void;
+  updateCurrentUser: (updates: Partial<CurrentUser>) => Promise<void>;
+  isAuthChecking: boolean;
+  setIsAuthChecking: (val: boolean) => void;
   
   // Excuse Letters
   excuseLetters: ExcuseLetter[];
-  updateExcuseLetter: (id: string, status: ExcuseStatus, reason?: string) => void;
+  updateExcuseLetter: (id: string, status: ExcuseStatus, teacherNote?: string) => void;
   addExcuseLetter: (letter: ExcuseLetter) => void;
+  getExcuseDocument: (documentId: string) => Promise<StoredDocument | undefined>;
+  saveExcuseDocument: (doc: StoredDocument) => Promise<StoredDocument>;
+  deleteExcuseDocument: (id: string) => Promise<void>;
+
+  // Generic Documents (Profile Photos, etc)
+  getGenericDocument: (documentId: string) => Promise<StoredDocument | undefined>;
+  saveGenericDocument: (doc: StoredDocument) => Promise<StoredDocument>;
+
+  // Teacher Leaves
+  students: User[];
+  teachers: User[];
+  addTeacher: (t: Omit<User, 'id'>) => Promise<void>;
+  addStudent: (s: Omit<User, 'id'>) => Promise<void>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  teacherLeaves: TeacherLeave[];
+  addTeacherLeave: (leave: TeacherLeave) => void;
+  updateTeacherLeave: (id: string, status: "Pending"|"Approved"|"Rejected", approverNote?: string) => void;
 
   // Announcements
   announcements: Announcement[];
   addAnnouncement: (a: Announcement) => void;
+
+  // Assignments
+  assignments: Assignment[];
+  addAssignment: (a: Assignment) => Promise<void>;
+  updateAssignment: (id: string, updates: Partial<Assignment>) => Promise<void>;
+  assignmentSubmissions: AssignmentSubmission[];
+  addAssignmentSubmission: (s: AssignmentSubmission) => Promise<void>;
+  updateAssignmentSubmission: (id: string, updates: Partial<AssignmentSubmission>) => Promise<void>;
+
+  // Notifications
+  notifications: AppNotification[];
+  addNotification: (n: AppNotification) => void;
+  markNotificationsRead: (recipientId: string) => void;
 
   // Events
   events: CalendarEvent[];
@@ -105,17 +203,21 @@ type AppContextType = {
 
   // Cross-checks
   gateAttendance: GateAttendance[];
+  addGateAttendance: (log: GateAttendance) => void;
+  updateGateAttendance: (id: string, updates: Partial<GateAttendance>) => void;
   clinicReferrals: ClinicReferral[];
   addClinicReferral: (ref: ClinicReferral) => void;
   resolveClinicReferral: (id: string) => void;
+
+  // Nurse Visit Records (persisted)
+  clinicVisitRecords: any[];
+  addClinicVisitRecord: (v: any) => Promise<void>;
 
   behaviorLogs: BehaviorLog[];
   addBehaviorLog: (log: BehaviorLog) => void;
   updateBehaviorLog: (id: string, updates: Partial<BehaviorLog>) => void;
 
   // Appointments
-  parentEmail: string;
-  setParentEmail: (email: string) => void;
   appointments: Appointment[];
   addAppointment: (appt: Appointment) => void;
   updateAppointment: (id: string, status: AppointmentStatus) => void;
@@ -129,56 +231,37 @@ type AppContextType = {
   documentRequests: DocumentRequest[];
   addDocumentRequest: (req: DocumentRequest) => void;
   updateDocumentRequest: (id: string, updates: Partial<DocumentRequest>) => void;
+<<<<<<< HEAD
 
   // System Accounts (IT Admin)
   systemAccounts: SystemAccount[];
   deleteAccount: (id: string) => void;
   resetPassword: (id: string) => void;
+=======
+  
+  // Teacher Ranking
+  teacherRankings: TeacherRankingRecord[];
+  addTeacherRanking: (record: TeacherRankingRecord) => void;
+  updateTeacherRanking: (id: string, updates: Partial<TeacherRankingRecord>) => void;
+
+  // Enrollments
+  enrollmentApplications: Applicant[];
+  enrollmentError: string | null;
+  addEnrollmentApplication: (app: Applicant) => Promise<void>;
+  updateEnrollmentApplication: (id: string, updates: Partial<Applicant>) => void;
+>>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
 };
 
 // --- Seed Data --
-const SEED_GRADES_STATUS: Record<string, GradeStatus> = {
-  "Gr10-Rizal-Q1": "Published",
-  "Gr10-Rizal-Q2": "Submitted", // Sitting in Principal's queue
-  "Gr10-Rizal-Q3": "Draft",
-};
 
-const SEED_EXCUSE_LETTERS: ExcuseLetter[] = [
-  { id: "exc-1", studentName: "Juan Dela Cruz", section: "Grade 10 - Rizal", dates: "July 12, 2026", filename: "Medical_Cert_DelaCruz.pdf", submittedDate: "July 13, 2026", status: "Approved" },
-  { id: "exc-2", studentName: "Juan Dela Cruz", section: "Grade 10 - Rizal", dates: "July 20, 2026", filename: "Letter_Parents.pdf", submittedDate: "July 21, 2026", status: "Pending Review" }, // Sitting in Teacher's queue
-];
 
-const SEED_ANNOUNCEMENTS: Announcement[] = [
-  { id: "ann-1", author: "Dr. Roberto Santos (Principal)", title: "Quarter 1 Grading Period Deadline", body: "Please be reminded that all Q1 grades must be submitted for review by the end of this week. Thank you.", audience: "Teachers", timestamp: "Today, 8:00 AM" },
-  { id: "ann-2", author: "Dr. Roberto Santos (Principal)", title: "Suspension of Afternoon Classes", body: "Due to heavy rainfall and flooding warnings, all afternoon classes are suspended today. Please stay safe.", audience: "All", timestamp: "Yesterday, 11:30 AM" },
-];
 
-const SEED_MESSAGES: Message[] = [
-  { id: "msg-1", senderId: "s-juan", senderName: "Juan Dela Cruz", receiverId: "t-ana", receiverName: "Ana R. Soriano", content: "Good morning Ma'am Ana, I would like to ask about the deadline for our Q1 Project?", text: "Good morning Ma'am Ana, I would like to ask about the deadline for our Q1 Project?", timestamp: "Yesterday, 9:00 AM", read: true },
-  { id: "msg-2", senderId: "t-ana", senderName: "Ana R. Soriano", receiverId: "s-juan", receiverName: "Juan Dela Cruz", content: "Hi Juan, the deadline is extended until next Wednesday. Make sure to complete the rubric.", text: "Hi Juan, the deadline is extended until next Wednesday. Make sure to complete the rubric.", timestamp: "Yesterday, 10:15 AM", read: true },
-  { id: "msg-3", senderId: "s-juan", senderName: "Juan Dela Cruz", receiverId: "t-ana", receiverName: "Ana R. Soriano", content: "Thank you so much Ma'am! I'll submit it on Monday.", text: "Thank you so much Ma'am! I'll submit it on Monday.", timestamp: "Yesterday, 10:20 AM", read: true },
-  { id: "msg-4", senderId: "p-roberto", senderName: "Dr. Roberto Santos", receiverId: "t-ana", receiverName: "Ana R. Soriano", content: "Hi Ana, please review the Q1 grades for Grade 10 - Rizal. I've sent back a few for recalibration.", text: "Hi Ana, please review the Q1 grades for Grade 10 - Rizal. I've sent back a few for recalibration.", timestamp: "Today, 8:15 AM", read: true },
-  { id: "msg-5", senderId: "t-ana", senderName: "Ana R. Soriano", receiverId: "p-roberto", receiverName: "Dr. Roberto Santos", content: "Noted, Dr. Santos. I'm reviewing them now and will resubmit by noon.", text: "Noted, Dr. Santos. I'm reviewing them now and will resubmit by noon.", timestamp: "Today, 8:40 AM", read: true },
-];
 
-const SEED_GATE_ATTENDANCE: GateAttendance[] = [
-  { studentName: "Juan Dela Cruz", time: "7:14 AM" } // Scanned in
-];
 
-const SEED_CLINIC_REFERRALS: ClinicReferral[] = [
-  { id: "ref-1", studentName: "Trisha Ann Cruz", teacherName: "Ana R. Soriano", reason: "Severe headache and fever symptoms", timestamp: "Today, 9:45 AM", status: "Pending" }
-];
 
-const SEED_BEHAVIOR_LOGS: BehaviorLog[] = [
-  { id: "log-1", studentName: "Juan Dela Cruz", section: "Grade 10 - Rizal", type: "Misconduct", date: "Today", status: "Under investigation", note: "Using mobile phone during lecture despite multiple warnings." },
-  { id: "log-2", studentName: "Juan Dela Cruz", section: "Grade 10 - Rizal", type: "Disruption", date: "Yesterday", status: "Parent notified", note: "Consistently disruptive during group activities." }
-];
 
-const SEED_APPOINTMENTS: Appointment[] = [
-  { id: "appt-1", studentName: "Juan Miguel Santos", parentEmail: "maria.santos@email.com", teacherName: "Ana R. Soriano", date: "July 25, 2026", time: "10:00 AM", purpose: "Discuss quarterly academic performance and study habits improvement plan.", status: "Confirmed", direction: "parent-to-teacher", createdAt: "July 18, 2026" },
-  { id: "appt-2", studentName: "Juan Miguel Santos", parentEmail: "maria.santos@email.com", teacherName: "Carlo D. Reyes", date: "July 28, 2026", time: "2:00 PM", purpose: "Discuss Mathematics tutoring recommendations and supplementary materials.", status: "Pending", direction: "teacher-to-parent", createdAt: "July 20, 2026" },
-];
 
+<<<<<<< HEAD
 const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
   { id: "doc-1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
   { id: "doc-2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
@@ -289,32 +372,334 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const [studentRecords] = useState<StudentRecord[]>(SEED_STUDENT_RECORDS);
   const [counselingLogs, setCounselingLogs] = useState<CounselingLog[]>(SEED_COUNSELING_LOGS);
+=======
 
-  const setGradeStatus = (key: string, status: GradeStatus) => {
-    setGradesStatus(prev => ({ ...prev, [key]: status }));
+
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+/**
+ * Reusable authorization helper.
+ * Validates whether the current user is authorized to perform an action on a specific resource.
+ * This must be used by all AppContext mutations to secure data layer writes.
+ */
+function assertAuthorized(currentUser: CurrentUser | null, targetId: string, resourceType: "profile" | "gradebook" | "assignment" | "announcement" | "document" | "class_roster") {
+  if (!currentUser) throw new Error("Unauthorized: No active user session.");
+  
+  if (resourceType === "profile" && targetId !== currentUser.id) {
+    if (currentUser.role !== "Admin" && currentUser.role !== "Principal") {
+      throw new Error("Unauthorized: Cannot modify another user's profile.");
+    }
+  }
+>>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
+
+  if (resourceType === "announcement" && targetId === "All") {
+    if (currentUser.role !== "Principal" && currentUser.role !== "Admin") {
+      throw new Error("Unauthorized: Only Principals/Admins can publish school-wide announcements.");
+    }
+  }
+
+  if (resourceType === "gradebook" || resourceType === "class_roster" || resourceType === "assignment") {
+    if (currentUser.role !== "Teacher" && currentUser.role !== "Principal" && currentUser.role !== "Admin") {
+      throw new Error(`Unauthorized: Cannot modify ${resourceType}.`);
+    }
+    // TODO: In a real backend, verify that targetId (classId/section) is explicitly assigned to currentUser.id via a teacher_classes bridge table.
+  }
+}
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [excuseLetters, setExcuseLetters] = useState<ExcuseLetter[]>([]);
+  const [students, setStudents] = useState<User[]>([]);
+  const [teachers, setTeachers] = useState<User[]>([]);
+  const [clinicVisitRecords, setClinicVisitRecords] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentSubmissions, setAssignmentSubmissions] = useState<AssignmentSubmission[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [gateAttendance, setGateAttendance] = useState<GateAttendance[]>([]);
+  const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
+  const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
+  const [teacherRankings, setTeacherRankings] = useState<TeacherRankingRecord[]>([]);
+  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
+  const [enrollmentApplications, setEnrollmentApplications] = useState<Applicant[]>([]);
+  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function initDB() {
+      if (currentUser) {
+        try {
+          const meData = await apiClient.get<any>('/auth/me');
+          setCurrentUser({
+            id: meData.id,
+            name: `${meData.firstName} ${meData.lastName}`,
+            role: meData.roles[0],
+            permissions: meData.permissions || [],
+            rawRoles: meData.roles,
+            studentProfile: meData.studentProfile
+          });
+        } catch (err: any) {
+          setCurrentUser(null);
+          localStorage.removeItem('currentUser');
+          return;
+        }
+      }
+
+      try {
+        const [
+          dbExcuses, dbEv, dbClinic, dbNurseVisits, dbBeh,
+          dbAppt, dbDocReq, dbRank, dbEnrollments, dbNotifs, dbGateAtt,
+          dbUsers, dbAnnouncements, dbLeaves
+        ] = await Promise.all([
+          apiClient.get('/attendance/excuses').catch(() => []),
+          apiClient.get('/admin/events').catch(() => []),
+          apiClient.get('/student-services/clinic').catch(() => []),
+          Promise.resolve([]), // nurseVisits
+          apiClient.get('/student-services/guidance').catch(() => []),
+          apiClient.get('/student-services/appointments').catch(() => []),
+          apiClient.get('/student-services/doc-requests').catch(() => []),
+          Promise.resolve([]), // teacherRankings
+          apiClient.get('/admin/enrollment-applications').catch((e) => {
+            console.error("Failed to fetch enrollment applications", e);
+            setEnrollmentError("Failed to fetch enrollment applications. Please check the backend connection.");
+            return [];
+          }),
+          Promise.resolve([]), // notifications
+          apiClient.get('/attendance/gate').catch(() => []),
+          apiClient.get('/users').catch(() => []),
+          apiClient.get('/admin/announcements').catch(() => []),
+          apiClient.get('/admin/leaves').catch(() => [])
+        ]);
+
+        setExcuseLetters(dbExcuses as any);
+        setEvents(dbEv as any);
+        setClinicReferrals(dbClinic as any);
+        setClinicVisitRecords(dbNurseVisits as any);
+        setBehaviorLogs(dbBeh as any);
+        setAppointments(dbAppt as any);
+        setDocumentRequests(dbDocReq as any);
+        console.log("DB LEAVES FETCHED:", dbLeaves);
+        setTeacherRankings(dbRank as any);
+        setTeacherLeaves(dbLeaves as any);
+        setEnrollmentApplications(dbEnrollments as any);
+        setNotifications(dbNotifs as any);
+        setGateAttendance(dbGateAtt as any);
+        
+        // Filter users
+        const users = dbUsers.map((u: any) => ({ ...u, name: `${u.first_name} ${u.last_name}` }));
+        setStudents(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Student')));
+        setTeachers(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Teacher')));
+        setAnnouncements(dbAnnouncements as any);
+
+        setIsLoaded(true);
+      } catch (err: any) {
+        console.error("Failed to fetch from backend API:", err);
+      }
+    }
+    initDB();
+
+    const handleConflict = () => {
+      toast.error("Data was modified by another user. Refreshing...");
+      initDB();
+    };
+    
+    const handleUnauthorized = () => {
+      setCurrentUser(null);
+      localStorage.removeItem('currentUser');
+    };
+
+    window.addEventListener("api_conflict", handleConflict as EventListener);
+    window.addEventListener("api_unauthorized", handleUnauthorized as EventListener);
+    return () => {
+      window.removeEventListener("api_conflict", handleConflict as EventListener);
+      window.removeEventListener("api_unauthorized", handleUnauthorized as EventListener);
+    };
+  }, [currentUser?.id]);
+
+  // Sync currentUser to localStorage
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  }, [currentUser]);
+
+  const addNotification = async (n: AppNotification) => {
+    const saved = await apiClient.post("/admin/notifications", n);
+    setNotifications(prev => [...prev, saved as any]);
   };
 
-  const updateExcuseLetter = (id: string, status: ExcuseStatus, reason?: string) => {
-    setExcuseLetters(prev => prev.map(l => l.id === id ? { ...l, status, reason } : l));
+  const markNotificationsRead = async (recipientId: string) => {
+    const unread = notifications.filter(n => n.recipientId === recipientId && !n.isRead);
+    for (const n of unread) {
+      await apiClient.patch("/admin/notifications/" + n.id, { ...n, isRead: true });
+    }
+    setNotifications(prev => prev.map(n => n.recipientId === recipientId ? { ...n, isRead: true } : n));
+  };
+
+  const updateExcuseLetter = async (id: string, status: ExcuseStatus, teacherNote?: string) => {
+    const updates: Partial<ExcuseLetter> = { status, reviewedAt: new Date().toISOString() };
+    if (teacherNote !== undefined) updates.teacherNote = teacherNote;
+    await apiClient.patch("/admin/notifications/" + id, updates);
+    setExcuseLetters(prev => prev.map(l => l.id === id ? { ...l, ...updates } as any as any : l));
   };
   
-  const addExcuseLetter = (letter: ExcuseLetter) => {
-    setExcuseLetters(prev => [letter, ...prev]);
+  const addExcuseLetter = async (letter: ExcuseLetter) => {
+    const saved = await apiClient.post("/attendance/excuses", letter);
+    setExcuseLetters(prev => [saved as any, ...prev]);
   };
 
-  const addAnnouncement = (a: Announcement) => {
-    setAnnouncements(prev => [a, ...prev]);
+  const getExcuseDocument = async (documentId: string): Promise<StoredDocument | undefined> => {
+    if (!documentId) return undefined;
+    return apiClient.get<any>('/documents/' + documentId).catch(() => undefined);
   };
 
-  const addEvent = (e: CalendarEvent) => {
-    setEvents(prev => [...prev, e]);
+  const saveExcuseDocument = async (doc: StoredDocument): Promise<StoredDocument> => {
+    return apiClient.post('/documents', doc);
   };
 
-  const editEvent = (id: string, data: Partial<CalendarEvent>) => {
+  const deleteExcuseDocument = async (id: string): Promise<void> => {
+    return apiClient.delete('/documents/' + id);
+  };
+
+  const getGenericDocument = async (documentId: string): Promise<StoredDocument | undefined> => {
+    if (!documentId) return undefined;
+    return apiClient.get<any>('/documents/' + documentId).catch(() => undefined);
+  };
+
+  const saveGenericDocument = async (doc: StoredDocument): Promise<StoredDocument> => {
+    return apiClient.post('/documents', doc);
+  };
+
+  const updateCurrentUser = async (updates: Partial<CurrentUser>) => {
+    if (!currentUser) return;
+    assertAuthorized(currentUser, currentUser.id, "profile");
+    const updated = { ...currentUser, ...updates };
+    setCurrentUser(updated);
+    // Persist to indexedDB if it's a known user
+    try {
+      await apiClient.patch("/admin/notifications/" + currentUser.id, updates);
+    } catch (e) {
+      console.warn("Failed to persist currentUser updates", e);
+    }
+  };
+
+  const addTeacher = async (t: Omit<User, 'id'>) => {
+    assertAuthorized(currentUser, "admin", "profile"); // basic check
+    const saved = await apiClient.post("/users", t);
+    setTeachers(prev => [...prev, saved as any]);
+  };
+
+  const addStudent = async (s: Omit<User, 'id'>) => {
+    assertAuthorized(currentUser, s.section || "", "class_roster");
+    const saved = await apiClient.post("/admin/notifications", s);
+    setStudents(prev => [...prev, saved as any]);
+  };
+
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    // Basic check: if teacher, they can modify student records, else strictly profile
+    if (currentUser?.role === 'Teacher') {
+      assertAuthorized(currentUser, "", "class_roster"); // allowed via class_roster rule
+    } else {
+      assertAuthorized(currentUser, id, "profile");
+    }
+    const saved = await apiClient.patch("/users/" + id, updates);
+    setStudents(prev => prev.map(u => u.id === id ? { ...u, ...updates } as any : u));
+    setTeachers(prev => prev.map(u => u.id === id ? { ...u, ...updates } as any : u));
+  };
+
+  const addTeacherLeave = async (leave: TeacherLeave) => {
+    const saved = await apiClient.post("/admin/leaves", leave);
+    setTeacherLeaves(prev => [saved as any, ...prev]);
+  };
+
+  const updateTeacherLeave = async (id: string, status: "Pending"|"Approved"|"Rejected", approverNote?: string) => {
+    await apiClient.patch("/admin/leaves/" + id, { status, approverNote });
+    setTeacherLeaves(prev => prev.map(l => l.id === id ? { ...l, status, approverNote } : l));
+  };
+
+  const addAnnouncement = async (a: Announcement) => {
+    const saved = await apiClient.post("/admin/announcements", a);
+    setAnnouncements(prev => [saved as any, ...prev]);
+  };
+
+  const updateAssignment = async (id: string, updates: Partial<Assignment>) => {
+    try {
+      const assn = assignments.find(a => a.id === id);
+      if (!assn) return;
+      assertAuthorized(currentUser, assn.subject, "assignment");
+      const updated = await apiClient.patch("/admin/notifications/" + id, { ...assn, ...updates });
+      setAssignments(prev => prev.map(a => a.id === id ? updated as any : a));
+    } catch(e) { console.error(e); }
+  };
+
+  const addAssignmentSubmission = async (s: AssignmentSubmission) => {
+    // Only students submit, and they only submit for themselves
+    if (currentUser?.role === "Student") {
+      assertAuthorized(currentUser, s.studentId, "profile"); // ensure they are themselves
+    }
+    const saved = await apiClient.post("/admin/notifications", s);
+    setAssignmentSubmissions(prev => [saved as any, ...prev]);
+  };
+
+  const updateAssignmentSubmission = async (id: string, updates: Partial<AssignmentSubmission>) => {
+    try {
+      const sub = assignmentSubmissions.find(s => s.id === id);
+      if (!sub) return;
+      
+      // If teacher is grading, they must be authorized
+      if (updates.grade !== undefined) {
+        assertAuthorized(currentUser, "", "gradebook");
+      }
+
+      const updated = await apiClient.patch("/admin/notifications/" + id, { ...sub, ...updates });
+      setAssignmentSubmissions(prev => prev.map(s => s.id === id ? updated as any : s));
+    } catch(e) { console.error(e); }
+  };
+
+  const addAssignment = async (a: Assignment) => {
+    assertAuthorized(currentUser, a.subject, "assignment"); // subject represents class context
+    const saved = await apiClient.post("/admin/notifications", a);
+    setAssignments(prev => [saved as any, ...prev]);
+  };
+
+  const addEvent = async (e: CalendarEvent) => {
+    const saved = await apiClient.post("/admin/events", e);
+    setEvents(prev => [...prev, saved as any]);
+  };
+
+  const addGateAttendance = async (log: GateAttendance) => {
+    setGateAttendance(prev => [log, ...prev]);
+    await apiClient.post("/admin/notifications", log);
+  };
+
+  const updateGateAttendance = async (id: string, updates: Partial<GateAttendance>) => {
+    setGateAttendance(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
+    await apiClient.patch("/attendance/gate/" + id, updates);
+  };
+
+  const editEvent = async (id: string, data: Partial<CalendarEvent>) => {
+    await apiClient.patch("/admin/events/" + id, data);
     setEvents(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
+    await apiClient.delete("/mock/" + id);
     setEvents(prev => prev.filter(e => e.id !== id));
   };
 
@@ -322,37 +707,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMessages(prev => [...prev, msg]);
   };
 
-  const addClinicReferral = (ref: ClinicReferral) => {
-    setClinicReferrals(prev => [ref, ...prev]);
+  const addClinicReferral = async (ref: ClinicReferral) => {
+    const saved = await apiClient.post("/student-services/clinic", ref);
+    setClinicReferrals(prev => [saved as any, ...prev]);
   };
 
-  const resolveClinicReferral = (id: string) => {
+  const addClinicVisitRecord = async (v: any) => {
+    const saved = await apiClient.post("/student-services/clinic", v);
+    setClinicVisitRecords(prev => [saved as any, ...prev]);
+  };
+
+  const resolveClinicReferral = async (id: string) => {
+    await apiClient.patch("/student-services/clinic/" + id, { status: "Acknowledged" });
     setClinicReferrals(prev => prev.map(r => r.id === id ? { ...r, status: "Acknowledged" } : r));
   };
 
-  const addBehaviorLog = (log: BehaviorLog) => {
-    setBehaviorLogs(prev => [log, ...prev]);
+  const addBehaviorLog = async (log: BehaviorLog) => {
+    const saved = await apiClient.post("/student-services/guidance", log);
+    setBehaviorLogs(prev => [saved as any, ...prev]);
   };
 
-  const updateBehaviorLog = (id: string, updates: Partial<BehaviorLog>) => {
-    setBehaviorLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+  const updateBehaviorLog = async (id: string, updates: Partial<BehaviorLog>) => {
+    await apiClient.patch("/admin/notifications/" + id, updates);
+    setBehaviorLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } as any as any : l));
   };
 
-  const addAppointment = (appt: Appointment) => {
-    setAppointments(prev => [appt, ...prev]);
+  const addAppointment = async (appt: Appointment) => {
+    const saved = await apiClient.post("/student-services/appointments", appt);
+    setAppointments(prev => [saved as any, ...prev]);
   };
 
-  const updateAppointment = (id: string, status: AppointmentStatus) => {
+  const updateAppointment = async (id: string, status: AppointmentStatus) => {
+    await apiClient.patch("/student-services/appointments/" + id, { status });
     setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
   };
 
-  const addDocumentRequest = (req: DocumentRequest) => {
-    setDocumentRequests(prev => [req, ...prev]);
+  const addDocumentRequest = async (req: DocumentRequest) => {
+    const saved = await apiClient.post("/student-services/doc-requests", req);
+    setDocumentRequests(prev => [saved as any, ...prev]);
   };
 
-  const updateDocumentRequest = (id: string, updates: Partial<DocumentRequest>) => {
+  const updateDocumentRequest = async (id: string, updates: Partial<DocumentRequest>) => {
+    await apiClient.patch("/documents/requests/" + id, updates);
     setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
   };
+  
+  const addTeacherRanking = async (record: TeacherRankingRecord) => {
+    const saved = await apiClient.post("/users/rankings", record);
+    setTeacherRankings(prev => [saved as any, ...prev]);
+  };
+
+  const updateTeacherRanking = async (id: string, updates: Partial<TeacherRankingRecord>) => {
+    await apiClient.patch("/admin/notifications/" + id, updates);
+    setTeacherRankings(prev => prev.map(r => r.id === id ? { ...r, ...updates } as any : r));
+  };
+
+  const addEnrollmentApplication = async (app: Applicant) => {
+    const saved = await apiClient.post("/admin/enrollment-applications", app);
+    setEnrollmentApplications(prev => [saved as any, ...prev]);
+  };
+
+  const updateEnrollmentApplication = async (id: string, updates: Partial<Applicant>) => {
+    await apiClient.patch("/admin/notifications/" + id, updates);
+    setEnrollmentApplications(prev => prev.map(a => a.id === id ? { ...a, ...updates } as any : a));
+  };
+
+  if (!isLoaded) {
+    return (
+      <div style={{ display: "flex", height: "100vh", width: "100vw", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#64748b" }}>
+        Loading Secure Environment...
+      </div>
+    );
+  }
 
   const addCounselingLog = (log: CounselingLog) => {
     setCounselingLogs(prev => [log, ...prev]);
@@ -360,19 +786,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      gradesStatus, setGradeStatus,
+      students, teachers, addTeacher, addStudent, updateUser,
+      isAuthChecking, setIsAuthChecking,
+      currentUser, setCurrentUser, updateCurrentUser,
       excuseLetters, updateExcuseLetter, addExcuseLetter,
+      getExcuseDocument, saveExcuseDocument, deleteExcuseDocument,
+      getGenericDocument, saveGenericDocument,
       announcements, addAnnouncement,
+      assignments, addAssignment, updateAssignment,
+      assignmentSubmissions, addAssignmentSubmission, updateAssignmentSubmission,
+      notifications, addNotification, markNotificationsRead,
       events, addEvent, editEvent, deleteEvent,
       messages, addMessage,
-      gateAttendance,
+      gateAttendance, addGateAttendance, updateGateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,
       behaviorLogs, addBehaviorLog, updateBehaviorLog,
-      parentEmail, setParentEmail,
+
       appointments, addAppointment, updateAppointment,
       documentRequests, addDocumentRequest, updateDocumentRequest,
+<<<<<<< HEAD
       studentRecords, counselingLogs, addCounselingLog,
       systemAccounts, deleteAccount, resetPassword
+=======
+      teacherRankings, addTeacherRanking, updateTeacherRanking,
+      teacherLeaves, addTeacherLeave, updateTeacherLeave,
+      clinicVisitRecords, addClinicVisitRecord,
+      enrollmentApplications,
+      enrollmentError,
+      addEnrollmentApplication, updateEnrollmentApplication
+>>>>>>> 6acd4af (feat: implement authoritative SF10 Scholastic Records logic and UI)
     }}>
       {children}
     </AppContext.Provider>

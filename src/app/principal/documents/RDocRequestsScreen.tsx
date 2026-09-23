@@ -24,7 +24,6 @@ export function RDocRequestsScreen() {
       status: "Ready for Pickup",
       currentStage: 4
     });
-    alert("Document marked as Ready for Pickup!");
   }
 
   function handleMarkCompleted(id: string) {
@@ -32,7 +31,6 @@ export function RDocRequestsScreen() {
       status: "Completed",
       currentStage: 4
     });
-    alert("Document marked as Completed (Picked up).");
   }
 
   function statusColor(s: DocRequestStatus) {
@@ -105,7 +103,7 @@ export function RDocRequestsScreen() {
                 <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", fontSize: 13, color: C.t3 }}>No requests in this stage.</td></tr>
               ) : (
                 requests.map(req => (
-                  <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s" }}
+                  <tr key={req.id} data-purpose={req.purpose} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s" }}
                     onMouseEnter={e => e.currentTarget.style.background = C.paper}
                     onMouseLeave={e => e.currentTarget.style.background = "#fff"}
                   >

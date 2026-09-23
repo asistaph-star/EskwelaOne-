@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RScreen } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { LayoutDashboard, Users, FileText, FolderOpen, Settings, HelpCircle, LogOut, ChevronDown, User, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FolderOpen, Settings, HelpCircle, LogOut, ChevronDown, User, AlertTriangle, Search } from 'lucide-react';
 
 const R_NAV_GROUPS = [
   { category: "Overview", items: [
@@ -14,6 +14,7 @@ const R_NAV_GROUPS = [
     { id: "r-doc-requests" as RScreen, label: "Document Requests", icon: FileText },
     { id: "r-records" as RScreen, label: "Academic Records (SF10)", icon: FolderOpen },
     { id: "r-deficiency" as RScreen, label: "Document Deficiency", icon: AlertTriangle },
+    { id: "r-search" as RScreen, label: "Student Data Search", icon: Search },
   ]},
 ];
 
@@ -44,7 +45,7 @@ export function RSidebar({ active, onNav, onLogout, collapsed = false }: {
       </div>
 
       {/* Nav */}
-      <div style={{ flex: 1, overflowY: "auto", padding: collapsed ? "16px 8px" : "24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: collapsed ? "16px 8px" : "24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
         {R_NAV_GROUPS.map(g => (
           <div key={g.category}>
             {!collapsed && <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, paddingLeft: 12 }}>{g.category}</div>}

@@ -79,3 +79,5 @@ backend/seed_system_user.ts
 backend/src/scratch_rename.ts
 backend/src/check-terms.ts
 backend/src/check-users.ts
+backend/check_fks.ts
+backend/storage/

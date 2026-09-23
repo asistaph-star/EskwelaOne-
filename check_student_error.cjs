@@ -1,43 +1,31 @@
-const puppeteer = require('puppeteer');
+const { chromium } = require('playwright');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-  
+  const browser = await chromium.launch();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
   page.on('console', msg => {
     if (msg.type() === 'error') {
-      console.log('PAGE LOG ERROR:', msg.text());
+      console.log(`PAGE ERROR: ${msg.text()}`);
     }
   });
-
   page.on('pageerror', error => {
-    console.log('PAGE ERROR:', error.message);
+    console.log(`PAGE ERROR EXCEPTION: ${error.message}`);
   });
 
-  console.log('Navigating to app...');
-  await page.goto('http://localhost:5173', { waitUntil: 'networkidle0' });
-  
-  console.log('Looking for Student login...');
-  const btn = await page.$('text/Student');
-  if (btn) {
-    await btn.click();
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  
-  console.log('Clicking Achievement tab...');
-  const tabBtn = await page.$('text/Achievement');
-  if (tabBtn) {
-    await tabBtn.click();
-    await new Promise(r => setTimeout(r, 1000));
-  }
+  await page.goto('http://localhost:5173');
+  await page.fill('input[type="email"]', 'testteacher@digiskwela.com');
+  await page.fill('input[type="password"]', 'Password123!');
+  await page.click('button:has-text("Sign In")');
 
-  console.log('Clicking Grades tab...');
-  const gbBtn = await page.$('text/Grades');
-  if (gbBtn) {
-    await gbBtn.click();
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  
-  console.log('Done checking Student Portal.');
+  await page.waitForTimeout(2000);
+  console.log('Clicking Attendance...');
+  await page.click('button:has-text("Attendance")');
+  await page.waitForTimeout(1000);
+  console.log('Clicking Excuse Letters...');
+  await page.click('button:has-text("Excuse Letters")');
+  await page.waitForTimeout(3000);
+
   await browser.close();
 })();
