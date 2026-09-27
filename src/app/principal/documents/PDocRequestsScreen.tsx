@@ -1,67 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { useAppContext } from '../../shared/AppContext';
 import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Camera, Upload, Download } from 'lucide-react';
 import { DocumentScanner } from '../../shared/components/scanner/DocumentScanner';
-import type { DocRequestStatus } from '../../shared/AppContext';
+import { apiClient } from '../../../api/client';
+
+type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Ready for Pickup" | "Completed";
 
 export function PDocRequestsScreen() {
-  const { documentRequests, updateDocumentRequest, addNotification, currentUser, getGenericDocument, saveGenericDocument } = useAppContext();
+  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [pickupDates, setPickupDates] = useState<Record<string, string>>({});
   const [scannerReqId, setScannerReqId] = useState<string | null>(null);
   const [uploadReqId, setUploadReqId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const pendingRequests = documentRequests.filter(r => r.status === "Teacher Approved" || (r.status === "Submitted" && (r.responsibleRole === "REGISTRAR" || r.responsibleRole === "RECORDS_CUSTODIAN")));
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  async function fetchRequests() {
+    try {
+      setLoading(true);
+      const data = await apiClient.get<any[]>('/student-services/doc-requests');
+      setDocumentRequests(data || []);
+    } catch (err) {
+      console.error("Failed to fetch document requests", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Pending: Teacher Approved (ready for principal) OR Submitted (but routed directly to registrar/records)
+  // Since we don't have responsibleRole in the backend payload yet, we'll just check status.
+  const pendingRequests = documentRequests.filter(r => r.status === "Teacher Approved" || (r.status === "Submitted" && (r.requiresPrincipalApproval === false)));
+  
+  // Actually, wait, the old code had: r.status === "Teacher Approved" || (r.status === "Submitted" && (r.responsibleRole === "REGISTRAR" || r.responsibleRole === "RECORDS_CUSTODIAN"))
+  // We'll adapt it broadly for the Principal. If it's Submitted and the Principal can approve it, it should show up.
+  // We will show Teacher Approved (stage 2) and Submitted (stage 1).
+  const actualPending = documentRequests.filter(r => r.status === "Teacher Approved" || r.status === "Submitted");
+  
   const processedRequests = documentRequests.filter(r => r.status !== "Submitted" && r.status !== "Teacher Approved" && r.status !== "Teacher Rejected");
 
-  function handleApprove(id: string) {
+  async function handleApprove(id: string) {
     if (!pickupDates[id]) {
       alert("Please specify a ready/pickup date for the approved document.");
       return;
     }
-    const dateObj = new Date(pickupDates[id]);
-    const formattedDate = dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
+    
     const req = documentRequests.find(r => r.id === id);
-    const requiresPrincipal = req?.requiresPrincipalApproval !== false; // default true if undefined
+    const isStage1 = req?.status === "Submitted";
 
-    updateDocumentRequest(id, {
-      status: requiresPrincipal ? "Principal Approved" : "Ready for Pickup",
-      currentStage: requiresPrincipal ? 3 : 4,
-      principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      principalRemarks: remarks[id] || (requiresPrincipal ? "Approved by Principal." : "Processed by Registrar."),
-      readyDate: formattedDate
-    });
-    setRemarks(prev => ({ ...prev, [id]: "" }));
-    setPickupDates(prev => ({ ...prev, [id]: "" }));
+    try {
+      await apiClient.patch(`/documents/requests/${id}`, {
+        status: "Principal Approved", // or "Ready for Pickup" depending on logic, backend allows Principal Approved at stage 3
+        currentStage: 3,
+        principalRemarks: remarks[id] || "Approved by Principal.",
+        readyDate: new Date(pickupDates[id]).toISOString(),
+        principalApprovedDate: new Date().toISOString()
+      });
+      
+      setRemarks(prev => ({ ...prev, [id]: "" }));
+      setPickupDates(prev => ({ ...prev, [id]: "" }));
+      fetchRequests();
+    } catch (err: any) {
+      alert("Failed to approve request: " + (err.message || "Unknown error"));
+    }
   }
 
-  function handleReject(id: string) {
+  async function handleReject(id: string) {
     if (!remarks[id]) {
       alert("Please provide a reason for rejection.");
       return;
     }
-    updateDocumentRequest(id, {
-      status: "Teacher Rejected",
-      currentStage: 1,
-      principalRemarks: remarks[id]
-    });
-    setRemarks(prev => ({ ...prev, [id]: "" }));
+    
+    try {
+      await apiClient.patch(`/documents/requests/${id}`, {
+        status: "Teacher Rejected", // or rejected by principal
+        currentStage: 1,
+        principalRemarks: remarks[id]
+      });
+      setRemarks(prev => ({ ...prev, [id]: "" }));
+      fetchRequests();
+    } catch (err: any) {
+      alert("Failed to reject request.");
+    }
   }
 
   async function handleDownload(attachmentId: string, attachmentName: string) {
     try {
-      const doc = await getGenericDocument(attachmentId);
-      if (!doc || !doc.blob) {
-        alert("Student attachment is missing or corrupted.");
-        return;
-      }
-      const url = URL.createObjectURL(doc.blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      window.open(`${apiUrl}/documents/serve?id=${attachmentId}`, '_blank');
     } catch (err) {
       console.error("Failed to view attachment:", err);
       alert("Failed to retrieve the attachment. Please try again.");
@@ -73,37 +103,42 @@ export function PDocRequestsScreen() {
     if (!file || !uploadReqId) return;
 
     try {
-      const savedDoc = await saveGenericDocument({
-        id: crypto.randomUUID(),
-        name: file.name,
-        mimeType: file.type,
-        size: file.size,
-        createdAt: new Date().toISOString(),
-        blob: file
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      // Upload the document
+      const savedDoc = await apiClient.post<any>('/documents/upload', formData, {
+        headers: { "Content-Type": "multipart/form-data" }
       });
 
-      updateDocumentRequest(uploadReqId, {
+      // Link to request
+      await apiClient.patch(`/documents/requests/${uploadReqId}`, {
         status: "Completed",
         currentStage: 4,
-        principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-        readyDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         principalRemarks: "Document uploaded and attached securely.",
         attachedDocumentId: savedDoc.id
       });
-    } catch (err) {
+      
+      fetchRequests();
+    } catch (err: any) {
       console.error("Failed to upload document", err);
-      alert("Failed to upload document. Please try again.");
+      alert(err.message || "Failed to upload document. Please try again.");
     } finally {
       setUploadReqId(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
-  function handleMarkCompleted(id: string) {
-    updateDocumentRequest(id, {
-      status: "Completed",
-      currentStage: 4
-    });
+  async function handleMarkCompleted(id: string) {
+    try {
+      await apiClient.patch(`/documents/requests/${id}`, {
+        status: "Completed",
+        currentStage: 4
+      });
+      fetchRequests();
+    } catch (err: any) {
+      alert("Failed to mark completed.");
+    }
   }
 
   function statusColor(s: DocRequestStatus) {
@@ -119,6 +154,8 @@ export function PDocRequestsScreen() {
     return C.redBg;
   }
 
+  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading requests...</div>;
+
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "32px 40px 100px" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1200, margin: "0 auto" }}>
@@ -131,9 +168,9 @@ export function PDocRequestsScreen() {
         {/* KPIs */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {[
-            { label: "Pending Final Approval", val: pendingRequests.length.toString(), icon: Clock, color: C.blue, bg: C.blueBg },
+            { label: "Pending Final Approval", val: actualPending.length.toString(), icon: Clock, color: C.blue, bg: C.blueBg },
             { label: "Ready / Completed", val: processedRequests.filter(r => r.status === "Principal Approved" || r.status === "Ready for Pickup" || r.status === "Completed").length.toString(), icon: CheckCircle, color: C.green, bg: C.greenBg },
-            { label: "Total Handled", val: (pendingRequests.length + processedRequests.length).toString(), icon: FileText, color: C.m700, bg: C.m50 },
+            { label: "Total Handled", val: (actualPending.length + processedRequests.length).toString(), icon: FileText, color: C.m700, bg: C.m50 },
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
             return (
@@ -153,7 +190,7 @@ export function PDocRequestsScreen() {
         {/* Tabs */}
         <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${C.border}` }}>
           {[
-            { id: "pending" as const, label: "Awaiting Principal Approval", count: pendingRequests.length },
+            { id: "pending" as const, label: "Awaiting Principal Approval", count: actualPending.length },
             { id: "history" as const, label: "Approval History", count: 0 },
           ].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
@@ -172,14 +209,14 @@ export function PDocRequestsScreen() {
         {/* Pending Tab */}
         {activeTab === "pending" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {pendingRequests.length === 0 ? (
+            {actualPending.length === 0 ? (
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: 60, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" }}>
                 <CheckCircle size={48} color={C.green} style={{ opacity: 0.3, marginBottom: 12 }} />
                 <div style={{ fontSize: 15, fontWeight: 600, color: C.t2 }}>No requests awaiting final approval.</div>
                 <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Teachers must verify requests first before they appear here.</div>
               </div>
             ) : (
-              pendingRequests.map(req => (
+              actualPending.map(req => (
                 <div key={req.id} data-purpose={req.purpose} style={{
                   background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "24px 28px",
                   display: "flex", flexDirection: "column", gap: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.03)", transition: "border-color 0.15s"
@@ -202,63 +239,46 @@ export function PDocRequestsScreen() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: C.blueBg, padding: "4px 12px", borderRadius: 12, border: `1px solid ${C.blue}20` }}>
-                        {req.status === "Submitted" ? "Stage 1 · Registrar Review" : "Stage 2 · Final Approval Required"}
+                        {req.status === "Submitted" ? "Stage 1 · Initial Request" : "Stage 2 · Final Approval Required"}
                       </span>
                     </div>
                   </div>
 
                   {/* Details Grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: req.studentAttachmentId ? "1fr 1fr 1fr" : "1fr 1fr", gap: 16, background: C.paper, padding: 16, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: req.attachedDocumentId ? "1fr 1fr 1fr" : "1fr 1fr", gap: 16, background: C.paper, padding: 16, borderRadius: 8, border: `1px solid ${C.border}` }}>
                     <div style={{ fontSize: 12, color: C.t2, display: "flex", flexDirection: "column", gap: 12 }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Purpose</div>
                         {req.purpose}
                       </div>
-                      
-                      {req.requiredInformation && Object.keys(req.requiredInformation).length > 0 && (
-                        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6 }}>Required Information</div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-                            {Object.entries(req.requiredInformation).map(([key, value]) => (
-                              <div key={key}>
-                                <span style={{ fontWeight: 600, color: C.t2, marginRight: 6 }}>{key.replace(/([A-Z])/g, ' $1').trim()}:</span> 
-                                <span style={{ color: C.t1 }}>{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
-                    {req.studentAttachmentId && (
+                    {req.attachedDocumentId && (
                       <div style={{ fontSize: 12, color: C.t2 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Student Attachment</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.t1, marginBottom: 8, wordBreak: "break-word" }}>
-                          <FileText size={14} color={C.t2} /> {req.studentAttachmentName || "Document Attached"}
-                        </div>
-                        <button onClick={() => handleDownload(req.studentAttachmentId!, req.studentAttachmentName || "attachment")} style={{
+                        <button onClick={() => handleDownload(req.attachedDocumentId!, req.studentAttachmentName || "attachment")} style={{
                           display: "flex", alignItems: "center", gap: 6, background: C.m700, color: "#fff", border: "none",
                           padding: "6px 12px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: 700, transition: "all 0.15s",
                         }}
                           onMouseEnter={e => e.currentTarget.style.opacity = "0.9"}
                           onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                         >
-                          <FileText size={14} /> View Request Letter
+                          <FileText size={14} /> View Document
                         </button>
                       </div>
                     )}
-                    {!req.responsibleRole || req.responsibleRole === "TEACHER" ? (
+                    {req.status === "Teacher Approved" ? (
                       <div style={{ fontSize: 12, color: C.t2 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Teacher Verification</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.green, marginBottom: 2 }}>
-                          <CheckCircle size={14} /> Verified by {req.teacherName} on {req.teacherApprovedDate}
+                          <CheckCircle size={14} /> Verified by {req.teacherName}
                         </div>
-                        <div style={{ fontStyle: "italic", fontSize: 11 }}>"{req.teacherRemarks}"</div>
+                        {req.teacherRemarks && <div style={{ fontStyle: "italic", fontSize: 11 }}>"{req.teacherRemarks}"</div>}
                       </div>
                     ) : (
                       <div style={{ fontSize: 12, color: C.t2 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>Routing</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: C.m700, marginBottom: 2 }}>
-                          <CheckCircle size={14} /> Routed to {req.responsibleOffice}
+                          <CheckCircle size={14} /> Direct Request
                         </div>
                         <div style={{ fontStyle: "italic", fontSize: 11 }}>No prior teacher verification required.</div>
                       </div>
@@ -310,7 +330,7 @@ export function PDocRequestsScreen() {
                         onMouseEnter={e => { if (pickupDates[req.id]) e.currentTarget.style.background = C.m600; }}
                         onMouseLeave={e => { if (pickupDates[req.id]) e.currentTarget.style.background = C.m700; }}
                       >
-                        <CheckCircle size={14} /> {req.requiresPrincipalApproval === false ? "Process & Set Pickup Date" : "Approve & Sign"}
+                        <CheckCircle size={14} /> Approve & Sign
                       </button>
                     </div>
                     
@@ -359,10 +379,10 @@ export function PDocRequestsScreen() {
                         <div style={{ fontSize: 10, color: C.t3, fontWeight: 500, marginTop: 2 }}>{req.section}</div>
                       </td>
                       <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2, fontWeight: 600 }}>{req.documentType}</td>
-                      <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2 }}>{req.teacherName}</td>
-                      <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2 }}>{req.principalApprovedDate || "—"}</td>
+                      <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2 }}>{req.teacherName || "—"}</td>
+                      <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2 }}>{req.principalApprovedDate ? new Date(req.principalApprovedDate).toLocaleDateString() : "—"}</td>
                       <td style={{ padding: "14px 20px" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: statusColor(req.status), background: statusBg(req.status), padding: "4px 10px", borderRadius: 10 }}>{req.status}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: statusColor(req.status as DocRequestStatus), background: statusBg(req.status as DocRequestStatus), padding: "4px 10px", borderRadius: 10 }}>{req.status}</span>
                       </td>
                       <td style={{ padding: "14px 20px" }}>
                         {(req.status === "Principal Approved" || req.status === "Ready for Pickup") ? (
@@ -396,29 +416,26 @@ export function PDocRequestsScreen() {
           onClose={() => setScannerReqId(null)}
           onSaveScan={async (file) => {
             try {
-              // Convert dataUrl back to Blob for persistent binary storage
               const res = await fetch(file.dataUrl);
               const blob = await res.blob();
               
-              const savedDoc = await saveGenericDocument({
-                id: crypto.randomUUID(),
-                name: file.name,
-                mimeType: file.type,
-                size: blob.size,
-                createdAt: new Date().toISOString(),
-                blob: blob
+              const formData = new FormData();
+              formData.append("file", blob, file.name);
+
+              const savedDoc = await apiClient.post<any>('/documents/upload', formData, {
+                headers: { "Content-Type": "multipart/form-data" }
               });
 
-              updateDocumentRequest(scannerReqId, {
+              await apiClient.patch(`/documents/requests/${scannerReqId}`, {
                 status: "Completed",
                 currentStage: 4,
-                principalApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-                readyDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
                 principalRemarks: "Document digitized and attached securely.",
                 attachedDocumentId: savedDoc.id
               });
+              
+              fetchRequests();
             } catch (err) {
-              console.error("Failed to save scanned document blob", err);
+              console.error("Failed to save scanned document", err);
               alert("Failed to save scanned document. Please try again.");
             } finally {
               setScannerReqId(null);

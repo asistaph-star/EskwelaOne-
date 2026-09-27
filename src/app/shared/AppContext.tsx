@@ -190,6 +190,7 @@ type AppContextType = {
   notifications: AppNotification[];
   addNotification: (n: AppNotification) => void;
   markNotificationsRead: (recipientId: string) => void;
+  markSingleNotificationRead: (id: string) => void;
 
   // Events
   events: CalendarEvent[];
@@ -445,7 +446,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setEnrollmentError("Failed to fetch enrollment applications. Please check the backend connection.");
             return [];
           }),
-          Promise.resolve([]), // notifications
+          apiClient.get('/admin/notifications').catch(() => []),
           apiClient.get('/attendance/gate').catch(() => []),
           apiClient.get('/users').catch(() => []),
           apiClient.get('/admin/announcements').catch(() => []),
@@ -507,8 +508,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser]);
 
   const addNotification = async (n: AppNotification) => {
-    const saved = await apiClient.post("/admin/notifications", n);
+    const { id, ...payload } = n;
+    const saved = await apiClient.post("/admin/notifications", payload);
     setNotifications(prev => [...prev, saved as any]);
+  };
+
+    const markSingleNotificationRead = async (id: string) => {
+    const n = notifications.find(n => n.id === id);
+    if (!n || n.isRead) return;
+    await apiClient.patch("/admin/notifications/" + id, { ...n, isRead: true });
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   };
 
   const markNotificationsRead = async (recipientId: string) => {
@@ -560,7 +569,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(updated);
     // Persist to indexedDB if it's a known user
     try {
-      await apiClient.patch("/admin/notifications/" + currentUser.id, updates);
+      await apiClient.patch("/users/" + currentUser.id, updates);
     } catch (e) {
       console.warn("Failed to persist currentUser updates", e);
     }
@@ -574,7 +583,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addStudent = async (s: Omit<User, 'id'>) => {
     assertAuthorized(currentUser, s.section || "", "class_roster");
-    const saved = await apiClient.post("/admin/notifications", s);
+    const saved = await apiClient.post("/users", s);
     setStudents(prev => [...prev, saved as any]);
   };
 
@@ -610,7 +619,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const assn = assignments.find(a => a.id === id);
       if (!assn) return;
       assertAuthorized(currentUser, assn.subject, "assignment");
-      const updated = await apiClient.patch("/admin/notifications/" + id, { ...assn, ...updates });
+      const updated = await apiClient.patch("/academic/assignments/" + id, { ...assn, ...updates });
       setAssignments(prev => prev.map(a => a.id === id ? updated as any : a));
     } catch(e) { console.error(e); }
   };
@@ -620,7 +629,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (currentUser?.role === "Student") {
       assertAuthorized(currentUser, s.studentId, "profile"); // ensure they are themselves
     }
-    const saved = await apiClient.post("/admin/notifications", s);
+    const saved = await apiClient.post("/academic/assignments/submissions", s);
     setAssignmentSubmissions(prev => [saved as any, ...prev]);
   };
 
@@ -634,14 +643,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         assertAuthorized(currentUser, "", "gradebook");
       }
 
-      const updated = await apiClient.patch("/admin/notifications/" + id, { ...sub, ...updates });
+      const updated = await apiClient.patch("/academic/assignments/submissions/" + id, { ...sub, ...updates });
       setAssignmentSubmissions(prev => prev.map(s => s.id === id ? updated as any : s));
     } catch(e) { console.error(e); }
   };
 
   const addAssignment = async (a: Assignment) => {
     assertAuthorized(currentUser, a.subject, "assignment"); // subject represents class context
-    const saved = await apiClient.post("/admin/notifications", a);
+    const saved = await apiClient.post("/academic/assignments", a);
     setAssignments(prev => [saved as any, ...prev]);
   };
 
@@ -652,7 +661,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addGateAttendance = async (log: GateAttendance) => {
     setGateAttendance(prev => [log, ...prev]);
-    await apiClient.post("/admin/notifications", log);
+    await apiClient.post("/attendance/gate", log);
   };
 
   const updateGateAttendance = async (id: string, updates: Partial<GateAttendance>) => {
@@ -666,7 +675,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteEvent = async (id: string) => {
-    await apiClient.delete("/mock/" + id);
+    await apiClient.delete("/admin/events/" + id);
     setEvents(prev => prev.filter(e => e.id !== id));
   };
 
@@ -695,7 +704,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateBehaviorLog = async (id: string, updates: Partial<BehaviorLog>) => {
-    await apiClient.patch("/admin/notifications/" + id, updates);
+    await apiClient.patch("/student-services/behavior/" + id + "/status", updates);
     setBehaviorLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } as any as any : l));
   };
 
@@ -725,7 +734,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTeacherRanking = async (id: string, updates: Partial<TeacherRankingRecord>) => {
-    await apiClient.patch("/admin/notifications/" + id, updates);
+    await apiClient.patch("/admin/rankings/" + id, updates);
     setTeacherRankings(prev => prev.map(r => r.id === id ? { ...r, ...updates } as any : r));
   };
 
@@ -735,7 +744,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateEnrollmentApplication = async (id: string, updates: Partial<Applicant>) => {
-    await apiClient.patch("/admin/notifications/" + id, updates);
+    await apiClient.patch("/admin/enrollment-applications/" + id, updates);
     setEnrollmentApplications(prev => prev.map(a => a.id === id ? { ...a, ...updates } as any : a));
   };
 
@@ -762,7 +771,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       announcements, addAnnouncement,
       assignments, addAssignment, updateAssignment,
       assignmentSubmissions, addAssignmentSubmission, updateAssignmentSubmission,
-      notifications, addNotification, markNotificationsRead,
+      notifications, addNotification, markNotificationsRead, markSingleNotificationRead,
       events, addEvent, editEvent, deleteEvent,
       messages, addMessage,
       gateAttendance, addGateAttendance, updateGateAttendance,

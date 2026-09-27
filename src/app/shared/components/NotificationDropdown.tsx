@@ -1,27 +1,89 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { C } from '../constants/tokens';
 import { Bell, AlertCircle, Megaphone, Calendar as CalendarIcon } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 
 export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { notifications, currentUser, markNotificationsRead } = useAppContext();
+  const { notifications, currentUser, markNotificationsRead, markSingleNotificationRead } = useAppContext();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+        return;
+      }
+      onClose();
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
   
   const myNotifications = notifications
     .filter(n => n.recipientId === currentUser?.id)
-    .sort((a, b) => b.id.localeCompare(a.id)); // sort by timestamp/id descending
+    .sort((a, b) => b.id.localeCompare(a.id));
 
   const unreadCount = myNotifications.filter(n => !n.isRead).length;
 
+  const handleNotificationClick = (notif: any) => {
+    // 1. Mark as read if it isn't
+    if (!notif.isRead && markSingleNotificationRead) {
+      markSingleNotificationRead(notif.id);
+    }
+    
+    // 2. Close dropdown
+    onClose();
+
+    // 3. Determine routing based on user role and notification content
+    if (!currentUser) return;
+    const roleStr = currentUser.role.toLowerCase();
+    const title = notif.title.toLowerCase();
+    
+    let destScreen = 'dashboard';
+    
+    if (title.includes('announcement') || notif.iconType === 'megaphone') {
+      if (roleStr === 'principal') destScreen = 'p-announcements';
+      else if (roleStr === 'admin') destScreen = 'a-announcements';
+      else destScreen = 'announcements';
+    } else if (title.includes('appointment')) {
+      if (roleStr === 'principal') destScreen = 'p-dashboard';
+      else destScreen = 'appointments';
+    } else if (title.includes('document')) {
+      if (roleStr === 'principal') destScreen = 'p-doc-requests';
+      else if (roleStr === 'registrar') destScreen = 'r-doc-requests';
+      else destScreen = 'doc-requests';
+    } else if (title.includes('leave')) {
+      if (roleStr === 'principal') destScreen = 'p-leaves';
+      else destScreen = 'leave-requests';
+    } else if (title.includes('enrollment')) {
+      if (roleStr === 'registrar') destScreen = 'r-enrollment';
+    }
+    
+    if (destScreen === 'dashboard') {
+      if (roleStr === 'principal') destScreen = 'p-dashboard';
+      else if (roleStr === 'admin') destScreen = 'a-dashboard';
+      else if (roleStr === 'registrar') destScreen = 'r-dashboard';
+      else if (roleStr === 'guidance') destScreen = 'g-dashboard';
+    }
+    
+    window.location.hash = `#/${roleStr}/${destScreen}`;
+  };
+
   return (
-    <>
+    <div ref={dropdownRef}>
       <style>{`
         .notif-item {
           transition: all 0.15s ease;
           cursor: pointer;
         }
         .notif-item:hover {
-          background: #f9f9f9;
+          background: #f9f9f9 !important;
         }
         .notif-item.unread:hover {
           background: rgba(139,30,30,0.06) !important;
@@ -43,10 +105,6 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onC
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
-      <div 
-        onClick={onClose} 
-        style={{ position: 'fixed', inset: 0, zIndex: 199 }} 
-      />
       
       <div 
         style={{ 
@@ -84,7 +142,12 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onC
              <div style={{ padding: '24px 20px', textAlign: 'center', color: C.t3, fontSize: 12 }}>No new notifications</div>
           ) : (
             myNotifications.map((notif) => (
-              <div key={notif.id} className={!notif.isRead ? "notif-item unread" : "notif-item"} style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderLight}`, display: 'flex', gap: 14, background: !notif.isRead ? 'rgba(139,30,30,0.03)' : 'transparent' }}>
+              <div 
+                key={notif.id} 
+                onClick={() => handleNotificationClick(notif)}
+                className={!notif.isRead ? "notif-item unread" : "notif-item"} 
+                style={{ padding: '16px 20px', borderBottom: `1px solid ${C.borderLight}`, display: 'flex', gap: 14, background: !notif.isRead ? 'rgba(139,30,30,0.03)' : 'transparent' }}
+              >
                 <div style={{ width: 36, height: 36, borderRadius: 18, background: notif.iconType === "alert" ? C.redBg : notif.iconType === "document" ? C.blueBg : C.greenBg, border: `1px solid rgba(0,0,0,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {notif.iconType === "alert" ? <AlertCircle size={16} color={C.red} /> : notif.iconType === "document" ? <AlertCircle size={16} color={C.blue} /> : <Megaphone size={16} color={C.green} />}
                 </div>
@@ -109,6 +172,6 @@ export function NotificationDropdown({ isOpen, onClose }: { isOpen: boolean, onC
           <span style={{ fontSize: 12, fontWeight: 800, color: C.m700 }}>View All Notifications</span>
         </div>
       </div>
-    </>
+    </div>
   );
 }

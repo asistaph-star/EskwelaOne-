@@ -9,6 +9,7 @@ import { AppError } from '../common/middleware/errorHandler.js';
 import inventoryRoutes from './inventory.routes.js';
 import leavesRoutes from './leaves.routes.js';
 import rankingRoutes from './ranking.routes.js';
+import notificationsRoutes from './notifications.routes.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -16,6 +17,7 @@ router.use(authMiddleware);
 router.use('/inventory', inventoryRoutes);
 router.use('/leaves', leavesRoutes);
 router.use('/rankings', rankingRoutes);
+router.use('/notifications', notificationsRoutes);
 
 // ─── Announcements ───────────────────────────────────────────
 

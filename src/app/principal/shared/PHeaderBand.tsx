@@ -12,7 +12,7 @@ export function PHeaderBand({ title, sub, onMenu, onLogout, onSettings }: { titl
   const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
 
   return (
-    <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+    <div style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position: "relative", zIndex: 100 }}>
       <div style={{ display:"flex", alignItems:"center", gap:14 }}>
         {onMenu && (
           <button onClick={onMenu} style={{ background:"none", border:"none", cursor:"pointer", color:C.m700 }}>

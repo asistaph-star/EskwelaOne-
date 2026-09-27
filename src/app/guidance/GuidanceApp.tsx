@@ -37,7 +37,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
         
         {/* Topbar */}
-        <div style={{ height: 72, background: "#fff", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", flexShrink: 0, zIndex: 10 }}>
+        <div style={{ height: 72, background: "#fff", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", flexShrink: 0, position: "relative", zIndex: 100 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>{current.title}</div>
             <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>{current.sub}</div>

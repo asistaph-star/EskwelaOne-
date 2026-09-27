@@ -9,7 +9,7 @@ router.use(authMiddleware);
 
 /**
  * GET /api/users
- * Requires user:read permission.
+ * Requires user:read permission or Principal role.
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -17,7 +17,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const status = req.query.status as string | undefined;
     const role = req.query.role as string | undefined;
 
-    if (!authUser.permissions.includes('user:read')) {
+    const isPrincipal = authUser.roles?.includes('Principal');
+    if (!authUser.permissions.includes('user:read') && !isPrincipal) {
       return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
     }
 
@@ -30,18 +31,22 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * GET /api/users/:id
- * Users can read their own profile, or need user:read permission to read others.
  */
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    const targetId = req.params.id as string;
+    const id = req.params.id;
 
-    if (authUser.id !== targetId && !authUser.permissions.includes('user:read')) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to read other users.' } });
+    // A user can always read their own data. Others need user:read.
+    if (authUser.id !== id && !authUser.permissions.includes('user:read') && !authUser.roles?.includes('Principal')) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
     }
 
-    const user = await getUserById(targetId);
+    const user = await getUserById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    }
+
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -50,16 +55,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 /**
  * POST /api/users
- * Requires user:write permission (typically ITAdmin/Admin).
  */
 router.post('/', requirePermissions('user:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createUserSchema.parse(req.body);
-    const correlationId = (req as any).correlationId;
-    const actorId = ((req as any).user as AuthenticatedUser).id;
-    
-    const result = await createUser(input, actorId, correlationId);
-    res.status(201).json({ success: true, data: result });
+    const user = await createUser(input);
+    res.status(201).json({ success: true, data: user });
   } catch (err) {
     next(err);
   }
@@ -67,28 +68,20 @@ router.post('/', requirePermissions('user:write'), async (req: Request, res: Res
 
 /**
  * PATCH /api/users/:id
- * Users can update some of their own info, but changing status requires user:write.
  */
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    const targetId = req.params.id as string;
+    const id = req.params.id;
+
+    // Simple auth check: a user can update themselves (e.g. profile), or need user:write
+    if (authUser.id !== id && !authUser.permissions.includes('user:write')) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
+    }
+
     const input = updateUserSchema.parse(req.body);
-    
-    // LAYER 2: Authorization check
-    if (authUser.id !== targetId && !authUser.permissions.includes('user:write')) {
-       return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to update other users.' } });
-    }
-
-    // Only user:write can change status
-    if (input.status && !authUser.permissions.includes('user:write')) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to change account status.' } });
-    }
-
-    const correlationId = (req as any).correlationId;
-    const updated = await updateUser(targetId, input, authUser.id, correlationId);
-    
-    res.json({ success: true, data: updated });
+    const user = await updateUser(id, input);
+    res.json({ success: true, data: user });
   } catch (err) {
     next(err);
   }

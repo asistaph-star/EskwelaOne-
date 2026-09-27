@@ -869,9 +869,7 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-          position: "relative",
-          zIndex: 10
+          boxShadow: "0 2px 8px rgba(0,0,0,0.03)", position: "relative", zIndex: 100
         }}>
           {/* Hamburger + Dynamic Page Title/Subtitle */}
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
