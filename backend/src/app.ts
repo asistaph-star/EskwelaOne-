@@ -13,6 +13,12 @@ import attendanceRoutes from './attendance/attendance.routes.js';
 import documentRoutes from './documents/document.routes.js';
 import studentServicesRoutes from './student-services/studentServices.routes.js';
 import adminRoutes from './admin/admin.routes.js';
+import mediaRoutes from './admin/media.routes.js';
+
+import { initMediaStorage } from './config/storage.config.js';
+
+// Initialize required directories
+initMediaStorage();
 
 const app = express();
 
@@ -24,6 +30,9 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
+
+import path from 'path';
+app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
 
 // ─── Health Check ───────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
@@ -47,6 +56,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/student-services', studentServicesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/media', mediaRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────
 app.use((_req, res) => {

@@ -8,7 +8,9 @@ import { AttendanceSummary } from "../principal/reports/AttendanceSummary";
 import { PHeaderBand } from "../principal/shared/PHeaderBand";
 import { C } from "../shared/constants/tokens";
 
-export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "inventory" | "accounts";
+import { CampusMediaManagement } from "./operations/CampusMediaManagement";
+
+export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "inventory" | "accounts" | "campus-media";
 
 export function AdminApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<AdminScreen>("dashboard");
@@ -20,6 +22,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
       case "teacher-create": return "Provision Account";
       case "inventory": return "Inventory Management";
       case "accounts": return "Account Management";
+      case "campus-media": return "Campus Media Management";
       default: return "";
     }
   };
@@ -38,6 +41,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
           {screen === "teacher-create" && <CreateTeacher />}
           {screen === "inventory" && <InventoryManagement />}
           {screen === "accounts" && <AccountManagement />}
+          {screen === "campus-media" && <CampusMediaManagement />}
         </main>
       </div>
     </div>

@@ -13,10 +13,9 @@ import path from 'path';
 import fs from 'fs';
 
 // Constants for local storage
-const STORAGE_DIR = path.join(process.cwd(), 'storage', 'documents');
-if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR, { recursive: true });
-}
+import { getMediaStoragePath } from '../config/storage.config.js';
+
+const STORAGE_DIR = getMediaStoragePath();
 
 // Set up multer memory storage first so we can validate magic bytes before saving to disk
 const upload = multer({
@@ -221,7 +220,7 @@ const updateDocumentRequestSchema = z.object({
  */
 router.patch('/requests/:id', requirePermissions('document:approve'), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const input = updateDocumentRequestSchema.parse(req.body);
     const actorId = ((req as any).user as AuthenticatedUser).id;
     const correlationId = (req as any).correlationId;

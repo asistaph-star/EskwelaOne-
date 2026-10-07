@@ -1,7 +1,7 @@
-export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse" | "Guidance";
+export type Role = "Admin" | "ITAdmin" | "Teacher" | "Student" | "Parent" | "Registrar" | "Nurse" | "Guidance" | "GateOperator";
 
 export type TScreen =
-  | "dashboard" | "classroom" | "gradebook" | "quarterly-summary"
+  | "dashboard" | "classroom" | "gradebook" | "quarterly-summary" | "term-summary" | "t-ranking" | "announcements"
   | "grades-direct" | "attendance-direct" | "clinic-visits"
   | "ai-tools" | "pro-dev" | "appointments" | "doc-requests"
   | "calendar" | "templates" | "leave-requests" | "tutorials" | "tools" | "help" | "settings" | "behavior" | "scanner" | "student-create";
@@ -11,7 +11,7 @@ export type PScreen =
   | "p-analytics" | "p-teachers"
   | "p-inventory" | "p-doc-requests"
   | "p-events" | "p-faculty-attendance"
-  | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner";
+  | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner" | "p-announcements";
 
 export type GScreen =
   | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";
@@ -29,7 +29,30 @@ export interface RCStudent {
   gender: string;
 }
 
-export type AttSub = "daily" | "qr" | "manual" | "late" | "sf2";
+export interface TeacherCriteriaScore {
+  criteriaName: string;
+  score: number;
+  maxScore: number;
+}
+
+export interface TeacherRankingRecord {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  currentPosition: string;
+  targetPosition: string;
+  evaluationPeriod: string;
+  status: "Pending" | "Under Review" | "Completed";
+  criteriaScores: TeacherCriteriaScore[];
+  totalScore: number;
+  evaluators: string[];
+  remarks: string;
+  docsAttached?: number;
+  createdAt?: string;
+  supportingDocuments?: string[];
+}
+
+export type AttSub = "daily" | "qr" | "manual" | "late" | "sf2" | "excuses";
 export type AStatus = "P" | "A" | "L" | "E";
 
 export interface GradeCardInfo {

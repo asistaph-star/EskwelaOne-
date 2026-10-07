@@ -11,7 +11,7 @@ export function ClassGradeSummary({ onStudentClick }: { onStudentClick:(id:numbe
         <div style={{ fontSize: 13, color: C.t3, fontWeight: 500 }}>
           Student Analytics Coming Soon
         </div>
-        <div style={{ fontSize: 11, color: C.t4, marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: C.t3, marginTop: 8 }}>
           Advanced at-risk identification and analytics will be available in a future phase.
         </div>
       </div>

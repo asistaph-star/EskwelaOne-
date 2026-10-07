@@ -1,0 +1,274 @@
+import { StudentSettings } from './screens/StudentSettings';
+import { StudentDocRequests } from './screens/StudentDocRequests';
+import { StudentAppointments } from './screens/StudentAppointments';
+import { StudentCalendar } from './screens/StudentCalendar';
+import { StudentClinic } from './screens/StudentClinic';
+import { StudentAssignments } from './screens/StudentAssignments';
+import { StudentAttendance } from './screens/StudentAttendance';
+import { StudentAcademics } from './screens/StudentAcademics';
+import { StudentAnnouncements } from './screens/StudentAnnouncements';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { studentApi } from '../../api/student.api';
+import { usersApi } from '../../api/users.api';
+import { academicApi } from '../../api/academic.api';
+import { C } from '../shared/constants/tokens';
+import { StudentReportCard } from './components/StudentReportCard';
+import {
+  getStudentSubjectGrades,
+  getStudentFullAcademicHistory,
+  getStudentGradeTrend,
+  getStudentRecentQuizzes,
+  getStudentRankAndStanding
+} from '../shared/utils/gradesService';
+import { generateReportCardPDF } from '../shared/utils/pdfGenerator';
+import { NotificationDropdown } from '../shared/components/NotificationDropdown';
+import { MobileDrawer } from '../shared/components/MobileDrawer';
+import { Form138PDFDocument } from './components/Form138PDFDocument';
+import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
+import {
+  LogOut, BookOpen, Calendar, Award, BookMarked, Printer, Download,
+  LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell, AlertCircle,
+  QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
+  Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
+  Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope
+} from 'lucide-react';
+import type { AppointmentStatus } from '../shared/AppContext';
+import { Stamp } from '../shared/components/Stamp';
+import { StatBox } from '../shared/components/StatBox';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { SCHOOL_EVENTS, CLASS_SCHEDULE, SUBJECT_COLORS, CalendarEvent } from '../shared/data/calendarData';
+import { useAppContext } from '../shared/AppContext';
+import { useHashRouter } from '../shared/utils/useHashRouter';
+import { StoredDocument } from '../shared/AppContext';
+import { DOCUMENT_REQUIREMENTS } from '../shared/constants/documentRequirements';
+const STUDENT_NAV_GROUPS = [
+  {
+    title: "Overview",
+    items: [
+    ]
+  },
+  {
+    title: "Services",
+    items: [
+    ]
+  },
+  {
+    title: "Academics",
+    items: [
+  },
+  {
+    title: "Communication",
+    items: [
+  }
+];
+const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
+  dashboard: { title: "Student Portal", sub: "Overview & Quick Actions" },
+  academics: { title: "Grades & Performance", sub: "Scholastic History & Grades" },
+  attendance: { title: "Gate Attendance", sub: "Daily Logs & excuse submissions" },
+  assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
+  announcements: { title: "Announcements", sub: "School Bulletin Board" },
+  calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
+  appointments: { title: "Book Appointment", sub: "Parent-Teacher Meeting Requests" },
+  "doc-requests": { title: "Request Documents", sub: "School Certificates & Records" },
+  settings: { title: "Account Settings", sub: "Profile & Security Configuration" }
+};
+type SScreen = "dashboard" | "academics" | "attendance" | "assignments" | "resources" | "behavior" | "clinic" | "settings" | "calendar" | "announcements" | "messages" | "appointments" | "doc-requests";
+export function StudentPortal({ onLogout }: { onLogout: () => void }) {
+  const [tab, setTab] = useHashRouter<SScreen>("student", "dashboard");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { events, assignments, assignmentSubmissions, addAssignmentSubmission } = useAppContext();
+  function formatTimeDisplay(timeStr?: string) {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hr = parseInt(h);
+    let ampm = hr >= 12 ? " PM" : " AM";
+    hr = hr % 12 || 12;
+    return `${hr}${m !== "00" ? ":" + m : ""}${ampm}`;
+  }
+  const { currentUser, updateCurrentUser, getGenericDocument, saveGenericDocument, behaviorLogs, announcements, messages, addMessage, appointments, addAppointment, updateAppointment, addNotification, notifications } = useAppContext();
+  const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
+  const currentRequirement = docType ? DOCUMENT_REQUIREMENTS[docType] : null;
+  // PDF Export state
+  async function handleExportPDF() {
+    setIsExportingPDF(true);
+    setPdfToast(null);
+    try {
+    } catch (err) {
+    } finally {
+    }
+  }
+  // Temporary isolated test route hook removal for defense prep
+  async function handleDownload(attachedDocumentId: string, docType: string) {
+    try {
+    } catch (err) {
+    }
+  }
+  async function handleDocumentRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setDocError("");
+    setDocSuccess(false);
+    // Validate required fields
+    const vErrors: { type?: string; purpose?: string; file?: string; info?: Record<string, string> } = { info: {} };
+    if (!docType) vErrors.type = "Please select a document type.";
+    if (!docPurpose.trim()) vErrors.purpose = "Please provide the purpose of this request.";
+    // Requirement Validation
+    if (currentRequirement?.attachmentRequired && !docFile) {
+    } else if (docFile && currentRequirement) {
+    }
+    // Dynamic info validation
+    if (currentRequirement?.requiredFields?.length) {
+    }
+    if (Object.keys(vErrors.info!).length === 0) delete vErrors.info;
+    if (Object.keys(vErrors).length > 0) {
+    }
+    setDocValidation({});
+    // Validate current user identity
+    if (!currentUser?.id || !currentUser?.name) {
+    }
+    const isRegistrar = docRouting === "REGISTRAR";
+    let selectedTeacher = undefined;
+    if (!isRegistrar) {
+    }
+    setDocSubmitting(true);
+    try {
+    } catch (err) {
+    } finally {
+    }
+  }
+  async function handleBookAppointment(e: React.FormEvent) {
+    e.preventDefault();
+    if (isSubmittingAppt) return;
+    const emailToUse = apptParentEmail || currentUser?.parentEmail || "";
+    if (!emailToUse || !apptTeacher || !apptDate || !apptTime || !apptPurpose || !currentUser) return;
+    const teacher = teachers.find(t => t.id === apptTeacher);
+    if (!teacher) return;
+    setIsSubmittingAppt(true);
+    try {
+    } catch (err) {
+    } finally {
+    }
+  }
+  function apptStatusColor(s: AppointmentStatus) {
+    return s === "Confirmed" ? C.green : s === "Pending" ? "#f59e0b" : s === "Declined" ? C.red : C.blue;
+  }
+  function apptStatusBg(s: AppointmentStatus) {
+    return s === "Confirmed" ? C.greenBg : s === "Pending" ? "#fef3c7" : s === "Declined" ? C.redBg : C.blueBg;
+  }
+  const [aiBuddyOpen, setAiBuddyOpen] = useState(false);
+  useEffect(() => {
+    if (currentUser?.parentEmail) setEmailInputValue(currentUser.parentEmail);
+  }, [currentUser?.parentEmail]);
+  const handleEmailSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = emailInputValue.trim();
+    if (!trimmed) {
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+    }
+    setEmailError("");
+    setIsSavingEmail(true);
+    try {
+    } catch (err) {
+    } finally {
+    }
+  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Phase 6A: Load photo blob from IndexedDB
+  useEffect(() => {
+    let url: string | null = null;
+    if (currentUser?.photoDocId) {
+    } else {
+    }
+    return () => {
+    };
+  }, [currentUser?.photoDocId, getGenericDocument]);
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Validate type
+    if (file.type !== "image/jpeg" && file.type !== "image/png") {
+    }
+    // Validate size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+    }
+    setPhotoUploadError("");
+    setIsUploadingPhoto(true);
+    try {
+    } catch (err) {
+    } finally {
+    }
+  };
+  // Phase B1.10-C Migration: Parse backend apiHistory into SubjectGrade format
+  const parsedApiGrades = useMemo(() => {
+    if (!apiHistory || apiHistory.length === 0) return [];
+    // We expect apiHistory to contain an array of studentEnrollments for this year
+    const enrollment = apiHistory[0];
+    if (!enrollment || !enrollment.grade_entries) return [];
+    // Map backend grade_entries to SubjectGrade format
+    // In a real app, this would involve complex WW/PT/QA weighting or the backend would return term averages directly.
+    // For now, we will return an empty array and rely on the mock fallback below if the backend isn't populated with term averages.
+    // TODO: Create a backend endpoint that returns pre-calculated term averages for the student portal.
+    return [];
+  }, [apiHistory]);
+  const studentId = currentUser?.id || "s-juan";
+  // Use backend grades if they exist, otherwise fallback to mock gradebooks
+  const realSubjectGrades = useMemo(() => {
+    if (parsedApiGrades.length > 0) return parsedApiGrades;
+    return getStudentSubjectGrades(studentId, {});
+  }, [studentId, parsedApiGrades]);
+  const realAcademicHistory = useMemo(() => getStudentFullAcademicHistory(studentId, {}), [studentId]);
+  const realGradeTrendData = useMemo(() => getStudentGradeTrend(realAcademicHistory), [realAcademicHistory]);
+  const realRecentQuizzes = useMemo(() => getStudentRecentQuizzes(studentId, {}), [studentId]);
+  const currentStudent = useMemo(() => {
+    const rawName = currentUser?.name || "Juan Miguel Santos";
+    const nameParts = rawName.split(" ");
+    const surname = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];
+    const first = nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : "";
+    const lrn = currentUser?.id === "s-juan" ? "100001" : currentUser?.id ? `1000${currentUser.id.replace(/\D/g, '').padEnd(2, '0').slice(0, 2)}` : "100001";
+    const section = currentUser?.section ? currentUser.section.replace(/Grade \d+\s*-\s*/i, "").trim() : "Pilot";
+    return {
+    };
+  }, [currentUser]);
+  const currentGrade10Avg = useMemo(() => {
+    if (realSubjectGrades.length === 0) return 0;
+    const total = realSubjectGrades.reduce((sum, s) => sum + (s.term1 + s.term2 + s.term3) / 3, 0);
+    return Math.round((total / realSubjectGrades.length) * 10) / 10;
+  }, [realSubjectGrades]);
+  const standingInfo = useMemo(() => getStudentRankAndStanding(currentGrade10Avg), [currentGrade10Avg]);
+  // Excuse Letter Submit
+  async function handleExcuseSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setExcuseError("");
+    if (!excuseTeacher) {
+    }
+    if (!excuseStartDate || !excuseEndDate) {
+    }
+    if (!excuseText) {
+    }
+    if (!currentUser) {
+    }
+    setIsSubmittingExcuse(true);
+    try {
+    } catch (err: any) {
+    } finally {
+    }
+  }
+  const renderSidebarContent = () => (
+    <>
+    </>
+  );
+  return (
+    <div style={{ height: "100vh", overflow: "hidden", background: C.paper, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+{/* 9. REQUEST DOCUMENTS TAB */}
+{/* 10. SETTINGS PAGE */}
+    </div>
+  );
+}
+// Helpers
+function cardStatColor(s: string) {
+  return s === "Submitted" ? C.green : s === "Pending" ? C.amber : C.red;
+}
+function cardStatBg(s: string) {
+  return s === "Submitted" ? C.greenBg : s === "Pending" ? C.amberBg : C.redBg;
+}

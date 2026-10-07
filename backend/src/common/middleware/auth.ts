@@ -123,3 +123,26 @@ export function requirePermissions(...requiredPermissions: string[]) {
     next();
   };
 }
+
+/**
+ * Permission guard factory — pass if user has ANY ONE of the listed permissions.
+ * Use this when a broader permission (e.g. attendance:write_all) should also
+ * satisfy a narrower permission check (e.g. attendance:write).
+ */
+export function requireAnyPermission(...anyOfPermissions: string[]) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const user = (req as any).user as AuthenticatedUser | undefined;
+    if (!user) {
+      next(new AppError(401, 'UNAUTHORIZED', 'Authentication required.'));
+      return;
+    }
+
+    const hasAny = anyOfPermissions.some(p => user.permissions.includes(p));
+    if (!hasAny) {
+      next(new AppError(403, 'FORBIDDEN', 'You do not have permission to access this resource.'));
+      return;
+    }
+
+    next();
+  };
+}

@@ -24,6 +24,7 @@ async function main() {
   const roleGuidance = await ensureRole('Guidance');
   const roleAdmin = await ensureRole('Admin');
   const roleRegistrar = await ensureRole('Registrar');
+  const roleGateOperator = await ensureRole('GateOperator');
 
   // Helper to create user
   async function ensureUser(id: string, email: string, firstName: string, lastName: string, roleId: string) {
@@ -56,6 +57,7 @@ async function main() {
   const guidanceUser = await ensureUser('demo-guidance-1', 'guidance@demo.com', 'Sigmund', 'Freud', roleGuidance.id);
   const adminUser = await ensureUser('demo-admin-1', 'admin@demo.com', 'System', 'Admin', roleAdmin.id);
   const registrarUser = await ensureUser('demo-registrar-1', 'registrar@demo.com', 'Records', 'Officer', roleRegistrar.id);
+  const gateUser = await ensureUser('demo-gate-1', 'gate@demo.com', 'Gate', 'Operator', roleGateOperator.id);
 
   // Ensure Academic Year & Term
   const ayId = 'demo-ay-2026';

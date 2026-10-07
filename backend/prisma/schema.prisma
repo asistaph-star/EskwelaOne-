@@ -40,6 +40,7 @@ model User {
   student                        Student?
   teacher                        Teacher?
   user_roles                     UserRole[]
+  campus_media                   CampusMedia[]
 
   @@map("users")
 }
@@ -305,6 +306,7 @@ model Document {
   uploader                User                     @relation(fields: [uploaded_by], references: [id])
   excuseLetters           ExcuseLetter[]
   teacherRankingDocuments TeacherRankingDocument[]
+  campus_media            CampusMedia?
 
   @@map("documents")
 }
@@ -421,21 +423,22 @@ model Appointment {
 }
 
 model LeaveRequest {
-  id            String   @id @db.VarChar(36)
-  user_id       String   @db.VarChar(36)
-  type          String   @db.VarChar(50)
-  start_date    DateTime
-  end_date      DateTime
-  days          Int
-  reason        String
-  status        String   @default("Pending") @db.VarChar(20)
-  submitted_on  DateTime @default(now())
-  approver_note String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  approver_id   String?  @db.VarChar(36)
-  approver      User?    @relation("LeaveApprover", fields: [approver_id], references: [id], onDelete: Restrict)
-  user          User     @relation("LeaveRequester", fields: [user_id], references: [id])
+  id             String   @id @db.VarChar(36)
+  user_id        String   @db.VarChar(36)
+  type           String   @db.VarChar(50)
+  start_date     DateTime
+  end_date       DateTime
+  days           Int
+  reason         String
+  status         String   @default("Pending") @db.VarChar(20)
+  submitted_on   DateTime @default(now())
+  approver_note  String?
+  attachment_url String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  approver_id    String?  @db.VarChar(36)
+  approver       User?    @relation("LeaveApprover", fields: [approver_id], references: [id], onDelete: Restrict)
+  user           User     @relation("LeaveRequester", fields: [user_id], references: [id])
 
   @@map("leave_requests")
 }
@@ -708,6 +711,24 @@ model TeacherRankingDocument {
 
   @@id([ranking_id, document_id])
   @@map("teacher_ranking_documents")
+}
+
+model CampusMedia {
+  id            String   @id @db.VarChar(36)
+  title         String   @db.VarChar(255)
+  media_type    String   @db.VarChar(20) // 'image' | 'video'
+  is_active     Boolean  @default(true)
+  sort_order    Int      @default(0)
+  duration_ms   Int?
+  document_id   String   @unique @db.VarChar(36)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by_id String   @db.VarChar(36)
+
+  document Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [created_by_id], references: [id])
+
+  @@map("campus_media")
 }
 
 enum TermKey {

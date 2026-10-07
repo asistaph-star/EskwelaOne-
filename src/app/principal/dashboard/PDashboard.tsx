@@ -20,9 +20,9 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [aiDone, setAiDone] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   
-  const pendingLeaves = teacherLeaves.filter(l => l.status === "Pending").length;
-  const activeClinic = clinicReferrals.filter(c => c.status === "Pending").length;
-  const scansToday = gateAttendance.length;
+  const pendingLeaves = (teacherLeaves || []).filter(l => l.status === "Pending").length;
+  const activeClinic = (clinicReferrals || []).filter(c => c.status === "Pending").length;
+  const scansToday = (gateAttendance || []).length;
 
   const KPI_CARDS = [
     {

@@ -107,9 +107,7 @@ export function PDocRequestsScreen() {
       formData.append("file", file);
       
       // Upload the document
-      const savedDoc = await apiClient.post<any>('/documents/upload', formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const savedDoc = await apiClient.postFormData<any>('/documents/upload', formData);
 
       // Link to request
       await apiClient.patch(`/documents/requests/${uploadReqId}`, {
@@ -422,9 +420,7 @@ export function PDocRequestsScreen() {
               const formData = new FormData();
               formData.append("file", blob, file.name);
 
-              const savedDoc = await apiClient.post<any>('/documents/upload', formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-              });
+              const savedDoc = await apiClient.postFormData<any>('/documents/upload', formData);
 
               await apiClient.patch(`/documents/requests/${scannerReqId}`, {
                 status: "Completed",

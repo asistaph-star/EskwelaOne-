@@ -1,7 +1,7 @@
 import React from 'react';
 import { C } from '../constants/tokens';
 import { BookMarked } from 'lucide-react';
-import { ReportCardDTO } from '../../../../../backend/src/academic/reportCard.service';
+
 
 function Stamp({ label, color, bg, border }: { label: string; color: string; bg: string; border?: string }) {
   return (
@@ -25,7 +25,7 @@ function Stamp({ label, color, bg, border }: { label: string; color: string; bg:
   );
 }
 
-export function Form138({ data }: { data: ReportCardDTO }) {
+export function Form138({ data }: { data: any }) {
   const { student, school, enrollment, scholastic, attendance, adviser, principal } = data;
 
   const isPromoted = scholastic.generalAverage !== null && scholastic.generalAverage >= 75;

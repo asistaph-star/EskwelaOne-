@@ -73,6 +73,7 @@ export function TLeaveScreen() {
   const [fStart, setFStart] = useState('');
   const [fEnd, setFEnd] = useState('');
   const [fReason, setFReason] = useState('');
+  const [fFile, setFFile] = useState<File | null>(null);
 
   const calcDays = () => {
     if (!fStart || !fEnd) return 0;
@@ -84,14 +85,18 @@ export function TLeaveScreen() {
     if (!fStart || !fEnd || !fReason.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await apiClient.post('/admin/leaves', {
-        type: fType,
-        start_date: fStart,
-        end_date: fEnd,
-        days: calcDays(),
-        reason: fReason,
-      });
-      setFType(LEAVE_TYPES[0]); setFStart(''); setFEnd(''); setFReason('');
+      const formData = new FormData();
+      formData.append('type', fType);
+      formData.append('start_date', fStart);
+      formData.append('end_date', fEnd);
+      formData.append('days', calcDays().toString());
+      formData.append('reason', fReason);
+      if (fFile) {
+        formData.append('attachment', fFile);
+      }
+      
+      await apiClient.postFormData('/admin/leaves', formData);
+      setFType(LEAVE_TYPES[0]); setFStart(''); setFEnd(''); setFReason(''); setFFile(null);
       setModal(false);
       fetchLeaves();
     } catch (err: any) {
@@ -256,8 +261,9 @@ export function TLeaveScreen() {
                 <textarea rows={3} value={fReason} onChange={e => setFReason(e.target.value)} placeholder="Brief description of your leave reason..."
                   style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }} />
               </div>
-              <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 4, padding: '8px 12px', fontSize: 10, color: '#92400e' }}>
-                <strong>Note:</strong> Attach supporting documents (medical certificate, etc.) to your HR office separately. This form is for official recording only.
+              <div>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Supporting Document (Optional)</label>
+                <input type="file" onChange={e => setFFile(e.target.files ? e.target.files[0] : null)} style={{ ...inputStyle, padding: '6px 10px' }} />
               </div>
             </div>
             <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -305,6 +311,12 @@ export function TLeaveScreen() {
                   <Stamp label={detail.status} {...statusColor(detail.status)} />
                 </div>
               </div>
+              {detail.attachment_url && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: 10 }}>
+                  <span style={{ fontSize: 11, color: C.t3, fontWeight: 600 }}>Attachment</span>
+                  <a href={`http://localhost:4000${detail.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.m700, fontWeight: 600, textDecoration: 'underline' }}>View Document</a>
+                </div>
+              )}
               {detail.approver_note && (
                 <div style={{ background: detail.status === 'Approved' ? C.greenBg : detail.status === 'Rejected' ? C.redBg : C.amberBg, border: `1px solid ${detail.status === 'Approved' ? 'rgba(22,101,52,0.2)' : detail.status === 'Rejected' ? 'rgba(185,28,28,0.2)' : 'rgba(217,119,6,0.2)'}`, borderRadius: 4, padding: '10px 14px' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: detail.status === 'Approved' ? C.green : detail.status === 'Rejected' ? C.red : C.amber, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Approver's Note ({detail.approverName || 'Admin'})</div>

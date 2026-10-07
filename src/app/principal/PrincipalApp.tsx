@@ -21,6 +21,8 @@ import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
 import { PAnnouncementsScreen } from './announcements/PAnnouncementsScreen';
 
+import { Toaster } from 'sonner';
+
 export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen] = useHashRouter<PScreen>("principal", "p-dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +58,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <PHeaderBand
           title={TITLES[screen]}
-          sub="Tuesday, June 10, 2025"
+          sub={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
           onMenu={isMobile?()=>setMenuOpen(true):undefined}
           onLogout={onLogout}
           onSettings={() => setScreen("p-settings")}
@@ -93,6 +95,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
         </div>
       </div>
       <AIAssistantWidget role="Principal" />
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function AppointmentsScreen() {
         apiClient.get('/student-services/appointments/students')
       ]);
 
-      const formatted = (apptsRes || []).map((a: any) => {
+      const formatted = ((apptsRes as any[]) || []).map((a: any) => {
         const d = new Date(a.time);
         let hr = d.getUTCHours();
         const min = d.getUTCMinutes();
@@ -59,7 +59,7 @@ export function AppointmentsScreen() {
       });
       setApiAppointments(formatted);
       
-      const st = (studentsRes || []);
+      const st = ((studentsRes as any[]) || []);
       const mappedStudents = st.map((s: any) => ({
         id: s.id,
         name: `${s.user.first_name} ${s.user.last_name}`,

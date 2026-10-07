@@ -111,9 +111,9 @@ export function AccountManagement() {
                 <td style={{ padding: "16px 20px" }}>
                   <span style={{ 
                     display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-                    background: acc.status === "Active" ? C.greenBg : acc.status === "Locked" ? C.redBg : C.yellowBg,
-                    color: acc.status === "Active" ? C.green : acc.status === "Locked" ? C.red : C.yellow,
-                    border: `1px solid ${acc.status === "Active" ? C.green : acc.status === "Locked" ? C.red : C.yellow}40`
+                    background: acc.status === "Active" ? C.greenBg : acc.status === "Locked" ? C.redBg : C.amberBg,
+                    color: acc.status === "Active" ? C.green : acc.status === "Locked" ? C.red : C.amber,
+                    border: `1px solid ${acc.status === "Active" ? C.green : acc.status === "Locked" ? C.red : C.amber}40`
                   }}>
                     {acc.status}
                   </span>
@@ -161,8 +161,8 @@ export function AccountManagement() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, animation: "fadeIn 0.2s ease-out" }}>
           <div style={{ background: "#fff", padding: 32, borderRadius: 16, width: 400, maxWidth: "90%", boxShadow: "0 24px 48px rgba(0,0,0,0.2)", animation: "slideUp 0.2s ease-out" }}>
             <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 24, background: confirmModal.type === "delete" ? C.redBg : C.yellowBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {confirmModal.type === "delete" ? <Trash2 size={24} color={C.red} /> : <ShieldAlert size={24} color={C.yellow} />}
+              <div style={{ width: 48, height: 48, borderRadius: 24, background: confirmModal.type === "delete" ? C.redBg : C.amberBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {confirmModal.type === "delete" ? <Trash2 size={24} color={C.red} /> : <ShieldAlert size={24} color={C.amber} />}
               </div>
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, color: C.t1, margin: "0 0 8px" }}>

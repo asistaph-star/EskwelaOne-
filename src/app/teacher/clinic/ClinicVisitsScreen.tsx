@@ -114,7 +114,7 @@ export function ClinicVisitsScreen() {
   React.useEffect(() => {
     apiClient.get('/student-services/clinic')
       .then(res => {
-        setRecords(res || []);
+        setRecords((res as any[]) || []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -236,7 +236,7 @@ function StudentMedicalHistoryCard({ student, onClose }:{ student:{ id: string, 
   React.useEffect(() => {
     // Fetch the real history for this specific student
     apiClient.get(`/student-services/clinic/${student.id}`)
-      .then(res => setHistory(res || []))
+      .then(res => setHistory((res as any[]) || []))
       .catch(console.error);
     
     // Attempt to fetch profile (if we had a student-specific profile endpoint, but we don't, so we'll mock profile or leave it blank if not current user)

@@ -58,6 +58,9 @@ const ROLES = {
   ],
   Guidance: [
     'user:read', 'guidance:read', 'guidance:write', 'behavior:read', 'behavior:write'
+  ],
+  GateOperator: [
+    'attendance:write'
   ]
 };
 

@@ -65,14 +65,12 @@ export const studentApi = {
   uploadDocument: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return await apiClient.post('/documents/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    return await apiClient.postFormData('/documents/upload', formData);
   },
 
   // Get presigned download URL
   getPresignedDownloadUrl: async (documentId: string) => {
-    return await apiClient.post(`/documents/${documentId}/presign-download`);
+    return await apiClient.post(`/documents/${documentId}/presign-download`, {});
   },
 
   // Fetch document requests

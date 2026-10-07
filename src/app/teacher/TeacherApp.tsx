@@ -54,6 +54,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     dashboard: { title: "Teacher Dashboard", sub: "Overview & Quick Actions" },
     classroom: { title: "Classroom Hub", sub: "Manage sections & grades" },
     gradebook: { title: "Gradebook Entry", sub: "Class activity records" },
+    "quarterly-summary": { title: "Quarterly Summary", sub: "Periodic ratings overview" },
     "term-summary": { title: "Term Summary", sub: "Final ratings overview" },
     "grades-direct": { title: "Gradebooks Quick Access" },
     "attendance-direct": { title: "Attendance Quick Access" },
@@ -162,8 +163,8 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
             onHubClick={(id) => { setClassId(id); setScreen("classroom"); }} 
             onShowGradeCard={showGradeCard} 
           />}
-          {screen === "classroom" && <ClassroomHub classId={classId || 1} onBack={() => setScreen("dashboard")} onShowGradeCard={showGradeCard} />}
-          {screen === "gradebook" && <GradebookFullScreen classId={classId || 1} onBack={() => setScreen("dashboard")} />}
+          {screen === "classroom" && <ClassroomHub classId={classId || "1"} onBack={() => setScreen("dashboard")} onShowGradeCard={showGradeCard} />}
+          {screen === "gradebook" && <GradebookFullScreen classId={classId || "1"} onBack={() => setScreen("dashboard")} />}
           {screen === "term-summary" && <TermSummaryScreen />}
           {screen === "grades-direct" && <GradesDirectScreen />}
           {screen === "attendance-direct" && <AttendanceDirectScreen />}

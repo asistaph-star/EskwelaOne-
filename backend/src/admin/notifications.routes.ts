@@ -64,7 +64,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    const { id } = req.params;
+    const id = String(req.params.id);
     const input = req.body;
     
     const existing = await prisma.notification.findUnique({ where: { id } });

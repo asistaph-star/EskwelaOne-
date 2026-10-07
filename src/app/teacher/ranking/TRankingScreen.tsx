@@ -68,7 +68,7 @@ export default function TRankingScreen() {
           onClose={() => setScannerRecordId(null)}
           onSaveScan={(file) => {
             updateTeacherRanking(scannerRecordId, {
-              supportingDocuments: [...activeRanking!.supportingDocuments, file.name]
+              supportingDocuments: [...(activeRanking!.supportingDocuments || []), file.name]
             });
             // In a real app, we would upload the file.dataUrl to the backend here
             setScannerRecordId(null);
@@ -156,7 +156,7 @@ function RankingCard({ record, isActive, onAttach }: { record: TeacherRankingRec
               {isActive && <button onClick={onAttach} style={{ color: C.blue, background: "transparent", border: "none", cursor: "pointer", fontWeight: 600 }}>+ Attach Scan</button>}
             </div>
             
-            {record.supportingDocuments.length > 0 ? (
+            {(record.supportingDocuments && record.supportingDocuments.length > 0) ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {record.supportingDocuments.map((doc, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.t2, background: "#f8f9fa", padding: "6px 10px", borderRadius: 4, border: `1px solid ${C.borderMed}` }}>

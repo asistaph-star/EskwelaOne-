@@ -35,7 +35,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    const id = req.params.id;
+    const id = String(req.params.id);
 
     // A user can always read their own data. Others need user:read.
     if (authUser.id !== id && !authUser.permissions.includes('user:read') && !authUser.roles?.includes('Principal')) {
@@ -59,7 +59,8 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 router.post('/', requirePermissions('user:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createUserSchema.parse(req.body);
-    const user = await createUser(input);
+    const authUser = (req as any).user as AuthenticatedUser;
+    const user = await createUser(input, authUser.id, (req as any).correlationId);
     res.status(201).json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -72,7 +73,7 @@ router.post('/', requirePermissions('user:write'), async (req: Request, res: Res
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    const id = req.params.id;
+    const id = String(req.params.id);
 
     // Simple auth check: a user can update themselves (e.g. profile), or need user:write
     if (authUser.id !== id && !authUser.permissions.includes('user:write')) {
@@ -80,7 +81,7 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     const input = updateUserSchema.parse(req.body);
-    const user = await updateUser(id, input);
+    const user = await updateUser(id, input, authUser.id, (req as any).correlationId);
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);

@@ -6,10 +6,50 @@ import { P_TEACHERS, P_WELFARE } from '../../shared/constants/seedData';
 import { useAppContext } from '../../shared/AppContext';
 import { Stamp } from '../../shared/components/Stamp';
 import { Users, LogOut, Clock } from 'lucide-react';
+import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
+
 
 export function PMonitoring() {
   const [chartView, setChartView] = useState("Weekly");
-  const { gateAttendance } = useAppContext();
+  const { gateAttendance, invalidScans } = useAppContext();
+  const sseStatus = useGateAttendanceSSE();
+
+  // Transform flat daily records into discrete chronological events
+  const feedEvents = React.useMemo(() => {
+    const events: { id: string, studentName: string, direction: 'IN' | 'OUT' | 'INVALID', timestamp: Date, metadata?: string }[] = [];
+    
+    gateAttendance.forEach(record => {
+      if (record.timeIn) {
+        events.push({
+          id: `${record.id}-in`,
+          studentName: record.studentName,
+          direction: 'IN',
+          timestamp: new Date(record.timeIn)
+        });
+      }
+      if (record.timeOut) {
+        events.push({
+          id: `${record.id}-out`,
+          studentName: record.studentName,
+          direction: 'OUT',
+          timestamp: new Date(record.timeOut)
+        });
+      }
+    });
+
+    invalidScans?.forEach(scan => {
+      events.push({
+        id: `invalid-${scan.time}-${scan.barcode}`,
+        studentName: 'Unknown',
+        direction: 'INVALID',
+        timestamp: new Date(scan.time),
+        metadata: scan.barcode
+      });
+    });
+
+    return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [gateAttendance, invalidScans]);
+
   return (
     <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24 }}>
       {/* Redesigned Gate Cards Grid */}
@@ -138,8 +178,15 @@ export function PMonitoring() {
         {/* Gate log */}
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
           <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ width:7, height:7, borderRadius:10, background:C.green, boxShadow:`0 0 0 3px ${C.greenBg}` }}/>
+            <div style={{
+              width:7, height:7, borderRadius:10,
+              background: sseStatus === 'live' ? C.green : C.amber,
+              boxShadow: sseStatus === 'live' ? `0 0 0 3px ${C.greenBg}` : `0 0 0 3px ${C.amberBg}`
+            }}/>
             <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Live QR Gate Feed</span>
+            <span style={{ marginLeft:'auto', fontSize:9, color: sseStatus === 'live' ? C.green : C.amber, fontWeight:600 }}>
+              {sseStatus === 'live' ? 'LIVE UPDATES' : 'RECONNECTING...'}
+            </span>
           </div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><PTableHeader cols={["Student","Grade & Section","Time","Direction"]} /></thead>
@@ -160,16 +207,28 @@ export function PMonitoring() {
                   <Stamp label="Out" color={C.blue} bg={C.blueBg} />
                 </td>
               </tr>
-              {gateAttendance.map((g,i)=>(
-                <tr key={i} style={{ borderBottom:`0.5px solid ${C.border}` }}
+              {feedEvents.map((ev) => (
+                <tr key={ev.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
                   onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                   onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
-                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{g.studentName}</td>
-                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Grade 10 - Rizal</td>
-                  <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>{g.time}</td>
+                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color: ev.direction === 'INVALID' ? C.t3 : C.t1 }}>
+                    {ev.studentName}
+                  </td>
+                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>
+                    {ev.direction === 'INVALID' ? `Scanned: ${ev.metadata}` : 'Grade 10 - Rizal'}
+                  </td>
+                  <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>
+                    {ev.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </td>
                   <td style={{ padding:"9px 14px" }}>
                     <div style={{ display:"flex", gap:5 }}>
-                      <Stamp label="In" color={C.green} bg={C.greenBg} />
+                      {ev.direction === 'INVALID' ? (
+                        <Stamp label="Invalid" color={C.red} bg={C.redBg} />
+                      ) : ev.direction === 'OUT' ? (
+                        <Stamp label="Out" color={C.blue} bg={C.blueBg} />
+                      ) : (
+                        <Stamp label="In" color={C.green} bg={C.greenBg} />
+                      )}
                     </div>
                   </td>
                 </tr>

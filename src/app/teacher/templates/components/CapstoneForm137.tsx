@@ -1,7 +1,7 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens';
 import { GradeLevel } from '../../../shared/types';
-import { FULL_ACADEMIC_HISTORY } from '../TemplateHubScreen';
+
 
 /* ─── Full StudentReportCard (Modern SF10-JHS format) ─── */
 /* ─── Full StudentReportCard (Modern SF10-JHS format) ─── */

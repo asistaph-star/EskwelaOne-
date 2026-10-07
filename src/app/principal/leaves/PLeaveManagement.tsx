@@ -217,19 +217,9 @@ export function PLeaveManagement() {
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => setDetail(r)}
-                          style={{ fontSize: 10, fontWeight: 600, color: C.m700, background: C.m100, border: `1px solid ${C.m700}20`, borderRadius: 4, padding: '4px 9px', cursor: 'pointer' }}>
-                          View
+                          style={{ fontSize: 10, fontWeight: 600, color: r.status === 'Pending' ? '#fff' : C.m700, background: r.status === 'Pending' ? C.m700 : C.m100, border: r.status === 'Pending' ? 'none' : `1px solid ${C.m700}20`, borderRadius: 4, padding: '5px 12px', cursor: 'pointer' }}>
+                          {r.status === 'Pending' ? 'Review' : 'View'}
                         </button>
-                        {r.status === 'Pending' && (<>
-                          <button onClick={() => approve(r.id)}
-                            style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: C.green, border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer' }}>
-                            ✓ Approve
-                          </button>
-                          <button onClick={() => { setRejectModal(r); setRejectNote(''); }}
-                            style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: C.red, border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer' }}>
-                            ✕ Reject
-                          </button>
-                        </>)}
                       </div>
                     </td>
                   </tr>
@@ -295,7 +285,7 @@ export function PLeaveManagement() {
               {[
                 ['Position', (detail as any).teacherPosition],
                 ['Leave Type', detail.type],
-                ['Date Range', `${fmt((detail as any).start_date)}{(detail as any).start_date !== (detail as any).end_date ? ' - ' + fmt((detail as any).end_date) : ''}`],
+                ['Date Range', `${fmt((detail as any).start_date)}${(detail as any).start_date !== (detail as any).end_date ? ' - ' + fmt((detail as any).end_date) : ''}`],
                 ['Duration', `${detail.days} day${detail.days !== 1 ? 's' : ''}`],
                 ['Submitted On', fmt((detail as any).submitted_on)],
                 ['Reason', detail.reason],
@@ -312,6 +302,12 @@ export function PLeaveManagement() {
                   <Stamp label={detail.status} {...statusStyle(detail.status)} />
                 </div>
               </div>
+              {detail.attachment_url && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, paddingTop: 10 }}>
+                  <span style={{ fontSize: 11, color: C.t3, fontWeight: 600 }}>Attachment</span>
+                  <a href={`http://localhost:4000${detail.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.m700, fontWeight: 700, textDecoration: 'underline' }}>View Document</a>
+                </div>
+              )}
               {(detail as any).approver_note && (
                 <div style={{ background: detail.status === 'Approved' ? C.greenBg : C.redBg, border: `1px solid ${detail.status === 'Approved' ? 'rgba(22,101,52,0.2)' : 'rgba(185,28,28,0.2)'}`, borderRadius: 4, padding: '10px 14px' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: detail.status === 'Approved' ? C.green : C.red, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Approver's Note</div>

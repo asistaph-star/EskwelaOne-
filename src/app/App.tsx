@@ -128,6 +128,7 @@ import { PrincipalApp } from "./principal/PrincipalApp";
 import { RegistrarApp } from "./principal/RegistrarApp";
 import { AdminApp } from "./admin/AdminApp";
 import { GuidanceApp } from "./guidance/GuidanceApp";
+import { GateTerminalApp } from "./gate/GateTerminalApp";
 
 import { useAppContext } from "./shared/AppContext";
 
@@ -150,6 +151,9 @@ export default function App() {
     localStorage.removeItem('currentUser');
   };
 
+  if (role === "GateOperator") {
+    return <GateTerminalApp onLogout={handleLogout} />;
+  }
   if (role === "Principal") {
     return <PrincipalApp onLogout={handleLogout} />;
   }
