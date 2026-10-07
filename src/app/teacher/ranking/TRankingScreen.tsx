@@ -6,8 +6,13 @@ import { TeacherRankingRecord } from "../../shared/types";
 import { DocumentScanner } from "../../shared/components/scanner/DocumentScanner";
 
 export default function TRankingScreen() {
-  const { teacherRankings, updateTeacherRanking, currentUser } = useAppContext();
+  const { currentUser } = useAppContext();
   const [scannerRecordId, setScannerRecordId] = useState<string | null>(null);
+  const [teacherRankings, setTeacherRankings] = useState<TeacherRankingRecord[]>([]);
+
+  const updateTeacherRanking = (id: string, updates: Partial<TeacherRankingRecord>) => {
+    setTeacherRankings(prev => prev.map(r => r.id === id ? { ...r, ...updates } as TeacherRankingRecord : r));
+  };
 
   const CURRENT_TEACHER_ID = currentUser?.id || ""; 
 

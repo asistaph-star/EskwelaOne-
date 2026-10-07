@@ -188,7 +188,7 @@ type AppContextType = {
 
   // Notifications
   notifications: AppNotification[];
-  addNotification: (n: AppNotification) => void;
+  addNotification: (n: AppNotification | string, type?: "success"|"error"|"info") => void;
   markNotificationsRead: (recipientId: string) => void;
   markSingleNotificationRead: (id: string) => void;
 
@@ -204,6 +204,9 @@ type AppContextType = {
 
   // Cross-checks
   gateAttendance: GateAttendance[];
+  invalidScans: any[];
+  addInvalidScan: (barcode: string, time?: string) => void;
+  refreshGateAttendance: () => Promise<void>;
   addGateAttendance: (log: GateAttendance) => void;
   updateGateAttendance: (id: string, updates: Partial<GateAttendance>) => void;
   clinicReferrals: ClinicReferral[];
@@ -237,11 +240,7 @@ type AppContextType = {
   deleteAccount: (id: string) => void;
   resetPassword: (id: string) => void;
   
-  // Teacher Ranking
-  teacherRankings: TeacherRankingRecord[];
-  addTeacherRanking: (record: TeacherRankingRecord) => void;
-  updateTeacherRanking: (id: string, updates: Partial<TeacherRankingRecord>) => void;
-
+  // Teacher Ranking
   // Enrollments
   enrollmentApplications: Applicant[];
   enrollmentError: string | null;
@@ -251,17 +250,10 @@ type AppContextType = {
 
 // --- Seed Data --
 
-
-
-
-
-
-
-
 const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
-  { id: "doc-1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
-  { id: "doc-2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
-  { id: "doc-3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
+  { id: "doc-1", studentId: "s1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
+  { id: "doc-2", studentId: "s2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
+  { id: "doc-3", studentId: "s3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
 ];
 
 const SEED_STUDENT_RECORDS: StudentRecord[] = [
@@ -390,14 +382,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [gateAttendance, setGateAttendance] = useState<GateAttendance[]>([]);
+  const [invalidScans, setInvalidScans] = useState<any[]>([]);
+
+  const addInvalidScan = (barcode: string, time?: string) => setInvalidScans(prev => [{ barcode, time }, ...prev]);
+  const refreshGateAttendance = async () => {
+    try {
+      const res = await apiClient.get("/attendance/gate");
+      setGateAttendance(res as any);
+    } catch (e) {}
+  };
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
-  const [teacherRankings, setTeacherRankings] = useState<TeacherRankingRecord[]>([]);
-  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
   const [enrollmentApplications, setEnrollmentApplications] = useState<Applicant[]>([]);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
 
@@ -460,15 +459,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBehaviorLogs(dbBeh as any);
         setAppointments(dbAppt as any);
         setDocumentRequests(dbDocReq as any);
-        console.log("DB LEAVES FETCHED:", dbLeaves);
-        setTeacherRankings(dbRank as any);
-        setTeacherLeaves(dbLeaves as any);
+        console.log("DB LEAVES FETCHED:", dbLeaves);        setTeacherLeaves(dbLeaves as any);
         setEnrollmentApplications(dbEnrollments as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
         
         // Filter users
-        const users = dbUsers.map((u: any) => ({ ...u, name: `${u.first_name} ${u.last_name}` }));
+        const users = (dbUsers as any[]).map((u: any) => ({ ...u, name: `${u.first_name} ${u.last_name}` }));
         setStudents(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Student')));
         setTeachers(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Teacher')));
         setAnnouncements(dbAnnouncements as any);
@@ -507,11 +504,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser]);
 
-  const addNotification = async (n: AppNotification) => {
-    const { id, ...payload } = n;
-    const saved = await apiClient.post("/admin/notifications", payload);
-    setNotifications(prev => [...prev, saved as any]);
+  const addNotification = async (n: AppNotification | string, type?: "success"|"error"|"info") => {
+    let notif: AppNotification;
+    if (typeof n === 'string') {
+      notif = {
+        id: `local-${Date.now()}`,
+        recipientId: currentUser?.id || "",
+        title: type === 'error' ? 'Error' : 'Notification',
+        body: n as string,
+        iconType: type === 'error' ? 'alert' : 'megaphone',
+        isRead: false,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      notif = n;
+    }
+    setNotifications(prev => [notif, ...prev]);
+    try {
+      await apiClient.post("/admin/notifications", notif);
+    } catch (e) {
+      console.warn("Failed to sync notification to DB");
+    }
   };
+
 
     const markSingleNotificationRead = async (id: string) => {
     const n = notifications.find(n => n.id === id);
@@ -726,17 +741,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateDocumentRequest = async (id: string, updates: Partial<DocumentRequest>) => {
     await apiClient.patch("/documents/requests/" + id, updates);
     setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
-  };
-  
-  const addTeacherRanking = async (record: TeacherRankingRecord) => {
-    const saved = await apiClient.post("/users/rankings", record);
-    setTeacherRankings(prev => [saved as any, ...prev]);
-  };
-
-  const updateTeacherRanking = async (id: string, updates: Partial<TeacherRankingRecord>) => {
-    await apiClient.patch("/admin/rankings/" + id, updates);
-    setTeacherRankings(prev => prev.map(r => r.id === id ? { ...r, ...updates } as any : r));
-  };
+  };;;
 
   const addEnrollmentApplication = async (app: Applicant) => {
     const saved = await apiClient.post("/admin/enrollment-applications", app);
@@ -774,7 +779,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       notifications, addNotification, markNotificationsRead, markSingleNotificationRead,
       events, addEvent, editEvent, deleteEvent,
       messages, addMessage,
-      gateAttendance, addGateAttendance, updateGateAttendance,
+      gateAttendance, addGateAttendance, updateGateAttendance, invalidScans, addInvalidScan, refreshGateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,
       behaviorLogs, addBehaviorLog, updateBehaviorLog,
 
@@ -782,7 +787,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       documentRequests, addDocumentRequest, updateDocumentRequest,
       studentRecords, counselingLogs, addCounselingLog,
       systemAccounts, deleteAccount, resetPassword,
-      teacherRankings, addTeacherRanking, updateTeacherRanking,
+        
       teacherLeaves, addTeacherLeave, updateTeacherLeave,
       clinicVisitRecords, addClinicVisitRecord,
       enrollmentApplications,
