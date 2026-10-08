@@ -141,8 +141,6 @@ type AppContextType = {
   resolveClinicReferral: (id: string) => void;
 
   // Nurse Visit Records (persisted)
-  clinicVisitRecords: any[];
-  addClinicVisitRecord: (v: any) => Promise<void>;
 
   // Student Records (Guidance)
   studentRecords: StudentRecord[];
@@ -288,7 +286,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [students, setStudents] = useState<User[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
-  const [clinicVisitRecords, setClinicVisitRecords] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -333,10 +330,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbClinic, dbNurseVisits, dbDocReq, dbRank, dbNotifs, dbGateAtt,
+          dbClinic, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
-          apiClient.get('/student-services/clinic').catch(() => []),
           Promise.resolve([]), // nurseVisits
           apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
@@ -346,7 +342,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           apiClient.get('/admin/announcements').catch(() => [])
         ]);
         setClinicReferrals(dbClinic as any);
-        setClinicVisitRecords(dbNurseVisits as any);
         setDocumentRequests(dbDocReq as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
@@ -509,11 +504,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setClinicReferrals(prev => [saved as any, ...prev]);
   };
 
-  const addClinicVisitRecord = async (v: any) => {
-    const saved = await apiClient.post("/student-services/clinic", v);
-    setClinicVisitRecords(prev => [saved as any, ...prev]);
-  };
-
   const resolveClinicReferral = async (id: string) => {
     await apiClient.patch("/student-services/clinic/" + id, { status: "Acknowledged" });
     setClinicReferrals(prev => prev.map(r => r.id === id ? { ...r, status: "Acknowledged" } : r));
@@ -564,7 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       systemAccounts, deleteAccount, resetPassword,
         
       
-      clinicVisitRecords, addClinicVisitRecord,
+      
       
       
       
