@@ -28,22 +28,6 @@ export type Announcement = { id: string; author: string; title: string; body: st
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
-export type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed";
-export type AppointmentDirection = "parent-to-teacher" | "teacher-to-parent";
-export type Appointment = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  parentEmail: string;
-  teacherId: string;
-  teacherName: string;
-  date: string;
-  time: string;
-  purpose: string;
-  status: AppointmentStatus;
-  direction: AppointmentDirection;
-  createdAt: string;
-};
 export type CounselingLogType = "Counseling Session" | "Disciplinary Incident" | "Academic Review" | "Attendance Check-in" | "Parent Conference";
 export type CounselingLog = {
   id: string;
@@ -159,11 +143,6 @@ type AppContextType = {
   // Nurse Visit Records (persisted)
   clinicVisitRecords: any[];
   addClinicVisitRecord: (v: any) => Promise<void>;
-
-  // Appointments
-  appointments: Appointment[];
-  addAppointment: (appt: Appointment) => void;
-  updateAppointment: (id: string, status: AppointmentStatus) => void;
 
   // Student Records (Guidance)
   studentRecords: StudentRecord[];
@@ -324,8 +303,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   };
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
-
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
 
   const [studentRecords, setStudentRecords] = useState<any[]>([]);
@@ -356,13 +333,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbClinic, dbNurseVisits,
-          dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
+          dbClinic, dbNurseVisits, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
           apiClient.get('/student-services/clinic').catch(() => []),
           Promise.resolve([]), // nurseVisits
-          apiClient.get('/student-services/appointments').catch(() => []),
           apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
           apiClient.get('/admin/notifications').catch(() => []),
@@ -372,7 +347,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ]);
         setClinicReferrals(dbClinic as any);
         setClinicVisitRecords(dbNurseVisits as any);
-        setAppointments(dbAppt as any);
         setDocumentRequests(dbDocReq as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
@@ -545,16 +519,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setClinicReferrals(prev => prev.map(r => r.id === id ? { ...r, status: "Acknowledged" } : r));
   };
 
-  const addAppointment = async (appt: Appointment) => {
-    const saved = await apiClient.post("/student-services/appointments", appt);
-    setAppointments(prev => [saved as any, ...prev]);
-  };
-
-  const updateAppointment = async (id: string, status: AppointmentStatus) => {
-    await apiClient.patch("/student-services/appointments/" + id, { status });
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-  };
-
   const addDocumentRequest = async (req: DocumentRequest) => {
     const saved = await apiClient.post("/student-services/doc-requests", req);
     setDocumentRequests(prev => [saved as any, ...prev]);
@@ -594,7 +558,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clinicReferrals, addClinicReferral, resolveClinicReferral,
       
 
-      appointments, addAppointment, updateAppointment,
+      
       documentRequests, addDocumentRequest, updateDocumentRequest,
       studentRecords, counselingLogs, addCounselingLog,
       systemAccounts, deleteAccount, resetPassword,

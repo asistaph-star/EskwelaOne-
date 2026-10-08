@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { HeartHandshake, CheckCircle, XCircle, Clock, Calendar, Plus, Mail, X, User, FileText } from 'lucide-react';
-import type { Appointment } from '../../shared/AppContext';
 import { apiClient } from '@/api/client';
 
 export function GCounselingScreen() {
