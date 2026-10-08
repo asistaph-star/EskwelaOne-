@@ -182,7 +182,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setCurrentUser({
             id: meData.id,
             name: `${meData.firstName} ${meData.lastName}`,
-            role: meData.roles[0],
+            role: meData.roles?.[0] || '',
             permissions: meData.permissions || [],
             rawRoles: meData.roles,
             studentProfile: meData.studentProfile

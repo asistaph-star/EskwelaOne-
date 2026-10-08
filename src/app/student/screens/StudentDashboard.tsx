@@ -7,7 +7,7 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
   Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 
-export function StudentDashboard({ setTab, currentUser, apiAppointments, apiDocRequests, apiExcuses, apiGateAttendance = [], assignments = [], assignmentSubmissions = [], announcements = [] }: any) {
+export function StudentDashboard({ setTab, currentUser, apiAppointments = [], apiDocRequests = [], apiExcuses = [], apiGateAttendance = [], assignments = [], assignmentSubmissions = [], announcements = [] }: any) {
   const myGateScans = apiGateAttendance || [];
   const [events, setEvents] = useState<any[]>([]);
   useEffect(() => {

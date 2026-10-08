@@ -180,7 +180,7 @@ router.post('/requests', requirePermissions('document:request'), async (req: Req
     const request = await prisma.documentRequest.create({
       data: {
         id: generateId(),
-        student_id: input.studentId,
+        student_id: student.id,
         document_type: input.documentType,
         purpose: input.purpose,
         status: 'Submitted',
@@ -270,6 +270,11 @@ router.patch('/requests/:id', requirePermissions('document:approve'), async (req
       }
 
       if (!isAllowed && userRoles.includes('Teacher')) {
+        const teacherProfile = await prisma.teacher.findUnique({ where: { user_id: actorId } });
+        if (!teacherProfile || existing.teacher_id !== teacherProfile.id) {
+          throw new AppError(403, 'FORBIDDEN', 'You are not assigned to this document request.');
+        }
+        
         if (currentStatus === 'Submitted' && currentStage === 1) {
           if (reqStatus === 'Teacher Approved' || reqStatus === 'Teacher Rejected') {
             isAllowed = true;

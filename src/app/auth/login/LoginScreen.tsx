@@ -28,7 +28,7 @@ export function LoginScreen() {
       setCurrentUser({
         id: user.id,
         name: `${user.firstName} ${user.lastName}`,
-        role: user.roles?.[0] || 'Teacher',
+        role: user.roles?.[0] || '',
         permissions: user.permissions || [],
         rawRoles: user.roles || [],
         studentProfile: user.studentProfile

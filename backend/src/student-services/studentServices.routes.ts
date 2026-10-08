@@ -47,8 +47,25 @@ router.use('/clinic', clinicRecordsRoutes);
  */
 router.get('/doc-requests/:studentId', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const requestedStudentId = req.params.studentId as string;
+    let whereClause: any = { student_id: requestedStudentId };
+
+    if (authUser.roles.includes('Student')) {
+      const studentProfile = await prisma.student.findUnique({ where: { user_id: authUser.id } });
+      if (!studentProfile || studentProfile.id !== requestedStudentId) {
+        throw new AppError(403, 'FORBIDDEN', 'You can only view your own document requests.');
+      }
+    } else if (authUser.roles.includes('Teacher')) {
+      const teacherProfile = await prisma.teacher.findUnique({ where: { user_id: authUser.id } });
+      if (!teacherProfile) throw new AppError(403, 'FORBIDDEN', 'Teacher profile not found.');
+      whereClause.teacher_id = teacherProfile.id;
+    } else if (!authUser.roles.some(r => ['Admin', 'Principal', 'Registrar'].includes(r))) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized role.');
+    }
+
     const rawRecords = await prisma.documentRequest.findMany({
-      where: { student_id: req.params.studentId as string },
+      where: whereClause,
       include: { principal: true },
       orderBy: { submitted_date: 'desc' }
     });
@@ -141,6 +158,16 @@ router.get('/doc-requests', async (req: Request, res: Response, next: NextFuncti
 router.post('/doc-requests', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createDocRequestSchema.parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+
+    if (authUser.roles.includes('Student')) {
+      const studentProfile = await prisma.student.findUnique({ where: { user_id: authUser.id } });
+      if (!studentProfile || studentProfile.id !== input.studentId) {
+        throw new AppError(403, 'FORBIDDEN', 'You can only create requests for yourself.');
+      }
+    } else if (!authUser.roles.some(r => ['Admin', 'Principal', 'Registrar'].includes(r))) {
+      throw new AppError(403, 'FORBIDDEN', 'Unauthorized role to create document requests on behalf of students.');
+    }
 
     const record = await prisma.documentRequest.create({
       data: {

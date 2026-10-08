@@ -157,7 +157,7 @@ export default function App() {
   if (role === "Principal") {
     return <PrincipalApp onLogout={handleLogout} />;
   }
-  if (role === "Admin") {
+  if (role === "Admin" || role === "ITAdmin") {
     return <AdminApp onLogout={handleLogout} />;
   }
   if (role === "Registrar") {
@@ -175,6 +175,20 @@ export default function App() {
   if (role === "Guidance") {
     return <GuidanceApp onLogout={handleLogout} />;
   }
+  if (role === "Teacher") {
+    return <TeacherApp onLogout={handleLogout} />;
+  }
   
-  return <TeacherApp onLogout={handleLogout} />;
+  return (
+    <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
+      <h2 style={{ color: '#d97706', marginBottom: 8 }}>Access Denied</h2>
+      <p style={{ color: '#4b5563', marginBottom: 24 }}>Your account does not have a recognized portal role.</p>
+      <button 
+        onClick={handleLogout} 
+        style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600 }}
+      >
+        Return to Login
+      </button>
+    </div>
+  );
 }
