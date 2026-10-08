@@ -140,3 +140,14 @@ export interface ClinicStudent {
   emergencyContact: string;
   medicalConditions: string;
 }
+
+export type EnrollmentStatus = "Pending Review" | "Missing Documents" | "Enrolled" | "Rejected";
+export type Applicant = {
+  id: string;
+  name: string;
+  gradeLevel: string;
+  type: "New Student" | "Transferee" | "Returning";
+  dateApplied: string;
+  status: EnrollmentStatus;
+  documents: { birthCert: boolean; form138: boolean; goodMoral: boolean; medical: boolean; };
+};

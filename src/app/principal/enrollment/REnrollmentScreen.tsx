@@ -1,10 +1,44 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { Search, Filter, CheckCircle, XCircle, FileText, AlertTriangle, UserPlus, X } from 'lucide-react';
-import { useAppContext, EnrollmentStatus, Applicant } from '../../shared/AppContext';
+import { useAppContext } from '../../shared/AppContext';
+import { EnrollmentStatus, Applicant } from '../../shared/types';
+import { apiClient } from '../../../api/client';
+import { useEffect } from 'react';
 
 export function REnrollmentScreen() {
-  const { enrollmentApplications: applicants, enrollmentError, updateEnrollmentApplication, addEnrollmentApplication } = useAppContext();
+    const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchEnrollments() {
+      try {
+        const res = await apiClient.get<Applicant[]>('/admin/enrollment-applications');
+        setApplicants(res);
+      } catch (e) {
+        setEnrollmentError("Failed to fetch enrollment applications. Please check the backend connection.");
+      }
+    }
+    fetchEnrollments();
+  }, []);
+
+  const updateEnrollmentApplication = async (id: string, updates: Partial<Applicant>) => {
+    try {
+      await apiClient.patch("/admin/enrollment-applications/" + id, updates);
+      setApplicants(prev => prev.map(a => a.id === id ? { ...a, ...updates } as any : a));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const addEnrollmentApplication = async (app: Applicant) => {
+    try {
+      const saved = await apiClient.post("/admin/enrollment-applications", app);
+      setApplicants(prev => [saved as any, ...prev]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"All" | "Pending Review" | "Missing Documents" | "Enrolled">("All");
   

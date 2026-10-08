@@ -54,16 +54,6 @@ export type TeacherLeave = { id: string; type: string; startDate: string; endDat
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
 export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
-export type EnrollmentStatus = "Pending Review" | "Missing Documents" | "Enrolled" | "Rejected";
-export type Applicant = {
-  id: string;
-  name: string;
-  gradeLevel: string;
-  type: "New Student" | "Transferee" | "Returning";
-  dateApplied: string;
-  status: EnrollmentStatus;
-  documents: { birthCert: boolean; form138: boolean; goodMoral: boolean; medical: boolean; };
-};
 export type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed";
 export type AppointmentDirection = "parent-to-teacher" | "teacher-to-parent";
 export type Appointment = {
@@ -242,10 +232,6 @@ type AppContextType = {
   
   // Teacher Ranking
   // Enrollments
-  enrollmentApplications: Applicant[];
-  enrollmentError: string | null;
-  addEnrollmentApplication: (app: Applicant) => Promise<void>;
-  updateEnrollmentApplication: (id: string, updates: Partial<Applicant>) => void;
 };
 
 // --- Seed Data --
@@ -397,8 +383,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
-  const [enrollmentApplications, setEnrollmentApplications] = useState<Applicant[]>([]);
-  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
 
   const [studentRecords, setStudentRecords] = useState<any[]>([]);
   const [counselingLogs, setCounselingLogs] = useState<any[]>([]);
@@ -429,7 +413,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const [
           dbExcuses, dbEv, dbClinic, dbNurseVisits, dbBeh,
-          dbAppt, dbDocReq, dbRank, dbEnrollments, dbNotifs, dbGateAtt,
+          dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements, dbLeaves
         ] = await Promise.all([
           apiClient.get('/attendance/excuses').catch(() => []),
@@ -440,11 +424,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           apiClient.get('/student-services/appointments').catch(() => []),
           apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
-          apiClient.get('/admin/enrollment-applications').catch((e) => {
-            console.error("Failed to fetch enrollment applications", e);
-            setEnrollmentError("Failed to fetch enrollment applications. Please check the backend connection.");
-            return [];
-          }),
           apiClient.get('/admin/notifications').catch(() => []),
           apiClient.get('/attendance/gate').catch(() => []),
           apiClient.get('/users').catch(() => []),
@@ -460,7 +439,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAppointments(dbAppt as any);
         setDocumentRequests(dbDocReq as any);
         console.log("DB LEAVES FETCHED:", dbLeaves);        setTeacherLeaves(dbLeaves as any);
-        setEnrollmentApplications(dbEnrollments as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
         
@@ -743,16 +721,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
   };;;
 
-  const addEnrollmentApplication = async (app: Applicant) => {
-    const saved = await apiClient.post("/admin/enrollment-applications", app);
-    setEnrollmentApplications(prev => [saved as any, ...prev]);
-  };
-
-  const updateEnrollmentApplication = async (id: string, updates: Partial<Applicant>) => {
-    await apiClient.patch("/admin/enrollment-applications/" + id, updates);
-    setEnrollmentApplications(prev => prev.map(a => a.id === id ? { ...a, ...updates } as any : a));
-  };
-
   if (!isLoaded) {
     return (
       <div style={{ display: "flex", height: "100vh", width: "100vw", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#64748b" }}>
@@ -790,9 +758,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
       teacherLeaves, addTeacherLeave, updateTeacherLeave,
       clinicVisitRecords, addClinicVisitRecord,
-      enrollmentApplications,
-      enrollmentError,
-      addEnrollmentApplication, updateEnrollmentApplication
+      
+      
+      
     }}>
       {children}
     </AppContext.Provider>

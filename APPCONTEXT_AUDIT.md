@@ -1,8 +1,8 @@
 # AppContext Dependency Audit
 
 ## Summary
-- AppContext Lines: 827
-- Exposed Members: 72
+- AppContext Lines: 809
+- Exposed Members: 69
 - Files using AppContext: 29
 
 ## Member Analysis
@@ -166,15 +166,15 @@
 - Used in 1 files.
   - /app/shared/hooks/useGateAttendanceSSE.ts
 
+### refreshGateAttendance [SCREEN-LOCAL (/app/shared/hooks/useGateAttendanceSSE.ts)]
+- Used in 1 files.
+  - /app/shared/hooks/useGateAttendanceSSE.ts
+
 ### addGateAttendance [UNUSED/LEGACY]
 - Used in 0 files.
 
 ### updateGateAttendance [UNUSED/LEGACY]
 - Used in 0 files.
-
-### refreshGateAttendance [SCREEN-LOCAL (/app/shared/hooks/useGateAttendanceSSE.ts)]
-- Used in 1 files.
-  - /app/shared/hooks/useGateAttendanceSSE.ts
 
 ### clinicReferrals [SCREEN-LOCAL (/app/principal/dashboard/PDashboard.tsx)]
 - Used in 1 files.
@@ -244,17 +244,6 @@
 
 ### resetPassword [UNUSED/LEGACY]
 - Used in 0 files.
-
-### teacherRankings [SCREEN-LOCAL (/app/teacher/ranking/TRankingScreen.tsx)]
-- Used in 1 files.
-  - /app/teacher/ranking/TRankingScreen.tsx
-
-### addTeacherRanking [UNUSED/LEGACY]
-- Used in 0 files.
-
-### updateTeacherRanking [SCREEN-LOCAL (/app/teacher/ranking/TRankingScreen.tsx)]
-- Used in 1 files.
-  - /app/teacher/ranking/TRankingScreen.tsx
 
 ### enrollmentApplications [SCREEN-LOCAL (/app/principal/enrollment/REnrollmentScreen.tsx)]
 - Used in 1 files.
