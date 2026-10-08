@@ -47,8 +47,6 @@ export interface CurrentUser {
 }
 export type Message = { id: string; senderId: string; senderName: string; receiverId?: string; receiverName?: string; text?: string; content?: string; timestamp: string; isAI?: boolean; read?: boolean; };
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
-export type Assignment = { id: string; section?: string; subject: string; title: string; dueDate: string; type: string; gradebookColumnId?: string; };
-export type AssignmentSubmission = { id: string; assignmentId: string; studentId: string; genericDocId?: string; status: "Submitted" | "Graded" | "Returned"; grade?: number; feedback?: string; submittedAt: string; };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type TeacherLeave = { id: string; type: string; startDate: string; endDate: string; days: number; reason: string; status: "Pending" | "Approved" | "Rejected"; submittedOn: string; approverNote?: string };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
@@ -169,12 +167,6 @@ type AppContextType = {
   addAnnouncement: (a: Announcement) => void;
 
   // Assignments
-  assignments: Assignment[];
-  addAssignment: (a: Assignment) => Promise<void>;
-  updateAssignment: (id: string, updates: Partial<Assignment>) => Promise<void>;
-  assignmentSubmissions: AssignmentSubmission[];
-  addAssignmentSubmission: (s: AssignmentSubmission) => Promise<void>;
-  updateAssignmentSubmission: (id: string, updates: Partial<AssignmentSubmission>) => Promise<void>;
 
   // Notifications
   notifications: AppNotification[];
@@ -363,8 +355,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [teachers, setTeachers] = useState<User[]>([]);
   const [clinicVisitRecords, setClinicVisitRecords] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assignmentSubmissions, setAssignmentSubmissions] = useState<AssignmentSubmission[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [gateAttendance, setGateAttendance] = useState<GateAttendance[]>([]);
@@ -607,46 +597,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAnnouncements(prev => [saved as any, ...prev]);
   };
 
-  const updateAssignment = async (id: string, updates: Partial<Assignment>) => {
-    try {
-      const assn = assignments.find(a => a.id === id);
-      if (!assn) return;
-      assertAuthorized(currentUser, assn.subject, "assignment");
-      const updated = await apiClient.patch("/academic/assignments/" + id, { ...assn, ...updates });
-      setAssignments(prev => prev.map(a => a.id === id ? updated as any : a));
-    } catch(e) { console.error(e); }
-  };
-
-  const addAssignmentSubmission = async (s: AssignmentSubmission) => {
-    // Only students submit, and they only submit for themselves
-    if (currentUser?.role === "Student") {
-      assertAuthorized(currentUser, s.studentId, "profile"); // ensure they are themselves
-    }
-    const saved = await apiClient.post("/academic/assignments/submissions", s);
-    setAssignmentSubmissions(prev => [saved as any, ...prev]);
-  };
-
-  const updateAssignmentSubmission = async (id: string, updates: Partial<AssignmentSubmission>) => {
-    try {
-      const sub = assignmentSubmissions.find(s => s.id === id);
-      if (!sub) return;
-      
-      // If teacher is grading, they must be authorized
-      if (updates.grade !== undefined) {
-        assertAuthorized(currentUser, "", "gradebook");
-      }
-
-      const updated = await apiClient.patch("/academic/assignments/submissions/" + id, { ...sub, ...updates });
-      setAssignmentSubmissions(prev => prev.map(s => s.id === id ? updated as any : s));
-    } catch(e) { console.error(e); }
-  };
-
-  const addAssignment = async (a: Assignment) => {
-    assertAuthorized(currentUser, a.subject, "assignment"); // subject represents class context
-    const saved = await apiClient.post("/academic/assignments", a);
-    setAssignments(prev => [saved as any, ...prev]);
-  };
-
   const addEvent = async (e: CalendarEvent) => {
     const saved = await apiClient.post("/admin/events", e);
     setEvents(prev => [...prev, saved as any]);
@@ -742,8 +692,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       getExcuseDocument, saveExcuseDocument, deleteExcuseDocument,
       getGenericDocument, saveGenericDocument,
       announcements, addAnnouncement,
-      assignments, addAssignment, updateAssignment,
-      assignmentSubmissions, addAssignmentSubmission, updateAssignmentSubmission,
+      
+      
       notifications, addNotification, markNotificationsRead, markSingleNotificationRead,
       events, addEvent, editEvent, deleteEvent,
       messages, addMessage,

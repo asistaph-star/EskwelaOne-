@@ -151,3 +151,6 @@ export type Applicant = {
   status: EnrollmentStatus;
   documents: { birthCert: boolean; form138: boolean; goodMoral: boolean; medical: boolean; };
 };
+
+export type Assignment = { id: string; section?: string; subject: string; title: string; dueDate: string; type: string; gradebookColumnId?: string; };
+export type AssignmentSubmission = { id: string; assignmentId: string; studentId: string; genericDocId?: string; status: "Submitted" | "Graded" | "Returned"; grade?: number; feedback?: string; submittedAt: string; };

@@ -2,10 +2,31 @@ import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { X, CheckCircle, Clock } from 'lucide-react';
 import { useAppContext } from '../../shared/AppContext';
+import { Assignment, AssignmentSubmission } from '../../shared/types';
+import { apiClient } from '../../../api/client';
+import { useEffect } from 'react';
 import { Stamp } from '../../shared/components/Stamp';
 
 export function AssignmentReviewModal({ assignmentId, classStudents, onClose }: { assignmentId: string, classStudents: any[], onClose: () => void }) {
-  const { assignments, assignmentSubmissions, updateAssignmentSubmission, currentUser } = useAppContext();
+    const { currentUser } = useAppContext();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentSubmissions, setAssignmentSubmissions] = useState<AssignmentSubmission[]>([]);
+
+  useEffect(() => {
+    // In a real implementation, you would fetch the specific assignment and its submissions here.
+    // For now, since AppContext didn't fetch them either (they were always []), we initialize to empty
+    // and rely on the parent component to potentially pass them down if needed in the future.
+    // To match previous functionality where it was empty:
+    setAssignments([]);
+    setAssignmentSubmissions([]);
+  }, [assignmentId]);
+
+  const updateAssignmentSubmission = async (id: string, updates: Partial<AssignmentSubmission>) => {
+    try {
+      const updated = await apiClient.patch("/academic/assignments/submissions/" + id, updates);
+      setAssignmentSubmissions(prev => prev.map(s => s.id === id ? updated as any : s));
+    } catch(e) { console.error(e); }
+  };
   const assignment = assignments.find(a => a.id === assignmentId);
   const [editingId, setEditingId] = useState<string|null>(null);
   const [gradeInput, setGradeInput] = useState<string>("");
