@@ -91,8 +91,8 @@ export async function createStudentServicesDocRequest(input: any, authUser: Auth
     if (!studentProfile || studentProfile.id !== input.studentId) {
       throw new AppError(403, 'FORBIDDEN', 'You can only create requests for yourself.');
     }
-  } else if (!authUser.roles.some(r => ['Admin', 'Principal', 'Registrar'].includes(r))) {
-    throw new AppError(403, 'FORBIDDEN', 'Unauthorized role to create document requests on behalf of students.');
+  } else {
+    throw new AppError(403, 'FORBIDDEN', 'Only students can create document requests through this service.');
   }
 
   const record = await prisma.documentRequest.create({

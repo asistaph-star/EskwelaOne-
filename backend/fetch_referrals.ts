@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); async function main() { const referrals = await prisma.clinicReferral.findMany(); console.log(JSON.stringify(referrals, null, 2)); } main().catch(console.error).finally(() = 

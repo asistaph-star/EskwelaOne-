@@ -275,4 +275,17 @@ describe('Phase 4L: Document Requests Characterization Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('Ready for Pickup');
   });
+
+  it('8. PATCH /api/documents/requests/:id - Completed', async () => {
+    const res = await request(app)
+      .patch(`/api/documents/requests/${requestFromStudentServices}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        status: 'Completed',
+        currentStage: 4
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe('Completed');
+    expect(res.body.data.current_stage).toBe(4);
+  });
 });
