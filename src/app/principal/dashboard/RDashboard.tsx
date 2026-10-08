@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { Users, FileText, CheckCircle, Clock, AlertTriangle, Loader } from 'lucide-react';
-import { useAppContext } from '../../shared/AppContext';
 import { apiClient } from "../../../api/client";
+import { documentsApi } from "../../../api/documents.api";
+import { DocumentRequest } from '../../shared/types';
 
 export function RDashboard() {
-  const { documentRequests } = useAppContext();
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [stats, setStats] = useState<{
     totalEnrolled: number;
     targetEnrollment: number | null;
@@ -22,7 +23,16 @@ export function RDashboard() {
         console.error("Failed to load enrollment stats", err);
       }
     }
+    async function fetchDocRequests() {
+      try {
+        const data = await documentsApi.getAllRequests();
+        setDocumentRequests(data);
+      } catch (err) {
+        console.error("Failed to load doc requests", err);
+      }
+    }
     loadStats();
+    fetchDocRequests();
   }, []);
 
   const pendingDocs = documentRequests.filter(r => r.status === "Submitted" || r.status === "Teacher Approved").length;

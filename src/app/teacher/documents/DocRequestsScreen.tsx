@@ -1,38 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { useAppContext } from '../../shared/AppContext';
 import { FileText, CheckCircle, XCircle, Clock, User, Filter, MessageSquare, ChevronRight, AlertCircle } from 'lucide-react';
-import type { DocRequestStatus } from '../../shared/AppContext';
+import type { DocRequestStatus, DocumentRequest } from '../../shared/types';
+import { documentsApi } from "../../../api/documents.api";
 
 export function DocRequestsScreen() {
-  const { documentRequests, updateDocumentRequest, currentUser } = useAppContext();
+  const { currentUser } = useAppContext();
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const data = await documentsApi.getAllRequests();
+        setDocumentRequests(data);
+      } catch (err) {
+        console.error("Failed to load doc requests", err);
+      }
+    }
+    fetchRequests();
+  }, []);
 
   const isCurrentTeacher = (r: any) => r.teacherId === currentUser?.id || (!r.teacherId && r.teacherName === currentUser?.name);
 
   const pendingRequests = documentRequests.filter(r => r.status === "Submitted" && isCurrentTeacher(r));
   const processedRequests = documentRequests.filter(r => r.status !== "Submitted" && isCurrentTeacher(r));
 
-  function handleApprove(id: string) {
-    updateDocumentRequest(id, {
-      status: "Teacher Approved",
-      currentStage: 2,
-      teacherApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      teacherRemarks: remarks[id] || "Verified and approved. Forwarding to Principal for final approval."
-    });
-    setRemarks(prev => ({ ...prev, [id]: "" }));
+  async function handleApprove(id: string) {
+    try {
+      const updates: Partial<DocumentRequest> = {
+        status: "Teacher Approved",
+        currentStage: 2,
+        teacherApprovedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        teacherRemarks: remarks[id] || "Verified and approved. Forwarding to Principal for final approval."
+      };
+      await documentsApi.updateRequest(id, updates);
+      setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+      setRemarks(prev => ({ ...prev, [id]: "" }));
+    } catch (e) { console.error(e); }
   }
 
-  function handleReject(id: string) {
+  async function handleReject(id: string) {
     if (!remarks[id]) return;
-    
-    updateDocumentRequest(id, {
-      status: "Teacher Rejected",
-      currentStage: 1,
-      teacherRemarks: remarks[id]
-    });
-    setRemarks(prev => ({ ...prev, [id]: "" }));
+    try {
+      const updates: Partial<DocumentRequest> = {
+        status: "Teacher Rejected",
+        currentStage: 1,
+        teacherRemarks: remarks[id]
+      };
+      await documentsApi.updateRequest(id, updates);
+      setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+      setRemarks(prev => ({ ...prev, [id]: "" }));
+    } catch (e) { console.error(e); }
   }
 
   function statusColor(s: DocRequestStatus) {

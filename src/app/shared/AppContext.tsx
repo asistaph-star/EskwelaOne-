@@ -27,32 +27,6 @@ export type Message = { id: string; senderId: string; senderName: string; receiv
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
-export type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Principal Rejected" | "Ready for Pickup" | "Completed";
-export type DocumentRequest = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  section: string;
-  documentType: string;
-  purpose: string;
-  status: DocRequestStatus;
-  currentStage: number; // 1=Submitted, 2=Teacher Approved, 3=Principal Approved, 4=Ready for Pickup
-  submittedDate: string;
-  teacherId?: string;
-  teacherName?: string;
-  responsibleRole?: "TEACHER" | "REGISTRAR" | "RECORDS_CUSTODIAN" | "GUIDANCE";
-  responsibleOffice?: string;
-  requiredInformation?: Record<string, string>;
-  requiresPrincipalApproval?: boolean;
-  teacherApprovedDate?: string;
-  teacherRemarks?: string;
-  principalApprovedDate?: string;
-  principalRemarks?: string;
-  readyDate?: string; // estimated pickup date
-  attachedDocumentId?: string; // ID of the document stored in IndexedDB (Principal's attachment)
-  studentAttachmentId?: string; // ID of the document stored in IndexedDB (Student's requirement upload)
-  studentAttachmentName?: string; // Filename of the student's upload
-};
 
 export type SystemAccountRole = "Teacher" | "Student" | "Parent" | "Staff";
 export type SystemAccountStatus = "Active" | "Locked" | "Pending";
@@ -116,25 +90,18 @@ type AppContextType = {
   // Student Records (Guidance)
 
   // Document Requests
-  documentRequests: DocumentRequest[];
-  addDocumentRequest: (req: DocumentRequest) => void;
-  updateDocumentRequest: (id: string, updates: Partial<DocumentRequest>) => void;
   // System Accounts (IT Admin)
   systemAccounts: SystemAccount[];
   deleteAccount: (id: string) => void;
   resetPassword: (id: string) => void;
   
-  // Teacher Ranking
+  // Teacher Ranking
   // Enrollments
 };
 
 // --- Seed Data --
 
-const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
-  { id: "doc-1", studentId: "s1", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Certificate of Good Moral", purpose: "Required for college application at University of the Philippines.", status: "Principal Approved", currentStage: 3, submittedDate: "July 10, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 11, 2026", teacherRemarks: "Student has exemplary conduct. Recommended for approval.", principalApprovedDate: "July 14, 2026", principalRemarks: "Approved. Document will be ready by July 18.", readyDate: "July 18, 2026" },
-  { id: "doc-2", studentId: "s2", studentName: "Juan Miguel Santos", section: "Grade 10 - Pilot", documentType: "Form 137 (Permanent Record)", purpose: "Transfer credentials for senior high school enrollment.", status: "Teacher Approved", currentStage: 2, submittedDate: "July 18, 2026", teacherName: "Ana R. Soriano", teacherApprovedDate: "July 19, 2026", teacherRemarks: "Records verified. Forwarding to principal for final approval." },
-  { id: "doc-3", studentId: "s3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
-];
+
 
 
 
@@ -203,7 +170,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGateAttendance(res as any);
     } catch (e) {}
   };
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [systemAccounts, setSystemAccounts] = useState<any[]>([]);
   const deleteAccount = (id: string) => setSystemAccounts(prev => prev.filter(a => a.id !== id));
   const resetPassword = (id: string) => setSystemAccounts(prev => prev.map(a => a.id === id ? { ...a, status: "Active" } : a));
@@ -230,17 +196,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbDocReq, dbRank, dbNotifs, dbGateAtt,
+           dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
-          apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
           apiClient.get('/admin/notifications').catch(() => []),
           apiClient.get('/attendance/gate').catch(() => []),
           apiClient.get('/users').catch(() => []),
           apiClient.get('/admin/announcements').catch(() => [])
         ]);
-        setDocumentRequests(dbDocReq as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
         
@@ -397,16 +361,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMessages(prev => [...prev, msg]);
   };
 
-  const addDocumentRequest = async (req: DocumentRequest) => {
-    const saved = await apiClient.post("/student-services/doc-requests", req);
-    setDocumentRequests(prev => [saved as any, ...prev]);
-  };
-
-  const updateDocumentRequest = async (id: string, updates: Partial<DocumentRequest>) => {
-    await apiClient.patch("/documents/requests/" + id, updates);
-    setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
-  };;;
-
   if (!isLoaded) {
     return (
       <div style={{ display: "flex", height: "100vh", width: "100vw", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#64748b" }}>
@@ -433,7 +387,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
 
       
-      documentRequests, addDocumentRequest, updateDocumentRequest,
+      
       systemAccounts, deleteAccount, resetPassword,
         
       

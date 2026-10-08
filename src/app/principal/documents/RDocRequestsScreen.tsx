@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { useAppContext } from '../../shared/AppContext';
 import { FileText, CheckCircle, Printer, Search, Filter } from 'lucide-react';
-import type { DocRequestStatus } from '../../shared/AppContext';
+import type { DocRequestStatus, DocumentRequest } from '../../shared/types';
+import { documentsApi } from "../../../api/documents.api";
 
 export function RDocRequestsScreen() {
-  const { documentRequests, updateDocumentRequest } = useAppContext();
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"Pending Prep" | "Ready for Pickup" | "Completed">("Pending Prep");
+
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const data = await documentsApi.getAllRequests();
+        setDocumentRequests(data);
+      } catch (err) {
+        console.error("Failed to load doc requests", err);
+      }
+    }
+    fetchRequests();
+  }, []);
 
   // For the Registrar, "Pending Prep" means the Principal has approved it and it's time to print/prepare it.
   const requests = documentRequests.filter(r => {
@@ -15,22 +27,24 @@ export function RDocRequestsScreen() {
     if (activeTab === "Ready for Pickup") return r.status === "Ready for Pickup";
     return r.status === "Completed";
   }).filter(r => 
-    r.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.studentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.documentType.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  function handleMarkReady(id: string) {
-    updateDocumentRequest(id, {
-      status: "Ready for Pickup",
-      currentStage: 4
-    });
+  async function handleMarkReady(id: string) {
+    try {
+      const updates: Partial<DocumentRequest> = { status: "Ready for Pickup", currentStage: 4 };
+      await documentsApi.updateRequest(id, updates);
+      setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+    } catch (e) { console.error(e); }
   }
 
-  function handleMarkCompleted(id: string) {
-    updateDocumentRequest(id, {
-      status: "Completed",
-      currentStage: 4
-    });
+  async function handleMarkCompleted(id: string) {
+    try {
+      const updates: Partial<DocumentRequest> = { status: "Completed", currentStage: 4 };
+      await documentsApi.updateRequest(id, updates);
+      setDocumentRequests(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+    } catch (e) { console.error(e); }
   }
 
   function statusColor(s: DocRequestStatus) {

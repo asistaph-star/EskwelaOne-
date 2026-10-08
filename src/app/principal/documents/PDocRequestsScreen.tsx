@@ -3,11 +3,11 @@ import { C } from '../../shared/constants/tokens';
 import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Camera, Upload, Download } from 'lucide-react';
 import { DocumentScanner } from '../../shared/components/scanner/DocumentScanner';
 import { apiClient } from '../../../api/client';
-
-type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Ready for Pickup" | "Completed";
+import { documentsApi } from '../../../api/documents.api';
+import type { DocRequestStatus, DocumentRequest } from '../../shared/types';
 
 export function PDocRequestsScreen() {
-  const [documentRequests, setDocumentRequests] = useState<any[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [pickupDates, setPickupDates] = useState<Record<string, string>>({});
@@ -23,7 +23,7 @@ export function PDocRequestsScreen() {
   async function fetchRequests() {
     try {
       setLoading(true);
-      const data = await apiClient.get<any[]>('/student-services/doc-requests');
+      const data = await documentsApi.getAllRequests();
       setDocumentRequests(data || []);
     } catch (err) {
       console.error("Failed to fetch document requests", err);

@@ -154,3 +154,5 @@ export type Applicant = {
 
 export type Assignment = { id: string; section?: string; subject: string; title: string; dueDate: string; type: string; gradebookColumnId?: string; };
 export type AssignmentSubmission = { id: string; assignmentId: string; studentId: string; genericDocId?: string; status: "Submitted" | "Graded" | "Returned"; grade?: number; feedback?: string; submittedAt: string; };
+
+export * from './documentRequests';
