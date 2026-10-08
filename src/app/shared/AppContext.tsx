@@ -50,7 +50,6 @@ export type Announcement = { id: string; author: string; title: string; body: st
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
-export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
 export type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed";
 export type AppointmentDirection = "parent-to-teacher" | "teacher-to-parent";
 export type Appointment = {
@@ -190,10 +189,6 @@ type AppContextType = {
   // Nurse Visit Records (persisted)
   clinicVisitRecords: any[];
   addClinicVisitRecord: (v: any) => Promise<void>;
-
-  behaviorLogs: BehaviorLog[];
-  addBehaviorLog: (log: BehaviorLog) => void;
-  updateBehaviorLog: (id: string, updates: Partial<BehaviorLog>) => void;
 
   // Appointments
   appointments: Appointment[];
@@ -360,7 +355,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   };
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
-  const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
@@ -393,14 +387,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbExcuses,dbClinic, dbNurseVisits, dbBeh,
+          dbExcuses,dbClinic, dbNurseVisits,
           dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
           apiClient.get('/attendance/excuses').catch(() => []),
           apiClient.get('/student-services/clinic').catch(() => []),
           Promise.resolve([]), // nurseVisits
-          apiClient.get('/student-services/guidance').catch(() => []),
           apiClient.get('/student-services/appointments').catch(() => []),
           apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
@@ -413,7 +406,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setExcuseLetters(dbExcuses as any);
         setClinicReferrals(dbClinic as any);
         setClinicVisitRecords(dbNurseVisits as any);
-        setBehaviorLogs(dbBeh as any);
         setAppointments(dbAppt as any);
         setDocumentRequests(dbDocReq as any);
         setNotifications(dbNotifs as any);
@@ -603,16 +595,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setClinicReferrals(prev => prev.map(r => r.id === id ? { ...r, status: "Acknowledged" } : r));
   };
 
-  const addBehaviorLog = async (log: BehaviorLog) => {
-    const saved = await apiClient.post("/student-services/guidance", log);
-    setBehaviorLogs(prev => [saved as any, ...prev]);
-  };
-
-  const updateBehaviorLog = async (id: string, updates: Partial<BehaviorLog>) => {
-    await apiClient.patch("/student-services/behavior/" + id + "/status", updates);
-    setBehaviorLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } as any as any : l));
-  };
-
   const addAppointment = async (appt: Appointment) => {
     const saved = await apiClient.post("/student-services/appointments", appt);
     setAppointments(prev => [saved as any, ...prev]);
@@ -661,7 +643,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages, addMessage,
       gateAttendance, addGateAttendance, updateGateAttendance, invalidScans, addInvalidScan, refreshGateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,
-      behaviorLogs, addBehaviorLog, updateBehaviorLog,
+      
 
       appointments, addAppointment, updateAppointment,
       documentRequests, addDocumentRequest, updateDocumentRequest,

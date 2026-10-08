@@ -1,10 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { apiClient } from "../../../api/client";
+
+export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
 import { AlertCircle, Filter, Search, ShieldAlert, FileText, CheckCircle2 } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
-import { useAppContext } from "../../shared/AppContext";
 
 export function BehavioralReports() {
-  const { behaviorLogs } = useAppContext();
+  const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
+
+  useEffect(() => {
+    apiClient.get('/student-services/guidance')
+      .then(res => setBehaviorLogs(res as BehaviorLog[]))
+      .catch(console.error);
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredLogs = behaviorLogs.filter(log => 
