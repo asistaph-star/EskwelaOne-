@@ -8,28 +8,6 @@ import { toast } from "sonner";
 // --- Types --
 export type User = { id: string; name: string; role: string; section?: string; photoDocId?: string; parentEmail?: string; smsAlerts?: boolean; emailAlerts?: boolean; };
 export type GradeStatus = "Draft" | "Submitted" | "Published" | "Returned";
-export type ExcuseStatus = "Pending Review" | "Approved" | "Rejected";
-export type ExcuseLetter = {
-  id: string;
-  studentId: string;
-  studentName: string;
-  teacherId: string;
-  teacherName: string;
-  section: string;
-  dates: string;
-  reason: string;
-  // Document reference — empty string means no document attached
-  documentId: string;
-  documentName: string;
-  documentType: string;
-  documentSize: number;
-  // Timestamps
-  submittedDate: string;
-  // Review
-  status: ExcuseStatus;
-  teacherNote?: string;
-  reviewedAt?: string;
-};
 
 /** Represents the currently logged-in user identity */
 export interface CurrentUser {
@@ -137,14 +115,6 @@ type AppContextType = {
   updateCurrentUser: (updates: Partial<CurrentUser>) => Promise<void>;
   isAuthChecking: boolean;
   setIsAuthChecking: (val: boolean) => void;
-  
-  // Excuse Letters
-  excuseLetters: ExcuseLetter[];
-  updateExcuseLetter: (id: string, status: ExcuseStatus, teacherNote?: string) => void;
-  addExcuseLetter: (letter: ExcuseLetter) => void;
-  getExcuseDocument: (documentId: string) => Promise<StoredDocument | undefined>;
-  saveExcuseDocument: (doc: StoredDocument) => Promise<StoredDocument>;
-  deleteExcuseDocument: (id: string) => Promise<void>;
 
   // Generic Documents (Profile Photos, etc)
   getGenericDocument: (documentId: string) => Promise<StoredDocument | undefined>;
@@ -337,7 +307,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   });
-  const [excuseLetters, setExcuseLetters] = useState<ExcuseLetter[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
   const [clinicVisitRecords, setClinicVisitRecords] = useState<any[]>([]);
@@ -387,11 +356,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbExcuses,dbClinic, dbNurseVisits,
+          dbClinic, dbNurseVisits,
           dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
-          apiClient.get('/attendance/excuses').catch(() => []),
           apiClient.get('/student-services/clinic').catch(() => []),
           Promise.resolve([]), // nurseVisits
           apiClient.get('/student-services/appointments').catch(() => []),
@@ -402,8 +370,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           apiClient.get('/users').catch(() => []),
           apiClient.get('/admin/announcements').catch(() => [])
         ]);
-
-        setExcuseLetters(dbExcuses as any);
         setClinicReferrals(dbClinic as any);
         setClinicVisitRecords(dbNurseVisits as any);
         setAppointments(dbAppt as any);
@@ -490,18 +456,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setNotifications(prev => prev.map(n => n.recipientId === recipientId ? { ...n, isRead: true } : n));
   };
 
-  const updateExcuseLetter = async (id: string, status: ExcuseStatus, teacherNote?: string) => {
-    const updates: Partial<ExcuseLetter> = { status, reviewedAt: new Date().toISOString() };
-    if (teacherNote !== undefined) updates.teacherNote = teacherNote;
-    await apiClient.patch("/admin/notifications/" + id, updates);
-    setExcuseLetters(prev => prev.map(l => l.id === id ? { ...l, ...updates } as any as any : l));
-  };
-  
-  const addExcuseLetter = async (letter: ExcuseLetter) => {
-    const saved = await apiClient.post("/attendance/excuses", letter);
-    setExcuseLetters(prev => [saved as any, ...prev]);
-  };
-
   const getExcuseDocument = async (documentId: string): Promise<StoredDocument | undefined> => {
     if (!documentId) return undefined;
     return apiClient.get<any>('/documents/' + documentId).catch(() => undefined);
@@ -509,10 +463,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const saveExcuseDocument = async (doc: StoredDocument): Promise<StoredDocument> => {
     return apiClient.post('/documents', doc);
-  };
-
-  const deleteExcuseDocument = async (id: string): Promise<void> => {
-    return apiClient.delete('/documents/' + id);
   };
 
   const getGenericDocument = async (documentId: string): Promise<StoredDocument | undefined> => {
@@ -632,8 +582,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       students, teachers, addTeacher, addStudent, updateUser,
       isAuthChecking, setIsAuthChecking,
       currentUser, setCurrentUser, updateCurrentUser,
-      excuseLetters, updateExcuseLetter, addExcuseLetter,
-      getExcuseDocument, saveExcuseDocument, deleteExcuseDocument,
+      
       getGenericDocument, saveGenericDocument,
       announcements, addAnnouncement,
       
