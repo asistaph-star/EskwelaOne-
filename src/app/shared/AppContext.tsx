@@ -27,21 +27,6 @@ export type Message = { id: string; senderId: string; senderName: string; receiv
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
-export type StudentRecordStatus = "Active monitoring" | "Case resolved" | "Needs follow-up" | "New case";
-export type StudentRecord = {
-  id: string;
-  fullName: string;
-  lrn: string;
-  grade: string;
-  section: string;
-  parentName: string;
-  parentEmail: string;
-  parentPhone: string;
-  primaryConcerns: string[];
-  effectiveStrategies: string[];
-  currentStatus: StudentRecordStatus;
-  aiSummary: string;
-};
 export type DocRequestStatus = "Submitted" | "Teacher Approved" | "Teacher Rejected" | "Principal Approved" | "Principal Rejected" | "Ready for Pickup" | "Completed";
 export type DocumentRequest = {
   id: string;
@@ -129,7 +114,6 @@ type AppContextType = {
   // Nurse Visit Records (persisted)
 
   // Student Records (Guidance)
-  studentRecords: StudentRecord[];
 
   // Document Requests
   documentRequests: DocumentRequest[];
@@ -152,50 +136,6 @@ const SEED_DOCUMENT_REQUESTS: DocumentRequest[] = [
   { id: "doc-3", studentId: "s3", studentName: "Trisha Ann Cruz", section: "Grade 10 - Pilot", documentType: "Certificate of Enrollment", purpose: "Needed for scholarship application.", status: "Submitted", currentStage: 1, submittedDate: "July 20, 2026", teacherName: "Ana R. Soriano" },
 ];
 
-const SEED_STUDENT_RECORDS: StudentRecord[] = [
-  {
-    id: "sr-1",
-    fullName: "Juan Dela Cruz",
-    lrn: "200014",
-    grade: "Grade 10",
-    section: "Rizal",
-    parentName: "Mrs. Maria Dela Cruz",
-    parentEmail: "maria.delacruz@email.com",
-    parentPhone: "0917-834-5621",
-    primaryConcerns: ["Classroom misconduct", "Disruptive behavior during group activities", "Mobile phone policy violations"],
-    effectiveStrategies: ["Bi-weekly progress check-ins", "Parent-teacher conference", "Assigned peer mentor"],
-    currentStatus: "Active monitoring",
-    aiSummary: "Juan Dela Cruz has been documented across five guidance interactions since June 2026, primarily involving classroom misconduct and disruptive behavior. A pattern of recurring incidents during group activities has been identified, with escalation noted in early July. Following parental notification and the introduction of bi-weekly progress check-ins, observable improvement in classroom conduct has been reported by the advising teacher. The case remains under active monitoring with the next scheduled review on August 30, 2026."
-  },
-  {
-    id: "sr-2",
-    fullName: "Hannah Grace Espino",
-    lrn: "200005",
-    grade: "Grade 8",
-    section: "Rizal",
-    parentName: "Mr. Ricardo Espino",
-    parentEmail: "ricardo.espino@email.com",
-    parentPhone: "0926-451-7803",
-    primaryConcerns: ["Academic underperformance", "Frequent unexcused absences", "Exam-related anxiety"],
-    effectiveStrategies: ["Weekly academic counseling", "Coordinated study plan with adviser", "Referral to peer tutoring program"],
-    currentStatus: "Needs follow-up",
-    aiSummary: "Hannah Grace Espino has been the subject of four guidance office interactions since June 2026, primarily concerning declining academic performance and chronic absenteeism. Records indicate a pattern of unexcused absences correlating with quarterly examination periods, suggesting possible exam-related anxiety. A coordinated academic support plan involving weekly counseling, peer tutoring, and close collaboration with her class adviser was initiated in July 2026. While attendance has shown marginal improvement, the student's quarterly average remains below the passing threshold, and continued follow-up is strongly recommended."
-  },
-  {
-    id: "sr-3",
-    fullName: "Ramon Jr. Bondoc",
-    lrn: "200002",
-    grade: "Grade 8",
-    section: "Rizal",
-    parentName: "Mr. Ramon Sr. Bondoc",
-    parentEmail: "ramon.bondoc@email.com",
-    parentPhone: "0935-612-9487",
-    primaryConcerns: ["Peer conflict", "Reported bullying behavior", "Emotional regulation difficulties"],
-    effectiveStrategies: ["Individual counseling sessions", "Restorative justice circle", "Parent involvement and home-school agreement"],
-    currentStatus: "Active monitoring",
-    aiSummary: "Ramon Jr. Bondoc has been involved in six guidance-related interactions since May 2026, centered on peer conflict and reported bullying behavior targeting younger students. Documented incidents reveal a pattern of verbal aggression during unstructured periods such as recess and lunch. A restorative justice circle conducted in July 2026 with affected parties resulted in a formal agreement, and individual counseling sessions focused on emotional regulation were initiated. Parental engagement has been active, and while no new incidents have been reported in the past three weeks, the case remains under active monitoring."
-  }
-];
 
 
 const SEED_SYSTEM_ACCOUNTS: SystemAccount[] = [
@@ -264,8 +204,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {}
   };
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
-
-  const [studentRecords, setStudentRecords] = useState<any[]>([]);
   const [systemAccounts, setSystemAccounts] = useState<any[]>([]);
   const deleteAccount = (id: string) => setSystemAccounts(prev => prev.filter(a => a.id !== id));
   const resetPassword = (id: string) => setSystemAccounts(prev => prev.map(a => a.id === id ? { ...a, status: "Active" } : a));
@@ -496,7 +434,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       
       documentRequests, addDocumentRequest, updateDocumentRequest,
-      studentRecords, 
       systemAccounts, deleteAccount, resetPassword,
         
       

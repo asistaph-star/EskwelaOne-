@@ -1,12 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { useAppContext } from '../../shared/AppContext';
-import type { StudentRecord } from '../../shared/AppContext';
 import {
   Search, Users, Sparkles, AlertTriangle, CheckCircle, Target,
   Clock, BookOpen, ShieldAlert, UserCheck, MessageSquare, CalendarCheck,
   ChevronRight, ArrowLeft, FileText, Mail, Phone
 } from 'lucide-react';
+
+export type StudentRecordStatus = "Active monitoring" | "Case resolved" | "Needs follow-up" | "New case";
+export type StudentRecord = {
+  id: string;
+  fullName: string;
+  lrn: string;
+  grade: string;
+  section: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  primaryConcerns: string[];
+  effectiveStrategies: string[];
+  currentStatus: StudentRecordStatus;
+  aiSummary: string;
+};
 
 /* ── Log type styling ────────────────────────── */
 function logTypeStyle(type: CounselingLogType) {
@@ -59,8 +73,8 @@ export type CounselingLog = {
 };
 
 export function GStudentRecordsScreen() {
-  const { studentRecords } = useAppContext();
   const counselingLogs: CounselingLog[] = [];
+  const studentRecords: StudentRecord[] = [];
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiTyping, setAiTyping] = useState(false);
