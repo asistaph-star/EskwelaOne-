@@ -175,10 +175,6 @@ type AppContextType = {
   markSingleNotificationRead: (id: string) => void;
 
   // Events
-  events: CalendarEvent[];
-  addEvent: (e: CalendarEvent) => void;
-  editEvent: (id: string, e: Partial<CalendarEvent>) => void;
-  deleteEvent: (id: string) => void;
 
   // Messages
   messages: Message[];
@@ -369,7 +365,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
@@ -402,12 +397,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbExcuses, dbEv, dbClinic, dbNurseVisits, dbBeh,
+          dbExcuses,dbClinic, dbNurseVisits, dbBeh,
           dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements, dbLeaves
         ] = await Promise.all([
           apiClient.get('/attendance/excuses').catch(() => []),
-          apiClient.get('/admin/events').catch(() => []),
           apiClient.get('/student-services/clinic').catch(() => []),
           Promise.resolve([]), // nurseVisits
           apiClient.get('/student-services/guidance').catch(() => []),
@@ -422,7 +416,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ]);
 
         setExcuseLetters(dbExcuses as any);
-        setEvents(dbEv as any);
         setClinicReferrals(dbClinic as any);
         setClinicVisitRecords(dbNurseVisits as any);
         setBehaviorLogs(dbBeh as any);
@@ -597,11 +590,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAnnouncements(prev => [saved as any, ...prev]);
   };
 
-  const addEvent = async (e: CalendarEvent) => {
-    const saved = await apiClient.post("/admin/events", e);
-    setEvents(prev => [...prev, saved as any]);
-  };
-
   const addGateAttendance = async (log: GateAttendance) => {
     setGateAttendance(prev => [log, ...prev]);
     await apiClient.post("/attendance/gate", log);
@@ -610,16 +598,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateGateAttendance = async (id: string, updates: Partial<GateAttendance>) => {
     setGateAttendance(prev => prev.map(a => a.id === id ? { ...a, ...updates } : a));
     await apiClient.patch("/attendance/gate/" + id, updates);
-  };
-
-  const editEvent = async (id: string, data: Partial<CalendarEvent>) => {
-    await apiClient.patch("/admin/events/" + id, data);
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...data } : e));
-  };
-
-  const deleteEvent = async (id: string) => {
-    await apiClient.delete("/admin/events/" + id);
-    setEvents(prev => prev.filter(e => e.id !== id));
   };
 
   const addMessage = (msg: Message) => {
@@ -695,7 +673,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       
       notifications, addNotification, markNotificationsRead, markSingleNotificationRead,
-      events, addEvent, editEvent, deleteEvent,
+      
       messages, addMessage,
       gateAttendance, addGateAttendance, updateGateAttendance, invalidScans, addInvalidScan, refreshGateAttendance,
       clinicReferrals, addClinicReferral, resolveClinicReferral,

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '../../../api/client';
 import { C } from '../../shared/constants/tokens';
 import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell, AlertCircle,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck,
@@ -6,8 +7,12 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
   Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 
-export function StudentDashboard({ setTab, currentUser, events, apiAppointments, apiDocRequests, apiExcuses, apiGateAttendance = [], assignments = [], assignmentSubmissions = [], announcements = [] }: any) {
+export function StudentDashboard({ setTab, currentUser, apiAppointments, apiDocRequests, apiExcuses, apiGateAttendance = [], assignments = [], assignmentSubmissions = [], announcements = [] }: any) {
   const myGateScans = apiGateAttendance || [];
+  const [events, setEvents] = useState<any[]>([]);
+  useEffect(() => {
+    apiClient.get<any[]>('/admin/events').then(setEvents).catch(console.error);
+  }, []);
   const myAssignments = assignments ? assignments.filter((a: any) => a.section === currentUser?.section) : [];
   const mySubmissions = assignmentSubmissions ? assignmentSubmissions.filter((s: any) => s.studentId === currentUser?.id) : [];
   const myPendingAssignments = myAssignments.filter((a: any) => !mySubmissions.some((s: any) => s.assignmentId === a.id));

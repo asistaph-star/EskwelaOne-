@@ -7,10 +7,16 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
 
-import { useAppContext } from '../../shared/AppContext';
+import { apiClient } from '../../../api/client';
+import { useEffect } from 'react';
+export type CalendarEvent = { id: string; title: string; date: string; time?: string; endTime?: string; audience: "all" | "students" | "parents" | "teachers"; };
+
 
 export function StudentCalendar({ setTab }: any) {
-  const { events } = useAppContext();
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+  useEffect(() => {
+    apiClient.get<CalendarEvent[]>('/admin/events').then(setEvents).catch(console.error);
+  }, []);
   const [calendarDate, setCalendarDate] = React.useState(new Date(2025, 5, 1));
   const formatTimeDisplay = (timeString: string) => {
     if (!timeString) return '';
