@@ -84,10 +84,8 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
     
     unauthorizedToken = sign({ userId: unauthUser.id }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
 
-    // 3. Clear existing relevant data for isolation (REMOVED to prevent race conditions with clinicRecords.test.ts)
-    // await prisma.clinicReferral.deleteMany({});
-    // await prisma.inventoryItem.deleteMany({ where: { category: { in: ['Medicine', 'Supplies'] } } });
-
+    // 3. (No global wipes. We rely on narrow cleanup and fileParallelism to prevent test pollution)
+    
     // 4. Setup Clinic Referrals (deterministic, matching trend window)
     // We create:
     // - 2 records 0 days ago (today), diagnosis: "Headache", Time: 09:xx and 09:xx (Peak hour = 09)
@@ -176,9 +174,9 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
 
   afterAll(async () => {
     // Cleanup
-    await prisma.inventoryUpdate.deleteMany({});
+    await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
     await prisma.inventoryItem.deleteMany({ where: { id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
-    await prisma.clinicReferral.deleteMany({});
+    await prisma.clinicReferral.deleteMany({ where: { recorded_by: testUserId } });
     try {
       await prisma.student.deleteMany({ where: { id: testStudentId } });
     } catch(e) {}
@@ -216,21 +214,20 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
     // Verify specific days (order is from i=4 down to 0, so oldest to newest)
     expect(data.trend[0].date).toBe(getDaysAgoStr(4));
     expect(data.trend[1].date).toBe(getDaysAgoStr(3));
-    expect(data.trend[1].visits).toBeGreaterThanOrEqual(1);
+    expect(data.trend[1].visits).toBe(1);
 
     expect(data.trend[3].date).toBe(getDaysAgoStr(1));
-    expect(data.trend[3].visits).toBeGreaterThanOrEqual(1);
+    expect(data.trend[3].visits).toBe(1);
 
     expect(data.trend[4].date).toBe(getDaysAgoStr(0));
-    expect(data.trend[4].visits).toBeGreaterThanOrEqual(2);
+    expect(data.trend[4].visits).toBe(2);
 
     // 2. Characterize Top Diagnosis
-    // Headache or whatever is top
-    expect(typeof data.topDiagnosis).toBe('string');
-    expect(typeof data.topDiagPercent).toBe('number');
+    expect(data.topDiagnosis).toBe('Headache');
+    expect(data.topDiagPercent).toBe(75); // 3 out of 4 is 75%
 
     // 3. Characterize Peak Hour
-    expect(typeof data.peakHour).toBe('string');
+    expect(data.peakHour).toBe('09:00 - 10:00'); // 3 out of 4 occurred in hour 9 (09:10, 09:15, 09:45)
 
     // 4. Characterize Inventory Warnings
     expect(data.inventoryWarnings).toBeDefined();
@@ -239,21 +236,17 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
     // Only Paracetamol should be here (quantity 5 <= reorder 10)
     // Bandages (20 > 10) shouldn't be included.
     const warnings = data.inventoryWarnings;
-    expect(warnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: 'Paracetamol',
-          stock: 5,
-          reorder: 10
-        })
-      ])
-    );
+    expect(warnings.length).toBe(1);
+    expect(warnings[0].name).toBe('Paracetamol');
+    expect(warnings[0].stock).toBe(5);
+    expect(warnings[0].reorder).toBe(10);
   });
 
   it('should characterize empty data defaults', async () => {
-    // Cannot delete globally because of concurrent tests. 
-    // We will just verify that the response has the correct structure for empty-data behavior by trusting the previous assertions on types.
-    // However, to satisfy characterization of empty defaults, we skip deletion and just verify shape.
+    // Narrow cleanup to test empty state
+    await prisma.clinicReferral.deleteMany({ where: { recorded_by: testUserId } });
+    await prisma.inventoryItem.deleteMany({ where: { id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
+
     const res = await request(app)
       .get('/api/student-services/clinic-analytics')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -261,7 +254,14 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
     expect(res.status).toBe(200);
     const data = res.body.data;
 
-    // Trend should still be 5 items
+    // Trend should still be 5 items, all 0 visits
     expect(data.trend.length).toBe(5);
+    expect(data.trend.every((t: any) => t.visits === 0)).toBe(true);
+
+    // Empty state fallbacks
+    expect(data.topDiagnosis).toBe('None');
+    expect(data.topDiagPercent).toBe(0);
+    expect(data.peakHour).toBe('None');
+    expect(data.inventoryWarnings).toEqual([]);
   });
 });

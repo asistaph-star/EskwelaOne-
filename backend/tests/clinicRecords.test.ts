@@ -293,4 +293,18 @@ describe('Phase 4G: Clinic Records Characterization Tests', () => {
       expect(res.body.data).toEqual([]);
     });
   });
+
+  afterAll(async () => {
+    // Narrow cleanup of fixtures created by this test suite
+    await prisma.clinicReferral.deleteMany({ where: { recorded_by: nurseUserId } });
+    await prisma.inventoryUpdate.deleteMany({ where: { user_id: nurseUserId } });
+    
+    // Also cleanup users if needed, though they don't interfere with analytics
+    const uids = [nurseUserId, student1UserId, student2UserId];
+    await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: uids } } });
+    await prisma.userRole.deleteMany({ where: { user_id: { in: uids } } });
+    await prisma.staff.deleteMany({ where: { user_id: { in: uids } } });
+    await prisma.student.deleteMany({ where: { user_id: { in: uids } } });
+    await prisma.user.deleteMany({ where: { id: { in: uids } } });
+  });
 });
