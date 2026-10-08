@@ -119,7 +119,7 @@ router.post('/clinic/inventory/:id/use', requirePermissions('clinic:write'), asy
     const authUser = (req as any).user as AuthenticatedUser;
 
     const result = await prisma.$transaction(async (tx) => {
-      // Fetch with row lock (if supported, or rely on Prisma atomicity)
+      // Fetch for existence and authorization checks
       const existing = await tx.inventoryItem.findUnique({ where: { id } });
       
       if (!existing) {
@@ -131,15 +131,23 @@ router.post('/clinic/inventory/:id/use', requirePermissions('clinic:write'), asy
         throw new AppError(403, 'FORBIDDEN', 'Access denied to non-clinic inventory.');
       }
       
-      if (existing.quantity < quantity) {
+      // Atomic Conditional Decrement
+      const updateResult = await tx.inventoryItem.updateMany({
+        where: { 
+          id: id,
+          quantity: { gte: quantity } 
+        },
+        data: { 
+          quantity: { decrement: quantity } 
+        }
+      });
+      
+      if (updateResult.count === 0) {
+        // If it exists but updateMany returned 0, stock is insufficient for concurrent or sequential requests
         throw new AppError(400, 'BAD_REQUEST', 'Insufficient stock.');
       }
 
-      // Atomically decrement
-      const updatedItem = await tx.inventoryItem.update({
-        where: { id },
-        data: { quantity: { decrement: quantity } }
-      });
+      const updatedItem = await tx.inventoryItem.findUnique({ where: { id } });
       
       await tx.inventoryUpdate.create({
         data: {

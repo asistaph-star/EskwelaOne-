@@ -241,5 +241,49 @@ describe('Phase 4I.1: Clinic Inventory Characterization Tests', () => {
       
       expect(res.status).toBe(422);
     });
+
+    it('should correctly handle concurrent consumption (Data Integrity Fix)', async () => {
+      // Create a fresh item with quantity 5
+      const createRes = await request(app)
+        .post('/api/student-services/clinic/inventory')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'Concurrent Item',
+          category: 'Medicine',
+          quantity: 5,
+          unit: 'packs'
+        });
+      
+      const concurrentItemId = createRes.body.data.id;
+
+      // Fire two concurrent requests, each asking for 4
+      const req1 = request(app)
+        .post(`/api/student-services/clinic/inventory/${concurrentItemId}/use`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ quantity: 4, reason: 'Req 1' });
+      
+      const req2 = request(app)
+        .post(`/api/student-services/clinic/inventory/${concurrentItemId}/use`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ quantity: 4, reason: 'Req 2' });
+      
+      const [res1, res2] = await Promise.all([req1, req2]);
+
+      // Exactly one should succeed, one should fail
+      const statuses = [res1.status, res2.status].sort();
+      expect(statuses).toEqual([200, 400]);
+
+      // Verify the final state
+      const item = await prisma.inventoryItem.findUnique({ 
+        where: { id: concurrentItemId }, 
+        include: { updates: { orderBy: { created_at: 'desc' } } } 
+      });
+      
+      expect(item!.quantity).toBe(1); // 5 - 4
+      
+      // Updates length should be 2: 1 for creation, 1 for the successful consumption
+      expect(item!.updates.length).toBe(2);
+      expect(item!.updates[0].action).toBe('Stock Consumed');
+    });
   });
 });
