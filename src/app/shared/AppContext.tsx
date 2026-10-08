@@ -27,16 +27,6 @@ export type Message = { id: string; senderId: string; senderName: string; receiv
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
-export type CounselingLogType = "Counseling Session" | "Disciplinary Incident" | "Academic Review" | "Attendance Check-in" | "Parent Conference";
-export type CounselingLog = {
-  id: string;
-  studentId: string;
-  date: string;
-  type: CounselingLogType;
-  summary: string;
-  actionTaken: string;
-  counselor: string;
-};
 export type StudentRecordStatus = "Active monitoring" | "Case resolved" | "Needs follow-up" | "New case";
 export type StudentRecord = {
   id: string;
@@ -140,8 +130,6 @@ type AppContextType = {
 
   // Student Records (Guidance)
   studentRecords: StudentRecord[];
-  counselingLogs: CounselingLog[];
-  addCounselingLog: (log: CounselingLog) => void;
 
   // Document Requests
   documentRequests: DocumentRequest[];
@@ -209,26 +197,6 @@ const SEED_STUDENT_RECORDS: StudentRecord[] = [
   }
 ];
 
-const SEED_COUNSELING_LOGS: CounselingLog[] = [
-  { id: "cl-1", studentId: "sr-1", date: "2026-08-20", type: "Counseling Session", summary: "Bi-weekly progress check-in. Juan reported feeling more focused in class after being assigned a peer mentor. Teacher confirmed reduced disruptions in the past two weeks.", actionTaken: "Continued current intervention plan. Scheduled next check-in for September 3.", counselor: "Counselor Perez" },
-  { id: "cl-2", studentId: "sr-1", date: "2026-08-06", type: "Counseling Session", summary: "Follow-up session after parent conference. Discussed behavioral expectations and strategies for self-regulation during group activities.", actionTaken: "Assigned peer mentor from Grade 10 Honor Society. Provided self-monitoring checklist.", counselor: "Counselor Perez" },
-  { id: "cl-3", studentId: "sr-1", date: "2026-07-28", type: "Parent Conference", summary: "Conference with Mrs. Dela Cruz regarding recurring behavioral incidents. Parent expressed concern and willingness to collaborate on an intervention plan.", actionTaken: "Established home-school behavioral agreement. Parent will monitor homework completion and screen time.", counselor: "Counselor Perez" },
-  { id: "cl-4", studentId: "sr-1", date: "2026-07-15", type: "Disciplinary Incident", summary: "Reported by adviser for consistently disrupting group activities in Filipino 10 class. Third documented incident in two weeks.", actionTaken: "Formal written warning issued. Parent notification sent via official letter. Scheduled parent conference.", counselor: "Counselor Perez" },
-  { id: "cl-5", studentId: "sr-1", date: "2026-07-08", type: "Disciplinary Incident", summary: "Caught using mobile phone during lecture despite prior verbal warnings. Device was confiscated per school policy.", actionTaken: "Phone returned to parent after school. Student signed mobile phone policy acknowledgment form.", counselor: "Counselor Perez" },
-  { id: "cl-6", studentId: "sr-1", date: "2026-06-24", type: "Academic Review", summary: "Initial guidance check-in for Q1. Student's grades are satisfactory but adviser flagged emerging behavioral concerns in class.", actionTaken: "Noted for monitoring. Advised student on classroom expectations and self-discipline.", counselor: "Counselor Perez" },
-
-  { id: "cl-7", studentId: "sr-2", date: "2026-08-14", type: "Academic Review", summary: "Mid-quarter academic review. Hannah's current average is 68.5%, below the 75% passing threshold. She is at risk of failing Mathematics and Science.", actionTaken: "Coordinated with subject teachers for remedial worksheets. Enrolled in after-school peer tutoring (Tuesdays/Thursdays).", counselor: "Counselor Perez" },
-  { id: "cl-8", studentId: "sr-2", date: "2026-07-30", type: "Counseling Session", summary: "Hannah disclosed feeling overwhelmed before exams and frequently avoids school on test days. She described symptoms consistent with test anxiety.", actionTaken: "Provided coping strategy handout. Recommended relaxation techniques. Referred to weekly counseling.", counselor: "Counselor Perez" },
-  { id: "cl-9", studentId: "sr-2", date: "2026-07-10", type: "Attendance Check-in", summary: "Called in for attendance review. Hannah accumulated 5 unexcused absences in June, primarily on Mondays and Fridays.", actionTaken: "Parent contacted via phone. Attendance contract established with student and parent.", counselor: "Counselor Perez" },
-  { id: "cl-10", studentId: "sr-2", date: "2026-06-20", type: "Academic Review", summary: "Quarterly baseline academic check. Hannah's Grade 7 records show declining performance starting Q3 of previous year. Current trajectory suggests continued risk.", actionTaken: "Flagged for academic support. Coordinated with class adviser for study plan.", counselor: "Counselor Perez" },
-
-  { id: "cl-11", studentId: "sr-3", date: "2026-08-12", type: "Counseling Session", summary: "Bi-weekly individual counseling session. Ramon demonstrated improved awareness of his emotional triggers. No new incidents reported in the past three weeks.", actionTaken: "Positive reinforcement provided. Continued emotional regulation exercises. Next session scheduled August 26.", counselor: "Counselor Perez" },
-  { id: "cl-12", studentId: "sr-3", date: "2026-07-29", type: "Counseling Session", summary: "Follow-up after restorative justice circle. Ramon expressed remorse and committed to the behavior agreement. Discussed healthy conflict resolution strategies.", actionTaken: "Began structured emotional regulation program (4 sessions). Provided journal for self-reflection.", counselor: "Counselor Perez" },
-  { id: "cl-13", studentId: "sr-3", date: "2026-07-22", type: "Disciplinary Incident", summary: "Restorative justice circle conducted with Ramon, two affected Grade 7 students, and their class advisers. All parties shared their perspectives.", actionTaken: "Formal behavioral agreement signed by all parties. Ramon committed to zero verbal aggression policy. Follow-up in one week.", counselor: "Counselor Perez" },
-  { id: "cl-14", studentId: "sr-3", date: "2026-07-08", type: "Disciplinary Incident", summary: "Second reported incident of verbal aggression toward Grade 7 students during lunch break. Witnesses confirmed intimidation behavior.", actionTaken: "Parent (Mr. Bondoc) called in for conference. Temporary lunch supervision assigned. Recommended individual counseling.", counselor: "Counselor Perez" },
-  { id: "cl-15", studentId: "sr-3", date: "2026-06-18", type: "Disciplinary Incident", summary: "Reported by recess duty teacher for verbal bullying of a Grade 7 student. Incident involved name-calling and exclusion from a group activity.", actionTaken: "Verbal warning issued. Student counseled on anti-bullying policy. Incident documented.", counselor: "Counselor Perez" },
-  { id: "cl-16", studentId: "sr-3", date: "2026-05-28", type: "Parent Conference", summary: "End-of-year parent conference for Grade 7. Mr. Bondoc raised concerns about Ramon's social difficulties and aggressive tendencies at home.", actionTaken: "Recommended continued monitoring into Grade 8. Noted for incoming guidance caseload.", counselor: "Counselor Reyes" }
-];
 
 const SEED_SYSTEM_ACCOUNTS: SystemAccount[] = [
   { id: "acc-1", name: "Ana R. Soriano", username: "ana.soriano@cis.edu.ph", role: "Teacher", status: "Active", lastLogin: "Today, 7:15 AM", departmentOrGrade: "Science" },
@@ -298,7 +266,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
 
   const [studentRecords, setStudentRecords] = useState<any[]>([]);
-  const [counselingLogs, setCounselingLogs] = useState<any[]>([]);
   const [systemAccounts, setSystemAccounts] = useState<any[]>([]);
   const deleteAccount = (id: string) => setSystemAccounts(prev => prev.filter(a => a.id !== id));
   const resetPassword = (id: string) => setSystemAccounts(prev => prev.map(a => a.id === id ? { ...a, status: "Active" } : a));
@@ -510,10 +477,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const addCounselingLog = (log: CounselingLog) => {
-    setCounselingLogs(prev => [log, ...prev]);
-  };
-
   return (
     <AppContext.Provider value={{
       students, teachers, addTeacher, addStudent, updateUser,
@@ -533,7 +496,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       
       documentRequests, addDocumentRequest, updateDocumentRequest,
-      studentRecords, counselingLogs, addCounselingLog,
+      studentRecords, 
       systemAccounts, deleteAccount, resetPassword,
         
       

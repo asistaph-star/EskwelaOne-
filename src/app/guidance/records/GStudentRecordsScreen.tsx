@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { useAppContext } from '../../shared/AppContext';
-import type { StudentRecord, CounselingLog, CounselingLogType } from '../../shared/AppContext';
+import type { StudentRecord } from '../../shared/AppContext';
 import {
   Search, Users, Sparkles, AlertTriangle, CheckCircle, Target,
   Clock, BookOpen, ShieldAlert, UserCheck, MessageSquare, CalendarCheck,
@@ -47,8 +47,20 @@ function formatDate(dateStr: string) {
 }
 
 /* ── Main Component ──────────────────────────── */
+export type CounselingLogType = "Counseling Session" | "Disciplinary Incident" | "Academic Review" | "Attendance Check-in" | "Parent Conference";
+export type CounselingLog = {
+  id: string;
+  studentId: string;
+  date: string;
+  type: CounselingLogType;
+  summary: string;
+  actionTaken: string;
+  counselor: string;
+};
+
 export function GStudentRecordsScreen() {
-  const { studentRecords, counselingLogs } = useAppContext();
+  const { studentRecords } = useAppContext();
+  const counselingLogs: CounselingLog[] = [];
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aiTyping, setAiTyping] = useState(false);
