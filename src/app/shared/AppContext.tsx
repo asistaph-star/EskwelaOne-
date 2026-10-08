@@ -27,7 +27,6 @@ export type Message = { id: string; senderId: string; senderName: string; receiv
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
-export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
 export type CounselingLogType = "Counseling Session" | "Disciplinary Incident" | "Academic Review" | "Attendance Check-in" | "Parent Conference";
 export type CounselingLog = {
   id: string;
@@ -136,9 +135,6 @@ type AppContextType = {
   refreshGateAttendance: () => Promise<void>;
   addGateAttendance: (log: GateAttendance) => void;
   updateGateAttendance: (id: string, updates: Partial<GateAttendance>) => void;
-  clinicReferrals: ClinicReferral[];
-  addClinicReferral: (ref: ClinicReferral) => void;
-  resolveClinicReferral: (id: string) => void;
 
   // Nurse Visit Records (persisted)
 
@@ -299,7 +295,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGateAttendance(res as any);
     } catch (e) {}
   };
-  const [clinicReferrals, setClinicReferrals] = useState<ClinicReferral[]>([]);
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
 
   const [studentRecords, setStudentRecords] = useState<any[]>([]);
@@ -330,10 +325,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const [
-          dbClinic, dbDocReq, dbRank, dbNotifs, dbGateAtt,
+          dbDocReq, dbRank, dbNotifs, dbGateAtt,
           dbUsers, dbAnnouncements
         ] = await Promise.all([
-          Promise.resolve([]), // nurseVisits
           apiClient.get('/student-services/doc-requests').catch(() => []),
           Promise.resolve([]), // teacherRankings
           apiClient.get('/admin/notifications').catch(() => []),
@@ -341,7 +335,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           apiClient.get('/users').catch(() => []),
           apiClient.get('/admin/announcements').catch(() => [])
         ]);
-        setClinicReferrals(dbClinic as any);
         setDocumentRequests(dbDocReq as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
@@ -499,16 +492,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMessages(prev => [...prev, msg]);
   };
 
-  const addClinicReferral = async (ref: ClinicReferral) => {
-    const saved = await apiClient.post("/student-services/clinic", ref);
-    setClinicReferrals(prev => [saved as any, ...prev]);
-  };
-
-  const resolveClinicReferral = async (id: string) => {
-    await apiClient.patch("/student-services/clinic/" + id, { status: "Acknowledged" });
-    setClinicReferrals(prev => prev.map(r => r.id === id ? { ...r, status: "Acknowledged" } : r));
-  };
-
   const addDocumentRequest = async (req: DocumentRequest) => {
     const saved = await apiClient.post("/student-services/doc-requests", req);
     setDocumentRequests(prev => [saved as any, ...prev]);
@@ -545,7 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       messages, addMessage,
       gateAttendance, addGateAttendance, updateGateAttendance, invalidScans, addInvalidScan, refreshGateAttendance,
-      clinicReferrals, addClinicReferral, resolveClinicReferral,
+      
       
 
       

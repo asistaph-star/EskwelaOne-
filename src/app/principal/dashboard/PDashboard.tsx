@@ -17,7 +17,10 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
 }
 
 export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void; onShowGradeCard:(info:GradeCardInfo)=>void }) {
-  const { gateAttendance, clinicReferrals } = useAppContext();
+  const { gateAttendance } = useAppContext();
+  
+  type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
+  const clinicReferrals: ClinicReferral[] = [];
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
   useEffect(() => {
     apiClient.get<any[]>('/admin/leaves').then(setTeacherLeaves).catch(console.error);
