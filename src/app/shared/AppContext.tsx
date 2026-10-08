@@ -48,7 +48,6 @@ export interface CurrentUser {
 export type Message = { id: string; senderId: string; senderName: string; receiverId?: string; receiverName?: string; text?: string; content?: string; timestamp: string; isAI?: boolean; read?: boolean; };
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
 export type AppNotification = { id: string; recipientId: string; title: string; body: string; timestamp: string; isRead: boolean; iconType: "alert" | "megaphone" | "calendar" | "document" };
-export type TeacherLeave = { id: string; type: string; startDate: string; endDate: string; days: number; reason: string; status: "Pending" | "Approved" | "Rejected"; submittedOn: string; approverNote?: string };
 export type GateAttendance = { id: string; studentId: string; date: string; timeIn: string; timeOut: string; status: string; studentName?: string; time?: string; };
 export type ClinicReferral = { id: string; studentName: string; teacherName: string; reason: string; timestamp: string; status: "Pending" | "Acknowledged" };
 export type BehaviorLog = { id: string; studentName: string; section: string; type: string; date: string; status: string; note: string };
@@ -158,9 +157,6 @@ type AppContextType = {
   addTeacher: (t: Omit<User, 'id'>) => Promise<void>;
   addStudent: (s: Omit<User, 'id'>) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => Promise<void>;
-  teacherLeaves: TeacherLeave[];
-  addTeacherLeave: (leave: TeacherLeave) => void;
-  updateTeacherLeave: (id: string, status: "Pending"|"Approved"|"Rejected", approverNote?: string) => void;
 
   // Announcements
   announcements: Announcement[];
@@ -367,7 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);  const [teacherLeaves, setTeacherLeaves] = useState<TeacherLeave[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
 
   const [studentRecords, setStudentRecords] = useState<any[]>([]);
   const [counselingLogs, setCounselingLogs] = useState<any[]>([]);
@@ -399,7 +395,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const [
           dbExcuses,dbClinic, dbNurseVisits, dbBeh,
           dbAppt, dbDocReq, dbRank, dbNotifs, dbGateAtt,
-          dbUsers, dbAnnouncements, dbLeaves
+          dbUsers, dbAnnouncements
         ] = await Promise.all([
           apiClient.get('/attendance/excuses').catch(() => []),
           apiClient.get('/student-services/clinic').catch(() => []),
@@ -411,8 +407,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           apiClient.get('/admin/notifications').catch(() => []),
           apiClient.get('/attendance/gate').catch(() => []),
           apiClient.get('/users').catch(() => []),
-          apiClient.get('/admin/announcements').catch(() => []),
-          apiClient.get('/admin/leaves').catch(() => [])
+          apiClient.get('/admin/announcements').catch(() => [])
         ]);
 
         setExcuseLetters(dbExcuses as any);
@@ -421,7 +416,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBehaviorLogs(dbBeh as any);
         setAppointments(dbAppt as any);
         setDocumentRequests(dbDocReq as any);
-        console.log("DB LEAVES FETCHED:", dbLeaves);        setTeacherLeaves(dbLeaves as any);
         setNotifications(dbNotifs as any);
         setGateAttendance(dbGateAtt as any);
         
@@ -575,16 +569,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTeachers(prev => prev.map(u => u.id === id ? { ...u, ...updates } as any : u));
   };
 
-  const addTeacherLeave = async (leave: TeacherLeave) => {
-    const saved = await apiClient.post("/admin/leaves", leave);
-    setTeacherLeaves(prev => [saved as any, ...prev]);
-  };
-
-  const updateTeacherLeave = async (id: string, status: "Pending"|"Approved"|"Rejected", approverNote?: string) => {
-    await apiClient.patch("/admin/leaves/" + id, { status, approverNote });
-    setTeacherLeaves(prev => prev.map(l => l.id === id ? { ...l, status, approverNote } : l));
-  };
-
   const addAnnouncement = async (a: Announcement) => {
     const saved = await apiClient.post("/admin/announcements", a);
     setAnnouncements(prev => [saved as any, ...prev]);
@@ -684,7 +668,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       studentRecords, counselingLogs, addCounselingLog,
       systemAccounts, deleteAccount, resetPassword,
         
-      teacherLeaves, addTeacherLeave, updateTeacherLeave,
+      
       clinicVisitRecords, addClinicVisitRecord,
       
       

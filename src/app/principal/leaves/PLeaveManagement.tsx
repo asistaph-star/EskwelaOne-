@@ -14,7 +14,7 @@ function Stamp({ label, color, bg }: { label: string; color: string; bg: string 
 /* ── Types ── */
 type LStatus = 'Pending' | 'Approved' | 'Rejected';
 
-import { useAppContext, TeacherLeave } from '../../shared/AppContext';
+import { useAppContext } from '../../shared/AppContext';
 
 function statusStyle(s: LStatus) {
   if (s === 'Approved') return { color: C.green, bg: C.greenBg };

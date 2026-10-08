@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '../../../api/client';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
@@ -16,7 +17,11 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
 }
 
 export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void; onShowGradeCard:(info:GradeCardInfo)=>void }) {
-  const { gateAttendance, clinicReferrals, teacherLeaves } = useAppContext();
+  const { gateAttendance, clinicReferrals } = useAppContext();
+  const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
+  useEffect(() => {
+    apiClient.get<any[]>('/admin/leaves').then(setTeacherLeaves).catch(console.error);
+  }, []);
   const [aiDone, setAiDone] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   
