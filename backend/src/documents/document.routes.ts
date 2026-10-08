@@ -11,6 +11,8 @@ import { fileTypeFromBuffer } from 'file-type';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import fs from 'fs';
+import { createDocumentsDocRequest, updateDocumentRequest } from '../modules/document-requests/documentRequests.service.js';
+import { createDocumentsDocRequestSchema, updateDocumentRequestSchema } from '../modules/document-requests/documentRequests.schema.js';
 
 // Constants for local storage
 import { getMediaStoragePath } from '../config/storage.config.js';
@@ -145,57 +147,17 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
   }
 });
 
-const requestDocumentSchema = z.object({
-  studentId: z.string().min(1),
-  documentType: z.string().min(1),
-  purpose: z.string().min(1),
-});
-
-const approveDocumentSchema = z.object({
-  stage: z.enum(['teacher', 'principal', 'registrar']),
-  remarks: z.string().optional(),
-  status: z.enum(['Approved', 'Rejected', 'Ready for Pickup', 'Completed']),
-});
-
 /**
  * POST /api/documents/requests
  * Submit a new document request.
  */
 router.post('/requests', requirePermissions('document:request'), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const input = requestDocumentSchema.parse(req.body);
+    const input = createDocumentsDocRequestSchema.parse(req.body);
     const correlationId = (req as any).correlationId;
     const actorId = ((req as any).user as AuthenticatedUser).id;
 
-    // Resolve student info
-    const student = await prisma.student.findUnique({
-      where: { user_id: input.studentId },
-      include: { user: true }
-    });
-
-    if (!student) {
-      throw new AppError(404, 'NOT_FOUND', 'Student profile not found.');
-    }
-
-    const request = await prisma.documentRequest.create({
-      data: {
-        id: generateId(),
-        student_id: student.id,
-        document_type: input.documentType,
-        purpose: input.purpose,
-        status: 'Submitted',
-        current_stage: 1,
-      }
-    });
-
-    await createAuditLog({
-      actorUserId: actorId,
-      action: 'DOCUMENT_REQUEST_CREATED',
-      resourceType: 'document_request',
-      resourceId: request.id,
-      newState: { documentType: input.documentType, purpose: input.purpose },
-      correlationId,
-    });
+    const request = await createDocumentsDocRequest(input, actorId, correlationId);
 
     res.status(201).json({ success: true, data: request });
   } catch (err) {
@@ -203,16 +165,7 @@ router.post('/requests', requirePermissions('document:request'), async (req: Req
   }
 });
 
-const updateDocumentRequestSchema = z.object({
-  status: z.string().optional(),
-  currentStage: z.number().optional(),
-  teacherApprovedDate: z.string().optional(),
-  teacherRemarks: z.string().optional(),
-  principalApprovedDate: z.string().optional(),
-  principalRemarks: z.string().optional(),
-  readyDate: z.string().optional(),
-  attachedDocumentId: z.string().optional()
-});
+
 
 /**
  * PATCH /api/documents/requests/:id
@@ -224,137 +177,9 @@ router.patch('/requests/:id', requirePermissions('document:approve'), async (req
     const input = updateDocumentRequestSchema.parse(req.body);
     const actorId = ((req as any).user as AuthenticatedUser).id;
     const correlationId = (req as any).correlationId;
-
-    const existing = await prisma.documentRequest.findUnique({ where: { id } });
-    if (!existing) {
-      throw new AppError(404, 'NOT_FOUND', 'Document request not found.');
-    }
-
     const userRoles = ((req as any).user as AuthenticatedUser).roles;
-    const isAdmin = userRoles.includes('Admin') || userRoles.includes('ITAdmin');
-    const dataToUpdate: any = {};
 
-    // --- NEW SERVER-SIDE STATE MACHINE VALIDATION ---
-    if (input.status !== undefined || input.currentStage !== undefined) {
-      if (input.status === undefined || input.currentStage === undefined) {
-        throw new AppError(422, 'UNPROCESSABLE_ENTITY', 'Both status and currentStage must be provided together.');
-      }
-      
-      const reqStatus = input.status;
-      const reqStage = input.currentStage;
-      const currentStatus = existing.status;
-      const currentStage = existing.current_stage;
-
-      // Status/Stage Consistency Check
-      const isValidConsistency = 
-        (reqStatus === 'Teacher Approved' && reqStage === 2) ||
-        (reqStatus === 'Teacher Rejected' && reqStage === 1) ||
-        (reqStatus === 'Principal Approved' && reqStage === 3) ||
-        (reqStatus === 'Ready for Pickup' && reqStage === 4) ||
-        (reqStatus === 'Completed' && reqStage === 4);
-        
-      if (!isValidConsistency) {
-         throw new AppError(422, 'UNPROCESSABLE_ENTITY', `Invalid status/stage combination: ${reqStatus} (stage ${reqStage})`);
-      }
-
-      let isAllowed = false;
-
-      // Check transitions by role
-      if (isAdmin) {
-        const allValidTransitions = 
-          (currentStatus === 'Submitted' && currentStage === 1 && (reqStatus === 'Teacher Approved' || reqStatus === 'Teacher Rejected' || reqStatus === 'Principal Approved' || reqStatus === 'Ready for Pickup')) ||
-          (currentStatus === 'Teacher Approved' && currentStage === 2 && (reqStatus === 'Principal Approved' || reqStatus === 'Teacher Rejected')) ||
-          (currentStatus === 'Principal Approved' && currentStage === 3 && (reqStatus === 'Ready for Pickup' || reqStatus === 'Completed')) ||
-          (currentStatus === 'Ready for Pickup' && currentStage === 4 && reqStatus === 'Completed');
-        if (allValidTransitions) isAllowed = true;
-      }
-
-      if (!isAllowed && userRoles.includes('Teacher')) {
-        const teacherProfile = await prisma.teacher.findUnique({ where: { user_id: actorId } });
-        if (!teacherProfile || existing.teacher_id !== teacherProfile.id) {
-          throw new AppError(403, 'FORBIDDEN', 'You are not assigned to this document request.');
-        }
-        
-        if (currentStatus === 'Submitted' && currentStage === 1) {
-          if (reqStatus === 'Teacher Approved' || reqStatus === 'Teacher Rejected') {
-            isAllowed = true;
-          }
-        }
-      }
-
-      if (!isAllowed && userRoles.includes('Principal')) {
-        if (currentStatus === 'Teacher Approved' && currentStage === 2) {
-          if (reqStatus === 'Principal Approved' || reqStatus === 'Teacher Rejected') {
-            isAllowed = true;
-          }
-        }
-        if (currentStatus === 'Submitted' && currentStage === 1) {
-          if (reqStatus === 'Principal Approved' || reqStatus === 'Ready for Pickup') {
-            isAllowed = true; // Registrar-routed shortcut
-          }
-        }
-        if ((currentStatus === 'Principal Approved' && currentStage === 3) || 
-            (currentStatus === 'Ready for Pickup' && currentStage === 4)) {
-          if (reqStatus === 'Completed') {
-            isAllowed = true; // Upload/scan completion
-          }
-        }
-      }
-
-      if (!isAllowed && userRoles.includes('Registrar')) {
-        if (currentStatus === 'Principal Approved' && currentStage === 3) {
-          if (reqStatus === 'Ready for Pickup') {
-            isAllowed = true;
-          }
-        }
-        if (currentStatus === 'Ready for Pickup' && currentStage === 4) {
-          if (reqStatus === 'Completed') {
-            isAllowed = true;
-          }
-        }
-      }
-
-      if (!isAllowed) {
-        throw new AppError(422, 'UNPROCESSABLE_ENTITY', `Unauthorized transition from ${currentStatus} (stage ${currentStage}) to ${reqStatus} (stage ${reqStage})`);
-      }
-
-      dataToUpdate.status = reqStatus;
-      dataToUpdate.current_stage = reqStage;
-    }
-
-    // --- FIELD-LEVEL VALIDATION ---
-    if (input.teacherApprovedDate !== undefined && (isAdmin || userRoles.includes('Teacher'))) {
-      dataToUpdate.teacher_approved_date = new Date(input.teacherApprovedDate);
-    }
-    if (input.teacherRemarks !== undefined && (isAdmin || userRoles.includes('Teacher'))) {
-      dataToUpdate.teacher_remarks = input.teacherRemarks;
-    }
-    if (input.principalApprovedDate !== undefined && (isAdmin || userRoles.includes('Principal'))) {
-      dataToUpdate.principal_approved_date = new Date(input.principalApprovedDate);
-    }
-    if (input.principalRemarks !== undefined && (isAdmin || userRoles.includes('Principal'))) {
-      dataToUpdate.principal_remarks = input.principalRemarks;
-    }
-    if (input.readyDate !== undefined && (isAdmin || userRoles.includes('Principal') || userRoles.includes('Registrar'))) {
-      dataToUpdate.ready_date = new Date(input.readyDate);
-    }
-    if (input.attachedDocumentId !== undefined && (isAdmin || userRoles.includes('Principal'))) {
-      dataToUpdate.attached_document_id = input.attachedDocumentId;
-    }
-
-    const updated = await prisma.documentRequest.update({
-      where: { id },
-      data: dataToUpdate
-    });
-
-    await createAuditLog({
-      actorUserId: actorId,
-      action: 'DOCUMENT_REQUEST_UPDATED',
-      resourceType: 'document_request',
-      resourceId: updated.id,
-      newState: input,
-      correlationId,
-    });
+    const updated = await updateDocumentRequest(id, input, actorId, correlationId, userRoles);
 
     res.json({ success: true, data: updated });
   } catch (err) {
