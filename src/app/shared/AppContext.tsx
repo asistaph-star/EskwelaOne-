@@ -176,9 +176,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function initDB() {
-      if (currentUser) {
-        try {
+      if (!currentUser) {
+        setIsLoaded(true);
+        return;
+      }
+      
+      let perms: string[] = [];
+      try {
           const meData = await apiClient.get<any>('/auth/me');
+          perms = meData.permissions || [];
           setCurrentUser({
             id: meData.id,
             name: `${meData.firstName} ${meData.lastName}`,
@@ -192,7 +198,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('currentUser');
           return;
         }
-      }
 
       try {
         const [
@@ -201,8 +206,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ] = await Promise.all([
           Promise.resolve([]), // teacherRankings
           apiClient.get('/admin/notifications').catch(() => []),
-          apiClient.get('/attendance/gate').catch(() => []),
-          apiClient.get('/users').catch(() => []),
+          perms.includes('attendance:read') ? apiClient.get('/attendance/gate').catch(() => []) : Promise.resolve([]),
+          perms.includes('user:read') ? apiClient.get('/users').catch(() => []) : Promise.resolve([]),
           apiClient.get('/admin/announcements').catch(() => [])
         ]);
         setNotifications(dbNotifs as any);
