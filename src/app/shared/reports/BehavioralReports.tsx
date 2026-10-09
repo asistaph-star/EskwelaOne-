@@ -13,7 +13,7 @@ export function BehavioralReports() {
       .then((res: any) => {
         const mappedLogs = (res || []).map((item: any) => ({
           id: item.id,
-          studentName: item.studentName || item.student_id,
+          studentName: item.studentName || "Unknown Student",
           section: "N/A", // Not provided by behavior API
           type: item.type,
           date: new Date(item.date).toLocaleDateString(),
