@@ -7,14 +7,35 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
   Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 
-export function StudentDashboard({ setTab, currentUser, apiAppointments = [], apiDocRequests = [], apiExcuses = [], apiGateAttendance = [], assignments = [], assignmentSubmissions = [], announcements = [] }: any) {
-  const myGateScans = apiGateAttendance || [];
+export function StudentDashboard({ setTab, currentUser }: any) {
+  const [apiGateAttendance, setApiGateAttendance] = useState<any[]>([]);
+  const [apiAppointments, setApiAppointments] = useState<any[]>([]);
+  const [apiDocRequests, setApiDocRequests] = useState<any[]>([]);
+  const [apiExcuses, setApiExcuses] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  
+  // No backend for assignments
+  const assignments: any[] = [];
+  const assignmentSubmissions: any[] = [];
+
   useEffect(() => {
+    if (currentUser?.id) {
+      import('../../../api/student.api').then(({ studentApi }) => {
+        studentApi.getGateAttendance(currentUser.id).then((data: any) => setApiGateAttendance(data)).catch(console.error);
+        studentApi.getAppointments(currentUser.id).then((data: any) => setApiAppointments(data)).catch(console.error);
+        studentApi.getDocumentRequests(currentUser.id).then((data: any) => setApiDocRequests(data)).catch(console.error);
+        studentApi.getExcuseLetters(currentUser.id).then((data: any) => setApiExcuses(data)).catch(console.error);
+      });
+    }
+    
     apiClient.get<any[]>('/admin/events').then(setEvents).catch(console.error);
-  }, []);
-  const myAssignments = assignments ? assignments.filter((a: any) => a.section === currentUser?.section) : [];
-  const mySubmissions = assignmentSubmissions ? assignmentSubmissions.filter((s: any) => s.studentId === currentUser?.id) : [];
+    apiClient.get<any[]>('/admin/announcements').then(setAnnouncements).catch(console.error);
+  }, [currentUser?.id]);
+
+  const myGateScans = apiGateAttendance || [];
+  const myAssignments = assignments.filter((a: any) => a.section === currentUser?.section);
+  const mySubmissions = assignmentSubmissions.filter((s: any) => s.studentId === currentUser?.id);
   const myPendingAssignments = myAssignments.filter((a: any) => !mySubmissions.some((s: any) => s.assignmentId === a.id));
 
   return (

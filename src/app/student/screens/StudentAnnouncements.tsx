@@ -7,8 +7,16 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
 
-export function StudentAnnouncements({ setTab, announcements, C }: any) {
-  
+import { apiClient } from '../../../api/client';
+
+export function StudentAnnouncements({ setTab }: any) {
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    apiClient.get<any[]>('/admin/announcements')
+      .then(setAnnouncements)
+      .catch(console.error);
+  }, []);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

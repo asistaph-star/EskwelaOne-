@@ -7,8 +7,9 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
 
-export function StudentAssignments({ setTab, currentUser, assignments, assignmentSubmissions, addAssignmentSubmission }: any) {
-  
+export function StudentAssignments({ setTab, currentUser, addAssignmentSubmission }: any) {
+  const assignments: any[] = [];
+  const assignmentSubmissions: any[] = [];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div>
