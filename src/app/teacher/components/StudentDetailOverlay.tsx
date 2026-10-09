@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { C } from '../constants/tokens';
+import { C } from '../../shared/constants/tokens';
 import { X, BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight } from 'lucide-react';
 import { StudentReportCard, getDynamicGrades } from '../../student/components/StudentReportCard';
-import { Stamp } from './Stamp';
+import { Stamp } from '../../shared/components/Stamp';
 
 export function StudentDetailOverlay({ student, onClose }: { student:{id:number,surname:string,first:string,avg:number,status:string}, onClose:()=>void }) {
   const [showCard, setShowCard] = useState(false);

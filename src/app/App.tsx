@@ -117,7 +117,7 @@ import { CalendarScreen } from "./teacher/calendar/CalendarScreen";
 import { TemplateHubScreen } from "./teacher/templates/TemplateHubScreen";
 
 import { StubScreen } from "./shared/components/StubScreen";
-import { StudentDetailOverlay } from "./shared/components/StudentDetailOverlay";
+
 import { NotificationDropdown } from "./shared/components/NotificationDropdown";
 import { AIAssistantWidget } from "./shared/components/AIAssistantWidget";
 

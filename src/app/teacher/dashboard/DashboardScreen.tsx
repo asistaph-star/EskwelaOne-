@@ -7,7 +7,7 @@ import { StatBox } from '../../shared/components/StatBox';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { ClassGradeSummary } from './ClassGradeSummary';
 import { NotificationDropdown } from '../../shared/components/NotificationDropdown';
-import { StudentDetailOverlay } from '../../shared/components/StudentDetailOverlay';
+import { StudentDetailOverlay } from '../components/StudentDetailOverlay';
 import { useMyClasses } from '../shared/useMyClasses';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { apiClient } from '../../../api/client';
