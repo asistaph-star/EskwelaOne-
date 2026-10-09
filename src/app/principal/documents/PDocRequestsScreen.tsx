@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Camera, Upload, Download } from 'lucide-react';
-import { DocumentScanner } from '../../shared/components/scanner/DocumentScanner';
+import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Download } from 'lucide-react';
 import { apiClient } from '../../../api/client';
 import { documentsApi } from '../../../api/documents.api';
 import type { DocRequestStatus, DocumentRequest } from '../../shared/types';
@@ -11,10 +10,7 @@ export function PDocRequestsScreen() {
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [pickupDates, setPickupDates] = useState<Record<string, string>>({});
-  const [scannerReqId, setScannerReqId] = useState<string | null>(null);
-  const [uploadReqId, setUploadReqId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchRequests();
@@ -98,34 +94,7 @@ export function PDocRequestsScreen() {
     }
   }
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !uploadReqId) return;
 
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      
-      // Upload the document
-      const savedDoc = await apiClient.postFormData<any>('/documents/upload', formData);
-
-      // Link to request
-      await apiClient.patch(`/documents/requests/${uploadReqId}`, {
-        status: "Completed",
-        currentStage: 4,
-        principalRemarks: "Document uploaded and attached securely.",
-        attachedDocumentId: savedDoc.id
-      });
-      
-      fetchRequests();
-    } catch (err: any) {
-      console.error("Failed to upload document", err);
-      alert(err.message || "Failed to upload document. Please try again.");
-    } finally {
-      setUploadReqId(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
 
   async function handleMarkCompleted(id: string) {
     try {
@@ -331,21 +300,6 @@ export function PDocRequestsScreen() {
                         <CheckCircle size={14} /> Approve & Sign
                       </button>
                     </div>
-                    
-                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 4 }}>
-                      <button onClick={() => { setUploadReqId(req.id); fileInputRef.current?.click(); }} style={{
-                        display: "flex", alignItems: "center", gap: 6, background: C.paper, color: C.t2, border: `1px solid ${C.borderMed}`,
-                        padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
-                      }}>
-                        <Upload size={14} /> Upload PDF/Image
-                      </button>
-                      <button onClick={() => setScannerReqId(req.id)} style={{
-                        display: "flex", alignItems: "center", gap: 6, background: C.blue, color: "#fff", border: "none",
-                        padding: "10px 20px", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 700, transition: "all 0.15s",
-                      }}>
-                        <Camera size={14} /> Scan & Attach Digital Copy
-                      </button>
-                    </div>
                   </div>
                 </div>
               ))
@@ -401,44 +355,7 @@ export function PDocRequestsScreen() {
         )}
       </div>
 
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileUpload}
-        accept="image/*,application/pdf"
-        style={{ display: "none" }}
-      />
 
-      {scannerReqId && (
-        <DocumentScanner
-          onClose={() => setScannerReqId(null)}
-          onSaveScan={async (file) => {
-            try {
-              const res = await fetch(file.dataUrl);
-              const blob = await res.blob();
-              
-              const formData = new FormData();
-              formData.append("file", blob, file.name);
-
-              const savedDoc = await apiClient.postFormData<any>('/documents/upload', formData);
-
-              await apiClient.patch(`/documents/requests/${scannerReqId}`, {
-                status: "Completed",
-                currentStage: 4,
-                principalRemarks: "Document digitized and attached securely.",
-                attachedDocumentId: savedDoc.id
-              });
-              
-              fetchRequests();
-            } catch (err) {
-              console.error("Failed to save scanned document", err);
-              alert("Failed to save scanned document. Please try again.");
-            } finally {
-              setScannerReqId(null);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

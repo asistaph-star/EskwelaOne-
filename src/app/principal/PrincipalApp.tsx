@@ -14,7 +14,7 @@ import { PInventory } from './inventory/PInventory';
 import { PEventsScreen } from './events/PEventsScreen';
 import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 
-import { CamScannerScreen } from '../shared/components/CamScannerScreen';
+
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
@@ -35,7 +35,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-inventory": "Inventory",          "p-behavior":  "Behavioral Reports",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
     "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
-    "p-scanner": "Document Scanner",     "p-doc-requests": "Document Requests",
+    "p-doc-requests": "Document Requests",
     "p-leaves": "Leave Management",      "p-announcements": "Announcements"
   };
 
@@ -72,7 +72,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-teachers"   && <PTeachers   />}
           {screen==="p-inventory"  && <PInventory   />}
           {screen==="p-events"     && <PEventsScreen />}
-          {screen==="p-scanner"    && <CamScannerScreen />}
+
           {screen==="p-leaves"     && <PLeaveManagement />}
           {screen==="p-doc-requests" && <PDocRequestsScreen />}
           {screen==="p-announcements" && <PAnnouncementsScreen />}

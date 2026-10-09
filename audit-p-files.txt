@@ -1,0 +1,58 @@
+
+--- analytics\PAcademics.tsx ---
+Uses AppContext
+Mock Keywords: settimeout
+
+--- announcements\PAnnouncementsScreen.tsx ---
+Uses AppContext
+Mock Keywords: mock, settimeout, placeholder
+
+--- attendance\PLiveFacultyAttendance.tsx ---
+Mock Keywords: mock, settimeout
+
+--- dashboard\PDashboard.tsx ---
+Uses AppContext
+Mock Keywords: seeddata
+
+--- documents\PDocRequestsScreen.tsx ---
+fetch calls:
+  file.dataUrl
+Mock Keywords: placeholder
+
+--- events\PEventsScreen.tsx ---
+apiClient calls:
+  GET '/admin/events'
+  PATCH `/admin/events/${editId}`, payload
+  POST '/admin/events', payload
+  DELETE `/admin/events/${id}`
+Mock Keywords: placeholder
+
+--- inventory\PInventory.tsx ---
+apiClient calls:
+  PATCH `/admin/inventory/${editingItem.id}`, itemData
+  POST '/admin/inventory', itemData
+  PATCH `/admin/inventory/${id}`, { status: 'Lost' }
+Mock Keywords: placeholder
+
+--- leaves\PLeaveManagement.tsx ---
+apiClient calls:
+  PATCH `/admin/leaves/${id}/status`, { status: 'Approved' }
+  PATCH `/admin/leaves/${id}/status`, { status: 'Rejected', approver_note: note || 'Rejected by the School Head.' }
+Uses AppContext
+Mock Keywords: placeholder
+
+--- monitoring\PMonitoring.tsx ---
+Uses AppContext
+Mock Keywords: seeddata
+
+--- ranking\PRankingScreen.tsx ---
+Uses AppContext
+Mock Keywords: placeholder
+
+--- shared\PHeaderBand.tsx ---
+Uses AppContext
+Mock Keywords: mock, placeholder
+
+--- teachers\PTeachers.tsx ---
+Uses AppContext
+Mock Keywords: placeholder

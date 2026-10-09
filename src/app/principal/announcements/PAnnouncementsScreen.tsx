@@ -27,7 +27,7 @@ export function PAnnouncementsScreen() {
   const [audience, setAudience] = useState("All");
   const [success, setSuccess] = useState(false);
 
-  const { addNotification, currentUser, students, teachers } = useAppContext();
+  const { currentUser, students, teachers } = useAppContext();
 
   useEffect(() => {
     fetchAnnouncements();
@@ -65,46 +65,7 @@ export function PAnnouncementsScreen() {
 
       setAnnouncements(prev => [newAnn, ...prev]);
       
-      // Dispatch mock frontend notifications to satisfy the UI red badge logic across portals
-      if (currentUser) {
-         addNotification({
-           id: "",
-           recipientId: currentUser.id,
-           title: "Announcement Posted",
-           body: `You posted: ${newAnn.title}`,
-           timestamp: "Just now",
-           isRead: false,
-           iconType: "megaphone"
-         });
-      }
 
-      if (audience === "All" || audience === "Students") {
-        students.forEach(s => {
-          addNotification({
-            id: "",
-            recipientId: s.id,
-            title: "New School Announcement",
-            body: newAnn.title,
-            timestamp: "Just now",
-            isRead: false,
-            iconType: "megaphone"
-          });
-        });
-      }
-
-      if (audience === "All" || audience === "Teachers") {
-        teachers.forEach(t => {
-          addNotification({
-            id: "",
-            recipientId: t.id,
-            title: "New Staff Announcement",
-            body: newAnn.title,
-            timestamp: "Just now",
-            isRead: false,
-            iconType: "megaphone"
-          });
-        });
-      }
 
       setSuccess(true);
       setTitle("");

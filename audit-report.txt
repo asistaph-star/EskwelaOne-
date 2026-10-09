@@ -1,0 +1,86 @@
+PRINCIPAL PORTAL AUTOMATED FORENSIC SCAN
+========================================
+
+--- analytics\PAcademics.tsx ---
+Mock/Placeholder Keywords: setTimeout
+Uses AppContext
+
+--- announcements\PAnnouncementsScreen.tsx ---
+Mock/Placeholder Keywords: mock, setTimeout, placeholder
+Uses AppContext
+
+--- attendance\PLiveFacultyAttendance.tsx ---
+Mock/Placeholder Keywords: Mock, setTimeout
+
+--- dashboard\PDashboard.tsx ---
+Mock/Placeholder Keywords: seedData
+Uses AppContext
+
+--- dashboard\RDashboard.tsx ---
+API Calls:
+  GET /admin/enrollment-stats
+
+--- documents\PDocRequestsScreen.tsx ---
+Mock/Placeholder Keywords: placeholder
+
+--- documents\RDocRequestsScreen.tsx ---
+Mock/Placeholder Keywords: placeholder
+
+--- enrollment\REnrollmentScreen.tsx ---
+Mock/Placeholder Keywords: Math.random, placeholder
+API Calls:
+  PATCH /admin/enrollment-applications/
+  POST /admin/enrollment-applications
+Uses AppContext
+
+--- events\PEventsScreen.tsx ---
+Mock/Placeholder Keywords: placeholder
+API Calls:
+  GET /admin/events
+  POST /admin/events
+
+--- inventory\PInventory.tsx ---
+Mock/Placeholder Keywords: placeholder
+API Calls:
+  POST /admin/inventory
+
+--- leaves\PLeaveManagement.tsx ---
+Mock/Placeholder Keywords: placeholder
+Uses AppContext
+
+--- monitoring\PMonitoring.tsx ---
+Mock/Placeholder Keywords: seedData
+Uses AppContext
+
+--- ranking\components\RankingDetailModal.tsx ---
+Mock/Placeholder Keywords: placeholder
+Uses AppContext
+
+--- ranking\PRankingScreen.tsx ---
+Mock/Placeholder Keywords: placeholder
+Uses AppContext
+
+--- records\RAcademicRecordsScreen.tsx ---
+Mock/Placeholder Keywords: placeholder
+Uses AppContext
+
+--- records\RDocDeficiencyScreen.tsx ---
+Mock/Placeholder Keywords: setTimeout, placeholder
+
+--- records\StudentDataSearch.tsx ---
+Mock/Placeholder Keywords: placeholder
+
+--- reports\AttendanceSummary.tsx ---
+Mock/Placeholder Keywords: Mock
+
+--- shared\PHeaderBand.tsx ---
+Mock/Placeholder Keywords: mock, placeholder
+Uses AppContext
+
+--- teachers\PTeachers.tsx ---
+Mock/Placeholder Keywords: placeholder
+Uses AppContext
+
+--- teachers\TeacherProfileModal.tsx ---
+Mock/Placeholder Keywords: mock
+

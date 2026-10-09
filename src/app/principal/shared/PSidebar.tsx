@@ -22,7 +22,7 @@ const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
   { category: "Operations", items: [
     { id: "p-inventory",  label: "Inventory",           icon: Package },
     { id: "p-faculty-attendance", label: "Live Faculty Attendance", icon: Monitor },
-    { id: "p-scanner",    label: "Document Scanner",    icon: Scan },
+
     { id: "p-behavior", label: "Behavioral Reports", icon: ShieldAlert },
   ]},
 ];

@@ -45,7 +45,7 @@ router.get('/announcements', async (req: Request, res: Response, next: NextFunct
 /**
  * POST /api/admin/announcements
  */
-router.post('/announcements', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/announcements', requirePermissions('announcement:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createAnnouncementSchema.parse(req.body);
     const correlationId = (req as any).correlationId;
