@@ -75,7 +75,7 @@ export const studentApi = {
 
   // Fetch document requests
   getDocumentRequests: async (studentId: string) => {
-    return await apiClient.get(`/student-services/documents/${studentId}`);
+    return await apiClient.get(`/student-services/doc-requests/${studentId}`);
   },
 
   // Create a document request

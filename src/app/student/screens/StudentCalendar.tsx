@@ -168,7 +168,7 @@ export function StudentCalendar({ setTab }: any) {
                           <tr key={pIdx}>
                             <td style={{ padding: "0 12px", fontSize: 11.5, fontWeight: 700, color: C.t2, whiteSpace: "nowrap" }}>{timeSlot}</td>
                             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => {
-                              const period = CLASS_SCHEDULE[day][pIdx];
+                              const period = CLASS_SCHEDULE[day]?.[pIdx];
                               if (!period) return <td key={day} style={{ padding: "0 6px" }} />;
   return (
                                 <td key={day} style={{ padding: "0 6px" }}>
