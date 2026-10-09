@@ -9,8 +9,19 @@ export function BehavioralReports() {
   const [behaviorLogs, setBehaviorLogs] = useState<BehaviorLog[]>([]);
 
   useEffect(() => {
-    apiClient.get('/student-services/guidance')
-      .then(res => setBehaviorLogs(res as BehaviorLog[]))
+    apiClient.get('/student-services/behavior')
+      .then((res: any) => {
+        const mappedLogs = (res || []).map((item: any) => ({
+          id: item.id,
+          studentName: item.studentName || item.student_id,
+          section: "N/A", // Not provided by behavior API
+          type: item.type,
+          date: new Date(item.date).toLocaleDateString(),
+          status: item.status,
+          note: item.note
+        }));
+        setBehaviorLogs(mappedLogs);
+      })
       .catch(console.error);
   }, []);
   const [searchTerm, setSearchTerm] = useState("");
