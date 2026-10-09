@@ -6,7 +6,7 @@ import { BehaviorService } from './behavior.service.js';
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/', requirePermissions('guidance:read'), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/', requirePermissions('behavior:read'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const records = await BehaviorService.getBehaviorLogs();
     res.json({ success: true, data: records });
@@ -15,7 +15,7 @@ router.get('/', requirePermissions('guidance:read'), async (_req: Request, res: 
   }
 });
 
-router.get('/:studentId', requirePermissions('guidance:read'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:studentId', requirePermissions('behavior:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const records = await BehaviorService.getBehaviorLogsByStudentId(req.params.studentId as string);
     res.json({ success: true, data: records });
@@ -24,7 +24,7 @@ router.get('/:studentId', requirePermissions('guidance:read'), async (req: Reque
   }
 });
 
-router.post('/', requirePermissions('guidance:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requirePermissions('behavior:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createBehaviorSchema.parse(req.body);
     const authUser = (req as any).user as AuthenticatedUser;
@@ -37,7 +37,7 @@ router.post('/', requirePermissions('guidance:write'), async (req: Request, res:
   }
 });
 
-router.patch('/:id/status', requirePermissions('guidance:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/:id/status', requirePermissions('behavior:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
     const { status } = req.body;

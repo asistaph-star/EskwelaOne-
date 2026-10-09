@@ -54,10 +54,10 @@ describe('Phase 4D: Behavior Characterization Tests', () => {
     if (!studentRole) studentRole = await prisma.role.create({ data: { id: generateId(), name: 'Student' } });
     
     // Ensure permissions are attached
-    let permRead = await prisma.permission.findFirst({ where: { key: 'guidance:read' } });
-    if (!permRead) permRead = await prisma.permission.create({ data: { id: generateId(), key: 'guidance:read' } });
-    let permWrite = await prisma.permission.findFirst({ where: { key: 'guidance:write' } });
-    if (!permWrite) permWrite = await prisma.permission.create({ data: { id: generateId(), key: 'guidance:write' } });
+    let permRead = await prisma.permission.findFirst({ where: { key: 'behavior:read' } });
+    if (!permRead) permRead = await prisma.permission.create({ data: { id: generateId(), key: 'behavior:read' } });
+    let permWrite = await prisma.permission.findFirst({ where: { key: 'behavior:write' } });
+    if (!permWrite) permWrite = await prisma.permission.create({ data: { id: generateId(), key: 'behavior:write' } });
 
     // Link perms to Guidance and Principal
     await prisma.rolePermission.createMany({
