@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAppContext } from '../../shared/AppContext';
 import { C } from '../../shared/constants/tokens';
 import { InventoryItem, InventoryUpdate } from '../../shared/types';
 import { X, Plus, Edit2, Trash2, Eye, Package, Calendar, MapPin, Tag, FileText, Info, History } from 'lucide-react';
@@ -222,6 +223,8 @@ function InventoryDetailsDrawer({ item, onClose }: { item: InventoryItem, onClos
 }
 
 export function PInventory() {
+  const { currentUser } = useAppContext();
+  const canWrite = currentUser?.permissions?.includes('inventory:write') ?? false;
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("All");
@@ -294,9 +297,11 @@ export function PInventory() {
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>Inventory Management</h2>
           <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Track and manage school assets and equipment</p>
         </div>
-        <button onClick={() => setIsAddFormOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 4, background: C.m700, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-          <Plus size={14} /> Add Asset
-        </button>
+        {canWrite && (
+          <button onClick={() => setIsAddFormOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 4, background: C.m700, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
+            <Plus size={14} /> Add Asset
+          </button>
+        )}
       </div>
 
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, display: "flex", marginBottom: 16, borderRadius: 6, overflow: "hidden" }}>
@@ -358,12 +363,16 @@ export function PInventory() {
                     <button onClick={() => setViewingItem(item)} style={{ width: 28, height: 28, borderRadius: 4, background: C.paper, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2 }} title="View Details">
                       <Eye size={14} />
                     </button>
-                    <button onClick={() => setEditingItem(item)} style={{ width: 28, height: 28, borderRadius: 4, background: C.m50, border: `1px solid ${C.m200}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.m700 }} title="Edit Item">
-                      <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(item.id)} style={{ width: 28, height: 28, borderRadius: 4, background: C.redBg, border: `1px solid rgba(153,27,27,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.red }} title="Delete Item">
-                      <Trash2 size={14} />
-                    </button>
+                    {canWrite && (
+                      <>
+                        <button onClick={() => setEditingItem(item)} style={{ width: 28, height: 28, borderRadius: 4, background: C.m50, border: `1px solid ${C.m200}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.m700 }} title="Edit Item">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(item.id)} style={{ width: 28, height: 28, borderRadius: 4, background: C.redBg, border: `1px solid rgba(153,27,27,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.red }} title="Delete Item">
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

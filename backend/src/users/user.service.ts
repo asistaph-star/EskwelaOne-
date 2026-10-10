@@ -178,7 +178,16 @@ export async function getUsers(filters?: { role?: string; status?: string }) {
           }
         }
       },
-      teacher: true,
+      teacher: {
+        include: {
+          assignments: {
+            include: {
+              subject: true,
+              section: true,
+            }
+          }
+        }
+      },
       staff: true,
     },
     orderBy: { last_name: 'asc' },

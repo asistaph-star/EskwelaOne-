@@ -30,7 +30,7 @@ const updateInventorySchema = createInventorySchema.partial().extend({
 /**
  * GET /api/admin/inventory
  */
-router.get('/', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requirePermissions('inventory:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const items = await prisma.inventoryItem.findMany({
       include: {

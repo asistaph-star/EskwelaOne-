@@ -29,7 +29,7 @@ const PERMISSIONS = [
   // Admin
   'announcement:write',
   'leave:approve',
-  'inventory:write',
+  'inventory:read', 'inventory:write',
 ];
 
 const ROLES = {
@@ -39,7 +39,7 @@ const ROLES = {
     'user:read', 'academic:read', 'assignment:read_all', 'enrollment:read',
     'grade:read_all', 'grade:publish', 'attendance:read', 'attendance:write_all',
     'document:read', 'document:approve', 'behavior:read', 'announcement:write',
-    'leave:approve'
+    'leave:approve', 'inventory:read'
   ],
   Teacher: [
     'user:read', 'academic:read', 'assignment:read_own', 
