@@ -78,11 +78,14 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
     }
 
     res.json({
-      enrolledStudents: enrolledStudentsCount,
-      totalTeachers: teachersCount,
-      gateToday: gateScansTodayCount,
-      pendingApprovals: pendingLeaves, // Currently tracking leaves
-      gateTrend
+      success: true,
+      data: {
+        enrolledStudents: enrolledStudentsCount,
+        totalTeachers: teachersCount,
+        gateToday: gateScansTodayCount,
+        pendingApprovals: pendingLeaves,
+        gateTrend
+      }
     });
   } catch (error) {
     next(error);

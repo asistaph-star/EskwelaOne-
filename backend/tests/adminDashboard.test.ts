@@ -1,151 +1,201 @@
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import app from '../src/app';
 import prisma from '../src/config/database';
 import { generateId } from '../src/common/utils/uuid';
-import { hashPassword } from '../src/auth/auth.service';
-import { startOfDay, subDays } from 'date-fns';
+import bcrypt from 'bcrypt';
+import { startOfDay, endOfDay, subDays, format } from 'date-fns';
 
 describe('Phase 5D: Principal Dashboard Aggregation API', () => {
   let principalToken: string;
-  let teacherToken: string;
-  let testYearId: string;
+  let studentToken: string;
+  
+  // Set TZ to UTC to prevent date-fns from creating local-time boundaries that span two UTC days in the DB
+  process.env.TZ = 'UTC';
+  
+  // Use a completely isolated date far in the past to avoid concurrent test interference
+  const mockNow = new Date('2020-05-15T12:00:00Z');
+  
+  let baselineEnrollments = 0;
+  let baselineTeachers = 0;
+  let baselineGateToday = 0;
+  let baselinePendingLeaves = 0;
+  let baselineGateTrend: number[] = Array(7).fill(0);
+
+  const pEmail = 'dashboard_principal_' + Date.now() + '@dash.com';
+  const sEmail = 'dashboard_student_' + Date.now() + '@dash.com';
+  let principalId = generateId();
+  let studentUserId = generateId();
+  let tEmail = 'dashboard_teacher_' + Date.now() + '@dash.com';
+  let teacherId = generateId();
+  let studentId = generateId();
+
+  // Keep references to clean up easily
+  const cleanupIds = {
+    users: [principalId, studentUserId, teacherId],
+    roles: [],
+    academicYears: [],
+    sections: [],
+    students: [studentId],
+    teachers: [],
+    enrollments: [],
+    gate: [],
+    leaves: []
+  };
 
   beforeAll(async () => {
-    // 1. Create Principal User
-    const principalId = generateId();
-    await prisma.user.create({
-      data: {
-        id: principalId,
-        email: 'dashboard_principal@test.com',
-        password_hash: await hashPassword('password123'),
-        first_name: 'Dashboard',
-        last_name: 'Principal',
-        status: 'active'
-      }
-    });
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(mockNow);
 
-    const pRole = await prisma.role.findFirst({ where: { name: 'Principal' } });
-    if (pRole) {
-      await prisma.userRole.create({
-        data: { user_id: principalId, role_id: pRole.id }
-      });
-    }
+    const now = mockNow;
 
-    // 2. Create a Teacher User (should not have access if missing permissions, but teacher might have user:read. Wait, user:read is allowed for Teacher in this system. Let's test with someone who lacks it, or just verify the endpoint contract)
-    const teacherId = generateId();
-    await prisma.user.create({
-      data: {
-        id: teacherId,
-        email: 'dashboard_teacher@test.com',
-        password_hash: await hashPassword('password123'),
-        first_name: 'Dashboard',
-        last_name: 'Teacher',
-        status: 'active'
-      }
-    });
-
-    const tRole = await prisma.role.findFirst({ where: { name: 'Teacher' } });
-    if (tRole) {
-      await prisma.userRole.create({
-        data: { user_id: teacherId, role_id: tRole.id }
-      });
-    }
-
-    // 3. Login to get tokens
-    let res = await request(app).post('/api/auth/login').send({ email: 'dashboard_principal@test.com', password: 'password123' });
-    if (!res.body.success) console.error("Principal Login failed:", res.body);
-    principalToken = res.headers['set-cookie'] ? res.headers['set-cookie'][0] : '';
-
-    res = await request(app).post('/api/auth/login').send({ email: 'dashboard_teacher@test.com', password: 'password123' });
-    if (!res.body.success) console.error("Teacher Login failed:", res.body);
-    teacherToken = res.headers['set-cookie'] ? res.headers['set-cookie'][0] : '';
-
-    // 4. Create an Academic Year
-    testYearId = generateId();
-    await prisma.academicYear.create({
-      data: {
-        id: testYearId,
-        name: 'Dashboard Test Year',
-        start_date: new Date('2025-01-01'),
-        end_date: new Date('2025-12-31'),
-        is_current: true
-      }
-    });
-
-    // 5. Create some students & enrollments
-    const student1Id = generateId();
-    const student2Id = generateId();
-    const userS1 = generateId();
-    const userS2 = generateId();
-
+    // Create Principal and Student users for Auth
     await prisma.user.createMany({
       data: [
-        { id: userS1, email: 's1_dash@test.com', password_hash: '123', first_name: 'S1', last_name: 'Dash' },
-        { id: userS2, email: 's2_dash@test.com', password_hash: '123', first_name: 'S2', last_name: 'Dash' }
+        { id: principalId, email: pEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'P', last_name: 'P' },
+        { id: studentUserId, email: sEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'S', last_name: 'S' },
+        { id: teacherId, email: tEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'T', last_name: 'T' }
       ]
     });
 
-    await prisma.student.createMany({
+    
+    let pRoleObj = await prisma.role.findFirst({ where: { name: 'Principal' } });
+    if (!pRoleObj) pRoleObj = await prisma.role.create({ data: { id: generateId(), name: 'Principal' } });
+    let sRoleObj = await prisma.role.findFirst({ where: { name: 'Student' } });
+    if (!sRoleObj) sRoleObj = await prisma.role.create({ data: { id: generateId(), name: 'Student' } });
+    let tRoleObj = await prisma.role.findFirst({ where: { name: 'Teacher' } });
+    if (!tRoleObj) tRoleObj = await prisma.role.create({ data: { id: generateId(), name: 'Teacher' } });
+
+    await prisma.userRole.createMany({
       data: [
-        { id: student1Id, user_id: userS1, lrn: 'DASH_LRN1', grade_level: 7 },
-        { id: student2Id, user_id: userS2, lrn: 'DASH_LRN2', grade_level: 8 }
+        { user_id: principalId, role_id: pRoleObj.id },
+        { user_id: studentUserId, role_id: sRoleObj.id },
+        { user_id: teacherId, role_id: tRoleObj.id }
       ]
     });
 
-    const sectionId = generateId();
-    await prisma.section.create({
-      data: { id: sectionId, name: 'Dash Sec', grade_level: 7, academic_year_id: testYearId }
-    });
 
-    await prisma.enrollment.createMany({
+    // Generate tokens
+    const pRes = await request(app).post('/api/auth/login').send({ email: pEmail, password: 'password123' });
+    principalToken = pRes.headers['set-cookie'] ? pRes.headers['set-cookie'][0] : '';
+    const sRes = await request(app).post('/api/auth/login').send({ email: sEmail, password: 'password123' });
+    studentToken = sRes.headers['set-cookie'] ? sRes.headers['set-cookie'][0] : '';
+
+    // Measure Baselines FIRST
+    const currentAy = await prisma.academicYear.findFirst({ where: { is_current: true } });
+    if (currentAy) {
+      baselineEnrollments = await prisma.enrollment.count({ where: { academic_year_id: currentAy.id, status: 'Enrolled' } });
+    }
+    baselineTeachers = await prisma.teacher.count();
+    
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    baselineGateToday = await prisma.gateAttendance.count({ where: { date: { gte: todayStart, lte: todayEnd } } });
+    baselinePendingLeaves = await prisma.leaveRequest.count({ where: { status: 'Pending' } });
+
+    for (let i = 6; i >= 0; i--) {
+      const d = subDays(now, i);
+      const start = startOfDay(d);
+      const end = endOfDay(d);
+      baselineGateTrend[6-i] = await prisma.gateAttendance.count({
+        where: { date: { gte: start, lte: end } }
+      });
+    }
+
+    // Now inject exactly what we expect
+    let testYearId = currentAy ? currentAy.id : generateId();
+    if (!currentAy) {
+      await prisma.academicYear.create({
+        data: { id: testYearId, name: 'AY ' + generateId(), start_date: new Date(), end_date: new Date(), is_current: true }
+      });
+      cleanupIds.academicYears.push(testYearId);
+    }
+    const nonCurrentYearId = generateId();
+    await prisma.academicYear.create({
+      data: { id: nonCurrentYearId, name: 'AY ' + generateId(), start_date: new Date(), end_date: new Date(), is_current: false }
+    });
+    cleanupIds.academicYears.push(nonCurrentYearId);
+
+    const s2UserId = generateId(); const s3UserId = generateId();
+    cleanupIds.users.push(s2UserId, s3UserId);
+    await prisma.user.createMany({
       data: [
-        { id: generateId(), student_id: student1Id, section_id: sectionId, academic_year_id: testYearId, status: 'Enrolled' },
-        { id: generateId(), student_id: student2Id, section_id: sectionId, academic_year_id: testYearId, status: 'Enrolled' }
+        { id: s2UserId, email: 'dash_s2' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S2', last_name: 'S2' },
+        { id: s3UserId, email: 'dash_s3' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S3', last_name: 'S3' }
       ]
     });
 
-    // 6. Create some Gate Attendance
-    const today = new Date();
-    const yesterday = subDays(today, 1);
+    const s2Id = generateId(); const s3Id = generateId();
+    cleanupIds.students.push(s2Id, s3Id);
+    await prisma.student.createMany({ data: [
+      { id: studentId, user_id: studentUserId, lrn: 'L1' + Date.now(), grade_level: 7 },
+      { id: s2Id, user_id: s2UserId, lrn: 'L2' + Date.now(), grade_level: 8 },
+      { id: s3Id, user_id: s3UserId, lrn: 'L3' + Date.now(), grade_level: 9 }
+    ]});
 
-    await prisma.gateAttendance.createMany({
-      data: [
-        { id: generateId(), student_id: student1Id, date: startOfDay(today), status: 'Present' },
-        { id: generateId(), student_id: student1Id, date: startOfDay(yesterday), status: 'Present' },
-      ]
-    });
+    const secId = generateId();
+    cleanupIds.sections.push(secId);
+    await prisma.section.create({ data: { id: secId, name: 'Dash Sec ' + Date.now(), grade_level: 7, academic_year_id: testYearId } });
 
-    // 7. Create Pending Leave Request
-    await prisma.leaveRequest.create({
-      data: {
-        id: generateId(),
-        user_id: teacherId,
-        type: 'Sick Leave',
-        start_date: new Date(),
-        end_date: new Date(),
-        days: 1,
-        reason: 'Sick',
-        status: 'Pending'
-      }
-    });
+    const e1 = generateId(); const e2 = generateId(); const e3 = generateId();
+    cleanupIds.enrollments.push(e1, e2, e3);
+    await prisma.enrollment.createMany({ data: [
+      { id: e1, student_id: studentId, section_id: secId, academic_year_id: testYearId, status: 'Enrolled' },
+      { id: e2, student_id: s2Id, section_id: secId, academic_year_id: testYearId, status: 'Enrolled' },
+      { id: e3, student_id: s3Id, section_id: secId, academic_year_id: nonCurrentYearId, status: 'Enrolled' }
+    ]});
 
-    // Wait for DB sync
-    await new Promise(r => setTimeout(r, 100));
+    const tRealId = generateId(); const t2Id = generateId();
+    cleanupIds.teachers.push(tRealId, t2Id);
+    await prisma.teacher.createMany({ data: [
+      { id: tRealId, user_id: teacherId, employee_id: 'T1' + Date.now(), department: 'Math' },
+      { id: t2Id, user_id: principalId, employee_id: 'T2' + Date.now(), department: 'Science' } // Reusing principal user for simplicity
+    ]});
+
+    // Gate Attendance
+    const yestStart = startOfDay(subDays(now, 1));
+    const sixStart = startOfDay(subDays(now, 6));
+
+    const g1 = generateId(), g2 = generateId(), g3 = generateId(), g4 = generateId(), g5 = generateId(), g6 = generateId();
+    cleanupIds.gate.push(g1, g2, g3, g4, g5, g6);
+    await prisma.gateAttendance.createMany({ data: [
+      { id: g1, student_id: studentId, date: todayStart, status: 'Present' },
+      { id: g2, student_id: s2Id, date: todayStart, status: 'Present' },
+      { id: g3, student_id: s3Id, date: todayStart, status: 'Present' },
+      { id: g4, student_id: studentId, date: yestStart, status: 'Present' },
+      { id: g5, student_id: s2Id, date: sixStart, status: 'Present' },
+      { id: g6, student_id: s3Id, date: sixStart, status: 'Present' }
+    ]});
+
+    // Leave Requests
+    const l1 = generateId(), l2 = generateId(), l3 = generateId();
+    cleanupIds.leaves.push(l1, l2, l3);
+    await prisma.leaveRequest.createMany({ data: [
+      { id: l1, user_id: teacherId, type: 'Sick', start_date: now, end_date: now, days: 1, reason: 'r1', status: 'Pending' },
+      { id: l2, user_id: teacherId, type: 'Vacation', start_date: now, end_date: now, days: 1, reason: 'r2', status: 'Pending' },
+      { id: l3, user_id: teacherId, type: 'Personal', start_date: now, end_date: now, days: 1, reason: 'r3', status: 'Approved' }
+    ]});
   });
 
   afterAll(async () => {
-    await prisma.auditLog.deleteMany({ where: { actor: { email: { contains: 'dashboard_' } } } });
-    await prisma.leaveRequest.deleteMany({ where: { user: { email: { contains: 'dashboard_' } } } });
-    await prisma.gateAttendance.deleteMany({ where: { student: { user: { email: { contains: '_dash' } } } } });
-    await prisma.enrollment.deleteMany({ where: { academic_year_id: testYearId } });
-    await prisma.section.deleteMany({ where: { academic_year_id: testYearId } });
-    await prisma.student.deleteMany({ where: { user: { email: { contains: '_dash' } } } });
-    await prisma.userRole.deleteMany({ where: { user: { email: { contains: 'dashboard_' } } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 'dashboard_' } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 's1_dash' } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 's2_dash' } } });
-    await prisma.academicYear.deleteMany({ where: { id: testYearId } });
+    vi.useRealTimers();
+    // Targeted cleanups using our specific IDs to avoid deleting records from parallel tests
+    try {
+      if (cleanupIds.gate.length) await prisma.gateAttendance.deleteMany({ where: { id: { in: cleanupIds.gate } } });
+      if (cleanupIds.leaves.length) await prisma.leaveRequest.deleteMany({ where: { id: { in: cleanupIds.leaves } } });
+      if (cleanupIds.enrollments.length) await prisma.enrollment.deleteMany({ where: { id: { in: cleanupIds.enrollments } } });
+      if (cleanupIds.students.length) await prisma.student.deleteMany({ where: { id: { in: cleanupIds.students } } });
+      if (cleanupIds.teachers.length) await prisma.teacher.deleteMany({ where: { id: { in: cleanupIds.teachers } } });
+      if (cleanupIds.sections.length) await prisma.section.deleteMany({ where: { id: { in: cleanupIds.sections } } });
+      if (cleanupIds.academicYears.length) await prisma.academicYear.deleteMany({ where: { id: { in: cleanupIds.academicYears } } });
+      if (cleanupIds.users.length) await prisma.userRole.deleteMany({ where: { user_id: { in: cleanupIds.users } } });
+      
+      // Audit logs often reference users, so we must delete them first before users
+      await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: cleanupIds.users } } });
+      if (cleanupIds.users.length) await prisma.user.deleteMany({ where: { id: { in: cleanupIds.users } } });
+    } catch (e) {
+      console.error("Dashboard Cleanup Error:", e);
+    }
   });
 
   it('should prevent unauthenticated access', async () => {
@@ -153,31 +203,50 @@ describe('Phase 5D: Principal Dashboard Aggregation API', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should return aggregated data for Principal', async () => {
+  it('should prevent unauthorized access (e.g. Student role)', async () => {
+    const res = await request(app)
+      .get('/api/admin/dashboard')
+      .set('Cookie', studentToken);
+    expect(res.status).toBe(403);
+  });
+
+  it('should return exactly controlled aggregate numbers for Principal', async () => {
     const res = await request(app)
       .get('/api/admin/dashboard')
       .set('Cookie', principalToken);
     
-    if (res.status !== 200) console.error("Dashboard endpoint failed:", res.body);
-
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('enrolledStudents');
-    expect(res.body).toHaveProperty('totalTeachers');
-    expect(res.body).toHaveProperty('gateToday');
-    expect(res.body).toHaveProperty('pendingApprovals');
-    expect(res.body).toHaveProperty('gateTrend');
+    expect(res.body.success).toBe(true);
     
-    expect(typeof res.body.enrolledStudents).toBe('number');
-    expect(res.body.enrolledStudents).toBeGreaterThanOrEqual(0);
+    const data = res.body.data;
+    const now = mockNow;
     
-    expect(typeof res.body.totalTeachers).toBe('number');
-    expect(typeof res.body.gateToday).toBe('number');
-    expect(typeof res.body.pendingApprovals).toBe('number');
-    expect(res.body.pendingApprovals).toBeGreaterThanOrEqual(1);
+    // Enrollment: 2 matching active year
+    expect(data.enrolledStudents).toBe(baselineEnrollments + 2);
+    
+    // Teachers: 2
+    expect(data.totalTeachers).toBe(baselineTeachers + 2);
+    
+    // Gate Today: 3
+    expect(data.gateToday).toBe(baselineGateToday + 3);
+    
+    // Pending Leaves: 2
+    expect(data.pendingApprovals).toBe(baselinePendingLeaves + 2);
+    
+    // Gate Trend
+    expect(Array.isArray(data.gateTrend)).toBe(true);
+    expect(data.gateTrend.length).toBe(7);
 
-    expect(Array.isArray(res.body.gateTrend)).toBe(true);
-    expect(res.body.gateTrend.length).toBe(7);
-    expect(res.body.gateTrend[0]).toHaveProperty('date');
-    expect(res.body.gateTrend[0]).toHaveProperty('count');
+    const oldest = data.gateTrend[0];
+    expect(oldest.date).toBe(format(subDays(now, 6), 'MMM dd'));
+    expect(oldest.count).toBe(baselineGateTrend[0] + 2);
+
+    const yesterday = data.gateTrend[5];
+    expect(yesterday.date).toBe(format(subDays(now, 1), 'MMM dd'));
+    expect(yesterday.count).toBe(baselineGateTrend[5] + 1);
+
+    const todayDay = data.gateTrend[6];
+    expect(todayDay.date).toBe(format(now, 'MMM dd'));
+    expect(todayDay.count).toBe(baselineGateTrend[6] + 3);
   });
 });
