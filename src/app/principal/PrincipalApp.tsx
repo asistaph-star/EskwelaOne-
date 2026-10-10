@@ -36,7 +36,8 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
     "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
     "p-doc-requests": "Document Requests",
-    "p-leaves": "Leave Management",      "p-announcements": "Announcements"
+    "p-leaves": "Leave Management",      "p-announcements": "Announcements",
+    "p-scanner": "ID Scanner"
   };
 
   if (screen === "p-faculty-attendance") {

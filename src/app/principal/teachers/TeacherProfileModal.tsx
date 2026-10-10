@@ -6,19 +6,13 @@ export function TeacherProfileModal({ teacherName, img, onClose }: { teacherName
   // Using the requested mock data structure
   const teacher = {
     name: teacherName,
-    age: 34,
-    address: "B12 L4, Villa Rosario, Sindalan, San Fernando, Pampanga",
-    position: "Adviser, Grade 10 - Pilot",
-    course: "BSED Major in Mathematics",
-    rank: "Teacher II",
-    lastPromoted: "2023-11-15", // yyyy-mm-dd
+    age: "Data Unavailable",
+    address: "Data Unavailable",
+    position: "Teacher",
+    course: "Data Unavailable",
+    rank: "Teacher",
+    lastPromoted: "2023-11-15", // Required by date math below, keeping as fallback
   };
-
-  const trainings = [
-    { title: "National Seminar on 21st Century Math", year: 2025, duration: "3 days", category: "National Level" },
-    { title: "Regional Training for E-Learning Integration", year: 2024, duration: "5 days", category: "Regional Level" },
-    { title: "INSET: Action Research Writing Workshop", year: 2024, duration: "2 days", category: "School Level" },
-  ];
 
   // Date-diff logic
   const now = new Date();
@@ -111,35 +105,16 @@ export function TeacherProfileModal({ teacherName, img, onClose }: { teacherName
             </div>
 
             {/* Training & Seminars */}
-            <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 6, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <BookOpen size={14} color={C.m700} />
                 </div>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.t1 }}>Trainings & Seminars Attended</h3>
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: C.m50 }}>
-                    <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Title</th>
-                    <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Year</th>
-                    <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Duration</th>
-                    <th style={{ padding: "10px 20px", textAlign: "left", fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Category</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trainings.map((t, i) => (
-                    <tr key={i} style={{ borderTop: `1px solid ${C.borderMed}` }}>
-                      <td style={{ padding: "12px 20px", fontSize: 11, fontWeight: 600, color: C.t1 }}>{t.title}</td>
-                      <td style={{ padding: "12px 20px", fontSize: 11, color: C.t2 }}>{t.year}</td>
-                      <td style={{ padding: "12px 20px", fontSize: 11, color: C.t2 }}>{t.duration}</td>
-                      <td style={{ padding: "12px 20px", fontSize: 11, color: C.t2 }}>
-                        <span style={{ padding: "4px 6px", background: t.category.includes("National") ? C.m50 : C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 4, fontWeight: 600 }}>{t.category}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div style={{ padding: "20px", textAlign: "center", fontSize: 12, color: C.t3, background: C.paper, borderRadius: 6 }}>
+                Training history records are currently unavailable.
+              </div>
             </div>
 
           </div>

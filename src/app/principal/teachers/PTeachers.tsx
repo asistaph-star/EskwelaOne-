@@ -89,28 +89,16 @@ export function PTeachers() {
             <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
               <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif", flex:1 }}>Faculty Attendance Today</span>
-                {[["18","Present",C.green],["0","Absent",C.red],["2","Late",C.amber]].map(([v,l,c])=>(
-                  <span key={l} style={{ fontSize:10, color:"rgba(255,255,255,0.7)", marginLeft:10 }}><span style={{ fontWeight:700, color:"#fff" }}>{v}</span> {l}</span>
-                ))}
+                <span style={{ fontSize:10, color:"rgba(255,255,255,0.7)" }}>No Data Available</span>
               </div>
               <table style={{ width:"100%", borderCollapse:"collapse" }}>
                 <thead><PTableHeader cols={["Teacher","Rank","Status","Time In"]} /></thead>
                 <tbody>
-                  {teachers.map((t,i)=>{
-                    const statuses = ["Present","Present","Late","Present","Present","Late","Present","Present"];
-                    const times = ["7:05","7:08","7:42","7:10","7:07","7:38","7:12","7:09"];
-                    const s = statuses[i % statuses.length], time = times[i % times.length];
-                    return (
-                      <tr key={t.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
-                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
-                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
-                        <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                        <td style={{ padding:"9px 14px", fontSize:10, color:C.t3 }}>{"Teacher I"}</td>
-                        <td style={{ padding:"9px 14px" }}><Stamp label={s} color={s==="Present"?C.green:s==="Late"?C.amber:C.red} bg={s==="Present"?C.greenBg:s==="Late"?C.amberBg:C.redBg} /></td>
-                        <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>{time} AM</td>
-                      </tr>
-                    );
-                  })}
+                  <tr>
+                    <td colSpan={4} style={{ padding:"24px", textAlign: "center", fontSize: 12, color: C.t3 }}>
+                      Faculty attendance tracking module is not currently available.
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -133,7 +121,7 @@ export function PTeachers() {
                 </table>
               </div>
               <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-                <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Promotion Eligibility</div>
+                <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Promotion Tracking</div>
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead><PTableHeader cols={["Teacher","Rank","Years","Status","Profile"]} /></thead>
                   <tbody>
@@ -169,13 +157,13 @@ export function PTeachers() {
           <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
             <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Subject Load Monitoring</div>
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
-              <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Total Load"]} /></thead>
+              <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Assignments"]} /></thead>
               <tbody>
                 {teachers.map((t: any,i)=>{
                   const assignments = t.teacher?.assignments || [];
                   const sections = assignments.map((a: any) => a.section.name).join(', ') || 'Unassigned';
                   const subjects = Array.from(new Set(assignments.map((a: any) => a.subject.name))).join(', ') || 'None';
-                  const load = assignments.length * 3; // Estimated 3 hours per subject
+                  const loadCount = assignments.length;
                   return (
                     <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -184,7 +172,7 @@ export function PTeachers() {
                       <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{"N/A"}</td>
                       <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{sections}</td>
                       <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{subjects}</td>
-                      <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{load}h/wk</td>
+                      <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{loadCount} subjects</td>
                     </tr>
                   );
                 })}
