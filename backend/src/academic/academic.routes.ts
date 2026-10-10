@@ -9,10 +9,12 @@ import {
   createSubjectSchema, 
   createSectionSchema, 
   createTeacherAssignmentSchema,
+  updateTeacherAssignmentSchema,
   createAcademicYear,
   createSubject,
   createSection,
-  createTeacherAssignment
+  createTeacherAssignment,
+  updateTeacherAssignment
 } from './academic.service.js';
 
 const router = Router();
@@ -154,6 +156,24 @@ router.post('/assignments', requirePermissions('assignment:write'), async (req: 
     
     const assignment = await createTeacherAssignment(input, actorId, correlationId);
     res.status(201).json({ success: true, data: assignment });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PUT /api/academic/assignments/:id
+ * Updates an assignment (e.g. to assign schedule)
+ * Requires assignment:write permission.
+ */
+router.put('/assignments/:id', requirePermissions('assignment:write'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const input = updateTeacherAssignmentSchema.parse(req.body);
+    const correlationId = (req as any).correlationId;
+    const actorId = ((req as any).user as AuthenticatedUser).id;
+    
+    const assignment = await updateTeacherAssignment(req.params.id, input, actorId, correlationId);
+    res.json({ success: true, data: assignment });
   } catch (err) {
     next(err);
   }

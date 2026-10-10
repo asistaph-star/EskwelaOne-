@@ -230,6 +230,13 @@ model TeacherSubjectAssignment {
   teacher_id        String            @db.VarChar(36)
   section_id        String            @db.VarChar(36)
   subject_id        String            @db.VarChar(36)
+  
+  // Schedule fields
+  days              String?           @db.VarChar(50)
+  start_time        String?           @db.VarChar(10)
+  end_time          String?           @db.VarChar(10)
+  room              String?           @db.VarChar(50)
+
   created_at        DateTime          @default(now())
   updated_at        DateTime          @updatedAt
   class_attendances ClassAttendance[]

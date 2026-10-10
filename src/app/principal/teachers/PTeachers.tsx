@@ -8,12 +8,14 @@ import { Stamp } from '../../shared/components/Stamp';
 import { UserPlus, Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
 import { TeacherProfileModal } from "./TeacherProfileModal";
 import PRankingScreen from "../ranking/PRankingScreen";
+import { AssignScheduleModal } from "./AssignScheduleModal";
 
 export function PTeachers() {
   const { teachers, addTeacher } = useAppContext();
   const [tab, setTab] = useState<"overview"|"ranking">("overview");
   const [createModal, setCreateModal] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [assignScheduleModal, setAssignScheduleModal] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [rankings, setRankings] = useState<any[]>([]);
 
   useEffect(() => {
@@ -63,6 +65,9 @@ export function PTeachers() {
           <div style={{ fontSize:12, color:C.t3, marginTop:4 }}>Oversee faculty attendance, subject loads, and leave requests.</div>
         </div>
         <div style={{ display:"flex", gap:10 }}>
+          <button onClick={() => setAssignScheduleModal(true)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:6, fontSize:11, fontWeight:700, color:C.m700, cursor:"pointer" }}>
+            <CalendarIcon size={14} /> Assign Schedule
+          </button>
           <button onClick={() => setCreateModal(true)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:6, fontSize:11, fontWeight:700, color:C.m700, cursor:"pointer" }}>
             <UserPlus size={14} /> Create Teacher Account
           </button>
@@ -143,7 +148,7 @@ export function PTeachers() {
                           <td style={{ padding:"8px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.t2 }}>{`${years} Yrs`}</td>
                           <td style={{ padding:"8px 14px" }}><Stamp label={statusLabel} color={tr.color} bg={tr.bg} /></td>
                           <td style={{ padding:"8px 14px", textAlign: "right" }}>
-                            <button onClick={() => setSelectedProfile(t.name)} style={{ padding: "4px 8px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 10, fontWeight: 600, color: C.m700, cursor: "pointer" }}>View Profile</button>
+                            <button onClick={() => setSelectedProfile(t)} style={{ padding: "4px 8px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 10, fontWeight: 600, color: C.m700, cursor: "pointer" }}>View Profile</button>
                           </td>
                         </tr>
                       );
@@ -163,13 +168,17 @@ export function PTeachers() {
                   const assignments = t.teacher?.assignments || [];
                   const sections = assignments.map((a: any) => a.section.name).join(', ') || 'Unassigned';
                   const subjects = Array.from(new Set(assignments.map((a: any) => a.subject.name))).join(', ') || 'None';
+                  
+                  // Collect unique schedule days
+                  const days = Array.from(new Set(assignments.map((a: any) => a.days).filter(Boolean))).join(' / ') || 'Unassigned';
+                  
                   const loadCount = assignments.length;
                   return (
                     <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
                       onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
                       onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
                       <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{"N/A"}</td>
+                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{days}</td>
                       <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{sections}</td>
                       <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{subjects}</td>
                       <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{loadCount} subjects</td>
@@ -183,7 +192,9 @@ export function PTeachers() {
       )}
 
 
-      {selectedProfile && <TeacherProfileModal teacherName={selectedProfile} onClose={() => setSelectedProfile(null)} />}
+      {selectedProfile && <TeacherProfileModal teacherUser={selectedProfile} onClose={() => setSelectedProfile(null)} />}
+      
+      {assignScheduleModal && <AssignScheduleModal onClose={() => setAssignScheduleModal(false)} onSuccess={() => { setAssignScheduleModal(false); window.location.reload(); }} />}
       
       {tab === "ranking" && (
         <PRankingScreen inTab={true} />

@@ -2,21 +2,19 @@ import React from 'react';
 import { C } from '../../shared/constants/tokens';
 import { User, Award, BookOpen, AlertCircle, CheckCircle, Clock, X } from 'lucide-react';
 
-export function TeacherProfileModal({ teacherName, img, onClose }: { teacherName: string, img?: string, onClose: () => void }) {
-  // Using the requested mock data structure
+export function TeacherProfileModal({ teacherUser, img, onClose }: { teacherUser: any, img?: string, onClose: () => void }) {
+  // Map real data from User and Teacher profile
   const teacher = {
-    name: teacherName,
-    age: "Data Unavailable",
-    address: "Data Unavailable",
-    position: "Teacher",
-    course: "Data Unavailable",
-    rank: "Teacher",
-    lastPromoted: "2023-11-15", // Required by date math below, keeping as fallback
+    name: `${teacherUser.first_name} ${teacherUser.last_name}`,
+    email: teacherUser.email || "No Email provided",
+    department: teacherUser.teacher?.department || "General",
+    position: teacherUser.teacher?.position || "Teacher I",
+    specialization: teacherUser.teacher?.specialization || "General Education",
+    dateHired: teacherUser.teacher?.date_hired || new Date().toISOString(),
   };
 
-  // Date-diff logic
   const now = new Date();
-  const promotedDate = new Date(teacher.lastPromoted);
+  const promotedDate = new Date(teacher.dateHired);
   const diffTime = Math.abs(now.getTime() - promotedDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   const diffYears = diffDays / 365.25;
@@ -90,16 +88,16 @@ export function TeacherProfileModal({ teacherName, img, onClose }: { teacherName
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Age</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.age} years old</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Email</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.email}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Educational Course</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.course}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Department</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.department}</div>
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Address</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.address}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Specialization</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.specialization}</div>
                 </div>
               </div>
             </div>
@@ -145,14 +143,8 @@ export function TeacherProfileModal({ teacherName, img, onClose }: { teacherName
                   <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{teacher.position}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Current Rank</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{teacher.rank}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Last Year Promoted</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>
-                    {new Date(teacher.lastPromoted).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Date Hired</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>{new Date(teacher.dateHired).toLocaleDateString()}</div>
                 </div>
               </div>
               

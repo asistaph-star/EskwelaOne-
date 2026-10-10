@@ -56,10 +56,24 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 /**
  * POST /api/users
  */
-router.post('/', requirePermissions('user:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createUserSchema.parse(req.body);
     const authUser = (req as any).user as AuthenticatedUser;
+    const hasUserWrite = authUser.permissions.includes('user:write');
+    const isPrincipal = authUser.roles?.includes('Principal');
+
+    if (!hasUserWrite && !isPrincipal) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to create users' } });
+    }
+
+    if (!hasUserWrite && isPrincipal) {
+      // Principal least-privilege enforcement
+      if (input.roles.length !== 1 || input.roles[0] !== 'Teacher') {
+        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Principals are only authorized to create Teacher accounts' } });
+      }
+    }
+
     const user = await createUser(input, authUser.id, (req as any).correlationId);
     res.status(201).json({ success: true, data: user });
   } catch (err) {

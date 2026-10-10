@@ -36,7 +36,7 @@ const ROLES = {
   ITAdmin: PERMISSIONS, // IT Admin gets everything
   Admin: PERMISSIONS.filter(p => !['user:write'].includes(p)), // Admins get almost everything
   Principal: [
-    'user:read', 'academic:read', 'assignment:read_all', 'enrollment:read',
+    'user:read', 'academic:read', 'assignment:read_all', 'assignment:write', 'enrollment:read',
     'grade:read_all', 'grade:publish', 'attendance:read', 'attendance:write_all',
     'document:read', 'document:approve', 'behavior:read', 'announcement:write',
     'leave:approve', 'inventory:read'

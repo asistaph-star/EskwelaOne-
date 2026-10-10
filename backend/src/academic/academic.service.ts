@@ -23,11 +23,39 @@ export const createSectionSchema = z.object({
   gradeLevel: z.number().int().min(1).max(12),
 });
 
+const timeFormat = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const scheduleValidation = (val: any) => {
+  if (val.startTime && !timeFormat.test(val.startTime)) return false;
+  if (val.endTime && !timeFormat.test(val.endTime)) return false;
+  if (val.startTime && val.endTime) {
+    return val.startTime < val.endTime;
+  }
+  return true;
+};
+
 export const createTeacherAssignmentSchema = z.object({
   academicYearId: z.string().min(1),
   teacherId: z.string().min(1),
   sectionId: z.string().min(1),
   subjectId: z.string().min(1),
+  days: z.string().max(50).optional(),
+  startTime: z.string().regex(timeFormat, 'Invalid time format (HH:MM)').optional().or(z.literal('')),
+  endTime: z.string().regex(timeFormat, 'Invalid time format (HH:MM)').optional().or(z.literal('')),
+  room: z.string().max(50).optional(),
+}).refine(scheduleValidation, {
+  message: 'Start time must be before end time, and both must be valid HH:MM',
+  path: ['endTime']
+});
+
+export const updateTeacherAssignmentSchema = z.object({
+  days: z.string().max(50).optional(),
+  startTime: z.string().regex(timeFormat, 'Invalid time format (HH:MM)').optional().or(z.literal('')),
+  endTime: z.string().regex(timeFormat, 'Invalid time format (HH:MM)').optional().or(z.literal('')),
+  room: z.string().max(50).optional(),
+}).refine(scheduleValidation, {
+  message: 'Start time must be before end time, and both must be valid HH:MM',
+  path: ['endTime']
 });
 
 export async function createAcademicYear(
@@ -208,6 +236,10 @@ export async function createTeacherAssignment(
       teacher_id: input.teacherId,
       section_id: input.sectionId,
       subject_id: input.subjectId,
+      days: input.days,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      room: input.room,
     },
   });
 
@@ -216,6 +248,49 @@ export async function createTeacherAssignment(
     action: 'TEACHER_ASSIGNMENT_CREATED',
     resourceType: 'teacher_subject_assignment',
     resourceId: assignmentId,
+    newState: input,
+    correlationId,
+  });
+
+  return assignment;
+}
+
+export async function updateTeacherAssignment(
+  id: string,
+  input: z.infer<typeof updateTeacherAssignmentSchema>,
+  actorId: string,
+  correlationId?: string
+) {
+  const existing = await prisma.teacherSubjectAssignment.findUnique({
+    where: { id }
+  });
+
+  if (!existing) {
+    throw new AppError(404, 'NOT_FOUND', 'Teacher assignment not found.');
+  }
+
+  // Very basic data integrity for start < end if both are present
+  if (input.startTime && input.endTime) {
+    if (input.startTime >= input.endTime) {
+      throw new AppError(400, 'INVALID_INPUT', 'Start time must be before end time.');
+    }
+  }
+
+  const assignment = await prisma.teacherSubjectAssignment.update({
+    where: { id },
+    data: {
+      days: input.days !== undefined ? input.days : existing.days,
+      start_time: input.startTime !== undefined ? input.startTime : existing.start_time,
+      end_time: input.endTime !== undefined ? input.endTime : existing.end_time,
+      room: input.room !== undefined ? input.room : existing.room,
+    },
+  });
+
+  await createAuditLog({
+    actorUserId: actorId,
+    action: 'TEACHER_ASSIGNMENT_UPDATED',
+    resourceType: 'teacher_subject_assignment',
+    resourceId: id,
     newState: input,
     correlationId,
   });
