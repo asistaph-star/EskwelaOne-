@@ -87,8 +87,8 @@ export function PAcademics() {
       
       {/* Grade Distribution Analytics */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14, padding: "16px 20px" }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:2 }}>Current Year Grade Distribution</div>
-        <div style={{ fontSize:11, color:C.t3, marginBottom:16 }}>Distribution of term grades across all subjects.</div>
+        <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:2 }}>Term Grade Distribution</div>
+        <div style={{ fontSize:11, color:C.t3, marginBottom:16 }}>Factual distribution of individual term grades across all subjects.</div>
         
         <div style={{ height: 210, width: "100%" }}>
           {gradeDistribution.length === 0 ? (
@@ -113,6 +113,7 @@ export function PAcademics() {
       {/* Grade averages */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
         <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Average by Grade Level</div>
+        <div style={{ padding:"4px 16px 10px", fontSize:10, color:C.t3, borderBottom:`0.5px solid ${C.border}` }}>Pulse average of all individual term grades submitted.</div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)" }}>
           {schoolAverageByGradeLevel.length === 0 ? (
             <div style={{ gridColumn: "span 4", padding: "16px 20px", fontSize: 12, color: C.t3, textAlign: "center" }}>No grades submitted yet.</div>
@@ -127,14 +128,15 @@ export function PAcademics() {
         </div>
       </div>
       
-      {/* T1 vs T2 vs T3 trend table */}
+      {/* T1 vs T2 vs T3 vs T4 trend table */}
       <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:14 }}>
-        <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>School Performance Trends (T1 / T2 / T3)</div>
+        <div style={{ padding:"10px 16px 2px", fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Term Performance Trends</div>
+        <div style={{ padding:"2px 16px 10px", borderBottom:`0.5px solid ${C.border}`, fontSize:10, color:C.t3 }}>Averages available submitted term grades independently per period.</div>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><PTableHeader cols={["Grade Level","T1 Average","T2 Average","T3 Average","Trend"]} /></thead>
+          <thead><PTableHeader cols={["Grade Level","T1","T2","T3","T4","Trend"]} /></thead>
           <tbody>
             {trendAverages.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No trend data available.</td></tr>
+              <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No trend data available.</td></tr>
             ) : trendAverages.map((t) => (
               <tr key={t.gradeLevel} style={{ borderBottom:`0.5px solid ${C.border}` }}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -143,6 +145,7 @@ export function PAcademics() {
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t1 || '-'}</td>
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t2 || '-'}</td>
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t3 || '-'}</td>
+                <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{(t as any).t4 || '-'}</td>
                 <td style={{ padding:"10px 16px" }}><Stamp label={t.trend} color={t.trend.includes("↑") ? C.green : t.trend.includes("↓") ? C.red : C.t3} bg={t.trend.includes("↑") ? C.greenBg : t.trend.includes("↓") ? C.redBg : C.m100} /></td>
               </tr>
             ))}
@@ -175,7 +178,8 @@ export function PAcademics() {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
         {/* Passing/failing per grade */}
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-          <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Passing vs Failing per Grade Level</div>
+          <div style={{ padding:"10px 16px 2px", fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Passing vs Failing</div>
+          <div style={{ padding:"2px 16px 10px", borderBottom:`0.5px solid ${C.border}`, fontSize:10, color:C.t3 }}>Includes only students with complete T1-T4 Final Ratings.</div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><PTableHeader cols={["Grade","Passing","Failing","Rate"]} /></thead>
             <tbody>
