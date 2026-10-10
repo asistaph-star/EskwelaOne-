@@ -172,7 +172,7 @@ router.put('/assignments/:id', requirePermissions('assignment:write'), async (re
     const correlationId = (req as any).correlationId;
     const actorId = ((req as any).user as AuthenticatedUser).id;
     
-    const assignment = await updateTeacherAssignment(req.params.id, input, actorId, correlationId);
+    const assignment = await updateTeacherAssignment(req.params.id as string, input, actorId, correlationId);
     res.json({ success: true, data: assignment });
   } catch (err) {
     next(err);

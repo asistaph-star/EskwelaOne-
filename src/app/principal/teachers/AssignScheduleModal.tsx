@@ -38,7 +38,7 @@ export function AssignScheduleModal({ onClose, onSuccess }: { onClose: () => voi
       const currentYear = yearsData?.find((y: any) => y.is_current);
       if (currentYear) {
         setForm(f => ({ ...f, academicYearId: currentYear.id }));
-        apiClient.get(`/academic/years/${currentYear.id}/sections`).then(secData => {
+        apiClient.get(`/academic/years/${currentYear.id}/sections`).then((secData: any) => {
           setSections(secData || []);
         });
       }
