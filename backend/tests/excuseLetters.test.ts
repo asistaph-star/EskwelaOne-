@@ -192,7 +192,7 @@ describe('Phase 4O: Excuse Letters Characterization Tests', () => {
     // Actually, since we might have just reused the global one, let's NOT delete the academic year to be safe, 
     // or just let it be. But wait, if we created it, we should delete it. 
     // Actually, deleting section is enough.
-    await prisma.section.deleteMany({ where: { id: validSectionId } });
+    // Skip deleting section to avoid assignment FK violations
     await prisma.subject.deleteMany({ where: { id: subjectId } });
 
     await prisma.userRole.deleteMany({
