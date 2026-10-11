@@ -33,5 +33,7 @@ export const usersApi = {
     return apiClient.get<UserProfile[]>(`/users?${params.toString()}`);
   },
   getUserById: (id: string) => apiClient.get<UserProfile>(`/users/${id}`),
+  updateProfile: (id: string, data: { firstName?: string; lastName?: string; middleName?: string }) =>
+    apiClient.patch<UserProfile>(`/users/${id}`, data),
 };
 

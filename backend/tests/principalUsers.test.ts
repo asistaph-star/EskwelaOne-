@@ -211,4 +211,58 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     
     expect(res.status).toBe(401);
   });
+
+  describe('PRIN-037: Self-Service Profile Update & Protection', () => {
+    it('Principal updates own permitted profile fields -> 200 OK', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          firstName: 'Roberto',
+          lastName: 'Santos Updated',
+          middleName: 'M.',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.first_name).toBe('Roberto');
+      expect(res.body.data.last_name).toBe('Santos Updated');
+      expect(res.body.data.middle_name).toBe('M.');
+    });
+
+    it('Principal attempts to modify another user profile -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${adminUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          firstName: 'Hacked',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('Principal attempts to modify own account status without user:write -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          status: 'suspended',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to change account status/i);
+    });
+
+    it('Unauthenticated PATCH -> 401 Unauthorized', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .send({
+          firstName: 'Anon',
+        });
+
+      expect(res.status).toBe(401);
+    });
+  });
 });

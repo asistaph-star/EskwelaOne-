@@ -95,6 +95,11 @@ router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     const input = updateUserSchema.parse(req.body);
+
+    if (input.status !== undefined && !authUser.permissions.includes('user:write')) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to change account status' } });
+    }
+
     const user = await updateUser(id, input, authUser.id, (req as any).correlationId);
     res.json({ success: true, data: user });
   } catch (err) {
