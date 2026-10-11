@@ -20,6 +20,7 @@ import { X } from 'lucide-react';
 import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
 import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
 import { PAnnouncementsScreen } from './announcements/PAnnouncementsScreen';
+import { PBehaviorScreen } from './behavior/PBehaviorScreen';
 
 import { Toaster } from 'sonner';
 
@@ -77,7 +78,8 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-leaves"     && <PLeaveManagement />}
           {screen==="p-doc-requests" && <PDocRequestsScreen />}
           {screen==="p-announcements" && <PAnnouncementsScreen />}
-          {(screen==="p-help"||screen==="p-settings"||screen==="p-behavior") && (
+          {screen==="p-behavior"      && <PBehaviorScreen />}
+          {(screen==="p-help"||screen==="p-settings") && (
             <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>
               <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "40px 32px", maxWidth: 400, width: "100%", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 36, background: C.m100, border: `2px solid ${C.m700}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.m700, boxShadow: "0 4px 12px rgba(139,30,30,0.1)" }}>
