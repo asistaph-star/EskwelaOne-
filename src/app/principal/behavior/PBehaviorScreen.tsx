@@ -8,10 +8,7 @@ import {
   Filter,
   Eye,
   X,
-  Calendar,
-  User,
   AlertTriangle,
-  CheckCircle2,
   Clock,
   RotateCcw,
   FileText
@@ -37,12 +34,23 @@ export interface BehaviorLogItem {
   } | null;
 }
 
+export interface BehaviorSummaryData {
+  total: number;
+  studentsCount: number;
+  statusCounts: Record<string, number>;
+  reported: number;
+  underInvestigation: number;
+  parentNotified: number;
+  resolved: number;
+}
+
 export function PBehaviorScreen() {
   const [logs, setLogs] = useState<BehaviorLogItem[]>([]);
+  const [summary, setSummary] = useState<BehaviorSummaryData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
 
-  // Filters
+  // Filters (for recent incident table)
   const [search, setSearch] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -51,14 +59,18 @@ export function PBehaviorScreen() {
   // Detail Drawer
   const [selectedLog, setSelectedLog] = useState<BehaviorLogItem | null>(null);
 
-  const fetchBehaviorLogs = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(false);
-      const data = await apiClient.get<BehaviorLogItem[]>('/student-services/behavior');
-      setLogs(Array.isArray(data) ? data : []);
+      const [logsData, summaryData] = await Promise.all([
+        apiClient.get<BehaviorLogItem[]>('/student-services/behavior'),
+        apiClient.get<BehaviorSummaryData>('/student-services/behavior/summary')
+      ]);
+      setLogs(Array.isArray(logsData) ? logsData : []);
+      setSummary(summaryData || null);
     } catch (err) {
-      console.error('Failed to fetch behavioral logs:', err);
+      console.error('Failed to fetch behavioral data:', err);
       setError(true);
     } finally {
       setLoading(false);
@@ -66,14 +78,16 @@ export function PBehaviorScreen() {
   };
 
   useEffect(() => {
-    fetchBehaviorLogs();
+    fetchData();
   }, []);
 
-  // Collect distinct types and statuses strictly from real data
+  // Collect distinct types from loaded logs and distinct statuses from summary/logs
   const availableTypes = Array.from(new Set(logs.map(l => l.type).filter(Boolean)));
-  const availableStatuses = Array.from(new Set(logs.map(l => l.status).filter(Boolean)));
+  const availableStatuses = summary
+    ? Array.from(new Set([...Object.keys(summary.statusCounts), ...logs.map(l => l.status)].filter(Boolean)))
+    : Array.from(new Set(logs.map(l => l.status).filter(Boolean)));
 
-  // Filter & sort logs
+  // Filter & sort logs within the recent list
   const filteredLogs = logs.filter(log => {
     const s = search.toLowerCase();
     const studentMatch = (log.studentName || '').toLowerCase().includes(s) || (log.student_id || '').toLowerCase().includes(s);
@@ -92,15 +106,6 @@ export function PBehaviorScreen() {
     return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
   });
 
-  // KPI Calculations derived solely from genuine data
-  const totalIncidents = logs.length;
-  const resolvedCount = logs.filter(l => {
-    const st = (l.status || '').toLowerCase();
-    return st === 'resolved' || st === 'closed' || st === 'archived';
-  }).length;
-  const activeCount = totalIncidents - resolvedCount;
-  const uniqueStudents = new Set(logs.map(l => l.student_id)).size;
-
   const resetFilters = () => {
     setSearch('');
     setSelectedType('all');
@@ -110,10 +115,11 @@ export function PBehaviorScreen() {
 
   const getStatusColor = (status: string) => {
     const s = (status || '').toLowerCase();
-    if (s === 'resolved' || s === 'closed') return { color: C.green, bg: C.greenBg };
-    if (s.includes('investigation') || s.includes('parent') || s.includes('action')) return { color: C.blue, bg: C.blueBg };
-    if (s === 'reported' || s.includes('urgent') || s.includes('pending')) return { color: C.red, bg: C.redBg };
-    return { color: C.amber, bg: C.amberBg };
+    if (s === 'resolved') return { color: C.green, bg: C.greenBg };
+    if (s === 'under investigation') return { color: C.blue, bg: C.blueBg };
+    if (s === 'parent notified') return { color: C.amber, bg: C.amberBg };
+    if (s === 'reported') return { color: C.red, bg: C.redBg };
+    return { color: C.t2, bg: C.paper };
   };
 
   return (
@@ -128,11 +134,11 @@ export function PBehaviorScreen() {
             </span>
           </div>
           <p style={{ fontSize: 12, color: C.t3, marginTop: 4, marginBottom: 0 }}>
-            Institutional log of reported student conduct incidents, guidance referrals, and disciplinary statuses.
+            Institutional overview of student conduct logs, incident cases, and disciplinary statuses across the school.
           </p>
         </div>
         <button
-          onClick={fetchBehaviorLogs}
+          onClick={fetchData}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -151,48 +157,56 @@ export function PBehaviorScreen() {
         </button>
       </div>
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      {/* Database-Wide Aggregate KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
         <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.m700}`, borderRadius: 4, padding: '14px 18px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Total Incidents</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : totalIncidents}
+            {loading ? '...' : (summary?.total ?? 0)}
           </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>All recorded incident logs</div>
+          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>School-wide database total</div>
         </div>
 
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.amber}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Active / In Progress</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.amber, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : activeCount}
+        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.red}`, borderRadius: 4, padding: '14px 18px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Reported</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.red, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
+            {loading ? '...' : (summary?.reported ?? 0)}
           </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Pending or under review</div>
+          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Initial intake status</div>
+        </div>
+
+        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.blue}`, borderRadius: 4, padding: '14px 18px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Under Investigation</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.blue, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
+            {loading ? '...' : (summary?.underInvestigation ?? 0)}
+          </div>
+          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Active Guidance inquiry</div>
         </div>
 
         <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.green}`, borderRadius: 4, padding: '14px 18px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Resolved Cases</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : resolvedCount}
+            {loading ? '...' : (summary?.resolved ?? 0)}
           </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Formally concluded incidents</div>
+          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Concluded incidents</div>
         </div>
 
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.blue}`, borderRadius: 4, padding: '14px 18px' }}>
+        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.t2}`, borderRadius: 4, padding: '14px 18px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Students Involved</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : uniqueStudents}
+            {loading ? '...' : (summary?.studentsCount ?? 0)}
           </div>
           <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Distinct individuals logged</div>
         </div>
       </div>
 
-      {/* Filter Toolbar */}
+      {/* Filter Toolbar (Applied to Recent Incident View) */}
       <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '12px 16px', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
           <Search size={14} color={C.t3} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
           <input
             type="text"
-            placeholder="Search by student, type, note, or reporter..."
+            placeholder="Search recent incidents by student, type, note, or reporter..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{
@@ -271,11 +285,21 @@ export function PBehaviorScreen() {
         )}
       </div>
 
+      {/* Section Title & Description */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: C.t1, margin: 0 }}>Recent Behavioral Incidents</h2>
+          <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>
+            Displaying the latest recorded incidents (up to 100). Search and filters operate within this recent incident view.
+          </div>
+        </div>
+      </div>
+
       {/* Content Area: Table / Loading / Error / Empty States */}
       {loading ? (
         <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: 48, textAlign: 'center' }}>
           <Clock size={28} color={C.m700} style={{ animation: 'spin 1.5s linear infinite', marginBottom: 12 }} />
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.t2 }}>Loading behavioral records...</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.t2 }}>Loading behavioral records & metrics...</div>
         </div>
       ) : error ? (
         <div style={{ background: '#fff', border: `1px solid ${C.red}`, borderRadius: 6, padding: 36, textAlign: 'center' }}>
@@ -283,19 +307,19 @@ export function PBehaviorScreen() {
           <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Failed to load behavioral records</div>
           <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Please verify your network connectivity or database service.</div>
           <button
-            onClick={fetchBehaviorLogs}
+            onClick={fetchData}
             style={{ padding: '8px 18px', background: C.m700, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
           >
             Retry
           </button>
         </div>
-      ) : logs.length === 0 ? (
+      ) : (summary?.total ?? 0) === 0 && logs.length === 0 ? (
         <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '56px 24px', textAlign: 'center' }}>
           <div style={{ width: 56, height: 56, borderRadius: 28, background: C.m50, border: `1.5px solid ${C.borderMed}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: C.m700 }}>
             <ShieldAlert size={28} />
           </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", marginBottom: 6 }}>
-            No Behavioral Incident Records
+            No Behavioral Incident Records in Database
           </div>
           <div style={{ fontSize: 12, color: C.t3, maxWidth: 440, margin: '0 auto', lineHeight: 1.5 }}>
             No student behavioral logs or disciplinary incident records currently exist in the school database. When faculty or Guidance Counselors submit incident reports, they will be aggregated here for administrative review.
@@ -305,7 +329,7 @@ export function PBehaviorScreen() {
         <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '40px 24px', textAlign: 'center' }}>
           <Filter size={28} color={C.t3} style={{ marginBottom: 10, opacity: 0.6 }} />
           <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 4 }}>No Matching Records</div>
-          <div style={{ fontSize: 12, color: C.t3, marginBottom: 14 }}>No behavioral logs match your active filter criteria.</div>
+          <div style={{ fontSize: 12, color: C.t3, marginBottom: 14 }}>No behavioral logs match your active filter criteria within the recent incidents list.</div>
           <button
             onClick={resetFilters}
             style={{ padding: '6px 14px', background: C.m50, color: C.m700, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
@@ -398,8 +422,8 @@ export function PBehaviorScreen() {
             </tbody>
           </table>
           <div style={{ padding: '10px 16px', background: C.paper, borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.t3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Showing {filteredLogs.length} of {logs.length} record(s)</span>
-            <span>Principal Governance · Read-Only Reporting</span>
+            <span>Showing {filteredLogs.length} of {logs.length} recent record(s)</span>
+            <span>Total Recorded in Database: {summary?.total ?? 0}</span>
           </div>
         </div>
       )}

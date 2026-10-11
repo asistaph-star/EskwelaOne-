@@ -31,6 +31,29 @@ export const BehaviorService = {
     }));
   },
 
+  async getBehaviorSummary() {
+    const [total, distinctStudentsGroup, statusGroups] = await Promise.all([
+      prisma.behaviorLog.count(),
+      prisma.behaviorLog.groupBy({ by: ['student_id'] }),
+      prisma.behaviorLog.groupBy({ by: ['status'], _count: { id: true } })
+    ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const sg of statusGroups) {
+      statusCounts[sg.status] = sg._count.id;
+    }
+
+    return {
+      total,
+      studentsCount: distinctStudentsGroup.length,
+      statusCounts,
+      reported: statusCounts['Reported'] || 0,
+      underInvestigation: statusCounts['Under investigation'] || 0,
+      parentNotified: statusCounts['Parent notified'] || 0,
+      resolved: statusCounts['Resolved'] || 0
+    };
+  },
+
   async createBehaviorLog(input: any, actorId: string, correlationId?: string) {
     const record = await prisma.behaviorLog.create({
       data: {

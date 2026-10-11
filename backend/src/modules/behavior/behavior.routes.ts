@@ -15,6 +15,15 @@ router.get('/', requirePermissions('behavior:read'), async (_req: Request, res: 
   }
 });
 
+router.get('/summary', requirePermissions('behavior:read'), async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const summary = await BehaviorService.getBehaviorSummary();
+    res.json({ success: true, data: summary });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:studentId', requirePermissions('behavior:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const records = await BehaviorService.getBehaviorLogsByStudentId(req.params.studentId as string);
