@@ -30,9 +30,15 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
   let behaviorLogId1: string;
   let behaviorLogId2: string;
   let behaviorLogId3: string;
+  let behaviorLogId4: string;
+
+  // Exact baseline snapshots to guarantee deterministic, isolated assertions
+  let baselineTotal = 0;
+  let baselineStudentsCount = 0;
+  let baselineStatusCounts: Record<string, number> = {};
 
   beforeAll(async () => {
-    // Cleanup any orphaned test entities from previous runs
+    // 1. Cleanup any orphaned test entities from previous runs of this suite
     try {
       const existingUsers = await prisma.user.findMany({
         where: { email: { in: ['prin_behav_test@calulut.edu.ph', 'stud_behav_test@calulut.edu.ph', 'stud_behav_test2@calulut.edu.ph', 'rep_behav_test@calulut.edu.ph'] } }
@@ -48,9 +54,19 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       }
     } catch (_err) {}
 
+    // 2. Capture baseline database state before injecting our controlled fixture
+    baselineTotal = await prisma.behaviorLog.count();
+    const baselineDistinct = await prisma.behaviorLog.groupBy({ by: ['student_id'] });
+    baselineStudentsCount = baselineDistinct.length;
+    const baselineGroups = await prisma.behaviorLog.groupBy({ by: ['status'], _count: { id: true } });
+    baselineStatusCounts = {};
+    for (const bg of baselineGroups) {
+      baselineStatusCounts[bg.status] = bg._count.id;
+    }
+
     const password_hash = await bcrypt.hash('Password123!', 10);
 
-    // Ensure permissions exist in database
+    // 3. Ensure permissions exist in database
     const permRead = await prisma.permission.upsert({
       where: { key: 'behavior:read' },
       update: {},
@@ -63,7 +79,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       create: { id: generateId(), key: 'behavior:write' }
     });
 
-    // Create isolated test-specific roles to strictly control permission boundaries
+    // 4. Create isolated test-specific roles to strictly control permission boundaries
     testRolePrincipalId = generateId();
     await prisma.role.create({
       data: {
@@ -98,7 +114,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       }
     });
 
-    // 1. Create Principal User (Canonical permissions: behavior:read only)
+    // 5. Create Principal User (Canonical permissions: behavior:read only)
     principalUserId = generateId();
     await prisma.user.create({
       data: {
@@ -115,7 +131,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
     });
     principalToken = sign({ userId: principalUserId }, config.jwt.secret, { expiresIn: '1h' });
 
-    // 2. Create Reporter User (Faculty / Guidance with behavior:write)
+    // 6. Create Reporter User (Faculty / Guidance with behavior:write)
     reporterUserId = generateId();
     await prisma.user.create({
       data: {
@@ -132,7 +148,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
     });
     reporterToken = sign({ userId: reporterUserId }, config.jwt.secret, { expiresIn: '1h' });
 
-    // 3. Create Student User 1 & Record
+    // 7. Create Student User 1 & Record
     studentUserId = generateId();
     studentId = generateId();
     await prisma.user.create({
@@ -150,7 +166,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
     });
     studentToken = sign({ userId: studentUserId }, config.jwt.secret, { expiresIn: '1h' });
 
-    // 4. Create Student User 2 & Record (to test distinct student count aggregate)
+    // 8. Create Student User 2 & Record (to test distinct student count aggregate)
     studentUserId2 = generateId();
     studentId2 = generateId();
     await prisma.user.create({
@@ -167,8 +183,8 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       }
     });
 
-    // 5. Seed controlled BehaviorLog records with exact canonical statuses:
-    // Record 1: Student 1, status = 'Reported'
+    // 9. Seed controlled BehaviorLog records covering ALL 4 canonical statuses:
+    // Record 1: Student 1 -> Canonical status 'Reported'
     behaviorLogId1 = generateId();
     await prisma.behaviorLog.create({
       data: {
@@ -182,7 +198,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       }
     });
 
-    // Record 2: Student 1, status = 'Under investigation'
+    // Record 2: Student 1 -> Canonical status 'Under investigation'
     behaviorLogId2 = generateId();
     await prisma.behaviorLog.create({
       data: {
@@ -196,7 +212,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
       }
     });
 
-    // Record 3: Student 2, status = 'Resolved'
+    // Record 3: Student 2 -> Canonical status 'Parent notified'
     behaviorLogId3 = generateId();
     await prisma.behaviorLog.create({
       data: {
@@ -204,8 +220,22 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
         student_id: studentId2,
         type: 'Tardiness',
         date: new Date('2026-10-10T12:00:00.000Z'),
+        status: 'Parent notified',
+        note: 'Guardian notified regarding recurring morning attendance tardiness.',
+        reported_by: reporterUserId
+      }
+    });
+
+    // Record 4: Student 2 -> Canonical status 'Resolved'
+    behaviorLogId4 = generateId();
+    await prisma.behaviorLog.create({
+      data: {
+        id: behaviorLogId4,
+        student_id: studentId2,
+        type: 'Misconduct',
+        date: new Date('2026-10-10T13:00:00.000Z'),
         status: 'Resolved',
-        note: 'Addressed through counseling session with parents.',
+        note: 'Addressed through counseling session; restitution agreement signed.',
         reported_by: reporterUserId
       }
     });
@@ -213,7 +243,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
 
   afterAll(async () => {
     try {
-      const logIds = [behaviorLogId1, behaviorLogId2, behaviorLogId3].filter(Boolean);
+      const logIds = [behaviorLogId1, behaviorLogId2, behaviorLogId3, behaviorLogId4].filter(Boolean);
       if (logIds.length > 0) {
         await prisma.behaviorLog.deleteMany({ where: { id: { in: logIds } } });
       }
@@ -254,10 +284,15 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
     const match3 = res.body.data.find((l: any) => l.id === behaviorLogId3);
     expect(match3).toBeTruthy();
     expect(match3.studentName).toBe('Pedro Penduko');
-    expect(match3.status).toBe('Resolved');
+    expect(match3.status).toBe('Parent notified');
+
+    const match4 = res.body.data.find((l: any) => l.id === behaviorLogId4);
+    expect(match4).toBeTruthy();
+    expect(match4.studentName).toBe('Pedro Penduko');
+    expect(match4.status).toBe('Resolved');
   });
 
-  it('GET /api/student-services/behavior/summary - Database-wide aggregates are computed accurately', async () => {
+  it('GET /api/student-services/behavior/summary - Database-wide aggregates are exact, deterministic, and reconcile completely', async () => {
     const res = await request(app)
       .get('/api/student-services/behavior/summary')
       .set('Authorization', `Bearer ${principalToken}`);
@@ -266,21 +301,48 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
     expect(res.body.success).toBe(true);
     const summary = res.body.data;
 
-    // Total incidents must be >= 3 (from our seeded records)
-    expect(summary.total).toBeGreaterThanOrEqual(3);
+    // 1. Exact total incidents (baseline + exactly 4 newly seeded records)
+    const expectedTotal = baselineTotal + 4;
+    expect(summary.total).toBe(expectedTotal);
 
-    // Distinct students must be >= 2 (Juan Dela Cruz and Pedro Penduko)
-    expect(summary.studentsCount).toBeGreaterThanOrEqual(2);
+    // 2. Exact distinct students count (baseline + exactly 2 unique students)
+    const expectedStudents = baselineStudentsCount + 2;
+    expect(summary.studentsCount).toBe(expectedStudents);
 
-    // Status counts must accurately reflect persisted canonical values
-    expect(summary.statusCounts['Reported']).toBeGreaterThanOrEqual(1);
-    expect(summary.statusCounts['Under investigation']).toBeGreaterThanOrEqual(1);
-    expect(summary.statusCounts['Resolved']).toBeGreaterThanOrEqual(1);
+    // 3. Exact status counts across all 4 canonical statuses
+    const expectedReported = (baselineStatusCounts['Reported'] || 0) + 1;
+    const expectedUnderInvestigation = (baselineStatusCounts['Under investigation'] || 0) + 1;
+    const expectedParentNotified = (baselineStatusCounts['Parent notified'] || 0) + 1;
+    const expectedResolved = (baselineStatusCounts['Resolved'] || 0) + 1;
 
-    // Convenience fields must match status counts
-    expect(summary.reported).toBeGreaterThanOrEqual(1);
-    expect(summary.underInvestigation).toBeGreaterThanOrEqual(1);
-    expect(summary.resolved).toBeGreaterThanOrEqual(1);
+    expect(summary.statusCounts['Reported']).toBe(expectedReported);
+    expect(summary.statusCounts['Under investigation']).toBe(expectedUnderInvestigation);
+    expect(summary.statusCounts['Parent notified']).toBe(expectedParentNotified);
+    expect(summary.statusCounts['Resolved']).toBe(expectedResolved);
+
+    // 4. Exact dedicated property mapping
+    expect(summary.reported).toBe(expectedReported);
+    expect(summary.underInvestigation).toBe(expectedUnderInvestigation);
+    expect(summary.parentNotified).toBe(expectedParentNotified);
+    expect(summary.resolved).toBe(expectedResolved);
+
+    // 5. Exact assertion against fixture constants in clean baseline
+    if (baselineTotal === 0) {
+      expect(summary.total).toBe(4);
+      expect(summary.studentsCount).toBe(2);
+      expect(summary.reported).toBe(1);
+      expect(summary.underInvestigation).toBe(1);
+      expect(summary.parentNotified).toBe(1);
+      expect(summary.resolved).toBe(1);
+    }
+
+    // 6. Total Reconciliation: sum of all canonical status counts must strictly equal total incidents
+    const totalCanonicalSum =
+      (summary.statusCounts['Reported'] || 0) +
+      (summary.statusCounts['Under investigation'] || 0) +
+      (summary.statusCounts['Parent notified'] || 0) +
+      (summary.statusCounts['Resolved'] || 0);
+    expect(totalCanonicalSum).toBe(summary.total);
   });
 
   it('GET /api/student-services/behavior/summary - Unauthenticated request returns 401', async () => {
@@ -307,7 +369,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+    expect(res.body.data.length).toBe(2);
     expect(res.body.data.every((l: any) => l.student_id === studentId)).toBe(true);
   });
 
