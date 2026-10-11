@@ -52,9 +52,9 @@ export function PAcademics() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    apiClient.get('/admin/analytics/academics')
-      .then((res: any) => {
-        setData(res.data);
+    apiClient.get<AcademicAnalyticsResponse>('/admin/analytics/academics')
+      .then((res) => {
+        setData(res);
         setLoading(false);
       })
       .catch((err) => {
