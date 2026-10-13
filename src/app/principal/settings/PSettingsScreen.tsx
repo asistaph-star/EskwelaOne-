@@ -145,7 +145,26 @@ export function PSettingsScreen() {
   };
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: "28px 36px", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: "28px 36px", fontFamily: "'Inter', sans-serif", position: "relative" }}>
+      {/* Floating Pop-up Above (Horizontally Centered within Main Content Area) */}
+      {saveSuccess && (
+        <div className="sticky top-2 z-50 flex justify-center w-full pointer-events-none mb-[-48px]">
+          <div className="pointer-events-auto flex items-center gap-2.5 bg-emerald-50 border border-emerald-500 rounded-lg py-2.5 px-5 text-emerald-800 text-xs font-semibold shadow-lg transition-all duration-300">
+            <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+            <span>Profile details updated successfully.</span>
+          </div>
+        </div>
+      )}
+
+      {saveError && (
+        <div className="sticky top-2 z-50 flex justify-center w-full pointer-events-none mb-[-48px]">
+          <div className="pointer-events-auto flex items-center gap-2.5 bg-red-50 border border-red-500 rounded-lg py-2.5 px-5 text-red-800 text-xs font-semibold shadow-lg transition-all duration-300">
+            <AlertCircle size={18} className="text-red-600 shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        </div>
+      )}
+
       {/* Executive Header Banner */}
       <div className="w-full max-w-[1060px] mx-auto flex justify-between items-start mb-7 flex-wrap gap-4">
         <div>
@@ -191,20 +210,6 @@ export function PSettingsScreen() {
         </div>
       ) : (
         <div className="w-full max-w-[1060px] mx-auto flex flex-col gap-6">
-          {/* Top Feedback Banner */}
-          {saveSuccess && (
-            <div className="w-full max-w-[1060px] mx-auto flex items-center justify-center gap-2.5 bg-emerald-50 border border-emerald-500 rounded-lg py-3 px-4 text-emerald-800 text-xs font-semibold shadow-sm transition-all duration-300">
-              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-              <span>Profile details updated successfully.</span>
-            </div>
-          )}
-
-          {saveError && (
-            <div className="w-full max-w-[1060px] mx-auto flex items-center justify-center gap-2.5 bg-red-50 border border-red-500 rounded-lg py-3 px-4 text-red-800 text-xs font-semibold shadow-sm transition-all duration-300">
-              <AlertCircle size={18} className="text-red-600 shrink-0" />
-              <span>{saveError}</span>
-            </div>
-          )}
 
           {/* Section 1: Account & Profile Details (Editable Self-Service) */}
           <div style={{ 
