@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { C } from "../../shared/constants/tokens";
 import { 
   User, Shield, School, Calendar, CheckCircle2, AlertCircle, 
-  Save, RefreshCw, Lock, BadgeCheck, FileText, Info, Key, Clock
+  Save, RefreshCw, Lock, BadgeCheck, FileText, Info, Key, Clock,
+  Check, X
 } from "lucide-react";
 import { useAppContext } from "../../shared/AppContext";
 import { usersApi } from "../../../api/users.api";
@@ -146,21 +147,51 @@ export function PSettingsScreen() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: "28px 36px", fontFamily: "'Inter', sans-serif", position: "relative" }}>
-      {/* Floating Pop-up Above (Horizontally Centered within Main Content Area) */}
+      {/* Floating Executive Notification Pill (Horizontally Centered within Main Content Area, Zero Text Overlap) */}
       {saveSuccess && (
-        <div className="sticky top-2 z-50 flex justify-center w-full pointer-events-none mb-[-48px]">
-          <div className="pointer-events-auto flex items-center gap-2.5 bg-emerald-50 border border-emerald-500 rounded-lg py-2.5 px-5 text-emerald-800 text-xs font-semibold shadow-lg transition-all duration-300">
-            <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-            <span>Profile details updated successfully.</span>
+        <div className="sticky top-1 z-50 flex justify-center w-full pointer-events-none mb-6">
+          <div className="pointer-events-auto inline-flex items-center gap-3 bg-white/95 backdrop-blur-md border border-emerald-500/30 rounded-full py-2 px-4 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.12),0_4px_16px_-2px_rgba(0,0,0,0.06),0_0_0_1px_rgba(16,185,129,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-top-3">
+            <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm shrink-0">
+              <Check size={12} strokeWidth={3} />
+            </div>
+            <span className="text-[13px] font-semibold text-slate-800 tracking-[-0.01em]">
+              Profile details updated successfully.
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
+              Saved
+            </span>
+            <button 
+              type="button"
+              onClick={() => setSaveSuccess(false)}
+              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100 shrink-0 ml-0.5"
+              aria-label="Dismiss notification"
+            >
+              <X size={13} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
       )}
 
       {saveError && (
-        <div className="sticky top-2 z-50 flex justify-center w-full pointer-events-none mb-[-48px]">
-          <div className="pointer-events-auto flex items-center gap-2.5 bg-red-50 border border-red-500 rounded-lg py-2.5 px-5 text-red-800 text-xs font-semibold shadow-lg transition-all duration-300">
-            <AlertCircle size={18} className="text-red-600 shrink-0" />
-            <span>{saveError}</span>
+        <div className="sticky top-1 z-50 flex justify-center w-full pointer-events-none mb-6">
+          <div className="pointer-events-auto inline-flex items-center gap-3 bg-white/95 backdrop-blur-md border border-rose-500/30 rounded-full py-2 px-4 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.12),0_4px_16px_-2px_rgba(0,0,0,0.06),0_0_0_1px_rgba(244,63,94,0.08)] transition-all duration-300 animate-in fade-in slide-in-from-top-3">
+            <div className="w-5 h-5 rounded-full bg-rose-600 flex items-center justify-center text-white shadow-sm shrink-0">
+              <AlertCircle size={12} strokeWidth={3} />
+            </div>
+            <span className="text-[13px] font-semibold text-slate-800 tracking-[-0.01em]">
+              {saveError}
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/80">
+              Error
+            </span>
+            <button 
+              type="button"
+              onClick={() => setSaveError("")}
+              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100 shrink-0 ml-0.5"
+              aria-label="Dismiss notification"
+            >
+              <X size={13} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
       )}
