@@ -8,7 +8,6 @@ import { useAppContext } from "../../shared/AppContext";
 import { usersApi } from "../../../api/users.api";
 import { academicApi, AcademicYear, Term } from "../../../api/academic.api";
 import { apiClient } from "../../../api/client";
-import { toast } from "sonner";
 
 export function PSettingsScreen() {
   const { currentUser, setCurrentUser } = useAppContext();
@@ -131,7 +130,6 @@ export function PSettingsScreen() {
       }
 
       setSaveSuccess(true);
-      toast.success("Profile details updated successfully.");
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err: any) {
       console.error("Profile update failed:", err);
@@ -141,7 +139,6 @@ export function PSettingsScreen() {
       setMiddleName(lastConfirmedProfile.middleName);
       const errMsg = err.message || "Failed to save profile changes. Please try again.";
       setSaveError(errMsg);
-      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -150,7 +147,7 @@ export function PSettingsScreen() {
   return (
     <div style={{ flex: 1, overflowY: "auto", background: C.paper, padding: "28px 36px", fontFamily: "'Inter', sans-serif" }}>
       {/* Executive Header Banner */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
+      <div className="w-full max-w-[1060px] mx-auto flex justify-between items-start mb-7 flex-wrap gap-4">
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>
@@ -193,27 +190,19 @@ export function PSettingsScreen() {
           Loading secure account configuration...
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1060 }}>
+        <div className="w-full max-w-[1060px] mx-auto flex flex-col gap-6">
           {/* Top Feedback Banner */}
           {saveSuccess && (
-            <div style={{ 
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#ecfdf5", border: "1px solid #10b981", borderRadius: 8,
-              padding: "12px 18px", color: "#065f46", fontSize: 13, fontWeight: 600
-            }}>
-              <CheckCircle2 size={18} color="#10b981" />
-              Your profile changes have been permanently saved and synchronized with the database.
+            <div className="w-full max-w-[1060px] mx-auto flex items-center justify-center gap-2.5 bg-emerald-50 border border-emerald-500 rounded-lg py-3 px-4 text-emerald-800 text-xs font-semibold shadow-sm transition-all duration-300">
+              <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+              <span>Profile details updated successfully.</span>
             </div>
           )}
 
           {saveError && (
-            <div style={{ 
-              display: "flex", alignItems: "center", gap: 10,
-              background: "#fef2f2", border: "1px solid #ef4444", borderRadius: 8,
-              padding: "12px 18px", color: "#991b1b", fontSize: 13, fontWeight: 600
-            }}>
-              <AlertCircle size={18} color="#ef4444" />
-              {saveError}
+            <div className="w-full max-w-[1060px] mx-auto flex items-center justify-center gap-2.5 bg-red-50 border border-red-500 rounded-lg py-3 px-4 text-red-800 text-xs font-semibold shadow-sm transition-all duration-300">
+              <AlertCircle size={18} className="text-red-600 shrink-0" />
+              <span>{saveError}</span>
             </div>
           )}
 
