@@ -434,7 +434,7 @@ export function PSettingsScreen() {
                   Minimum 8-Character Password Requirement
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  Enforced on all system-provisioned user credentials.
+                  Enforced on provisioned accounts (schema min 8 chars) & temporary credentials.
                 </div>
               </div>
             </div>
@@ -483,7 +483,7 @@ export function PSettingsScreen() {
                   Calulut Integrated School
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  DepEd School ID: 300971 · San Fernando
+                  Official Institutional Portal
                 </div>
               </div>
 

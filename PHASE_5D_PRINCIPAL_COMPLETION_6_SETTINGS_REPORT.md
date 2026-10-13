@@ -127,9 +127,8 @@ const initials = displayName
 
 ## 12. Calulut Integrated School as Authoritative Institution
 The school identity in `PSettingsScreen.tsx` is confirmed:
-- **Institution Name:** `Calulut Integrated School`
-- **School ID:** `300971 · San Fernando`
-- This is the authoritative branding for DigiSkwela.
+- **Institution Name:** `Calulut Integrated School` (authoritative branding for DigiSkwela).
+- **School ID / Location Audit:** An exhaustive repository trace revealed that `300971 · San Fernando` existed solely as hardcoded JSX in Settings, and conflicted with `300941` found in other historical components (`PDFPrimitives.tsx`, `StudentReportCard.tsx`). It was not defined in any database model, seed, or configuration. In accordance with strict evidence guidelines, the unverified `300971 · San Fernando` sub-line was removed from the Institution card, retaining the verified institution name `Calulut Integrated School`.
 
 ---
 
@@ -146,7 +145,7 @@ Settings fetches live academic data via `academicApi`:
 Security claims in `PSettingsScreen.tsx` were audited against actual backend source:
 - **Authentication Mode:** `HTTP-Only JWT Cookie & Bearer Token` (verified in `backend/src/auth/auth.routes.ts` lines 18-23 and `common/middleware/auth.ts` lines 28-33).
 - **Password Hashing:** `Bcrypt Salt Rounds (Cost: 12)` (verified in `backend/src/auth/auth.service.ts` line 9: `const SALT_ROUNDS = 12;`).
-- **Password Policy:** `Minimum 8-Character Password Requirement` (verified in `backend/src/users/user.service.ts` line 70: `crypto.randomBytes(4).toString('hex')` generates 8-character temporary passwords).
+- **Password Policy:** `Minimum 8-Character Password Requirement` (verified in `backend/src/users/user.service.ts` line 13: `password: z.string().min(8, 'Password must be at least 8 characters.').optional()` enforced on provisioned user accounts; temporary passwords generated via `crypto.randomBytes(4).toString('hex')` are also 8 characters per line 70).
 
 ---
 
