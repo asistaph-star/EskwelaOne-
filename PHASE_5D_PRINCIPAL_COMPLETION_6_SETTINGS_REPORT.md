@@ -4,7 +4,8 @@
 **Module:** Principal Settings & Institutional Profile Management  
 **Authoritative Institution:** Calulut Integrated School  
 **Date:** 2026-10-13  
-**Status:** IMPLEMENTED, VALIDATED, MANUAL VERIFICATION PENDING  
+**Status:** ✅ FULLY WORKING / CLOSED (Manually Verified & Approved)  
+**Principal Progress:** 26 / 29 = 89.66%  
 
 ---
 
@@ -199,19 +200,46 @@ Result: **19 / 19 tests PASS** (including all 12 PRIN-037 security cases):
 ---
 
 ## 19. Git Evidence
-- **Base Implementation Commit:** `b2bd82b21a8167f46deed97ff39cd76c670311d0` (`b2bd82b`)
-- **Stabilization & Hardening Commit:** `6f847153ebff7c81b6d9934561b533b210950a7b` (`6f84715`)
-- **Commit Subject:** `fix(principal): harden and finalize PRIN-037 settings`
-- **Files Included:**
-  - `backend/src/users/user.routes.ts`
-  - `backend/src/users/user.service.ts`
-  - `backend/tests/principalUsers.test.ts`
-  - `src/app/principal/settings/PSettingsScreen.tsx`
-  - `src/app/principal/shared/PSidebar.tsx`
-- **Working Tree State After Stabilization:** **CLEAN** (`nothing to commit, working tree clean`).
+- **Base Implementation Commit:** `b2bd82b21a8167f46deed97ff39cd76c670311d0` (`b2bd82b`) — `feat(principal): implement PRIN-037 Principal Settings and Profile management`
+- **Stabilization & Hardening Commit:** `6f847153ebff7c81b6d9934561b533b210950a7b` (`6f84715`) — `fix(principal): harden and finalize PRIN-037 settings`
+- **Documentation Report Commit:** `0b43cd0e34c2eeae9a022b781da2fe6df5025f18` (`0b43cd0`) — `docs: add Phase 5D Principal Completion 6 Settings report`
+- **Semantic Correction Commit:** `d82d95bd6fb89e3ecfafe130efe6ba4e01bf3617` (`d82d95b`) — `fix(principal): correct settings metadata semantics`
+- **Accepted UI Redesign Checkpoint:** `2925fbdbad377bb2ca79d6e210dc0a81d9793bb7` (`2925fbd`) — `fix(principal): redesign success toast as premium executive capsule pill`
+- **Working Tree State:** Clean and synchronized.
 
 ---
 
 ## 20. Manual Verification Status
-- **Current Progress:** 25 / 29 (86.21%) officially closed; PRIN-037 is **IMPLEMENTED, VALIDATED, MANUAL VERIFICATION PENDING**.
-- Upon user completion of the manual verification checklist below, PRIN-037 will advance to **FULLY WORKING** (26 / 29 = 89.66%).
+- **Final Status:** **MANUAL VERIFICATION — PASS**
+- **Lifecycle Status:** **PRIN-037 — FULLY WORKING / CLOSED**
+- **User Approval:** User manually approved final Settings workflow and approved the redesigned executive capsule success notification (`2925fbd`).
+
+### Verified Criteria Breakdown
+| Verification Check | Result |
+|---|---|
+| **Settings Page Rendering** | **PASS** |
+| **Institution Branding (Calulut Integrated School)** | **PASS** |
+| **Dynamic Sidebar Identity (`AppContext.currentUser`)** | **PASS** |
+| **Read-Only Account Metadata** | **PASS** |
+| **Security Configuration Oversight** | **PASS** |
+| **Academic Oversight & Active Terms** | **PASS** |
+| **Profile Self-Service Update** | **PASS** |
+| **Reactive Sidebar Sync** | **PASS** |
+| **Persistence After Hard Refresh** | **PASS** |
+| **Success Notification UI & Alignment** | **PASS** |
+| **Browser Console Cleanliness** | **PASS (Clean)** |
+| **Profile PATCH API Execution** | **PASS (200 OK)** |
+
+---
+
+## 21. Authoritative Principal Progress
+- **Previous Verified Count:** 25 / 29 (86.21%)
+- **Newly Closed Feature:** PRIN-037 Settings & Profile Management ✅
+- **New Authoritative Progress:** **26 / 29 = 89.66%**
+
+### Remaining Active Principal Features (3)
+1. **PRIN-003:** Teacher Attendance List
+2. **PRIN-004:** Welfare Alerts
+3. **PRIN-014:** Faculty Attendance Table
+
+*(Note: These 3 features are deferred to dedicated domain design and are not started in this task).*
