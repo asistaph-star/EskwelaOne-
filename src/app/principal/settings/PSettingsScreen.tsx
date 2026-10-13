@@ -17,6 +17,11 @@ export function PSettingsScreen() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [middleName, setMiddleName] = useState("");
+  const [lastConfirmedProfile, setLastConfirmedProfile] = useState<{
+    firstName: string;
+    lastName: string;
+    middleName: string;
+  }>({ firstName: "", lastName: "", middleName: "" });
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
@@ -41,9 +46,13 @@ export function PSettingsScreen() {
       // 1. Fetch current user from /api/auth/me
       const meData = await apiClient.get<any>("/auth/me");
       if (meData) {
-        setFirstName(meData.firstName || "");
-        setLastName(meData.lastName || "");
-        setMiddleName(meData.middleName || "");
+        const fName = meData.firstName || "";
+        const lName = meData.lastName || "";
+        const mName = meData.middleName || "";
+        setFirstName(fName);
+        setLastName(lName);
+        setMiddleName(mName);
+        setLastConfirmedProfile({ firstName: fName, lastName: lName, middleName: mName });
         setEmail(meData.email || "");
         setUserId(meData.id || "");
         setRoles(meData.roles || []);
@@ -94,17 +103,30 @@ export function PSettingsScreen() {
     setSaveSuccess(false);
 
     try {
-      await usersApi.updateProfile(userId, {
+      const updatedUser = await usersApi.updateProfile(userId, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         middleName: middleName.trim() || undefined,
       });
 
-      // Update current user in app context so global name reflects immediately
+      const confirmedFirst = updatedUser?.first_name || firstName.trim();
+      const confirmedLast = updatedUser?.last_name || lastName.trim();
+      const confirmedMiddle = updatedUser?.middle_name || middleName.trim();
+
+      setFirstName(confirmedFirst);
+      setLastName(confirmedLast);
+      setMiddleName(confirmedMiddle);
+      setLastConfirmedProfile({
+        firstName: confirmedFirst,
+        lastName: confirmedLast,
+        middleName: confirmedMiddle,
+      });
+
+      // Update current user in app context only AFTER backend succeeds
       if (currentUser) {
         setCurrentUser({
           ...currentUser,
-          name: `${firstName.trim()} ${lastName.trim()}`,
+          name: `${confirmedFirst} ${confirmedLast}`,
         });
       }
 
@@ -113,6 +135,10 @@ export function PSettingsScreen() {
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err: any) {
       console.error("Profile update failed:", err);
+      // Revert form state back to last confirmed server state on failure
+      setFirstName(lastConfirmedProfile.firstName);
+      setLastName(lastConfirmedProfile.lastName);
+      setMiddleName(lastConfirmedProfile.middleName);
       const errMsg = err.message || "Failed to save profile changes. Please try again.";
       setSaveError(errMsg);
       toast.error(errMsg);
@@ -280,7 +306,7 @@ export function PSettingsScreen() {
                     Official Email
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>
-                    {email || "principal@demo.com"}
+                    {email || "—"}
                   </div>
                   <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
                     Institutional login credential (Immutable)
@@ -292,10 +318,10 @@ export function PSettingsScreen() {
                     System Role
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.m700 }}>
-                    {roles.length > 0 ? roles.join(", ") : "Principal"}
+                    {roles.length > 0 ? roles.join(", ") : "—"}
                   </div>
                   <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
-                    DepEd Executive Administrative Tier
+                    Executive Administrative Tier
                   </div>
                 </div>
 
@@ -392,7 +418,7 @@ export function PSettingsScreen() {
                   <span style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Password Hashing</span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.t2 }}>
-                  Bcrypt Salt Rounds (Cost: 10)
+                  Bcrypt Salt Rounds (Cost: 12)
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
                   Zero plaintext credentials stored in database.
@@ -405,10 +431,10 @@ export function PSettingsScreen() {
                   <span style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>Password Policy</span>
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.t2 }}>
-                  DepEd Minimum 8-Character Standard
+                  Minimum 8-Character Password Requirement
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  Enforced on all provisioned administrative accounts.
+                  Enforced on all system-provisioned user credentials.
                 </div>
               </div>
             </div>
@@ -485,10 +511,10 @@ export function PSettingsScreen() {
                   Grading Standard
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.t1 }}>
-                  DepEd K-12 Transmutation
+                  Four-Term Cumulative Grading Standard
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  Passing Threshold: 75.00% · 4 Grading Terms
+                  Passing Threshold: 75.00% · Terms: T1, T2, T3, T4
                 </div>
               </div>
             </div>

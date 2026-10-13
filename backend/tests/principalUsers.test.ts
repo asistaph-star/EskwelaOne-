@@ -213,6 +213,16 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
   });
 
   describe('PRIN-037: Self-Service Profile Update & Protection', () => {
+    it('Principal reads own profile -> 200 OK', async () => {
+      const res = await request(app)
+        .get(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe(principalUserId);
+    });
+
     it('Principal updates own permitted profile fields -> 200 OK', async () => {
       const res = await request(app)
         .patch(`/api/users/${principalUserId}`)
@@ -230,7 +240,19 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
       expect(res.body.data.middle_name).toBe('M.');
     });
 
-    it('Principal attempts to modify another user profile -> 403 Forbidden', async () => {
+    it('Persisted values read back correctly via GET /api/users/:id -> 200 OK', async () => {
+      const res = await request(app)
+        .get(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.first_name).toBe('Roberto');
+      expect(res.body.data.last_name).toBe('Santos Updated');
+      expect(res.body.data.middle_name).toBe('M.');
+    });
+
+    it('Principal attempts to modify another user profile (Horizontal Escalation / ID substitution) -> 403 Forbidden', async () => {
       const res = await request(app)
         .patch(`/api/users/${adminUserId}`)
         .set('Authorization', `Bearer ${principalToken}`)
@@ -240,9 +262,10 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify another user profile/i);
     });
 
-    it('Principal attempts to modify own account status without user:write -> 403 Forbidden', async () => {
+    it('Principal attempts to modify own account status without user:write (Vertical Escalation) -> 403 Forbidden', async () => {
       const res = await request(app)
         .patch(`/api/users/${principalUserId}`)
         .set('Authorization', `Bearer ${principalToken}`)
@@ -252,7 +275,74 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
 
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe('FORBIDDEN');
-      expect(res.body.error.message).toMatch(/not authorized to change account status/i);
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: status/i);
+    });
+
+    it('Principal attempts to inject roles (Vertical Escalation) -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          roles: ['Admin', 'ITAdmin'],
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: roles/i);
+    });
+
+    it('Principal attempts to inject email (Credential Tampering) -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          email: 'escalated@calulut.edu.ph',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: email/i);
+    });
+
+    it('Principal attempts to inject permissions (Privilege Escalation) -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          permissions: ['user:write'],
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: permissions/i);
+    });
+
+    it('Principal attempts mixed safe + sensitive payload -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          firstName: 'ValidName',
+          status: 'suspended',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: status/i);
+    });
+
+    it('Principal attempts mixed safe + privilege injection payload -> 403 Forbidden', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${principalToken}`)
+        .send({
+          firstName: 'ValidName',
+          roles: ['Admin'],
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toMatch(/not authorized to modify restricted fields: roles/i);
     });
 
     it('Unauthenticated PATCH -> 401 Unauthorized', async () => {
@@ -263,6 +353,21 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
         });
 
       expect(res.status).toBe(401);
+    });
+
+    it('Legitimate Admin with user:write can update another user and status -> 200 OK', async () => {
+      const res = await request(app)
+        .patch(`/api/users/${principalUserId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Roberto',
+          status: 'active',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.first_name).toBe('Roberto');
+      expect(res.body.data.status).toBe('active');
     });
   });
 });

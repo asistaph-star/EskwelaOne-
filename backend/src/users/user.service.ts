@@ -44,7 +44,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  middleName: z.string().optional(),
+  middleName: z.string().optional().nullable(),
   status: z.enum(['active', 'inactive', 'suspended']).optional(),
 });
 
@@ -273,7 +273,7 @@ export async function updateUser(
     action: 'USER_UPDATED',
     resourceType: 'user',
     resourceId: id,
-    previousState: { firstName: existing.first_name, lastName: existing.last_name, status: existing.status },
+    previousState: { firstName: existing.first_name, lastName: existing.last_name, middleName: existing.middle_name, status: existing.status },
     newState: input,
     correlationId,
   });

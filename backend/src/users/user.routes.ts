@@ -82,23 +82,63 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
+ * Explicit server-side allowlist for self-service user profile updates (callers lacking user:write).
+ * Any field not explicitly enumerated here must be rejected to prevent horizontal and vertical privilege escalation.
+ */
+const SELF_SERVICE_ALLOWED_FIELDS = new Set([
+  'firstName',
+  'lastName',
+  'middleName',
+  'first_name',
+  'last_name',
+  'middle_name',
+]);
+
+/**
  * PATCH /api/users/:id
  */
 router.patch('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
     const id = String(req.params.id);
+    const hasUserWrite = authUser.permissions.includes('user:write');
 
-    // Simple auth check: a user can update themselves (e.g. profile), or need user:write
-    if (authUser.id !== id && !authUser.permissions.includes('user:write')) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
+    // 1. Horizontal privilege check: callers without user:write can ONLY update their own profile ID
+    if (authUser.id !== id && !hasUserWrite) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Not authorized to modify another user profile' }
+      });
     }
 
-    const input = updateUserSchema.parse(req.body);
-
-    if (input.status !== undefined && !authUser.permissions.includes('user:write')) {
-      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to change account status' } });
+    // 2. Vertical privilege escalation check: explicit server-side positive allowlist for self-service updates
+    if (!hasUserWrite) {
+      const payloadKeys = Object.keys(req.body || {});
+      const disallowedKeys = payloadKeys.filter(key => !SELF_SERVICE_ALLOWED_FIELDS.has(key));
+      if (disallowedKeys.length > 0) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: `Not authorized to modify restricted fields: ${disallowedKeys.join(', ')}`
+          }
+        });
+      }
     }
+
+    // Normalize snake_case input fields if provided
+    const body = { ...req.body };
+    if (body.first_name !== undefined && body.firstName === undefined) {
+      body.firstName = body.first_name;
+    }
+    if (body.last_name !== undefined && body.lastName === undefined) {
+      body.lastName = body.last_name;
+    }
+    if (body.middle_name !== undefined && body.middleName === undefined) {
+      body.middleName = body.middle_name;
+    }
+
+    const input = updateUserSchema.parse(body);
 
     const user = await updateUser(id, input, authUser.id, (req as any).correlationId);
     res.json({ success: true, data: user });

@@ -5,6 +5,7 @@ import {
   FileText, Calendar, ShieldAlert, ClipboardList, Scan
 } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
+import { useAppContext } from '../../shared/AppContext';
 
 const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
   { category: "Overview", items: [
@@ -36,8 +37,17 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
   onLogout: () => void;
   collapsed?: boolean;
 }) {
-  const user = { name: "Dr. Roberto Santos", sub: "School Administrator" };
-  const initials = "RS";
+  const { currentUser } = useAppContext();
+
+  const displayName = currentUser?.name?.trim() || "Principal";
+  const userSubtitle = currentUser?.role ? `${currentUser.role}` : "School Administrator";
+  const initials = displayName
+    .split(/\s+/)
+    .map(p => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "P";
 
   return (
     <PortalSidebar
@@ -46,8 +56,8 @@ export function PSidebar({ active, onNav, onLogout, collapsed = false }: {
       onNavigate={onNav}
       collapsed={collapsed}
       brandSubtitle="Integrated School"
-      userName={user.name}
-      userSubtitle={user.sub}
+      userName={displayName}
+      userSubtitle={userSubtitle}
       userInitials={initials}
       onLogout={onLogout}
       onProfileClick={() => onNav('p-settings' as PScreen)}
