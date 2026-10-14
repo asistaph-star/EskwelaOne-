@@ -518,43 +518,310 @@ The following **four school policy parameters** require explicit school decision
 
 *Note: Technical implementation can safely proceed immediately by recording exact `time_in` and `time_out` timestamps and marking valid check-ins as `"Present"`. Once the school locks the exact threshold values, the punctuality evaluator can be enabled seamlessly.*
 
----
-
-### 17. Exact Migration & Implementation Plan
-
-When implementation is authorized, the rollout will follow this phased sequence:
-
-1. **Phase 1: Prisma Schema & Migration**
-   - Add `FacultyAttendance` model to `backend/prisma/schema.prisma`.
-   - Add relations to `Teacher` and `User`.
-   - Run `npx prisma migrate dev --name add_faculty_attendance`.
-   - Verify PostgreSQL schema and indices.
-
-2. **Phase 2: RBAC & Permissions**
-   - Add `faculty_attendance:read` and `faculty_attendance:write` to `backend/prisma/seed.ts`.
-   - Assign `faculty_attendance:read` to `Principal`.
-   - Assign `faculty_attendance:read` and `faculty_attendance:write` to `Admin` and `ITAdmin`.
-   - Execute seed update script.
-
-3. **Phase 3: Backend Routes & Service**
-   - Create `backend/src/modules/faculty-attendance/facultyAttendance.service.ts`.
-   - Create `backend/src/modules/faculty-attendance/facultyAttendance.routes.ts`.
-   - Mount routes in `backend/src/app.ts` under `/api/attendance/faculty`.
-   - Add automated Jest/Supertest integration tests covering Time In, Time Out, concurrency race conditions, and leave resolution.
-
-4. **Phase 4: Seed Canonical Data**
-   - Seed realistic attendance records for existing canonical teachers (`teacher@demo.com`) across current and past dates.
-
-5. **Phase 5: Frontend Implementation**
-   - Update `PDashboard.tsx` (PRIN-003): Wire KPI card to `/api/attendance/faculty/summary`.
-   - Update `PTeachers.tsx` (PRIN-014): Replace placeholder with full interactive Tailwind table.
-   - Add self-service Punch Card widget to Teacher Dashboard (`DashboardScreen.tsx`).
-
-6. **Phase 6: Browser Verification**
-   - Verify in browser with canonical demo accounts (`principal@demo.com` and `teacher@demo.com`).
 
 ---
 
-**Report Status:** COMPLETE — DOMAIN ARCHITECTURE LOCKED  
-**Current Progress:** 26 / 29 = 89.66% *(Unchanged)*  
-**Awaiting:** User review and authorization to proceed to Implementation Phase.
+## 18. DATA SEMANTICS & DATE STRATEGY STABILIZATION (PHASE 7B)
+
+### 18.1 Resolution of Stored vs. Derived Status Semantics
+
+The Phase 7A candidate model proposed `status String @default("Present")`. A deep-dive audit identified that persisting a mutable status column creates severe stale-data and source-of-truth risks:
+
+1. **Stale Leave Risk:** If a teacher files a leave approved at 10:00 AM, a pre-persisted status in `faculty_attendance` would require active background synchronization. If the leave is later cancelled or rejected, the attendance row becomes stale. Furthermore, teachers on leave do not clock in; persisting a row for them would manufacture artificial check-in rows with `null` timestamps.
+2. **Policy Drift Risk:** If school start time (e.g., 08:00 AM) or grace period (e.g., 15 minutes) is amended by the administration, pre-persisted `"Late"` or `"Present"` rows become historically inconsistent.
+3. **The Absence Paradox:** An absent teacher has **no** `faculty_attendance` row. Therefore, querying `FacultyAttendance WHERE status = 'Absent'` cannot enumerate absences without inserting fake records for every absent employee every day.
+4. **Pre-Policy Vacuum:** Prior to the school locking its four policy values, writing `"Present"` or `"Late"` to the database would represent unverified speculation.
+
+#### Recommended Semantic Separation:
+To establish absolute data integrity, the domain adopts a clean tri-part separation:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        DATA SEMANTICS SEPARATION                       │
+├──────────────────────────────────┬─────────────────────────────────────┤
+│ 1. Stored Facts (Immutable)      │ • Calendar Date (Asia/Manila Date)  │
+│                                  │ • Time In (UTC ISO Timestamp)       │
+│                                  │ • Time Out (UTC ISO Timestamp)      │
+│                                  │ • Capture Source (web_teacher, etc) │
+├──────────────────────────────────┼─────────────────────────────────────┤
+│ 2. Stored Overrides (Admin-Only) │ • override_status (Nullable String) │
+│                                  │ • override_remarks (Mandatory Note) │
+│                                  │ • corrected_by_id (Admin User ID)   │
+│                                  │ • updated_at (Prisma Timestamp)     │
+├──────────────────────────────────┼─────────────────────────────────────┤
+│ 3. Derived Status (Read-Time)    │ • Present (Time In recorded)        │
+│                                  │ • Time Out Pending (Incomplete Day) │
+│                                  │ • On Leave (Derived from Leave)     │
+│                                  │ • Official Business (From Override) │
+│                                  │ • Not Checked In (Today, no record) │
+│                                  │ • Absent (Past day, no record/leave)│
+│                                  │ • Late (Time In > Policy Threshold) │
+└──────────────────────────────────┴─────────────────────────────────────┘
+```
+
+---
+
+### 18.2 On Leave: Single Source of Truth
+
+- **Decision:** **Option A (Computed Read-Time Display State)** is locked.
+- **Evidence:** `leave_requests` is the authoritative lifecycle domain for employee leaves. Creating synthetic rows in `faculty_attendance` for teachers on leave duplicates records, introduces synchronization bugs upon leave cancellation, and confuses biometric audit logs.
+- **Mechanism:** When the backend compiles attendance for a date, any active teacher who has not clocked in is matched against `leave_requests WHERE user_id = teacher.user_id AND status = 'Approved' AND start_date <= date <= end_date`. If a match is found, the teacher's status is dynamically returned as `"On Leave"`. Zero rows are inserted into `faculty_attendance`.
+
+---
+
+### 18.3 Absent Modeling: Resolution Without Fake Rows
+
+- **Problem:** Absent teachers do not interact with the system and generate no database rows.
+- **Solution:** Attendance endpoints query the **Active Faculty Roster** as the baseline denominator, performing an in-memory left join against `faculty_attendance` and `leave_requests`:
+  1. Fetch all active teachers (`User.status = 'active'`).
+  2. Fetch `faculty_attendance` records for the date.
+  3. Fetch approved `leave_requests` spanning the date.
+  4. For any teacher without an attendance record or an approved leave:
+     - If `date == today`: Status is `"Not Checked In"` (honest pre-absence state).
+     - If `date < today`: Status is evaluated against working-day policy. If a working school day, status is derived as `"Absent"`.
+- **Result:** Complete absence enumeration across all active faculty with **zero synthetic database rows**.
+
+---
+
+### 18.4 Present vs. Incomplete Time Out
+
+- **Rule:** A record where `time_in != null` and `time_out == null` is **NEVER** marked as `Absent`.
+- **Display Semantics:**
+  - Primary Status: `"Present"` (or `"Checked In"`).
+  - Sub-state Pill: `"Time Out Pending"` (or `"In Progress"`).
+  - Column Values: Time In displays actual clock-in time (e.g. `07:48 AM`); Time Out displays an em-dash (`"——"`).
+  - Dashboard Metric (PRIN-003): Counted under `"Present / Checked In"` because the faculty member arrived at school.
+
+---
+
+### 18.5 Official Business (OB) Override Specification
+
+- **Nature:** An authorized administrative override set exclusively by Admin / ITAdmin when a teacher is on official DepEd external duty.
+- **Persistence Fields:**
+  - `override_status`: `String? @db.VarChar(30)` (`"Official Business"`, `"Excused"`, or custom DepEd status).
+  - `override_remarks`: `String? @db.VarChar(255)` (Mandatory justification, e.g. "Proctoring Division MTAP Competition").
+  - `corrected_by_id`: `String? @db.VarChar(36)` (Foreign Key to `User.id`).
+- **Auditability:** `updated_at` records the modification instant. The existing `audit.service.ts` writes a persistent audit log entry (`action: 'FACULTY_ATTENDANCE_OVERRIDE'`) with actor ID, timestamp, and previous/new states. A separate `corrected_at` column is redundant and omitted.
+
+---
+
+### 18.6 Enum vs. String Convention
+
+- **Repository Audit:** All 40 models in `schema.prisma` use `String @db.VarChar(...)` with default values. There are **zero** native PostgreSQL enums in the schema.
+- **Adopted Convention:**
+  - **Database:** Flexible constrained strings (`String @db.VarChar(30)`).
+  - **Application / API:** Strict TypeScript string unions and runtime Zod validation (`z.enum(['web_teacher', 'admin_manual'])`, `z.enum(['Official Business', 'Excused'])`).
+  - **Advantage:** Prevents brittle PostgreSQL enum migrations while guaranteeing type safety at the API boundary.
+
+---
+
+### 18.7 Philippine Calendar Date Strategy (Zero Day-Boundary Drift)
+
+To eliminate the server timezone flaw identified in the legacy Student Gate implementation:
+- Calulut Integrated School operates strictly in the **Philippine Standard Time** zone (`Asia/Manila`, UTC+8).
+- The server computes the local date string using `Intl.DateTimeFormat`:
+  ```ts
+  export function getPhilippineCalendarDate(d: Date = new Date()): { dateStr: string; dateObj: Date } {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const dateStr = formatter.format(d); // Strictly produces 'YYYY-MM-DD'
+    const dateObj = new Date(`${dateStr}T00:00:00.000Z`);
+    return { dateStr, dateObj };
+  }
+  ```
+- **Guarantees:**
+  - Server in UTC at 07:30 AM Manila (23:30 UTC previous day) correctly resolves to Manila date `YYYY-MM-DD`.
+  - At 23:59:59 Manila, date resolves to current school day.
+  - At 00:00:01 Manila, date rolls over to next school day.
+  - Storing `dateObj` into PostgreSQL `@db.Date` preserves exact calendar day without day-boundary shift.
+
+---
+
+### 18.8 Time In / Time Out Storage Precision
+
+- **Prisma Type:** `DateTime? @db.Timestamptz(3)` (or standard Prisma `DateTime?`, which maps to `TIMESTAMP(3)`).
+- **Rule:** Stores the real, absolute UTC instant of the check-in and check-out events (`new Date()`).
+- **Prohibitions:**
+  - **NO** 1970 synthetic time values (`1970-01-01T...`).
+  - **NO** string-only times (`"08:00"`).
+  - **NO** client-generated authoritative timestamps.
+- **Display Formatting:** Timestamps are formatted in `Asia/Manila` time (`hh:mm A`) strictly on the presentation layer.
+
+---
+
+### 18.9 Unique Constraint & Concurrency Guarantees
+
+1. **Duplicate Time In Protection:**
+   - PostgreSQL `@@unique([teacher_id, date])` physically prevents duplicate rows for the same teacher on the same day.
+   - P2002 error from Prisma is trapped and returned as `HTTP 409 Conflict`:
+     `{ code: "ALREADY_TIMED_IN", message: "Time In has already been recorded for today." }`.
+2. **Atomic Conditional Time Out:**
+   - Executed via `prisma.facultyAttendance.updateMany({ where: { teacher_id, date, time_out: null }, data: { time_out: new Date() } })`.
+   - If row count is zero:
+     - Check if row exists: if no row or `time_in == null` -> `HTTP 400 TIME_IN_REQUIRED`.
+     - If row exists and `time_out != null` -> `HTTP 409 ALREADY_TIMED_OUT`.
+   - Guarantees zero race conditions on parallel clicks.
+
+---
+
+### 18.10 Teacher Identity Chain & Error Handling
+
+- **Chain:** `req.user.id` (from verified JWT) -> `User` -> `Teacher profile` -> `Teacher.id` -> `FacultyAttendance.teacher_id`.
+- **Fail-Safe Rule:** If an authenticated user with role `Teacher` has no record in the `teachers` table:
+  - Halts execution with `HTTP 403 FORBIDDEN` (`TEACHER_PROFILE_NOT_FOUND`).
+  - Never creates orphan records.
+  - Client-supplied `teacher_id` in request payloads is strictly rejected.
+
+---
+
+### 18.11 Active Faculty Denominator
+
+- **Source:** Authoritative active faculty denominator is defined as:
+  ```ts
+  const activeFacultyCount = await prisma.teacher.count({
+    where: {
+      user: {
+        status: 'active'
+      }
+    }
+  });
+  ```
+- **Rule:** Inactive, suspended, or archived user accounts are strictly excluded from the attendance denominator.
+
+---
+
+### 18.12 Verified DepEd Employee ID
+
+- **Audit Confirmation:** `Teacher.employee_id` **DOES exist** in the repository (`backend/prisma/schema.prisma` line 133) as a dedicated, unique `VARCHAR(50)` column (`employee_id String @unique`).
+- **PRIN-014 Inclusion:** `Employee ID` is verified and retained as a core column in the table design.
+
+---
+
+### 18.13 Pre-Policy Display Semantics (PRIN-003 & PRIN-014)
+
+Until Calulut Integrated School provides its four official attendance parameters:
+- **PRIN-003 (Dashboard KPI Card):**
+  - Metric: `"${checkedIn} / ${totalActive} Checked In"` (e.g. `"16 / 18 Checked In"`).
+  - Subtitle: `"${onLeave} On Leave · ${pending} Pending Check-In"`.
+  - Discloses physical check-ins truthfully without fabricating tardiness.
+- **PRIN-014 (Faculty Attendance Table):**
+  - Roster: All active teachers for the selected date.
+  - Statuses: `"Checked In"`, `"Time Out Pending"`, `"On Leave"`, `"Official Business"`, `"Not Checked In"`.
+  - No teacher is labeled `"Late"` or `"Absent"` until school parameters are configured.
+
+---
+
+### 18.14 Revised Final Prisma Model Proposal *(Design Only — Unchanged in Schema)*
+
+```prisma
+model FacultyAttendance {
+  id               String    @id @db.VarChar(36)
+  teacher_id       String    @db.VarChar(36)
+  date             DateTime  @db.Date
+  time_in          DateTime? @db.Timestamptz(3)
+  time_out         DateTime? @db.Timestamptz(3)
+  capture_source   String    @default("web_teacher") @db.VarChar(30)
+  override_status  String?   @db.VarChar(30)
+  override_remarks String?   @db.VarChar(255)
+  corrected_by_id  String?   @db.VarChar(36)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  teacher          Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+  corrected_by     User?     @relation("FacultyAttendanceCorrections", fields: [corrected_by_id], references: [id], onDelete: SetNull)
+
+  @@unique([teacher_id, date], map: "faculty_attendance_teacher_id_date_key")
+  @@index([date], map: "faculty_attendance_date_idx")
+  @@index([teacher_id, date], map: "faculty_attendance_teacher_id_date_idx")
+  @@map("faculty_attendance")
+}
+```
+
+#### Field-by-Field Matrix:
+
+| Field | Prisma Type | DB Type | Req/Opt | Stored vs Derived | Writer | Architectural Reason |
+|---|---|---|:---:|:---:|---|---|
+| `id` | `String` | `VARCHAR(36)` | Req | Stored | System | UUID primary key. |
+| `teacher_id` | `String` | `VARCHAR(36)` | Req | Stored | Session | FK to `Teacher.id`. |
+| `date` | `DateTime` | `DATE` | Req | Stored | System | School calendar day in Asia/Manila. |
+| `time_in` | `DateTime?` | `TIMESTAMPTZ(3)` | Opt | Stored | Teacher | Exact UTC instant of check-in. |
+| `time_out` | `DateTime?` | `TIMESTAMPTZ(3)` | Opt | Stored | Teacher | Exact UTC instant of check-out. |
+| `capture_source` | `String` | `VARCHAR(30)` | Req | Stored | System | Audit trail (`web_teacher`, `admin_manual`). |
+| `override_status`| `String?` | `VARCHAR(30)` | Opt | Stored | Admin | Exception status (e.g. `Official Business`). |
+| `override_remarks`| `String?` | `VARCHAR(255)` | Opt | Stored | Admin | Mandatory reason for administrative override. |
+| `corrected_by_id`| `String?` | `VARCHAR(36)` | Opt | Stored | Admin | FK to `User.id` for audit accountability. |
+| `created_at` | `DateTime` | `TIMESTAMPTZ(3)` | Req | Stored | Prisma | Record creation timestamp. |
+| `updated_at` | `DateTime` | `TIMESTAMPTZ(3)` | Req | Stored | Prisma | Record modification timestamp. |
+
+#### Concepts That Must NOT Be Persisted:
+- `status`: NOT persisted. Derived at read time to prevent staleness.
+- `On Leave`: NOT persisted in this table. Derived dynamically from `leave_requests`.
+- `Absent`: NOT persisted. Computed by comparing active faculty roster against records.
+- `Late`: NOT persisted. Computed by evaluating `time_in` against school policy.
+- Synthetic 1970 date-times: Strictly prohibited.
+
+---
+
+### 18.15 Deterministic Status Precedence
+
+When compiling attendance status for any teacher on a given calendar date:
+
+```
+[Start Evaluation]
+       │
+       ▼
+1. Is override_status != null?
+       ├─ YES ──> Status = override_status (e.g. "Official Business") with override_remarks
+       └─ NO
+           │
+           ▼
+2. Does teacher have an approved LeaveRequest covering this date?
+       ├─ YES ──> Status = "On Leave" (annotated with leave type)
+       └─ NO
+           │
+           ▼
+3. Does faculty_attendance row exist with time_in != null?
+       ├─ YES ──> Has school policy been configured?
+       │            ├─ YES ──> Is time_in > (Start Time + Grace Period)?
+       │            │            ├─ YES ──> Status = "Late"
+       │            │            └─ NO  ──> Status = "Present"
+       │            └─ NO  ──> Status = "Present" / "Checked In"
+       │                       (Sub-state: "Time Out Pending" if time_out == null)
+       └─ NO
+           │
+           ▼
+4. No attendance row & no approved leave:
+       ├─ Is queried date TODAY?
+       │    └─ Status = "Not Checked In" (Pending check-in)
+       └─ Is queried date in the PAST?
+            ├─ Was date an official school working day? ──> Status = "Absent"
+            └─ Was date a weekend / holiday?           ──> Status = "Non-Working Day"
+```
+
+---
+
+### 18.16 Phased Implementation Sequence (Authorization Pending)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                   PHASED IMPLEMENTATION SEQUENCE                 │
+├─────────┬────────────────────────────────────────────────────────┤
+│ Phase A │ Schema & RBAC: Add FacultyAttendance & seed permissions│
+│ Phase B │ Backend Services: Teacher punch APIs & read APIs       │
+│ Phase C │ Teacher Portal UI: Daily Punch Card widget             │
+│ Phase D │ Principal Dashboard (PRIN-003): Dynamic KPI Card       │
+│ Phase E │ Principal Faculty Screen (PRIN-014): Operational Table │
+│ Phase F │ Runtime Verification: Browser verification (Demo accts)│
+│ Phase G │ School Policy Integration: Plug in Late/Absent policy  │
+└─────────┴────────────────────────────────────────────────────────┘
+```
+
+---
+
+**Report Status:** DATA SEMANTICS FULLY STABILIZED — AWAITING IMPLEMENTATION AUTHORIZATION  
+**Current Principal Progress:** 26 / 29 = 89.66% *(Unchanged)*
+
