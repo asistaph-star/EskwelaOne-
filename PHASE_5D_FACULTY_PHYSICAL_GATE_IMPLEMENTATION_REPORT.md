@@ -160,16 +160,27 @@ In [`src/app/teacher/components/TeacherPunchCard.tsx`](file:///C:/Users/Admin/Do
 
 ---
 
-### 7. Principal TV Live Monitoring & SSE Feed
+### 7. Principal TV Live Monitoring & SSE Feed (UI Correction)
 
-In [`src/app/principal/monitoring/PMonitoring.tsx`](file:///C:/Users/Admin/Documents/Capstone%20Project/DigiSkwela/src/app/principal/monitoring/PMonitoring.tsx) and [`src/app/shared/hooks/useGateAttendanceSSE.ts`](file:///C:/Users/Admin/Documents/Capstone%20Project/DigiSkwela/src/app/shared/hooks/useGateAttendanceSSE.ts):
-- **SSE Stream:** Listens for `event: faculty-attendance-changed` on the existing `/gate/events` connection.
-- **Tabbed Segmented Control:** Toggle between `[ Students (N) ]` and `[ Faculty (N) ]`.
-- **Zero Mock Rows:** Mock teacher rows `Santos, Maria` and `Dela Cruz, Anna` were completely excised.
-- **Chronological Event Transformation:** Live `FacultyAttendance` records are transformed into discrete chronological events (newest first):
-  - `time_in` $\rightarrow$ `IN` badge (emerald)
-  - `time_out` $\rightarrow$ `OUT` badge (blue)
-  - Displays: Teacher Name, Employee ID, Department, Position, Timestamp.
+#### 7.1 Requirement Correction & Root Cause Analysis
+- **Old Incorrect Screen:** The initial standalone Faculty TV monitor (`PLiveFacultyAttendance.tsx`) introduced an unapproved categorized 4-column attendance board (`NOT YET CHECKED IN`, `PRESENT (ON TIME)`, `LATE ARRIVALS`, `ON LEAVE / OB`) with top summary metric cards and tap-in overlays.
+- **Unauthorized "LATE" Labeling:** The screen classified teachers as "LATE" despite explicit instructions that Calulut Integrated School has **not yet supplied official start times, grace periods, or tardiness policies**.
+- **User-Approved Direction:** The Principal requested that Faculty monitoring feel like the **same live chronological gate feed** already used for students—showing individual teacher gate scans with identical visual rhythm, TV-monitoring layout, and IN/OUT badge treatment.
+
+#### 7.2 Student Gate Monitor as Design Reference
+- **Visual Reference:** Audited the existing Student Gate feed (`PMonitoring.tsx`):
+  - Dual featured latest scan hero cards (`LATEST GATE SCAN`, `PREVIOUS SCAN`) for high-distance TV readability.
+  - Multi-column chronological activity stream (newest event first).
+  - High-contrast badges: `TIME IN` (emerald `bg-emerald-500/15 text-emerald-400 border-emerald-500/30`), `TIME OUT` (blue `bg-blue-500/15 text-blue-400 border-blue-500/30`), `INVALID` (rose).
+  - Clear teacher identity layout: Name (`text-white font-bold`), Metadata (`EMP-T-001 · Science`), Monospace timestamp (`09:58 AM`).
+- **Complete Removal of Categorization & Late Labels:**
+  - Removed all 4 categorized columns and summary counters.
+  - Removed all "LATE", "Late Arrivals", and "Absent" tags. No assumed cutoff times are hardcoded.
+- **Mode Navigation:** Clean segmented mode selector `[ Students (N) ] [ Faculty (N) ]` enabling instant switching between populations without changing screen contexts.
+- **SSE & Scanner Integration:**
+  - `useGateAttendanceSSE(loadData)` listens for `faculty-attendance-changed` events from the backend and automatically refreshes the feed with zero manual page reloads.
+  - `useHardwareScanner()` directly bound on the TV monitor window; physical scans immediately trigger authoritative refetches and dark-theme scan toast confirmations.
+- **Zero Mock Data:** All records derive exclusively from PostgreSQL `FacultyAttendance` and linked `Teacher` profile data.
 
 ---
 
@@ -197,7 +208,7 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 - **Backend TypeScript Compilation (`tsc`):** Clean, 0 errors
 - **Backend Test Suite (Vitest):** **20 test files passed (20/20), 180 total tests passed (180/180)**
 - **Frontend TypeScript (`tsc --noEmit`):** Clean, 0 errors
-- **Frontend Production Build (`vite build`):** Built in 46.26s, 0 errors
+- **Frontend Production Build (`vite build`):** Built in 24.77s, 0 errors
 
 ---
 
@@ -210,6 +221,7 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 | `1f04b61` | `feat(teacher): make attendance card gate-read-only` | TeacherPunchCard manual button removal |
 | `8e50671` | `feat(principal): add live faculty attendance monitoring` | SSE hook update, PMonitoring segmented feed, zero mocks |
 | `e6fcd36` | `test(gate): add unified dispatcher integration tests and physical audit` | Automated test suite, audit document, test QR |
+| `98b96eb` | `fix(principal): align faculty live monitor with student gate feed` | Excise 4-column dashboard & LATE labels; mirror Student Gate TV feed |
 
 ---
 
