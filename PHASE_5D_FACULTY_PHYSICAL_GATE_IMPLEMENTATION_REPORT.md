@@ -160,27 +160,44 @@ In [`src/app/teacher/components/TeacherPunchCard.tsx`](file:///C:/Users/Admin/Do
 
 ---
 
-### 7. Principal TV Live Monitoring & SSE Feed (UI Correction)
+### 7. Principal TV Live Monitoring & SSE Feed (1:1 Student Gate Mirror)
 
-#### 7.1 Requirement Correction & Root Cause Analysis
-- **Old Incorrect Screen:** The initial standalone Faculty TV monitor (`PLiveFacultyAttendance.tsx`) introduced an unapproved categorized 4-column attendance board (`NOT YET CHECKED IN`, `PRESENT (ON TIME)`, `LATE ARRIVALS`, `ON LEAVE / OB`) with top summary metric cards and tap-in overlays.
-- **Unauthorized "LATE" Labeling:** The screen classified teachers as "LATE" despite explicit instructions that Calulut Integrated School has **not yet supplied official start times, grace periods, or tardiness policies**.
-- **User-Approved Direction:** The Principal requested that Faculty monitoring feel like the **same live chronological gate feed** already used for students—showing individual teacher gate scans with identical visual rhythm, TV-monitoring layout, and IN/OUT badge treatment.
+#### 7.1 Final UI Correction: Exact 1:1 Mirror of Student Gate Monitor
+Per user instruction, the Faculty live monitoring screen (`src/app/principal/attendance/PLiveFacultyAttendance.tsx`) duplicates the exact JSX, Tailwind utility structure, and visual rhythm of the accepted **Student Gate Attendance monitor** ([`src/app/gate/GateTerminalScreen.tsx`](file:///C:/Users/Admin/Documents/Capstone%20Project/DigiSkwela/src/app/gate/GateTerminalScreen.tsx)):
+- **Light Gradient Shell:** `bg-gradient-to-b from-slate-100 to-white font-sans text-slate-800`
+- **School Seal Watermark:** Centered full-viewport watermark at 6% opacity (`school_seal.png`).
+- **Gate Header:** `border-b-2 border-amber-400 bg-slate-900` containing school seal, `CALULUT INTEGRATED SCHOOL`, and dynamic sub-heading:
+  - Student mode $\rightarrow$ `LIVE STUDENT GATE ATTENDANCE`
+  - Faculty mode $\rightarrow$ `LIVE FACULTY GATE ATTENDANCE`
+- **Center Mode Selector:** Toggle between `[ Students (N) ]` and `[ Faculty (N) ]` with live population count badges.
+- **Top/Center Activity Grid:** Multi-column stream (`columns-1 lg:columns-2 xl:columns-3 gap-6 space-y-3`) with rounded scan cards (`h-[4.5rem] break-inside-avoid`), entity avatar, bold display name, subtitle metadata (`EMP-T-001 • Science`), and colored direction text (`IN` in emerald, `OUT` in blue) with verified timestamps.
+- **Bottom Featured Panels:** Two large side-by-side `ProfileCard`s (`h-72 md:h-80 lg:h-[26rem]`) featuring:
+  - Massive status stamps: `IN` (red-600) / `OUT` (emerald-600) with `CHECKED` subtitle.
+  - Verified timestamp in top-right.
+  - Large entity profile photo in center.
+  - Full-width colored label bar: `bg-indigo-700` (Faculty) / `bg-slate-700` (Student) displaying name and department/section.
+  - Empty fallback: Dotted border with `Awaiting Scan` label.
+- **Biometric Status Footer:** `bg-slate-900` with `BIOMETRIC SYSTEM - STATUS: ONLINE`, scan count today, and pulsing green `SCANNER READY` LED.
 
-#### 7.2 Student Gate Monitor as Design Reference
-- **Visual Reference:** Audited the existing Student Gate feed (`PMonitoring.tsx`):
-  - Dual featured latest scan hero cards (`LATEST GATE SCAN`, `PREVIOUS SCAN`) for high-distance TV readability.
-  - Multi-column chronological activity stream (newest event first).
-  - High-contrast badges: `TIME IN` (emerald `bg-emerald-500/15 text-emerald-400 border-emerald-500/30`), `TIME OUT` (blue `bg-blue-500/15 text-blue-400 border-blue-500/30`), `INVALID` (rose).
-  - Clear teacher identity layout: Name (`text-white font-bold`), Metadata (`EMP-T-001 · Science`), Monospace timestamp (`09:58 AM`).
-- **Complete Removal of Categorization & Late Labels:**
-  - Removed all 4 categorized columns and summary counters.
-  - Removed all "LATE", "Late Arrivals", and "Absent" tags. No assumed cutoff times are hardcoded.
-- **Mode Navigation:** Clean segmented mode selector `[ Students (N) ] [ Faculty (N) ]` enabling instant switching between populations without changing screen contexts.
-- **SSE & Scanner Integration:**
-  - `useGateAttendanceSSE(loadData)` listens for `faculty-attendance-changed` events from the backend and automatically refreshes the feed with zero manual page reloads.
-  - `useHardwareScanner()` directly bound on the TV monitor window; physical scans immediately trigger authoritative refetches and dark-theme scan toast confirmations.
-- **Zero Mock Data:** All records derive exclusively from PostgreSQL `FacultyAttendance` and linked `Teacher` profile data.
+#### 7.2 Section-by-Section Comparison: Student vs. Faculty Monitor
+
+| Section | Student Gate Monitor (`GateTerminalScreen.tsx`) | Faculty Gate Monitor (`PLiveFacultyAttendance.tsx`) | Status |
+|---|---|---|---|
+| **Header** | `bg-slate-900 border-b-2 border-amber-400` with seal & school title | `bg-slate-900 border-b-2 border-amber-400` with seal, school title & `Exit TV` button | **SAME STRUCTURE** |
+| **Activity Stream** | Multi-column list (`columns-1 lg:columns-2 xl:columns-3`) with photo, name, subTitle, IN/OUT, time | Multi-column list (`columns-1 lg:columns-2 xl:columns-3`) with photo, name, subTitle, IN/OUT, time | **SAME STRUCTURE** |
+| **Latest Scan Panel** | Left `ProfileCard` (massive 7xl status, time, photo, colored bottom label bar) | Left `ProfileCard` (massive 7xl status, time, photo, `bg-indigo-700` label bar) | **SAME STRUCTURE** |
+| **Previous Scan Panel** | Right `ProfileCard` (massive 7xl status, time, photo, colored bottom label bar) | Right `ProfileCard` (massive 7xl status, time, photo, `bg-indigo-700` label bar) | **SAME STRUCTURE** |
+| **Event Cards** | `h-[4.5rem]` cards with avatar, name, subtitle, direction badge, timestamp | `h-[4.5rem]` cards with avatar, name, subtitle, direction badge, timestamp | **SAME STRUCTURE** |
+| **Empty State** | Centered user icon + `No student gate scans recorded today.` | Centered user icon + `No faculty gate scans recorded today.` | **SAME STRUCTURE** |
+| **Footer** | `bg-slate-900` status bar: `BIOMETRIC SYSTEM - STATUS: ONLINE`, `SCANNER READY` LED | `bg-slate-900` status bar: `BIOMETRIC SYSTEM - STATUS: ONLINE`, `SCANNER READY` LED | **SAME STRUCTURE** |
+| **TV / Fullscreen Sizing** | `h-screen w-full overflow-hidden`, responsive multi-columns | `h-screen w-full overflow-hidden`, responsive multi-columns | **SAME STRUCTURE** |
+
+#### 7.3 Data Source & Policy Alignment
+- **Student Data Source:** `GateAttendance` from `AppContext` / `POST /api/attendance/gate/scan`.
+- **Faculty Data Source:** `FacultyAttendance` from PostgreSQL via `GET /api/attendance/faculty/list`.
+- **Unauthorized Classifications:** Zero "LATE", "Late Arrivals", or "Absent" classifications exist on this screen.
+- **SSE Behavior:** Invalidation-only real-time refetch on `faculty-attendance-changed` via `useGateAttendanceSSE(loadData)`.
+- **Hardware USB Scanner:** Real-time burst detection via `useHardwareScanner()`; automatically updates data upon scan.
 
 ---
 
@@ -208,7 +225,7 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 - **Backend TypeScript Compilation (`tsc`):** Clean, 0 errors
 - **Backend Test Suite (Vitest):** **20 test files passed (20/20), 180 total tests passed (180/180)**
 - **Frontend TypeScript (`tsc --noEmit`):** Clean, 0 errors
-- **Frontend Production Build (`vite build`):** Built in 24.77s, 0 errors
+- **Frontend Production Build (`vite build`):** Built in 48.57s, 0 errors
 
 ---
 
@@ -221,7 +238,8 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 | `1f04b61` | `feat(teacher): make attendance card gate-read-only` | TeacherPunchCard manual button removal |
 | `8e50671` | `feat(principal): add live faculty attendance monitoring` | SSE hook update, PMonitoring segmented feed, zero mocks |
 | `e6fcd36` | `test(gate): add unified dispatcher integration tests and physical audit` | Automated test suite, audit document, test QR |
-| `98b96eb` | `fix(principal): align faculty live monitor with student gate feed` | Excise 4-column dashboard & LATE labels; mirror Student Gate TV feed |
+| `98b96eb` | `fix(principal): align faculty live monitor with student gate feed` | Excise 4-column dashboard & LATE labels |
+| `298288a` | `fix(principal): mirror student gate monitor for faculty` | 1:1 duplicate of accepted Student Gate Monitor UI structure |
 
 ---
 
