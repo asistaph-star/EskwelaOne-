@@ -9,6 +9,7 @@ import { UserPlus, Calendar as CalendarIcon, CheckCircle, XCircle } from 'lucide
 import { TeacherProfileModal } from "./TeacherProfileModal";
 import PRankingScreen from "../ranking/PRankingScreen";
 import { AssignScheduleModal } from "./AssignScheduleModal";
+import { FacultyAttendanceTable } from "./FacultyAttendanceTable";
 
 export function PTeachers() {
   const { teachers, addTeacher } = useAppContext();
@@ -88,25 +89,11 @@ export function PTeachers() {
       </div>
 
       {tab === "overview" && (
-        <div style={{ display:"flex", flexDirection:"column" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-            {/* Faculty attendance today */}
-            <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-              <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif", flex:1 }}>Faculty Attendance Today</span>
-                <span style={{ fontSize:10, color:"rgba(255,255,255,0.7)" }}>No Data Available</span>
-              </div>
-              <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                <thead><PTableHeader cols={["Teacher","Rank","Status","Time In"]} /></thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={4} style={{ padding:"24px", textAlign: "center", fontSize: 12, color: C.t3 }}>
-                      Faculty attendance tracking module is not currently available.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          {/* PRIN-014 Faculty Attendance Table */}
+          <FacultyAttendanceTable />
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
             {/* Promotion tracker */}
             <div>
               <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden", marginBottom:12 }}>
@@ -116,7 +103,7 @@ export function PTeachers() {
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead><PTableHeader cols={["Rank","Count"]} /></thead>
                   <tbody>
-                    {[["Teacher I","3"],["Teacher II","4"],["Teacher III","3"],["Master Teacher I","1"],["Master Teacher II","1"]].map(([r,c],i)=>(
+                    {[["Teacher I","3"],["Teacher II","4"],["Teacher III","3"],["Master Teacher I","1"],["Master Teacher II","1"]].map(([r,c])=>(
                       <tr key={r} style={{ borderBottom:`0.5px solid ${C.border}` }}>
                         <td style={{ padding:"9px 14px", fontSize:12, color:C.t1 }}>{r}</td>
                         <td style={{ padding:"9px 14px", fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:C.m700 }}>{c}</td>
@@ -157,36 +144,37 @@ export function PTeachers() {
                 </table>
               </div>
             </div>
-          </div>
-          {/* Subject load */}
-          <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-            <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Subject Load Monitoring</div>
-            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-              <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Assignments"]} /></thead>
-              <tbody>
-                {teachers.map((t: any,i)=>{
-                  const assignments = t.teacher?.assignments || [];
-                  const sections = assignments.map((a: any) => a.section.name).join(', ') || 'Unassigned';
-                  const subjects = Array.from(new Set(assignments.map((a: any) => a.subject.name))).join(', ') || 'None';
-                  
-                  // Collect unique schedule days
-                  const days = Array.from(new Set(assignments.map((a: any) => a.days).filter(Boolean))).join(' / ') || 'Unassigned';
-                  
-                  const loadCount = assignments.length;
-                  return (
-                    <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
-                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
-                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
-                      <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
-                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{days}</td>
-                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{sections}</td>
-                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{subjects}</td>
-                      <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{loadCount} subjects</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+            {/* Subject load */}
+            <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
+              <div style={{ padding:"10px 16px", borderBottom:`0.5px solid ${C.border}`, fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Subject Load Monitoring</div>
+              <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Assignments"]} /></thead>
+                <tbody>
+                  {teachers.map((t: any,i)=>{
+                    const assignments = t.teacher?.assignments || [];
+                    const sections = assignments.map((a: any) => a.section.name).join(', ') || 'Unassigned';
+                    const subjects = Array.from(new Set(assignments.map((a: any) => a.subject.name))).join(', ') || 'None';
+                    
+                    // Collect unique schedule days
+                    const days = Array.from(new Set(assignments.map((a: any) => a.days).filter(Boolean))).join(' / ') || 'Unassigned';
+                    
+                    const loadCount = assignments.length;
+                    return (
+                      <tr key={t.id} style={{ borderBottom:i<teachers.length-1?`0.5px solid ${C.border}`:"none" }}
+                        onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                        onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
+                        <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>{t.name}</td>
+                        <td style={{ padding:"9px 14px", fontSize:11, color:C.t3 }}>{days}</td>
+                        <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{sections}</td>
+                        <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>{subjects}</td>
+                        <td style={{ padding:"9px 14px", fontSize:12, fontFamily:"'JetBrains Mono',monospace", color:C.m700, fontWeight:600 }}>{loadCount} subjects</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

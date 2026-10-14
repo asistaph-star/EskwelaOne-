@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../../api/client';
+import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import { Sparkles, Users, CalendarCheck, Activity, GraduationCap, BookMarked, Stethoscope, AlertCircle, Building2 } from 'lucide-react';
@@ -29,18 +30,26 @@ function Stamp({ label, color, bg }: { label:string; color:string; bg:string }) 
 export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void; onShowGradeCard:(info:GradeCardInfo)=>void }) {
   const [dashData, setDashData] = useState<PrincipalDashboardResponse | null>(null);
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
+  const [facultySummary, setFacultySummary] = useState<FacultyAttendanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     Promise.all([
       apiClient.get<PrincipalDashboardResponse>('/admin/dashboard').catch(() => null),
-      apiClient.get('/admin/leaves').catch(() => [])
-    ]).then(([dData, lData]: any) => {
+      apiClient.get('/admin/leaves').catch(() => []),
+      facultyAttendanceApi.getSummary().catch((err) => {
+        console.error('Failed to load faculty summary:', err);
+        return null;
+      })
+    ]).then(([dData, lData, fData]: any) => {
       if (!dData) setError(true);
       else setDashData(dData.data || dData);
       
       setTeacherLeaves(lData?.data || lData || []);
+      if (fData) {
+        setFacultySummary(fData);
+      }
       setLoading(false);
     });
   }, []);
@@ -58,8 +67,16 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     { v: loading ? "..." : "0 Staff", l: "Total Staff", sub: "Support & Administration", subColor: C.t3, color: C.m700, bg: C.m100, icon: Building2, dest: "p-teachers" },
     { v: loading ? "..." : "0 Sections", l: "Total Active Sections", sub: "Grades 7 to 10", subColor: C.t3, color: C.m700, bg: C.m100, icon: BookMarked, dest: "p-templates" },
     { v: loading ? "..." : "0%", l: "Overall Attendance Rate", sub: "No data available", subColor: C.t3, color: C.green, bg: C.greenBg, icon: Activity, dest: "p-monitoring" },
-    { v: loading ? "..." : scansToday.toString(), l: "Students with Gate Activity Today", sub: "Based on recorded attendance", subColor: C.green, color: C.green, bg: C.greenBg, icon: CalendarCheck, dest: "p-monitoring" },
-    { v: loading ? "..." : "0 / 0", l: "Teachers Present Today", sub: "Attendance module unavailable", subColor: C.t3, color: C.amber, bg: C.amberBg, icon: GraduationCap, dest: "p-teachers" },
+    { 
+      v: loading ? "..." : `${facultySummary?.checkedInCount ?? 0} / ${facultySummary?.totalActiveFaculty ?? 0} Checked In`, 
+      l: "Faculty Checked In Today", 
+      sub: loading ? "Loading..." : `${facultySummary?.onLeaveCount ?? 0} On Leave · ${facultySummary?.pendingCheckInCount ?? 0} Pending Check-In${(facultySummary?.officialBusinessCount ?? 0) > 0 ? ` · ${facultySummary?.officialBusinessCount} Official Business` : ''}`, 
+      subColor: (facultySummary?.checkedInCount ?? 0) > 0 ? C.green : C.t3, 
+      color: (facultySummary?.checkedInCount ?? 0) > 0 ? C.green : C.amber, 
+      bg: (facultySummary?.checkedInCount ?? 0) > 0 ? C.greenBg : C.amberBg, 
+      icon: GraduationCap, 
+      dest: "p-teachers" 
+    },
     { v: loading ? "..." : "0 Active", l: "Active Clinic Cases", sub: "Clinic module unavailable", subColor: C.t3, color: C.teal, bg: C.tealBg, icon: Stethoscope, dest: "p-welfare" },
     { v: loading ? "..." : "0 Pending", l: "Pending Discipline Cases", sub: "Welfare module unavailable", subColor: C.t3, color: C.red, bg: C.redBg, icon: AlertCircle, dest: "p-welfare" }
   ];
