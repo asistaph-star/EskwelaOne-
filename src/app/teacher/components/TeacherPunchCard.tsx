@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, LogIn, LogOut, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { facultyAttendanceApi, FacultyPunchStatus } from '../../../api/facultyAttendance.api';
 
-export function TeacherPunchCard({ onAttendanceChange, className }: { onAttendanceChange?: () => void; className?: string }) {
+export function TeacherPunchCard({ className }: { onAttendanceChange?: () => void; className?: string }) {
   const [punchData, setPunchData] = useState<FacultyPunchStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchStatus = () => {
     setLoading(true);
@@ -23,36 +21,6 @@ export function TeacherPunchCard({ onAttendanceChange, className }: { onAttendan
   useEffect(() => {
     fetchStatus();
   }, []);
-
-  const handleTimeIn = async () => {
-    setActionLoading(true);
-    setMessage(null);
-    try {
-      await facultyAttendanceApi.recordTimeIn();
-      setMessage({ type: 'success', text: 'Time In recorded successfully!' });
-      fetchStatus();
-      if (onAttendanceChange) onAttendanceChange();
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to record Time In' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleTimeOut = async () => {
-    setActionLoading(true);
-    setMessage(null);
-    try {
-      await facultyAttendanceApi.recordTimeOut();
-      setMessage({ type: 'success', text: 'Time Out recorded successfully!' });
-      fetchStatus();
-      if (onAttendanceChange) onAttendanceChange();
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to record Time Out' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const getStatusBadge = (status?: string) => {
     switch (status) {
@@ -74,11 +42,11 @@ export function TeacherPunchCard({ onAttendanceChange, className }: { onAttendan
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-800">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-800">
             <Clock size={16} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-800 font-serif">Daily Punch Card</h3>
+            <h3 className="text-sm font-bold text-slate-800 font-serif">Today's Gate Attendance</h3>
             <p className="text-xs text-slate-500">{punchData?.date || 'Today'}</p>
           </div>
         </div>
@@ -91,55 +59,45 @@ export function TeacherPunchCard({ onAttendanceChange, className }: { onAttendan
         </div>
       </div>
 
-      {/* Message feedback */}
-      {message && (
-        <div className={`mt-3 p-2.5 rounded-md text-xs flex items-center gap-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
-          {message.type === 'success' ? <CheckCircle2 size={14} className="shrink-0" /> : <AlertCircle size={14} className="shrink-0" />}
-          <span>{message.text}</span>
-        </div>
-      )}
-
-      {/* Time Slots */}
+      {/* Read-Only Time Slots */}
       <div className="grid grid-cols-2 gap-3 mt-3">
-        {/* Time In Card / Action */}
+        {/* Time In Card */}
         <div className="p-3 rounded-lg border border-slate-100 bg-slate-50 flex flex-col justify-between">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Time In (Arrival)</div>
-          {punchData?.hasTimedIn ? (
-            <div className="flex items-center gap-1.5 text-emerald-700 font-bold font-mono text-sm">
-              <CheckCircle2 size={14} />
-              <span>{punchData.timeInFormatted || 'Recorded'}</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleTimeIn}
-              disabled={loading || actionLoading || punchData?.status === 'On Leave' || punchData?.status === 'Official Business'}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {actionLoading ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={13} />}
-              <span>Time In</span>
-            </button>
-          )}
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Time In (Gate Arrival)</div>
+          <div className="flex items-center gap-1.5 font-bold font-mono text-sm">
+            {punchData?.hasTimedIn ? (
+              <>
+                <CheckCircle2 size={14} className="text-emerald-600" />
+                <span className="text-emerald-700">{punchData.timeInFormatted || 'Recorded'}</span>
+              </>
+            ) : (
+              <span className="text-slate-400 font-sans text-xs">Not recorded</span>
+            )}
+          </div>
         </div>
 
-        {/* Time Out Card / Action */}
+        {/* Time Out Card */}
         <div className="p-3 rounded-lg border border-slate-100 bg-slate-50 flex flex-col justify-between">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Time Out (Departure)</div>
-          {punchData?.hasTimedOut ? (
-            <div className="flex items-center gap-1.5 text-emerald-700 font-bold font-mono text-sm">
-              <CheckCircle2 size={14} />
-              <span>{punchData.timeOutFormatted || 'Recorded'}</span>
-            </div>
-          ) : (
-            <button
-              onClick={handleTimeOut}
-              disabled={loading || actionLoading || !punchData?.hasTimedIn}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {actionLoading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={13} />}
-              <span>Time Out</span>
-            </button>
-          )}
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Time Out (Gate Departure)</div>
+          <div className="flex items-center gap-1.5 font-bold font-mono text-sm">
+            {punchData?.hasTimedOut ? (
+              <>
+                <CheckCircle2 size={14} className="text-emerald-600" />
+                <span className="text-emerald-700">{punchData.timeOutFormatted || 'Recorded'}</span>
+              </>
+            ) : (
+              <span className="text-slate-400 font-sans text-xs">
+                {punchData?.hasTimedIn ? 'Time Out Pending' : '—'}
+              </span>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Guidance footer */}
+      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-500">
+        <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+        <span>Attendance is recorded automatically when you scan your school ID at the gate.</span>
       </div>
 
       {punchData?.remarks && (
