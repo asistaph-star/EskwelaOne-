@@ -11,6 +11,8 @@ import { StudentDetailOverlay } from '../components/StudentDetailOverlay';
 import { useMyClasses } from '../shared/useMyClasses';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { apiClient } from '../../../api/client';
+import { TeacherPunchCard } from '../components/TeacherPunchCard';
+import { facultyAttendanceApi } from '../../../api/facultyAttendance.api';
 
 export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGradeCard }: { onNav:(s:TScreen)=>void, onGradebookClick:(id:string)=>void, onHubClick:(id:string)=>void, onShowGradeCard:(info:GradeCardInfo)=>void }) {
   const [detailStudent, setDetailStudent] = useState<any|null>(null);
@@ -18,16 +20,21 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [isLoadingDash, setIsLoadingDash] = useState(true);
+  const [todayStatus, setTodayStatus] = useState<string>('-');
 
   useEffect(() => {
     setIsLoadingDash(true);
     Promise.all([
       apiClient.get('/admin/announcements'),
-      apiClient.get('/admin/events')
+      apiClient.get('/admin/events'),
+      facultyAttendanceApi.getTeacherPunchStatus().catch(() => null)
     ])
-    .then(([annRes, evtRes]: any) => {
+    .then(([annRes, evtRes, punchRes]: any) => {
       setAnnouncements(Array.isArray(annRes) ? annRes : []);
       setEvents(Array.isArray(evtRes) ? evtRes : []);
+      if (punchRes && punchRes.status) {
+        setTodayStatus(punchRes.status);
+      }
     })
     .catch(err => {
       console.error('Failed to load dashboard data:', err);
@@ -49,7 +56,7 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
             { label: "Total Students",    val: isLoadingClasses ? "-" : `${totalStudents}`, sub: "Across sections", icon: Users, color: C.m700, bg: C.m50 },
             { label: "Today's Schedule",  val: "-", sub: "Coming Soon", icon: CalendarCheck, color: C.t3, bg: "#f1f5f9" },
             { label: "Pending Grades",    val: "-", sub: "Coming Soon", icon: AlertCircle, color: C.t3, bg: "#f1f5f9" },
-            { label: "Attendance Status", val: "-", sub: "Coming Soon", icon: BarChart2, color: C.t3, bg: "#f1f5f9" },
+            { label: "Attendance Status", val: todayStatus, sub: "Today", icon: BarChart2, color: todayStatus === 'Completed' ? C.green : todayStatus === 'Time Out Pending' ? C.amber : todayStatus === 'On Leave' ? C.blue : todayStatus === 'Official Business' ? C.purple : C.t3, bg: todayStatus === 'Completed' ? C.greenBg : todayStatus === 'Time Out Pending' ? C.amberBg : todayStatus === 'On Leave' ? C.blueBg : todayStatus === 'Official Business' ? '#faf5ff' : "#f1f5f9" },
             { label: "Upcoming Events",   val: isLoadingDash ? "-" : `${events.length}`, sub: "Schoolwide", icon: Bell, color: C.purple, bg: "#faf5ff" }
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
@@ -169,7 +176,11 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
           {/* RIGHT COLUMN */}
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             
-
+            <TeacherPunchCard onAttendanceChange={() => {
+              facultyAttendanceApi.getTeacherPunchStatus().then(d => {
+                if (d && d.status) setTodayStatus(d.status);
+              }).catch(() => {});
+            }} />
 
             {/* Quick Actions */}
             <DocPanel title="Quick Actions" icon={Wrench} style={{ flex: 1, display: "flex", flexDirection: "column" }}>
