@@ -17,8 +17,14 @@ export function PMonitoring() {
 
   const fetchFacultyAttendance = useCallback(() => {
     facultyAttendanceApi.getList({ limit: 100 })
-      .then(res => setFacultyList(res.data))
-      .catch(err => console.error('Failed to load faculty attendance for monitoring:', err));
+      .then(res => {
+        const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        setFacultyList(items);
+      })
+      .catch(err => {
+        console.error('Failed to load faculty attendance for monitoring:', err);
+        setFacultyList([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -31,7 +37,7 @@ export function PMonitoring() {
   const feedEvents = useMemo(() => {
     const events: { id: string, studentName: string, direction: 'IN' | 'OUT' | 'INVALID', timestamp: Date, metadata?: string }[] = [];
     
-    gateAttendance.forEach(record => {
+    (gateAttendance || []).forEach(record => {
       if (record.timeIn) {
         events.push({
           id: `${record.id}-in`,
@@ -76,7 +82,7 @@ export function PMonitoring() {
       captureSource: string | null;
     }[] = [];
 
-    facultyList.forEach(item => {
+    (facultyList || []).forEach(item => {
       if (item.timeIn) {
         events.push({
           id: `${item.teacherId}-in`,

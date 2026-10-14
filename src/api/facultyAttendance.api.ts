@@ -65,22 +65,22 @@ export interface FacultyPunchStatus {
 export const facultyAttendanceApi = {
   getTeacherPunchStatus: async (date?: string): Promise<FacultyPunchStatus> => {
     const res: any = await apiClient.get(`/attendance/faculty/me${date ? `?date=${date}` : ''}`);
-    return res.data;
+    return res?.data ?? res;
   },
 
   recordTimeIn: async (remarks?: string): Promise<any> => {
     const res: any = await apiClient.post('/attendance/faculty/time-in', { remarks });
-    return res.data;
+    return res?.data ?? res;
   },
 
   recordTimeOut: async (remarks?: string): Promise<any> => {
     const res: any = await apiClient.post('/attendance/faculty/time-out', { remarks });
-    return res.data;
+    return res?.data ?? res;
   },
 
   getSummary: async (date?: string): Promise<FacultyAttendanceSummary> => {
     const res: any = await apiClient.get(`/attendance/faculty/summary${date ? `?date=${date}` : ''}`);
-    return res.data;
+    return res?.data ?? res;
   },
 
   getList: async (params: {
@@ -101,7 +101,9 @@ export const facultyAttendanceApi = {
 
     const qs = searchParams.toString();
     const res: any = await apiClient.get(`/attendance/faculty${qs ? `?${qs}` : ''}`);
-    return { data: res.data, pagination: res.pagination };
+    const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    const pagination = res?.pagination || { total: items.length, page: 1, limit: items.length || 10, totalPages: 1 };
+    return { data: items, pagination };
   },
 
   adminCorrect: async (id: string, body: {
@@ -111,6 +113,6 @@ export const facultyAttendanceApi = {
     override_remarks?: string | null;
   }): Promise<any> => {
     const res: any = await apiClient.patch(`/attendance/faculty/${id}`, body);
-    return res.data;
+    return res?.data ?? res;
   },
 };
