@@ -24,7 +24,7 @@ const SSE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
 
 export type SseStatus = 'connecting' | 'live' | 'error';
 
-export function useGateAttendanceSSE(): SseStatus {
+export function useGateAttendanceSSE(onFacultyAttendanceChanged?: () => void): SseStatus {
   const { refreshGateAttendance, addInvalidScan } = useAppContext();
   const [status, setStatus] = useState<SseStatus>('connecting');
 
@@ -40,6 +40,13 @@ export function useGateAttendanceSSE(): SseStatus {
     es.addEventListener('attendance-changed', () => {
       // The event carries no data — we fetch the authoritative state from the API.
       refreshGateAttendance();
+    });
+
+    es.addEventListener('faculty-attendance-changed', () => {
+      // Invalidation event for faculty gate attendance
+      if (onFacultyAttendanceChanged) {
+        onFacultyAttendanceChanged();
+      }
     });
 
     es.addEventListener('invalid-scan', (e: MessageEvent) => {

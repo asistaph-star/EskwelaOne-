@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { P_TEACHERS, P_WELFARE } from '../../shared/constants/seedData';
+import { P_WELFARE } from '../../shared/constants/seedData';
 import { useAppContext } from '../../shared/AppContext';
 import { Stamp } from '../../shared/components/Stamp';
-import { Users, LogOut, Clock } from 'lucide-react';
+import { Users, LogOut, Clock, School } from 'lucide-react';
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
-
+import { facultyAttendanceApi, FacultyAttendanceItem } from '../../../api/facultyAttendance.api';
 
 export function PMonitoring() {
   const [chartView, setChartView] = useState("Weekly");
+  const [feedMode, setFeedMode] = useState<'student' | 'faculty'>('student');
+  const [facultyList, setFacultyList] = useState<FacultyAttendanceItem[]>([]);
   const { gateAttendance, invalidScans } = useAppContext();
-  const sseStatus = useGateAttendanceSSE();
+
+  const fetchFacultyAttendance = useCallback(() => {
+    facultyAttendanceApi.getList({ limit: 100 })
+      .then(res => setFacultyList(res.data))
+      .catch(err => console.error('Failed to load faculty attendance for monitoring:', err));
+  }, []);
+
+  useEffect(() => {
+    fetchFacultyAttendance();
+  }, [fetchFacultyAttendance]);
+
+  const sseStatus = useGateAttendanceSSE(fetchFacultyAttendance);
 
   // Transform flat daily records into discrete chronological events
-  const feedEvents = React.useMemo(() => {
+  const feedEvents = useMemo(() => {
     const events: { id: string, studentName: string, direction: 'IN' | 'OUT' | 'INVALID', timestamp: Date, metadata?: string }[] = [];
     
     gateAttendance.forEach(record => {
@@ -49,6 +62,49 @@ export function PMonitoring() {
 
     return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }, [gateAttendance, invalidScans]);
+
+  // Transform authoritative FacultyAttendance rows into chronological events (newest first)
+  const facultyFeedEvents = useMemo(() => {
+    const events: {
+      id: string;
+      name: string;
+      employeeId: string;
+      department: string;
+      position: string;
+      direction: 'IN' | 'OUT';
+      timestamp: Date;
+      captureSource: string | null;
+    }[] = [];
+
+    facultyList.forEach(item => {
+      if (item.timeIn) {
+        events.push({
+          id: `${item.teacherId}-in`,
+          name: item.name,
+          employeeId: item.employeeId,
+          department: item.department || 'Faculty',
+          position: item.position || 'Teacher',
+          direction: 'IN',
+          timestamp: new Date(item.timeIn),
+          captureSource: item.captureSource,
+        });
+      }
+      if (item.timeOut) {
+        events.push({
+          id: `${item.teacherId}-out`,
+          name: item.name,
+          employeeId: item.employeeId,
+          department: item.department || 'Faculty',
+          position: item.position || 'Teacher',
+          direction: 'OUT',
+          timestamp: new Date(item.timeOut),
+          captureSource: item.captureSource,
+        });
+      }
+    });
+
+    return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [facultyList]);
 
   return (
     <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24 }}>
@@ -175,66 +231,130 @@ export function PMonitoring() {
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-        {/* Gate log */}
+        {/* Live Gate & Presence Feed */}
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
-          <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ background:C.m800, padding:"10px 16px", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
             <div style={{
               width:7, height:7, borderRadius:10,
               background: sseStatus === 'live' ? C.green : C.amber,
               boxShadow: sseStatus === 'live' ? `0 0 0 3px ${C.greenBg}` : `0 0 0 3px ${C.amberBg}`
             }}/>
-            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Live QR Gate Feed</span>
+            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Live Gate & Presence Feed</span>
+            
+            {/* Segmented Control */}
+            <div style={{ display:"inline-flex", background:"rgba(255,255,255,0.15)", borderRadius:4, padding:2, marginLeft:12 }}>
+              <button
+                type="button"
+                onClick={() => setFeedMode('student')}
+                style={{
+                  fontSize:10, fontWeight:feedMode === 'student' ? 700 : 500,
+                  color:feedMode === 'student' ? C.m800 : '#fff',
+                  background:feedMode === 'student' ? '#fff' : 'transparent',
+                  border:'none', borderRadius:3, padding:'3px 9px', cursor:'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                Students ({feedEvents.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedMode('faculty')}
+                style={{
+                  fontSize:10, fontWeight:feedMode === 'faculty' ? 700 : 500,
+                  color:feedMode === 'faculty' ? C.m800 : '#fff',
+                  background:feedMode === 'faculty' ? '#fff' : 'transparent',
+                  border:'none', borderRadius:3, padding:'3px 9px', cursor:'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                Faculty ({facultyFeedEvents.length})
+              </button>
+            </div>
+
             <span style={{ marginLeft:'auto', fontSize:9, color: sseStatus === 'live' ? C.green : C.amber, fontWeight:600 }}>
               {sseStatus === 'live' ? 'LIVE UPDATES' : 'RECONNECTING...'}
             </span>
           </div>
-          <table style={{ width:"100%", borderCollapse:"collapse" }}>
-            <thead><PTableHeader cols={["Student","Grade & Section","Time","Direction"]} /></thead>
-            <tbody>
-              <tr style={{ borderBottom:`0.5px solid ${C.border}`, background: C.goldLight+"30" }}>
-                <td style={{ padding:"9px 14px", fontSize:12, fontWeight:700, color:C.m700 }}>Santos, Maria (Teacher)</td>
-                <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Faculty</td>
-                <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>8:03 AM</td>
-                <td style={{ padding:"9px 14px" }}>
-                  <Stamp label="In" color={C.green} bg={C.greenBg} />
-                </td>
-              </tr>
-              <tr style={{ borderBottom:`0.5px solid ${C.border}`, background: C.goldLight+"30" }}>
-                <td style={{ padding:"9px 14px", fontSize:12, fontWeight:700, color:C.m700 }}>Dela Cruz, Anna (Teacher)</td>
-                <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>Faculty</td>
-                <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>8:55 AM</td>
-                <td style={{ padding:"9px 14px" }}>
-                  <Stamp label="Out" color={C.blue} bg={C.blueBg} />
-                </td>
-              </tr>
-              {feedEvents.map((ev) => (
-                <tr key={ev.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
-                  <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color: ev.direction === 'INVALID' ? C.t3 : C.t1 }}>
-                    {ev.studentName}
-                  </td>
-                  <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>
-                    {ev.direction === 'INVALID' ? `Scanned: ${ev.metadata}` : 'Grade 10 - Rizal'}
-                  </td>
-                  <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>
-                    {ev.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td style={{ padding:"9px 14px" }}>
-                    <div style={{ display:"flex", gap:5 }}>
-                      {ev.direction === 'INVALID' ? (
-                        <Stamp label="Invalid" color={C.red} bg={C.redBg} />
-                      ) : ev.direction === 'OUT' ? (
-                        <Stamp label="Out" color={C.blue} bg={C.blueBg} />
-                      ) : (
-                        <Stamp label="In" color={C.green} bg={C.greenBg} />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {feedMode === 'student' ? (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead><PTableHeader cols={["Student","Grade & Section","Time","Direction"]} /></thead>
+              <tbody>
+                {feedEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding:"24px 14px", textAlign:"center", fontSize:11, color:C.t3 }}>
+                      No student gate scans recorded today.
+                    </td>
+                  </tr>
+                ) : (
+                  feedEvents.map((ev) => (
+                    <tr key={ev.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
+                      <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color: ev.direction === 'INVALID' ? C.t3 : C.t1 }}>
+                        {ev.studentName}
+                      </td>
+                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>
+                        {ev.direction === 'INVALID' ? `Scanned: ${ev.metadata}` : 'Grade 10 - Rizal'}
+                      </td>
+                      <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>
+                        {ev.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td style={{ padding:"9px 14px" }}>
+                        <div style={{ display:"flex", gap:5 }}>
+                          {ev.direction === 'INVALID' ? (
+                            <Stamp label="Invalid" color={C.red} bg={C.redBg} />
+                          ) : ev.direction === 'OUT' ? (
+                            <Stamp label="Out" color={C.blue} bg={C.blueBg} />
+                          ) : (
+                            <Stamp label="In" color={C.green} bg={C.greenBg} />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead><PTableHeader cols={["Teacher Name","Department & ID","Time","Direction"]} /></thead>
+              <tbody>
+                {facultyFeedEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding:"24px 14px", textAlign:"center", fontSize:11, color:C.t3 }}>
+                      No faculty gate scans recorded today.
+                    </td>
+                  </tr>
+                ) : (
+                  facultyFeedEvents.map((ev) => (
+                    <tr key={ev.id} style={{ borderBottom:`0.5px solid ${C.border}` }}
+                      onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
+                      onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="";}}>
+                      <td style={{ padding:"9px 14px", fontSize:12, fontWeight:600, color:C.t1 }}>
+                        {ev.name}
+                      </td>
+                      <td style={{ padding:"9px 14px", fontSize:11, color:C.t2 }}>
+                        {ev.department} • <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10 }}>{ev.employeeId}</span>
+                      </td>
+                      <td style={{ padding:"9px 14px", fontSize:11, fontFamily:"'JetBrains Mono',monospace", color:C.t3 }}>
+                        {ev.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td style={{ padding:"9px 14px" }}>
+                        <div style={{ display:"flex", gap:5 }}>
+                          {ev.direction === 'OUT' ? (
+                            <Stamp label="Out" color={C.blue} bg={C.blueBg} />
+                          ) : (
+                            <Stamp label="In" color={C.green} bg={C.greenBg} />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Late list + parent notifications */}
