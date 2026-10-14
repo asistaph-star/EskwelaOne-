@@ -1,20 +1,33 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { X, User, Check, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
-import { C } from '../../shared/constants/tokens';
+import { X, User, ArrowLeft, Radio } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
 import { useHardwareScanner } from '../../shared/hooks/useHardwareScanner';
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
-import { facultyAttendanceApi, FacultyAttendanceItem, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
+import { facultyAttendanceApi, FacultyAttendanceItem } from '../../../api/facultyAttendance.api';
+import { useAppContext } from '../../shared/AppContext';
 
-export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
+interface GateFeedEvent {
+  id: string;
+  name: string;
+  metadata: string;
+  direction: 'IN' | 'OUT' | 'INVALID';
+  timestamp: Date;
+  timeFormatted: string;
+}
+
+export function PLiveFacultyAttendance({ 
+  onExit, 
+  initialMode = 'faculty' 
+}: { 
+  onExit: () => void;
+  initialMode?: 'student' | 'faculty';
+}) {
+  const [feedMode, setFeedMode] = useState<'student' | 'faculty'>(initialMode);
   const [facultyList, setFacultyList] = useState<FacultyAttendanceItem[]>([]);
-  const [summary, setSummary] = useState<FacultyAttendanceSummary | null>(null);
   const [time, setTime] = useState(new Date());
-  const [selectedTeacher, setSelectedTeacher] = useState<{ name: string; role: string; img?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { gateAttendance, invalidScans } = useAppContext();
 
-  // Live Clock
+  // Clock
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -22,19 +35,15 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
 
   // Fetch Authoritative Faculty Attendance from PostgreSQL
   const loadData = useCallback(() => {
-    Promise.all([
-      facultyAttendanceApi.getList({ limit: 100 }),
-      facultyAttendanceApi.getSummary(),
-    ])
-      .then(([listRes, summaryRes]) => {
-        const items = Array.isArray(listRes?.data) ? listRes.data : (Array.isArray(listRes) ? listRes : []);
+    facultyAttendanceApi.getList({ limit: 100 })
+      .then(res => {
+        const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
         setFacultyList(items);
-        setSummary(summaryRes);
       })
       .catch(err => {
         console.error('Failed to load faculty attendance for TV monitor:', err);
-      })
-      .finally(() => setLoading(false));
+        setFacultyList([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -44,72 +53,120 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
   // Real-Time SSE Listener
   const sseStatus = useGateAttendanceSSE(loadData);
 
-  // Hardware Optical Scanner Integration (Allows scanning directly on this TV screen or gate)
+  // Hardware Scanner Integration & Visual Feedback
   const scannerState = useHardwareScanner();
-
   useEffect(() => {
-    if (scannerState.status === 'success' && scannerState.payload) {
-      const p = scannerState.payload;
-      const teacherName = p.teacherName || p.studentName || 'Faculty Member';
-      const role = p.department ? `${p.department} • ${p.position || 'Teacher'}` : (p.position || 'Teacher');
-      
-      setSelectedTeacher({ 
-        name: teacherName, 
-        role: `${p.action}: ${role}` 
-      });
-
-      confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 } });
+    if (scannerState.status === 'success') {
       loadData();
-
-      // Auto close after 5 seconds
-      const timer = setTimeout(() => {
-        setSelectedTeacher(current => current?.name === teacherName ? null : current);
-      }, 5000);
-
-      return () => clearTimeout(timer);
+      if (scannerState.payload) {
+        const p = scannerState.payload;
+        const who = p.teacherName || p.studentName || 'Identifier';
+        toast.success(`${who} — ${p.action} Recorded`, {
+          description: `${p.employeeId || p.studentId || ''} • Verified Gate Scan`,
+        });
+      }
+    } else if (scannerState.status === 'error' && scannerState.errorMessage) {
+      toast.error('Gate Scan Rejected', {
+        description: scannerState.errorMessage,
+      });
     }
-  }, [scannerState.status, scannerState.payload, loadData]);
+  }, [scannerState.status, scannerState.payload, scannerState.errorMessage, loadData]);
 
-  // Derived categorized groups
-  const presentTeachers = useMemo(() => {
-    return facultyList.filter(f => 
-      (f.status === 'Completed' || f.status === 'Time Out Pending') &&
-      (!f.timeInFormatted || f.timeInFormatted <= '07:30 AM')
-    );
-  }, [facultyList]);
+  // Transform authoritative FacultyAttendance rows into chronological scan events (newest first)
+  // Per locked requirements: NO Late or Absent classification is applied.
+  const facultyEvents = useMemo(() => {
+    const events: GateFeedEvent[] = [];
 
-  const lateTeachers = useMemo(() => {
-    return facultyList.filter(f => 
-      (f.status === 'Completed' || f.status === 'Time Out Pending') &&
-      (f.timeInFormatted && f.timeInFormatted > '07:30 AM')
-    );
-  }, [facultyList]);
+    (facultyList || []).forEach(item => {
+      const meta = [item.employeeId, item.department || item.position || 'Faculty'].filter(Boolean).join(' · ');
 
-  const onLeaveTeachers = useMemo(() => {
-    return facultyList.filter(f => f.status === 'On Leave' || f.status === 'Official Business');
-  }, [facultyList]);
+      if (item.timeIn) {
+        const d = new Date(item.timeIn);
+        events.push({
+          id: `${item.teacherId}-in`,
+          name: item.name,
+          metadata: meta,
+          direction: 'IN',
+          timestamp: d,
+          timeFormatted: item.timeInFormatted || d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+        });
+      }
 
-  const waitingTeachers = useMemo(() => {
-    return facultyList.filter(f => f.status === 'Not Checked In');
-  }, [facultyList]);
+      if (item.timeOut) {
+        const d = new Date(item.timeOut);
+        events.push({
+          id: `${item.teacherId}-out`,
+          name: item.name,
+          metadata: meta,
+          direction: 'OUT',
+          timestamp: d,
+          timeFormatted: item.timeOutFormatted || d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    });
 
-  const tTotal = facultyList.length;
-  const tPresent = presentTeachers.length;
-  const tLate = lateTeachers.length;
-  const tLeave = onLeaveTeachers.length;
-  const tWaiting = waitingTeachers.length;
+    (invalidScans || []).forEach(scan => {
+      const d = new Date(scan.time);
+      events.push({
+        id: `invalid-${scan.time}-${scan.barcode}`,
+        name: 'Unrecognized Identifier',
+        metadata: `Scanned: ${scan.barcode}`,
+        direction: 'INVALID',
+        timestamp: d,
+        timeFormatted: d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+      });
+    });
 
-  const bgHeader = '#2A0505'; // Deep dark CIS maroon
-  const bgTicker = '#3D0808'; 
-  const bgMain = '#FAF5F0'; // Warm off-white paper bg
-  const bgCardLight = '#FFFFFF';
-  
-  const green = '#155E36';
-  const yellow = '#92400E';
-  const red = '#911818';
-  const gray = '#8A7070';
-  const textDark = '#190D0D';
-  const textMuted = '#4A3232';
+    return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [facultyList, invalidScans]);
+
+  // Transform Student GateAttendance rows into chronological events (newest first)
+  const studentEvents = useMemo(() => {
+    const events: GateFeedEvent[] = [];
+
+    (gateAttendance || []).forEach(record => {
+      if (record.timeIn) {
+        const d = new Date(record.timeIn);
+        events.push({
+          id: `${record.id}-in`,
+          name: record.studentName,
+          metadata: 'Grade 10 · Rizal',
+          direction: 'IN',
+          timestamp: d,
+          timeFormatted: d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+      if (record.timeOut) {
+        const d = new Date(record.timeOut);
+        events.push({
+          id: `${record.id}-out`,
+          name: record.studentName,
+          metadata: 'Grade 10 · Rizal',
+          direction: 'OUT',
+          timestamp: d,
+          timeFormatted: d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+    });
+
+    (invalidScans || []).forEach(scan => {
+      const d = new Date(scan.time);
+      events.push({
+        id: `invalid-${scan.time}-${scan.barcode}`,
+        name: 'Unrecognized Identifier',
+        metadata: `Scanned: ${scan.barcode}`,
+        direction: 'INVALID',
+        timestamp: d,
+        timeFormatted: d.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit' }),
+      });
+    });
+
+    return events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }, [gateAttendance, invalidScans]);
+
+  const activeEvents = feedMode === 'faculty' ? facultyEvents : studentEvents;
+  const featuredLeft = activeEvents[0] || null;
+  const featuredRight = activeEvents[1] || null;
 
   const todayFormatted = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Manila',
@@ -120,273 +177,249 @@ export function PLiveFacultyAttendance({ onExit }: { onExit: () => void }) {
   }).format(time);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', background: bgMain, color: textDark, fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
+    <div className="flex h-screen w-screen flex-col bg-slate-900 text-slate-100 font-sans overflow-hidden">
       
-      {/* HEADER */}
-      <div style={{ background: bgHeader, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={onExit} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <X size={20} />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>Exit TV</span>
+      {/* 1. TV TOP HEADER BAR */}
+      <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 px-6">
+        <div className="flex items-center gap-6">
+          <button 
+            type="button"
+            onClick={onExit}
+            className="flex items-center gap-2 rounded-lg bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition"
+          >
+            <ArrowLeft size={16} />
+            <span>Exit TV</span>
           </button>
-          <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.2)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <img src="/school_seal.png" alt="CIS Seal" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+
+          <div className="h-8 w-px bg-slate-800" />
+
+          <div className="flex items-center gap-3.5">
+            <img src="/school_seal.png" alt="School Seal" className="h-11 w-11 object-contain" />
             <div>
-              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.05em' }}>LIVE FACULTY ATTENDANCE MONITOR</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.03em' }}>{todayFormatted.toUpperCase()}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: sseStatus === 'live' ? 'rgba(34,197,94,0.2)' : 'rgba(245,158,11,0.2)', color: sseStatus === 'live' ? '#22c55e' : '#f59e0b', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, marginLeft: 16 }}>
-            <div style={{ width: 6, height: 6, borderRadius: 6, background: sseStatus === 'live' ? '#22c55e' : '#f59e0b', animation: 'pulse 1.5s infinite' }} />
-            {sseStatus === 'live' ? 'LIVE GATE STREAM' : 'RECONNECTING...'}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          {/* STATS */}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <StatCard val={tTotal} label="Faculty" color="#fff" />
-            <StatCard val={tPresent} label="Present" color={green} />
-            <StatCard val={tLate} label="Late" color={yellow} />
-            <StatCard val={tLeave} label="On Leave" color="#60a5fa" />
-            <StatCard val={tWaiting} label="Not Yet In" color={gray} />
-          </div>
-          
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 28, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>
-              {time.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
-            <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
-              <div style={{ width: `${tTotal > 0 ? ((tPresent + tLate) / tTotal) * 100 : 0}%`, height: '100%', background: green, transition: 'width 1s' }} />
+              <div className="text-base font-extrabold tracking-wider text-white uppercase font-serif">
+                {feedMode === 'faculty' ? 'LIVE FACULTY GATE FEED' : 'LIVE STUDENT GATE FEED'}
+              </div>
+              <div className="text-[11px] font-semibold text-slate-400 tracking-wide">
+                CALULUT INTEGRATED SCHOOL • {todayFormatted.toUpperCase()}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* MAIN 4-COLUMN WALLBOARD */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1.3fr 1fr 1fr', gap: 20, padding: 20, overflow: 'hidden' }}>
+        {/* Center Mode Selector */}
+        <div className="flex items-center gap-1 rounded-lg bg-slate-900 p-1 border border-slate-800 shadow-inner">
+          <button
+            type="button"
+            onClick={() => setFeedMode('student')}
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-xs font-bold transition ${
+              feedMode === 'student'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>Students</span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+              feedMode === 'student' ? 'bg-blue-800 text-blue-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {studentEvents.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFeedMode('faculty')}
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-xs font-bold transition ${
+              feedMode === 'faculty'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>Faculty</span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+              feedMode === 'faculty' ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              {facultyEvents.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Right Status & Digital Clock */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2.5 rounded-full bg-slate-900 border border-slate-800 px-3 py-1.5 text-xs font-bold">
+            <span className={`h-2.5 w-2.5 rounded-full ${
+              sseStatus === 'live' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'
+            }`} />
+            <span className={sseStatus === 'live' ? 'text-emerald-400' : 'text-amber-400'}>
+              {sseStatus === 'live' ? 'LIVE GATE STREAM' : 'RECONNECTING...'}
+            </span>
+          </div>
+
+          <div className="text-right font-mono text-2xl font-black tracking-tight text-white">
+            {time.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+        </div>
+      </header>
+
+      {/* 2. MAIN TV BODY */}
+      <main className="flex min-h-0 flex-1 flex-col gap-6 p-6 overflow-hidden">
         
-        {/* 1. Waiting To Tap In */}
-        <Column title="NOT YET CHECKED IN" count={tWaiting} color={gray}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 6, height: '100%' }}>
-            {waitingTeachers.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
-                <Check size={32} style={{ marginBottom: 12, color: green }} />
-                <div style={{ fontWeight: 600 }}>All faculty checked in</div>
-              </div>
-            ) : (
-              waitingTeachers.map(w => (
-                <div key={w.teacherId} style={{ background: bgCardLight, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(139,30,30,0.12)', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                     <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
-                       <User size={18} />
-                     </div>
-                     <div>
-                       <div style={{ fontWeight: 700, fontSize: 13, color: textDark }}>{w.name}</div>
-                       <div style={{ fontSize: 11, color: textMuted }}>{w.department} • <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{w.employeeId}</span></div>
-                     </div>
-                   </div>
-                   <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: gray, background: '#f3f4f6', padding: '3px 8px', borderRadius: 6 }}>
-                     Pending
-                   </div>
-                </div>
-              ))
-            )}
+        {/* Top Featured Latest 2 Scans (Matching Student Gate TV visual rhythm) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 shrink-0 h-48 lg:h-52">
+          <FeaturedScanCard event={featuredLeft} label="LATEST GATE SCAN" />
+          <FeaturedScanCard event={featuredRight} label="PREVIOUS SCAN" />
+        </div>
+
+        {/* Bottom Multi-Column Chronological Feed (Newest First) */}
+        <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-slate-800 bg-slate-950/70 p-5 shadow-2xl backdrop-blur-sm">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+            <div className="flex items-center gap-2">
+              <Radio size={15} className="text-emerald-400 animate-pulse" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Chronological Activity Stream — {feedMode === 'faculty' ? 'Faculty Gate Scans' : 'Student Gate Scans'}
+              </h2>
+            </div>
+            <div className="text-[11px] font-semibold text-slate-500">
+              Newest activity at top • Server authoritative timestamps
+            </div>
           </div>
-        </Column>
 
-        {/* 2. Present (On Time) */}
-        <Column title="PRESENT (ON TIME)" count={tPresent} color={green}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 6, height: '100%' }}>
-            {presentTeachers.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
-                <Clock size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
-                <div>Awaiting arrivals</div>
+          {activeEvents.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center text-slate-500 py-12">
+              <div className="h-12 w-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mb-3">
+                <User size={24} className="text-slate-600" />
               </div>
-            ) : (
-              presentTeachers.map(f => (
-                <motion.div key={f.teacherId} layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} style={{ background: bgCardLight, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(21,94,54,0.25)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer' }}
-                  onClick={() => { confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } }); setSelectedTeacher({ name: f.name, role: `${f.department} • ${f.position}` }); }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 8, background: '#ecfdf5', border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: green }}>
-                      <Check size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: textDark }}>{f.name}</div>
-                      <div style={{ fontSize: 11, color: textMuted }}>{f.department} • <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{f.employeeId}</span></div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: green, fontFamily: "'JetBrains Mono', monospace" }}>{f.timeInFormatted}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: f.timeOutFormatted ? '#2563eb' : '#059669' }}>
-                      {f.timeOutFormatted ? `OUT ${f.timeOutFormatted}` : 'INSIDE'}
-                    </div>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </div>
-        </Column>
-
-        {/* 3. Late Arrivals */}
-        <Column title="LATE ARRIVALS" count={tLate} color={yellow}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 6, height: '100%' }}>
-            {lateTeachers.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
-                <Check size={32} style={{ marginBottom: 12, color: green }} />
-                <div>No late arrivals</div>
-              </div>
-            ) : (
-              lateTeachers.map(f => (
-                <div key={f.teacherId} style={{ background: bgCardLight, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(245,158,11,0.3)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer' }}
-                  onClick={() => { setSelectedTeacher({ name: f.name, role: `${f.department} • ${f.position}` }); }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 8, background: '#fffbeb', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: yellow }}>
-                      <Clock size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: textDark }}>{f.name}</div>
-                      <div style={{ fontSize: 11, color: textMuted }}>{f.department} • <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{f.employeeId}</span></div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: yellow, fontFamily: "'JetBrains Mono', monospace" }}>{f.timeInFormatted}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: yellow }}>LATE</div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Column>
-
-        {/* 4. On Leave / Official Business */}
-        <Column title="ON LEAVE / OB" count={tLeave} color="#2563eb">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', paddingRight: 6, height: '100%' }}>
-            {onLeaveTeachers.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: textMuted }}>
-                <ShieldCheck size={32} style={{ marginBottom: 12, color: '#3b82f6', opacity: 0.6 }} />
-                <div>No approved leaves today</div>
-              </div>
-            ) : (
-              onLeaveTeachers.map(f => (
-                <div key={f.teacherId} style={{ background: bgCardLight, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(59,130,246,0.25)', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: textDark }}>{f.name}</div>
-                    <div style={{ fontSize: 11, color: textMuted }}>{f.department} • {f.position}</div>
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '3px 8px', borderRadius: 6 }}>
-                    {f.status}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Column>
-
-      </div>
-
-      {/* TICKER */}
-      <div style={{ height: 52, background: bgTicker, color: '#fff', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', padding: '0 24px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'flex', gap: 24, animation: 'scroll 35s linear infinite' }}>
-          {facultyList.filter(f => f.timeInFormatted).length === 0 ? (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
-              Optical ID Gate Ready — Present teacher ID card to ONI B2D-0240 scanner to record attendance
+              <p className="text-sm font-bold text-slate-400">
+                {feedMode === 'faculty' 
+                  ? 'No faculty gate scans recorded today.' 
+                  : 'No student gate scans recorded today.'}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">
+                Scans captured at the gate terminal or via optical reader appear here automatically.
+              </p>
             </div>
           ) : (
-            facultyList.filter(f => f.timeInFormatted).map((f, i) => (
-              <div key={`${f.teacherId}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.06)', padding: '5px 14px', borderRadius: 20 }}>
-                 <div style={{ width: 18, height: 18, borderRadius: 9, background: f.timeOutFormatted ? '#2563eb' : green, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
-                   {f.timeOutFormatted ? 'OUT' : 'IN'}
-                 </div>
-                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{f.name}</span>
-                 <span style={{ fontSize: 11, color: f.timeOutFormatted ? '#93c5fd' : '#86efac', fontFamily: "'JetBrains Mono', monospace" }}>
-                   {f.timeOutFormatted ? f.timeOutFormatted : f.timeInFormatted}
-                 </span>
-                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{f.department}</span>
-              </div>
-            ))
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 overflow-y-auto pr-2">
+              {activeEvents.map((ev) => (
+                <div 
+                  key={ev.id} 
+                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/90 px-4 py-3.5 shadow-sm hover:border-slate-700 transition"
+                >
+                  <div className="min-w-0 pr-3">
+                    <div className="truncate text-sm font-bold text-white tracking-tight">
+                      {ev.name}
+                    </div>
+                    <div className="truncate text-xs font-semibold text-slate-400 mt-0.5">
+                      {ev.metadata}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <DirectionBadge direction={ev.direction} />
+                    <span className="font-mono text-xs font-bold text-slate-300">
+                      {ev.timeFormatted}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
+        </section>
+      </main>
+
+      {/* 3. TV FOOTER STATUS BAR */}
+      <footer className="flex h-10 shrink-0 items-center justify-between border-t border-slate-800 bg-slate-950 px-6 text-xs text-slate-500 font-medium">
+        <div>
+          DIGISKWELA GATE MONITORING SYSTEM • CALULUT INTEGRATED SCHOOL
         </div>
-      </div>
+        <div className="flex items-center gap-4">
+          <span className="font-mono text-slate-400">{activeEvents.length} Total Today</span>
+          <span>•</span>
+          <span className="text-slate-400">Timezone: Asia/Manila (UTC+8)</span>
+        </div>
+      </footer>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.5; }
-          100% { opacity: 1; }
-        }
-        ::-webkit-scrollbar {
-          width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: rgba(0,0,0,0.12);
-          border-radius: 10px;
-        }
-      `}} />
-
-      {selectedTeacher && (
-        <LiveTapInOverlay teacher={selectedTeacher} onClose={() => setSelectedTeacher(null)} />
-      )}
+      <Toaster position="top-right" richColors theme="dark" />
     </div>
   );
 }
 
-function StatCard({ val, label, color }: { val: number, label: string, color: string }) {
+function DirectionBadge({ direction }: { direction: 'IN' | 'OUT' | 'INVALID' }) {
+  if (direction === 'IN') {
+    return (
+      <span className="inline-flex items-center rounded-md bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-400">
+        TIME IN
+      </span>
+    );
+  }
+
+  if (direction === 'OUT') {
+    return (
+      <span className="inline-flex items-center rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-400">
+        TIME OUT
+      </span>
+    );
+  }
+
   return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ fontSize: 18, fontWeight: 800, color }}>{val}</div>
-      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-    </div>
+    <span className="inline-flex items-center rounded-md bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-rose-400">
+      INVALID
+    </span>
   );
 }
 
-function Column({ title, count, color, children }: { title: string, count: number, color: string, children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 4, background: color }} />
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.05em', color: '#4B5563' }}>{title}</div>
-        </div>
-        <div style={{ fontSize: 18, fontWeight: 800, color }}>{count}</div>
+function FeaturedScanCard({ event, label }: { event: GateFeedEvent | null; label: string }) {
+  if (!event) {
+    return (
+      <div className="flex h-full flex-col justify-center items-center rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-slate-600">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">{label}</span>
+        <span className="text-sm font-semibold">Awaiting scan activity</span>
       </div>
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
+    );
+  }
 
-function LiveTapInOverlay({ teacher, onClose }: { teacher: { name: string; role: string; img?: string }, onClose: () => void }) {
+  const isIn = event.direction === 'IN';
+  const isInvalid = event.direction === 'INVALID';
+
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(15,8,8,0.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      
-      <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ background: "#fff", borderRadius: 24, padding: "36px 32px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", boxShadow: "0 24px 60px rgba(74,10,16,0.4)", maxWidth: 420, width: "100%", position: "relative" }}>
-        
-        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, width: 36, height: 36, borderRadius: 18, background: "rgba(0,0,0,0.05)", border: "none", color: "#666", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <X size={20} />
-        </button>
+    <div className={`relative flex h-full flex-col justify-between overflow-hidden rounded-xl border p-5 shadow-lg transition ${
+      isInvalid 
+        ? 'border-rose-900/60 bg-gradient-to-br from-rose-950/40 to-slate-950'
+        : isIn 
+          ? 'border-emerald-900/60 bg-gradient-to-br from-emerald-950/40 to-slate-950' 
+          : 'border-blue-900/60 bg-gradient-to-br from-blue-950/40 to-slate-950'
+    }`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          {label}
+        </span>
+        <DirectionBadge direction={event.direction} />
+      </div>
 
-        <div style={{ width: 120, height: 120, borderRadius: 24, background: C.m50, border: `4px solid ${C.m100}`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 12px 32px rgba(0,0,0,0.1)", marginBottom: 20 }}>
-          <User size={60} color={C.m700} />
+      <div className="my-auto flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
+            {event.name}
+          </h3>
+          <p className="text-sm font-semibold text-slate-300 mt-1">
+            {event.metadata}
+          </p>
         </div>
 
-        <div style={{ fontSize: 12, fontWeight: 800, color: C.m700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Faculty Gate Scan</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", lineHeight: 1.1, marginBottom: 8 }}>{teacher.name}</div>
-        <div style={{ fontSize: 14, color: C.t2, fontWeight: 600 }}>{teacher.role}</div>
+        <div className="text-right">
+          <div className="font-mono text-3xl font-black tracking-tight text-white">
+            {event.timeFormatted}
+          </div>
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+            VERIFIED TIMESTAMP
+          </div>
+        </div>
+      </div>
 
-      </motion.div>
+      <div className="h-1 w-full rounded-full overflow-hidden bg-slate-800">
+        <div className={`h-full ${
+          isInvalid ? 'bg-rose-500' : isIn ? 'bg-emerald-500' : 'bg-blue-500'
+        } w-full`} />
+      </div>
     </div>
   );
 }
