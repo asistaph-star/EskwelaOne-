@@ -104,6 +104,18 @@ async function main() {
     create: { id: teacherUser.id, user_id: teacherUser.id, employee_id: 'EMP-T-001', department: 'Mathematics' }
   });
 
+  // Ensure Teacher Scan Credential (Development Test Credential)
+  await prisma.teacherScanCredential.upsert({
+    where: { scan_identifier: 'EMP-T-001' },
+    update: { is_active: true },
+    create: {
+      id: 'demo-teacher-cred-1',
+      teacher_id: teacherUser.id,
+      scan_identifier: 'EMP-T-001',
+      is_active: true
+    }
+  });
+
   // Ensure Teacher Assignment
   const assignmentId = 'demo-assign-1';
   await prisma.teacherSubjectAssignment.upsert({

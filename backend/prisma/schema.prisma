@@ -144,9 +144,24 @@ model Teacher {
   teacherRankings      TeacherRanking[]
   assignments          TeacherSubjectAssignment[]
   faculty_attendances  FacultyAttendance[]
+  scan_credentials     TeacherScanCredential[]
   user                 User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey")
 
   @@map("teachers")
+}
+
+model TeacherScanCredential {
+  id              String   @id @db.VarChar(36)
+  teacher_id      String   @db.VarChar(36)
+  scan_identifier String   @unique(map: "teacher_scan_credentials_identifier_key") @db.VarChar(100)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  teacher         Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+  @@index([scan_identifier, is_active], map: "teacher_scan_credentials_lookup_idx")
+  @@map("teacher_scan_credentials")
 }
 
 model Staff {
