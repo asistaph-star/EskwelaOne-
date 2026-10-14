@@ -41,6 +41,7 @@ model User {
   teacher                        Teacher?
   user_roles                     UserRole[]
   campus_media                   CampusMedia[]
+  faculty_attendance_corrections FacultyAttendance[]   @relation("FacultyAttendanceCorrections")
 
   @@map("users")
 }
@@ -140,9 +141,10 @@ model Teacher {
   appointments     Appointment[]
   documentRequests DocumentRequest[]
   excuseLetters    ExcuseLetter[]
-  teacherRankings  TeacherRanking[]
-  assignments      TeacherSubjectAssignment[]
-  user             User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey")
+  teacherRankings      TeacherRanking[]
+  assignments          TeacherSubjectAssignment[]
+  faculty_attendances  FacultyAttendance[]
+  user                 User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey")
 
   @@map("teachers")
 }
@@ -743,4 +745,26 @@ enum TermKey {
   T2
   T3
   T4
+}
+
+model FacultyAttendance {
+  id               String    @id @db.VarChar(36)
+  teacher_id       String    @db.VarChar(36)
+  date             DateTime  @db.Date
+  time_in          DateTime? @db.Timestamptz(3)
+  time_out         DateTime? @db.Timestamptz(3)
+  capture_source   String    @default("web_teacher") @db.VarChar(30)
+  override_status  String?   @db.VarChar(30)
+  override_remarks String?   @db.VarChar(255)
+  corrected_by_id  String?   @db.VarChar(36)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  teacher          Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+  corrected_by     User?     @relation("FacultyAttendanceCorrections", fields: [corrected_by_id], references: [id], onDelete: SetNull)
+
+  @@unique([teacher_id, date], map: "faculty_attendance_teacher_id_date_key")
+  @@index([date], map: "faculty_attendance_date_idx")
+  @@index([teacher_id, date], map: "faculty_attendance_teacher_id_date_idx")
+  @@map("faculty_attendance")
 }

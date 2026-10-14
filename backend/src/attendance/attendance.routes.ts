@@ -7,10 +7,12 @@ import { createAuditLog } from '../audit/audit.service.js';
 import { AppError } from '../common/middleware/errorHandler.js';
 import excuseLettersRouter from '../modules/excuse-letters/excuseLetters.routes.js';
 import classAttendanceRouter from '../modules/class-attendance/classAttendance.routes.js';
+import facultyAttendanceRouter from '../modules/faculty-attendance/facultyAttendance.routes.js';
 
 const router = Router();
 router.use(authMiddleware);
 
+router.use('/faculty', facultyAttendanceRouter);
 router.use('/excuses', excuseLettersRouter);
 router.use('/', classAttendanceRouter);
 

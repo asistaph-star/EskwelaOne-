@@ -17,6 +17,7 @@ const PERMISSIONS = [
 
   // Attendance
   'attendance:read', 'attendance:write', 'attendance:write_all',
+  'faculty_attendance:read', 'faculty_attendance:write',
 
   // Documents
   'document:request', 'document:read', 'document:approve',
@@ -38,6 +39,7 @@ const ROLES = {
   Principal: [
     'user:read', 'academic:read', 'assignment:read_all', 'assignment:write', 'enrollment:read',
     'grade:read_all', 'grade:publish', 'attendance:read', 'attendance:write_all',
+    'faculty_attendance:read',
     'document:read', 'document:approve', 'behavior:read', 'announcement:write',
     'leave:approve', 'inventory:read'
   ],
