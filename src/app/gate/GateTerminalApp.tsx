@@ -13,10 +13,13 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
   useEffect(() => {
     if (scannerState.status === 'success' && scannerState.payload) {
       setRecentScans((prev) => {
-        if (prev.length > 0 && prev[0].time === scannerState.payload!.time && prev[0].studentId === scannerState.payload!.studentId) {
+        const payload = scannerState.payload!;
+        const idMatches = (prev[0]?.studentId && prev[0].studentId === payload.studentId) ||
+                          (prev[0]?.teacherId && prev[0].teacherId === payload.teacherId);
+        if (prev.length > 0 && prev[0].time === payload.time && idMatches) {
           return prev;
         }
-        return [scannerState.payload!, ...prev].slice(0, 30);
+        return [payload, ...prev].slice(0, 30);
       });
     }
   }, [scannerState.status, scannerState.payload]);

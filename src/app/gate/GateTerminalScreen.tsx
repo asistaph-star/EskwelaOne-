@@ -80,25 +80,32 @@ export function GateTerminalScreen({ scannerState, hasFocus, recentScans }: Gate
           className="relative z-10 h-full w-full columns-1 lg:columns-2 xl:columns-3 gap-6 space-y-3 overflow-hidden" 
           style={{ columnFill: 'auto' }}
         >
-          {recentScans.slice(0, 32).map((scan, i) => (
-            <div key={i} className="flex h-[4.5rem] break-inside-avoid items-center gap-3 border-b border-slate-200 bg-white/50 px-3 transition-colors hover:bg-white rounded-lg">
-               <img src="/student_photo.png" alt="" className="h-12 w-12 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-black/5" />
-               <div className="flex min-w-0 flex-col overflow-hidden justify-center space-y-0.5">
-                 <div className="truncate text-xs font-bold uppercase tracking-tight text-slate-800 leading-none">
-                    {scan.studentName}
+          {recentScans.slice(0, 32).map((scan, i) => {
+            const isFaculty = scan.entityType === 'FACULTY';
+            const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
+            const subTitle = isFaculty ? `${scan.department || 'FACULTY'} • ${scan.position || 'TEACHER'}` : 'GRADE 10 • RIZAL';
+            const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
+
+            return (
+              <div key={i} className="flex h-[4.5rem] break-inside-avoid items-center gap-3 border-b border-slate-200 bg-white/50 px-3 transition-colors hover:bg-white rounded-lg">
+                 <img src={photoSrc} alt="" className="h-12 w-12 shrink-0 rounded-full object-cover shadow-sm ring-1 ring-black/5" />
+                 <div className="flex min-w-0 flex-col overflow-hidden justify-center space-y-0.5">
+                   <div className="truncate text-xs font-bold uppercase tracking-tight text-slate-800 leading-none">
+                      {displayName}
+                   </div>
+                   <div className="truncate text-[9px] font-semibold tracking-wider text-slate-500 uppercase leading-none">
+                      {subTitle}
+                   </div>
+                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 leading-none">
+                     <span className={scan.action === 'Time In' ? 'text-green-600' : 'text-blue-600'}>
+                       {scan.action === 'Time In' ? 'IN' : 'OUT'}
+                     </span>
+                     <span>{new Date(scan.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                   </div>
                  </div>
-                 <div className="truncate text-[9px] font-semibold tracking-wider text-slate-500 uppercase leading-none">
-                    GRADE 10 • RIZAL
-                 </div>
-                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 leading-none">
-                   <span className={scan.action === 'Time In' ? 'text-green-600' : 'text-blue-600'}>
-                     {scan.action === 'Time In' ? 'IN' : 'OUT'}
-                   </span>
-                   <span>{new Date(scan.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
-                 </div>
-               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
         
         {/* State Overlays */}
@@ -172,7 +179,10 @@ function ProfileCard({ scan }: { scan: RecentScan | null }) {
   }
 
   const isIn = scan.action === 'Time In';
-  const statusColor = isIn ? 'text-red-600' : 'text-blue-600'; // Using red/green styling as requested in spec ("clear red or green IN stamp")
+  const isFaculty = scan.entityType === 'FACULTY';
+  const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
+  const subTitle = isFaculty ? `${scan.department || 'FACULTY'} • ${scan.position || 'TEACHER'}` : 'GRADE 10 • RIZAL';
+  const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
   
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -196,19 +206,19 @@ function ProfileCard({ scan }: { scan: RecentScan | null }) {
       {/* Large Profile Picture */}
       <div className="flex min-h-0 flex-1 w-full items-end justify-center bg-white pt-6">
         <img 
-          src="/student_photo.png" 
-          alt={scan.studentName} 
+          src={photoSrc} 
+          alt={displayName} 
           className="h-full object-contain mix-blend-multiply" 
         />
       </div>
 
       {/* Colored Label Bar */}
-      <div className="flex w-full shrink-0 flex-col items-center bg-slate-600 py-3.5 text-white md:py-4">
+      <div className={`flex w-full shrink-0 flex-col items-center ${isFaculty ? 'bg-indigo-700' : 'bg-slate-600'} py-3.5 text-white md:py-4`}>
         <h2 className="text-lg font-bold uppercase tracking-wider md:text-xl lg:text-2xl">
-          {scan.studentName}
+          {displayName}
         </h2>
         <div className="mt-0.5 text-xs font-semibold tracking-widest text-slate-300 md:text-sm">
-          GRADE 10 • RIZAL
+          {subTitle}
         </div>
       </div>
     </div>

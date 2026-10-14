@@ -29,32 +29,38 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { apiClient } from '../../../api/client';
 
 // ─── Timing ────────────────────────────────────────────────────
-// STATUS: VALIDATED — The specific tested B2D-0240 unit measures ~116ms.
-// Threshold set to 150ms to provide margin above the observed measurement.
+// STATUS: VALIDATED — The specific tested B2D-0240 unit measures ~116ms for 12 chars.
+// Base threshold set to 150ms with dynamic scaling (25ms/char) for longer payloads.
 const SCANNER_BURST_THRESHOLD_MS = 150;
 
 // ─── Identifier Configuration ──────────────────────────────────
-// Current production assumption: Identifier = LRN
-// Status: WORKING / VERIFIED FOR TESTING
-// Final school ID identifier: NOT VERIFIED
-// This configuration isolates the LRN assumption from hardware timing logic.
+// Transport layer: detects physical scanner burst without imposing business rules.
+// Backend identity resolvers handle strict validation for Students and Faculty.
 
 export interface ScannerIdentifierConfig {
-  pattern: RegExp;
-  length: number;
+  pattern?: RegExp;
+  minLength?: number;
+  maxLength?: number;
 }
 
 export const DEFAULT_IDENTIFIER_CONFIG: ScannerIdentifierConfig = {
-  pattern: /^\d{12}$/, // LRN format: exactly 12 numeric digits
-  length: 12,
+  pattern: /^[\x20-\x7E]+$/, // Printable ASCII characters
+  minLength: 4,
+  maxLength: 64,
 };
 
 // ─── Typed State Contract ──────────────────────────────────────
-// Matches the actual backend POST /api/attendance/gate/scan response.
+// Matches the unified backend POST /api/attendance/gate/scan response.
 
 export interface GateScanPayload {
-  studentName: string;
-  studentId: string;
+  entityType?: 'STUDENT' | 'FACULTY';
+  studentName?: string;
+  studentId?: string;
+  teacherName?: string;
+  teacherId?: string;
+  employeeId?: string;
+  department?: string;
+  position?: string;
   action: 'Time In' | 'Time Out';
   time: string;
 }
@@ -100,25 +106,29 @@ export function useHardwareScanner(
   }, [resetToIdle]);
 
   useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      const now = Date.now();
+    const minLen = config.minLength ?? 4;
+    const maxLen = config.maxLength ?? 64;
+    const pattern = config.pattern ?? /^[\x20-\x7E]+$/;
 
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         // Enter arrived — check if the preceding keystrokes look like a scanner burst
-        console.log(`[Scanner Hook] Enter received. Buffer length: ${bufferRef.current.length}`);
+        const bufLen = bufferRef.current.length;
+        console.log(`[Scanner Hook] Enter received. Buffer length: ${bufLen}`);
 
-        if (bufferRef.current.length === config.length) {
+        if (bufLen >= minLen && bufLen <= maxLen) {
           const first = bufferRef.current[0].time;
-          const last = bufferRef.current[config.length - 1].time;
+          const last = bufferRef.current[bufLen - 1].time;
           const duration = last - first;
           const candidate = bufferRef.current.map(b => b.char).join('');
+          const maxAllowedDuration = Math.max(SCANNER_BURST_THRESHOLD_MS, candidate.length * 25);
 
-          console.log(`[Scanner Hook] Candidate: ${candidate} | Duration: ${duration}ms (Threshold: ${SCANNER_BURST_THRESHOLD_MS}ms)`);
+          console.log(`[Scanner Hook] Candidate: ${candidate} | Duration: ${duration}ms (Max: ${maxAllowedDuration}ms)`);
 
           // Clear buffer immediately regardless of outcome
           bufferRef.current = [];
 
-          if (duration <= SCANNER_BURST_THRESHOLD_MS && config.pattern.test(candidate)) {
+          if (duration <= maxAllowedDuration && pattern.test(candidate)) {
             // This looks like a scanner burst — block the Enter from the page
             e.preventDefault();
 
@@ -128,11 +138,17 @@ export function useHardwareScanner(
 
             try {
               const res = await apiClient.post<any>('/attendance/gate/scan', { barcode: candidate });
-              // apiClient already unwraps { success: true, data: { ... } } and returns the inner data object
+              // apiClient unwraps { success: true, data: { ... } }
               if (res) {
                 const payload: GateScanPayload = {
+                  entityType: res.entityType || (res.teacherId ? 'FACULTY' : 'STUDENT'),
                   studentName: res.studentName,
                   studentId: res.studentId,
+                  teacherName: res.teacherName,
+                  teacherId: res.teacherId,
+                  employeeId: res.employeeId,
+                  department: res.department,
+                  position: res.position,
                   action: res.action as 'Time In' | 'Time Out',
                   time: res.time,
                 };
@@ -156,7 +172,7 @@ export function useHardwareScanner(
           }
         } else {
           // Wrong number of buffered chars — clear and let Enter through normally
-          console.log(`[Scanner Hook] Dropped scan. Buffer length was ${bufferRef.current.length}, expected ${config.length}. Candidate was: ${bufferRef.current.map(b => b.char).join('')}`);
+          console.log(`[Scanner Hook] Dropped scan. Buffer length was ${bufferRef.current.length}, expected ${minLen}-${maxLen}.`);
           bufferRef.current = [];
         }
         return;
@@ -166,11 +182,10 @@ export function useHardwareScanner(
       if (e.key.length === 1) {
         const now_char = Date.now();
 
-        // If gap since last character is too long, it was human typing — reset buffer
+        // If gap since last character is too long (> 50ms), it was human typing — reset buffer
         if (bufferRef.current.length > 0) {
           const lastTime = bufferRef.current[bufferRef.current.length - 1].time;
           if (now_char - lastTime > 50) {
-            // 50ms inter-keystroke gap is too slow for a scanner; reset
             bufferRef.current = [];
           }
         }
@@ -178,7 +193,7 @@ export function useHardwareScanner(
         bufferRef.current.push({ char: e.key, time: now_char });
 
         // Safety: cap buffer to prevent runaway accumulation
-        if (bufferRef.current.length > config.length) {
+        if (bufferRef.current.length > maxLen) {
           bufferRef.current = [];
         }
       }
