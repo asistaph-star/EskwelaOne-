@@ -9,11 +9,19 @@ interface GateTerminalScreenProps {
   scannerState: ScannerState;
   hasFocus: boolean;
   recentScans: RecentScan[];
+  terminalContext: 'student' | 'faculty';
+  onTerminalContextChange: (mode: 'student' | 'faculty') => void;
 }
 
 const GATE_IDLE_MEDIA_DELAY_MS = 60_000;
 
-export function GateTerminalScreen({ scannerState, hasFocus, recentScans }: GateTerminalScreenProps) {
+export function GateTerminalScreen({
+  scannerState,
+  hasFocus,
+  recentScans,
+  terminalContext,
+  onTerminalContextChange,
+}: GateTerminalScreenProps) {
   const [isIdleMedia, setIsIdleMedia] = useState(false);
 
   // Idle Timer Logic
@@ -61,7 +69,10 @@ export function GateTerminalScreen({ scannerState, hasFocus, recentScans }: Gate
 
       {/* 1. Header Section */}
       <div className="relative z-20">
-        <GateHeader />
+        <GateHeader
+          terminalContext={terminalContext}
+          onTerminalContextChange={onTerminalContextChange}
+        />
       </div>
 
       {/* Campus Media Layer (Takes up main and bottom sections when idle) */}
@@ -156,9 +167,12 @@ export function GateTerminalScreen({ scannerState, hasFocus, recentScans }: Gate
       )}
 
       {/* 4. Footer Section (Status Bar) */}
-      <footer className="relative z-10 flex shrink-0 items-center justify-end gap-6 bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
-        <div className="text-[10px] text-slate-500">
-           BIOMETRIC SYSTEM - STATUS: ONLINE
+      <footer className="relative z-10 flex shrink-0 items-center justify-between gap-6 bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="text-slate-500">STATION:</span>
+          <span className={terminalContext === 'faculty' ? 'text-indigo-400' : 'text-blue-400'}>
+            {terminalContext === 'faculty' ? 'FACULTY ATTENDANCE INGESTION' : 'STUDENT ATTENDANCE INGESTION'}
+          </span>
         </div>
         <div className="flex items-center gap-3">
            <span className="text-slate-400">SCANNER READY</span>

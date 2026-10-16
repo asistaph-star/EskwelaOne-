@@ -7,7 +7,23 @@ interface GateTerminalAppProps {
 }
 
 export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
-  const scannerState = useHardwareScanner();
+  const [terminalContext, setTerminalContext] = useState<'student' | 'faculty'>(() => {
+    const saved = localStorage.getItem('digiskwela_gate_terminal_mode');
+    return (saved === 'faculty' || saved === 'student') ? saved : 'student';
+  });
+
+  const handleTerminalContextChange = useCallback((mode: 'student' | 'faculty') => {
+    setTerminalContext(mode);
+    localStorage.setItem('digiskwela_gate_terminal_mode', mode);
+  }, []);
+
+  const scannerConfig = React.useMemo(() => ({
+    endpoint: terminalContext === 'faculty'
+      ? '/attendance/gate/faculty/scan'
+      : '/attendance/gate/student/scan'
+  }), [terminalContext]);
+
+  const scannerState = useHardwareScanner(scannerConfig);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
 
   useEffect(() => {
@@ -56,7 +72,13 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-white text-slate-900 font-sans">
-      <GateTerminalScreen scannerState={scannerState} hasFocus={hasFocus} recentScans={recentScans} />
+      <GateTerminalScreen
+        scannerState={scannerState}
+        hasFocus={hasFocus}
+        recentScans={recentScans}
+        terminalContext={terminalContext}
+        onTerminalContextChange={handleTerminalContextChange}
+      />
 
       {/* Hidden Staff Logout Hot-Corner */}
       <button

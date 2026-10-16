@@ -161,138 +161,52 @@ async function resolveScannedTeacher(barcode: string) {
 // ─── Routes ─────────────────────────────────────────────────
 
 /**
- * POST /api/attendance/gate/scan
- * Hardware USB keyboard-wedge barcode scanner endpoint.
- * Unified dispatcher for both Students (by LRN) and Faculty (by TeacherScanCredential).
+ * POST /api/attendance/gate/student/scan
+ * Dedicated Student Gate Scanner endpoint.
+ * Strictly accepts Student LRN only -> records Student GateAttendance.
+ * Rejects Faculty credentials with explicit diagnostic error without creating attendance.
  */
-router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:write_all'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/gate/student/scan', requireAnyPermission('attendance:write', 'attendance:write_all'), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('=== GATE SCAN RECEIVED ===', req.body);
     const input = scanAttendanceSchema.parse(req.body);
     const correlationId = (req as any).correlationId;
     const actorId = ((req as any).user as AuthenticatedUser).id;
-
     const rawBarcode = input.barcode.replace(/[\r\n]/g, '');
 
-    // Concurrently resolve Student and Faculty
-    const [student, teacher] = await Promise.all([
-      resolveScannedStudent(rawBarcode),
-      resolveScannedTeacher(rawBarcode),
-    ]);
+    // Resolve Student only
+    const student = await resolveScannedStudent(rawBarcode);
 
-    // 1. Collision protection: Ambiguous scan matching both Student and Teacher
-    if (student && teacher) {
-      console.warn('--- COLLISION DETECTED: Barcode matched both Student and Teacher:', rawBarcode);
+    if (!student) {
+      // Diagnostic check: Was a Teacher credential scanned on the Student scanner?
+      const teacher = await resolveScannedTeacher(rawBarcode);
       emitInvalidScan(rawBarcode);
-      return res.status(409).json({
+      if (teacher) {
+        return res.status(422).json({
+          success: false,
+          error: {
+            code: 'INVALID_CREDENTIAL_TYPE',
+            message: 'This ID is not valid for the Student Attendance scanner.'
+          }
+        });
+      }
+
+      return res.status(404).json({
         success: false,
-        error: { code: 'AMBIGUOUS_SCAN', message: 'Identifier matches multiple registered profiles.' }
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Identifier not recognized.'
+        }
       });
-    }
-
-    // 2. Unrecognized scan: Neither Student nor Teacher found
-    if (!student && !teacher) {
-      console.log('--- GATE SCAN FAILED: Identifier not found for barcode', rawBarcode);
-      emitInvalidScan(rawBarcode);
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Identifier not recognized.' } });
     }
 
     const now = new Date();
-
-    // 3. Faculty Gate Scan Branch
-    if (teacher) {
-      if (!teacher.user || teacher.user.status !== 'active') {
-        return res.status(403).json({ success: false, error: { code: 'ACCOUNT_INACTIVE', message: 'Teacher account is not active.' } });
-      }
-
-      const { dateObj: today } = getPhilippineCalendarDate(now);
-
-      const existing = await prisma.facultyAttendance.findUnique({
-        where: {
-          teacher_id_date: {
-            teacher_id: teacher.id,
-            date: today,
-          }
-        }
-      });
-
-      let action = '';
-      let resultEntry;
-
-      if (!existing) {
-        resultEntry = await prisma.facultyAttendance.create({
-          data: {
-            id: generateId(),
-            teacher_id: teacher.id,
-            date: today,
-            time_in: now,
-            capture_source: 'gate_scanner',
-          }
-        });
-        action = 'Time In';
-      } else {
-        if (existing.time_out) {
-          return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Teacher already timed out today.' } });
-        }
-
-        // 60-second debounce matching Student Gate
-        if (existing.updated_at && (now.getTime() - existing.updated_at.getTime()) < 60000) {
-          return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Scan ignored (duplicate scan within 1 minute).' } });
-        }
-
-        resultEntry = await prisma.facultyAttendance.update({
-          where: { id: existing.id },
-          data: {
-            time_out: now,
-          }
-        });
-        action = 'Time Out';
-      }
-
-      await createAuditLog({
-        actorUserId: actorId,
-        action: existing ? 'FACULTY_ATTENDANCE_SCAN_OUT' : 'FACULTY_ATTENDANCE_SCAN_IN',
-        resourceType: 'faculty_attendance',
-        resourceId: resultEntry.id,
-        newState: { barcode: input.barcode, teacherId: teacher.id },
-        correlationId,
-      });
-
-      // Notify Principal Monitoring clients that Faculty Attendance changed
-      emitFacultyAttendanceChanged();
-
-      return res.json({
-        success: true,
-        data: {
-          entityType: 'FACULTY',
-          teacherName: teacher.user ? `${teacher.user.first_name} ${teacher.user.last_name}` : 'Unknown',
-          teacherId: teacher.id,
-          employeeId: teacher.employee_id,
-          department: teacher.department || 'Faculty',
-          position: teacher.position || 'Teacher',
-          action: action,
-          time: now.toISOString(),
-          record: {
-            id: resultEntry.id,
-            teacherId: teacher.id,
-            teacherName: teacher.user ? `${teacher.user.first_name} ${teacher.user.last_name}` : 'Unknown',
-            date: today.toISOString(),
-            timeIn: resultEntry.time_in ? resultEntry.time_in.toISOString() : null,
-            timeOut: resultEntry.time_out ? resultEntry.time_out.toISOString() : null,
-            captureSource: resultEntry.capture_source,
-          }
-        }
-      });
-    }
-
-    // 4. Student Gate Scan Branch (Preserved exact Student logic!)
     const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
     const today = new Date(todayStr); // 00:00:00Z for the Date field
 
     const existing = await prisma.gateAttendance.findUnique({
       where: {
         student_id_date: {
-          student_id: student!.id,
+          student_id: student.id,
           date: today,
         }
       }
@@ -305,7 +219,7 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
       resultEntry = await prisma.gateAttendance.create({
         data: {
           id: generateId(),
-          student_id: student!.id,
+          student_id: student.id,
           date: today,
           status: 'Present',
           time_in: now,
@@ -316,9 +230,8 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
       if (existing.time_out) {
         return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Student already timed out today.' } });
       }
-      
+
       // Debounce logic (within 1 minute of previous action, don't allow time_out)
-      // Note: time_in is @db.Time(3) so Prisma returns it as 1970-01-01. We use updated_at instead for a reliable timestamp comparison.
       if (existing.updated_at && (now.getTime() - existing.updated_at.getTime()) < 60000) {
         return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Scan ignored (duplicate scan within 1 minute).' } });
       }
@@ -348,14 +261,14 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
       success: true,
       data: {
         entityType: 'STUDENT',
-        studentName: student!.user ? `${student!.user.first_name} ${student!.user.last_name}` : 'Unknown',
-        studentId: student!.id,
+        studentName: student.user ? `${student.user.first_name} ${student.user.last_name}` : 'Unknown',
+        studentId: student.id,
         action: action,
         time: now.toISOString(),
         record: {
           id: resultEntry.id,
-          studentId: student!.id,
-          studentName: student!.user ? `${student!.user.first_name} ${student!.user.last_name}` : 'Unknown',
+          studentId: student.id,
+          studentName: student.user ? `${student.user.first_name} ${student.user.last_name}` : 'Unknown',
           date: today.toISOString(),
           timeIn: resultEntry.time_in ? resultEntry.time_in.toISOString() : null,
           timeOut: resultEntry.time_out ? resultEntry.time_out.toISOString() : null,
@@ -366,6 +279,148 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
   } catch (err) {
     next(err);
   }
+});
+
+/**
+ * POST /api/attendance/gate/faculty/scan
+ * Dedicated Faculty Gate Scanner endpoint.
+ * Strictly accepts TeacherScanCredential only -> records FacultyAttendance.
+ * Rejects Student IDs with explicit diagnostic error without creating attendance.
+ */
+router.post('/gate/faculty/scan', requireAnyPermission('attendance:write', 'attendance:write_all'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const input = scanAttendanceSchema.parse(req.body);
+    const correlationId = (req as any).correlationId;
+    const actorId = ((req as any).user as AuthenticatedUser).id;
+    const rawBarcode = input.barcode.replace(/[\r\n]/g, '');
+
+    // Resolve Faculty credential only
+    const teacher = await resolveScannedTeacher(rawBarcode);
+
+    if (!teacher) {
+      // Diagnostic check: Was a Student ID scanned on the Faculty scanner?
+      const student = await resolveScannedStudent(rawBarcode);
+      emitInvalidScan(rawBarcode);
+      if (student) {
+        return res.status(422).json({
+          success: false,
+          error: {
+            code: 'INVALID_CREDENTIAL_TYPE',
+            message: 'This ID is not valid for the Faculty Attendance scanner.'
+          }
+        });
+      }
+
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Identifier not recognized.'
+        }
+      });
+    }
+
+    if (!teacher.user || teacher.user.status !== 'active') {
+      return res.status(403).json({ success: false, error: { code: 'ACCOUNT_INACTIVE', message: 'Teacher account is not active.' } });
+    }
+
+    const now = new Date();
+    const { dateObj: today } = getPhilippineCalendarDate(now);
+
+    const existing = await prisma.facultyAttendance.findUnique({
+      where: {
+        teacher_id_date: {
+          teacher_id: teacher.id,
+          date: today,
+        }
+      }
+    });
+
+    let action = '';
+    let resultEntry;
+
+    if (!existing) {
+      resultEntry = await prisma.facultyAttendance.create({
+        data: {
+          id: generateId(),
+          teacher_id: teacher.id,
+          date: today,
+          time_in: now,
+          capture_source: 'gate_scanner',
+        }
+      });
+      action = 'Time In';
+    } else {
+      if (existing.time_out) {
+        return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Teacher already timed out today.' } });
+      }
+
+      // 60-second debounce matching Student Gate
+      if (existing.updated_at && (now.getTime() - existing.updated_at.getTime()) < 60000) {
+        return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Scan ignored (duplicate scan within 1 minute).' } });
+      }
+
+      resultEntry = await prisma.facultyAttendance.update({
+        where: { id: existing.id },
+        data: {
+          time_out: now,
+        }
+      });
+      action = 'Time Out';
+    }
+
+    await createAuditLog({
+      actorUserId: actorId,
+      action: existing ? 'FACULTY_ATTENDANCE_SCAN_OUT' : 'FACULTY_ATTENDANCE_SCAN_IN',
+      resourceType: 'faculty_attendance',
+      resourceId: resultEntry.id,
+      newState: { barcode: input.barcode, teacherId: teacher.id },
+      correlationId,
+    });
+
+    // Notify Principal Monitoring clients that Faculty Attendance changed
+    emitFacultyAttendanceChanged();
+
+    return res.json({
+      success: true,
+      data: {
+        entityType: 'FACULTY',
+        teacherName: teacher.user ? `${teacher.user.first_name} ${teacher.user.last_name}` : 'Unknown',
+        teacherId: teacher.id,
+        employeeId: teacher.employee_id,
+        department: teacher.department || 'Faculty',
+        position: teacher.position || 'Teacher',
+        action: action,
+        time: now.toISOString(),
+        record: {
+          id: resultEntry.id,
+          teacherId: teacher.id,
+          teacherName: teacher.user ? `${teacher.user.first_name} ${teacher.user.last_name}` : 'Unknown',
+          date: today.toISOString(),
+          timeIn: resultEntry.time_in ? resultEntry.time_in.toISOString() : null,
+          timeOut: resultEntry.time_out ? resultEntry.time_out.toISOString() : null,
+          captureSource: resultEntry.capture_source,
+        }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/attendance/gate/scan
+ * DEPRECATED: Unified scanner endpoint has been separated.
+ * Clients must use /gate/student/scan for Students or /gate/faculty/scan for Faculty.
+ */
+router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:write_all'), (req: Request, res: Response) => {
+  return res.status(400).json({
+    success: false,
+    error: {
+      code: 'DEPRECATED_ENDPOINT',
+      message: 'Unified scanner endpoint has been separated. Use /api/attendance/gate/student/scan for Students or /api/attendance/gate/faculty/scan for Faculty.'
+    }
+  });
 });
 
 /**

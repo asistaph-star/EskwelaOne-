@@ -153,14 +153,14 @@ describe('Phase 1A: Backend Regression Tests', () => {
   describe('Gate Attendance', () => {
     it('should reject missing authorization', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .send({ barcode: TEST_BARCODE });
       expect(res.status).toBe(401);
     });
 
     it('should successfully record gate attendance', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${testToken}`)
         .send({ barcode: TEST_BARCODE });
       
@@ -170,7 +170,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
 
     it('should gracefully handle duplicate/debounce by updating timeout if applicable', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${testToken}`)
         .send({ barcode: TEST_BARCODE });
       
@@ -179,7 +179,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
 
     it('should return 404 for unknown barcode', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${testToken}`)
         .send({ barcode: '999999999999' });
       expect(res.status).toBe(404);

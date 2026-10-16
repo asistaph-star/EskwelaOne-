@@ -41,16 +41,18 @@ export interface ScannerIdentifierConfig {
   pattern?: RegExp;
   minLength?: number;
   maxLength?: number;
+  endpoint?: string;
 }
 
 export const DEFAULT_IDENTIFIER_CONFIG: ScannerIdentifierConfig = {
   pattern: /^[\x20-\x7E]+$/, // Printable ASCII characters
   minLength: 4,
   maxLength: 64,
+  endpoint: '/attendance/gate/student/scan',
 };
 
 // ─── Typed State Contract ──────────────────────────────────────
-// Matches the unified backend POST /api/attendance/gate/scan response.
+// Matches the backend /api/attendance/gate/{student,faculty}/scan responses.
 
 export interface GateScanPayload {
   entityType?: 'STUDENT' | 'FACULTY';
@@ -82,6 +84,10 @@ export function useHardwareScanner(
   config: ScannerIdentifierConfig = DEFAULT_IDENTIFIER_CONFIG
 ): ScannerState {
   const [state, setState] = useState<ScannerState>({ status: 'idle' });
+
+  // Store config in ref so dynamic endpoint changes take effect immediately
+  const configRef = useRef(config);
+  configRef.current = config;
 
   // Buffer stores { char, timestamp } for each keystroke in the current burst
   const bufferRef = useRef<{ char: string; time: number }[]>([]);
@@ -137,7 +143,8 @@ export function useHardwareScanner(
             setState({ status: 'submitting' });
 
             try {
-              const res = await apiClient.post<any>('/attendance/gate/scan', { barcode: candidate });
+              const targetEndpoint = configRef.current.endpoint || '/attendance/gate/student/scan';
+              const res = await apiClient.post<any>(targetEndpoint, { barcode: candidate });
               // apiClient unwraps { success: true, data: { ... } }
               if (res) {
                 const payload: GateScanPayload = {

@@ -185,10 +185,10 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
     }
   });
 
-  describe('1. Student Gate Flow Preservation (Zero Regression)', () => {
-    it('should successfully record Student Time In via 12-digit LRN', async () => {
+  describe('1. Dedicated Student Gate Scanner (/api/attendance/gate/student/scan)', () => {
+    it('should successfully record Student Time In via 12-digit LRN and write GateAttendance only', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: studentLrn });
 
@@ -197,11 +197,25 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       expect(res.body.data.entityType).toBe('STUDENT');
       expect(res.body.data.action).toBe('Time In');
       expect(res.body.data.studentId).toBe(testStudentId);
+
+      // Verify Student GateAttendance created in DB
+      const { dateObj: today } = getPhilippineCalendarDate();
+      const studentRec = await prisma.gateAttendance.findUnique({
+        where: { student_id_date: { student_id: testStudentId, date: today } }
+      });
+      expect(studentRec).not.toBeNull();
+      expect(studentRec?.time_in).not.toBeNull();
+
+      // Verify ZERO FacultyAttendance created
+      const facultyRec = await prisma.facultyAttendance.findFirst({
+        where: { teacher_id: testTeacherId }
+      });
+      expect(facultyRec).toBeNull();
     });
 
     it('should debounce duplicate student scan within 1 minute', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: studentLrn });
 
@@ -210,7 +224,6 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
     });
 
     it('should record Student Time Out on valid scan after debounce', async () => {
-      // Manually adjust the existing gateAttendance record's updated_at to > 60 seconds ago
       const { dateObj: today } = getPhilippineCalendarDate();
       await prisma.gateAttendance.update({
         where: {
@@ -225,7 +238,7 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       });
 
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: studentLrn });
 
@@ -237,63 +250,51 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
 
     it('should reject student scan when already timed out today', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: studentLrn });
 
       expect(res.status).toBe(422);
       expect(res.body.error.message).toContain('Student already timed out today');
     });
-  });
 
-  describe('2. Faculty Credential Resolution & Validation', () => {
-    it('should reject unknown barcode with 404 NOT_FOUND', async () => {
+    it('should strictly reject Teacher credential on Student Scanner with diagnostic error (zero attendance created)', async () => {
+      const facultyCountBefore = await prisma.facultyAttendance.count();
+      const studentCountBefore = await prisma.gateAttendance.count();
+
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/student/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
-        .send({ barcode: 'UNKNOWN-BARCODE-999' });
+        .send({ barcode: teacherScanIdentifier });
+
+      expect(res.status).toBe(422);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('INVALID_CREDENTIAL_TYPE');
+      expect(res.body.error.message).toBe('This ID is not valid for the Student Attendance scanner.');
+
+      // Verify zero attendance records created anywhere
+      const facultyCountAfter = await prisma.facultyAttendance.count();
+      const studentCountAfter = await prisma.gateAttendance.count();
+      expect(facultyCountAfter).toBe(facultyCountBefore);
+      expect(studentCountAfter).toBe(studentCountBefore);
+    });
+
+    it('should reject unknown barcode on Student Scanner with 404 NOT_FOUND', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/student/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: 'UNKNOWN-STUDENT-999' });
 
       expect(res.status).toBe(404);
       expect(res.body.error.code).toBe('NOT_FOUND');
-    });
-
-    it('should reject inactive faculty scan credential with 404 NOT_FOUND', async () => {
-      const res = await request(app)
-        .post('/api/attendance/gate/scan')
-        .set('Authorization', `Bearer ${gateOperatorToken}`)
-        .send({ barcode: inactiveScanIdentifier });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error.code).toBe('NOT_FOUND');
-    });
-
-    it('should reject partial / corrupted credential with 404 NOT_FOUND (exact matching)', async () => {
-      // Trim one character off the legitimate identifier
-      const partialBarcode = teacherScanIdentifier.slice(0, -1);
-      const res = await request(app)
-        .post('/api/attendance/gate/scan')
-        .set('Authorization', `Bearer ${gateOperatorToken}`)
-        .send({ barcode: partialBarcode });
-
-      expect(res.status).toBe(404);
-      expect(res.body.error.code).toBe('NOT_FOUND');
-    });
-
-    it('should reject collision barcode with 409 AMBIGUOUS_SCAN', async () => {
-      const res = await request(app)
-        .post('/api/attendance/gate/scan')
-        .set('Authorization', `Bearer ${gateOperatorToken}`)
-        .send({ barcode: collisionBarcode });
-
-      expect(res.status).toBe(409);
-      expect(res.body.error.code).toBe('AMBIGUOUS_SCAN');
+      expect(res.body.error.message).toBe('Identifier not recognized.');
     });
   });
 
-  describe('3. Faculty Physical Gate Scan Semantics', () => {
-    it('should record Faculty Time In on first valid physical card scan', async () => {
+  describe('2. Dedicated Faculty Gate Scanner (/api/attendance/gate/faculty/scan)', () => {
+    it('should successfully record Faculty Time In via valid TeacherScanCredential and write FacultyAttendance only', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/faculty/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: teacherScanIdentifier });
 
@@ -322,9 +323,9 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       expect(dbRecord?.capture_source).toBe('gate_scanner');
     });
 
-    it('should debounce accidental immediate duplicate scan within 60 seconds', async () => {
+    it('should debounce accidental immediate duplicate faculty scan within 60 seconds', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/faculty/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: teacherScanIdentifier });
 
@@ -347,7 +348,7 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       });
 
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/faculty/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: teacherScanIdentifier });
 
@@ -371,12 +372,78 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
 
     it('should reject scan after completed Time Out for the day', async () => {
       const res = await request(app)
-        .post('/api/attendance/gate/scan')
+        .post('/api/attendance/gate/faculty/scan')
         .set('Authorization', `Bearer ${gateOperatorToken}`)
         .send({ barcode: teacherScanIdentifier });
 
       expect(res.status).toBe(422);
       expect(res.body.error.message).toContain('Teacher already timed out today');
+    });
+
+    it('should strictly reject Student ID on Faculty Scanner with diagnostic error (zero attendance created)', async () => {
+      const facultyCountBefore = await prisma.facultyAttendance.count();
+      const studentCountBefore = await prisma.gateAttendance.count();
+
+      const res = await request(app)
+        .post('/api/attendance/gate/faculty/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: studentLrn });
+
+      expect(res.status).toBe(422);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('INVALID_CREDENTIAL_TYPE');
+      expect(res.body.error.message).toBe('This ID is not valid for the Faculty Attendance scanner.');
+
+      // Verify zero attendance records created anywhere
+      const facultyCountAfter = await prisma.facultyAttendance.count();
+      const studentCountAfter = await prisma.gateAttendance.count();
+      expect(facultyCountAfter).toBe(facultyCountBefore);
+      expect(studentCountAfter).toBe(studentCountBefore);
+    });
+
+    it('should reject inactive faculty scan credential with 404 NOT_FOUND', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/faculty/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: inactiveScanIdentifier });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('should reject partial / corrupted credential with 404 NOT_FOUND (exact matching)', async () => {
+      const partialBarcode = teacherScanIdentifier.slice(0, -1);
+      const res = await request(app)
+        .post('/api/attendance/gate/faculty/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: partialBarcode });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('should reject unknown barcode on Faculty Scanner with 404 NOT_FOUND', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/faculty/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: 'UNKNOWN-FACULTY-999' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('NOT_FOUND');
+      expect(res.body.error.message).toBe('Identifier not recognized.');
+    });
+  });
+
+  describe('3. Deprecated Unified Scanner Route (/api/attendance/gate/scan)', () => {
+    it('should reject requests to legacy unified endpoint and instruct clients to use separated endpoints', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/scan')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({ barcode: studentLrn });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('DEPRECATED_ENDPOINT');
+      expect(res.body.error.message).toContain('/api/attendance/gate/student/scan');
     });
   });
 
