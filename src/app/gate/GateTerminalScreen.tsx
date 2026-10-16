@@ -69,7 +69,7 @@ export function GateTerminalScreen({
 
       {/* 1. Header Section */}
       <div className="relative z-20">
-        <GateHeader terminalType={terminalType} />
+        <GateHeader terminalType={terminalType} onOpenAdminConfig={onOpenAdminConfig} />
       </div>
 
       {/* Campus Media Layer (Takes up main and bottom sections when idle) */}
