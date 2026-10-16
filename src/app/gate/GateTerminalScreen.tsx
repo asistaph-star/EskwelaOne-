@@ -166,20 +166,12 @@ export function GateTerminalScreen({
       {/* 4. Footer Section (Status Bar) */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between gap-6 bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-slate-500">STATION ROLE:</span>
-          <button
-            type="button"
-            onClick={onOpenAdminConfig}
-            title="Click to authorize station role reconfiguration (Admin / ITAdmin credentials required)"
-            className={`flex items-center gap-1.5 rounded px-2.5 py-1 font-bold transition hover:opacity-90 active:scale-95 cursor-pointer ${
-              terminalType === 'faculty'
-                ? 'bg-indigo-950 text-indigo-300 ring-1 ring-indigo-500/50 hover:bg-indigo-900'
-                : 'bg-blue-950 text-blue-300 ring-1 ring-blue-500/50 hover:bg-blue-900'
-            }`}
-          >
-            <span>{terminalType === 'faculty' ? 'FACULTY GATE ATTENDANCE (LOCKED)' : 'STUDENT GATE ATTENDANCE (LOCKED)'}</span>
-            <span className="text-[9px] text-slate-400 font-normal border-l border-slate-700 pl-1.5">⚙ Reconfigure</span>
-          </button>
+          <span className="text-slate-500 font-semibold tracking-wider">STATION:</span>
+          <span className={`font-bold tracking-wider uppercase ${
+            terminalType === 'faculty' ? 'text-indigo-400' : 'text-blue-400'
+          }`}>
+            {terminalType === 'faculty' ? 'FACULTY GATE ATTENDANCE' : 'STUDENT GATE ATTENDANCE'}
+          </span>
         </div>
         <div className="flex items-center gap-3">
            <span className="text-slate-400">SCANNER READY</span>
