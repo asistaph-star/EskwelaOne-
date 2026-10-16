@@ -200,16 +200,14 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
           </button>
         </div>
 
-        {/* Right Status Indicator & Clock */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 rounded-full bg-slate-800/80 px-3 py-1 text-xs font-bold">
-            <span className={`h-2 w-2 rounded-full ${
-              sseStatus === 'live' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'
-            }`} />
-            <span className={sseStatus === 'live' ? 'text-emerald-400' : 'text-amber-400'}>
-              {sseStatus === 'live' ? 'LIVE GATE STREAM' : 'RECONNECTING...'}
-            </span>
-          </div>
+        {/* Right Clock & Network Indicator */}
+        <div className="flex items-center gap-3">
+          {sseStatus !== 'live' && (
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-400 border border-amber-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              <span>Reconnecting...</span>
+            </div>
+          )}
 
           <div className="font-mono text-xl font-bold tracking-tight text-white">
             {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
