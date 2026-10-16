@@ -1,12 +1,11 @@
 import React from 'react';
 
 interface GateHeaderProps {
-  terminalContext: 'student' | 'faculty';
-  onTerminalContextChange: (mode: 'student' | 'faculty') => void;
+  terminalType: 'student' | 'faculty';
 }
 
-export function GateHeader({ terminalContext, onTerminalContextChange }: GateHeaderProps) {
-  const isFaculty = terminalContext === 'faculty';
+export function GateHeader({ terminalType }: GateHeaderProps) {
+  const isFaculty = terminalType === 'faculty';
 
   return (
     <header className="flex shrink-0 items-center justify-between border-b-2 border-amber-400 bg-slate-900 px-5 py-3 md:px-6">
@@ -17,39 +16,20 @@ export function GateHeader({ terminalContext, onTerminalContextChange }: GateHea
             CALULUT INTEGRATED SCHOOL
           </h1>
           <div className="text-[10px] font-bold tracking-wider uppercase text-amber-400">
-            {isFaculty ? 'FACULTY GATE TERMINAL — FACULTY ONLY' : 'STUDENT GATE TERMINAL — STUDENTS ONLY'}
+            {isFaculty ? 'FACULTY GATE ATTENDANCE — FACULTY ONLY' : 'STUDENT GATE ATTENDANCE — STUDENTS ONLY'}
           </div>
         </div>
       </div>
 
-      {/* Operator Scanner Context Switcher */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">
-          Scanner Station Mode:
-        </span>
-        <div className="flex items-center gap-1 rounded-lg bg-slate-800 p-1 border border-slate-700 shadow-inner">
-          <button
-            type="button"
-            onClick={() => onTerminalContextChange('student')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition ${
-              !isFaculty
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <span>Student Scanner</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onTerminalContextChange('faculty')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition ${
-              isFaculty
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <span>Faculty Scanner</span>
-          </button>
+      {/* Dedicated Locked Station Badge (No Operator Toggle) */}
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider ${
+          isFaculty
+            ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/60 shadow-sm'
+            : 'bg-blue-950 text-blue-300 border border-blue-700/60 shadow-sm'
+        }`}>
+          <span className={`h-2.5 w-2.5 rounded-full ${isFaculty ? 'bg-indigo-400 animate-pulse' : 'bg-blue-400 animate-pulse'}`} />
+          <span>{isFaculty ? 'FACULTY ONLY' : 'STUDENTS ONLY'}</span>
         </div>
       </div>
     </header>

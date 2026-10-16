@@ -1,27 +1,69 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useHardwareScanner, GateScanPayload } from '../shared/hooks/useHardwareScanner';
+import { useHardwareScanner } from '../shared/hooks/useHardwareScanner';
 import { GateTerminalScreen, RecentScan } from './GateTerminalScreen';
+
+export type GateTerminalType = 'student' | 'faculty';
+
+/**
+ * Resolves the physical station terminal type from deployment configuration:
+ * 1. URL search param (e.g. ?terminal=faculty or ?terminal=student) for kiosk shortcuts.
+ * 2. Persisted deployment station setting in localStorage ('digiskwela_station_terminal_type').
+ * 3. Environment configuration (VITE_GATE_TERMINAL_TYPE, defaulting to 'student').
+ */
+export function getStationTerminalType(): GateTerminalType {
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const param = urlParams.get('terminal')?.toLowerCase();
+    if (param === 'faculty' || param === 'student') {
+      localStorage.setItem('digiskwela_station_terminal_type', param);
+      return param;
+    }
+
+    const stored = localStorage.getItem('digiskwela_station_terminal_type')?.toLowerCase();
+    if (stored === 'faculty' || stored === 'student') {
+      return stored;
+    }
+  }
+
+  const envType = ((import.meta as any).env?.VITE_GATE_TERMINAL_TYPE || 'student').toLowerCase();
+  if (envType === 'faculty') return 'faculty';
+  return 'student';
+}
 
 interface GateTerminalAppProps {
   onLogout: () => void;
 }
 
 export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
-  const [terminalContext, setTerminalContext] = useState<'student' | 'faculty'>(() => {
-    const saved = localStorage.getItem('digiskwela_gate_terminal_mode');
-    return (saved === 'faculty' || saved === 'student') ? saved : 'student';
-  });
+  // Terminal role is locked to physical station deployment configuration
+  const [terminalType, setTerminalType] = useState<GateTerminalType>(() => getStationTerminalType());
+  const [showAdminConfig, setShowAdminConfig] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleTerminalContextChange = useCallback((mode: 'student' | 'faculty') => {
-    setTerminalContext(mode);
-    localStorage.setItem('digiskwela_gate_terminal_mode', mode);
+  // Administrative station reconfiguration hotkey: Ctrl + Shift + F12
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'F12') {
+        e.preventDefault();
+        setShowAdminConfig(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const handleAdminSetTerminal = (type: GateTerminalType) => {
+    localStorage.setItem('digiskwela_station_terminal_type', type);
+    setTerminalType(type);
+    setShowAdminConfig(false);
+  };
+
+  // Hardware scanner hook binds strictly to the configured terminal endpoint
   const scannerConfig = React.useMemo(() => ({
-    endpoint: terminalContext === 'faculty'
+    endpoint: terminalType === 'faculty'
       ? '/attendance/gate/faculty/scan'
       : '/attendance/gate/student/scan'
-  }), [terminalContext]);
+  }), [terminalType]);
 
   const scannerState = useHardwareScanner(scannerConfig);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
@@ -64,30 +106,78 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
     };
   }, [handleFocus, handleBlur, handleVisibilityChange]);
 
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true);
-  };
-
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-white text-slate-900 font-sans">
       <GateTerminalScreen
         scannerState={scannerState}
         hasFocus={hasFocus}
         recentScans={recentScans}
-        terminalContext={terminalContext}
-        onTerminalContextChange={handleTerminalContextChange}
+        terminalType={terminalType}
       />
 
-      {/* Hidden Staff Logout Hot-Corner */}
+      {/* Hidden Staff Hot-Corner: Click opens Logout, Shift+Click opens Admin Station Config */}
       <button
-        onClick={handleLogoutClick}
+        onClick={(e) => {
+          if (e.shiftKey) {
+            setShowAdminConfig(true);
+          } else {
+            setShowLogoutConfirm(true);
+          }
+        }}
         className="absolute bottom-0 right-0 z-40 h-16 w-16 opacity-0 cursor-default"
-        aria-label="Logout"
+        aria-label="Staff Session Control"
       />
 
-      {/* Premium Logout Confirmation Overlay */}
+      {/* Administrative Station Reconfiguration Modal */}
+      {showAdminConfig && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md">
+          <div className="flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 max-w-md w-full mx-4 overflow-hidden">
+            <div className="p-6 sm:p-8 flex flex-col items-center text-center">
+              <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">Station Configuration</h2>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Lock this physical hardware terminal to its dedicated attendance role. Normal gate operators cannot change this setting.
+              </p>
+              <div className="mt-4 flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700">
+                <span>Active Deployment:</span>
+                <span className="font-extrabold text-blue-700 uppercase">{terminalType} Attendance Terminal</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-2 bg-slate-50 px-6 py-4 border-t border-slate-100 sm:px-8">
+              <button 
+                onClick={() => handleAdminSetTerminal('student')}
+                className={`inline-flex w-full justify-center items-center rounded-lg px-4 py-2.5 text-xs font-bold text-white transition-colors ${
+                  terminalType === 'student' ? 'bg-blue-700 ring-2 ring-blue-500' : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+              >
+                Deploy as Student Terminal (Students Only)
+              </button>
+              <button 
+                onClick={() => handleAdminSetTerminal('faculty')}
+                className={`inline-flex w-full justify-center items-center rounded-lg px-4 py-2.5 text-xs font-bold text-white transition-colors ${
+                  terminalType === 'faculty' ? 'bg-indigo-700 ring-2 ring-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500'
+                }`}
+              >
+                Deploy as Faculty Terminal (Faculty Only)
+              </button>
+              <button 
+                onClick={() => setShowAdminConfig(false)}
+                className="mt-1 inline-flex w-full justify-center rounded-lg bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Overlay */}
       {showLogoutConfirm && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
           <div className="flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 max-w-sm w-full mx-4 overflow-hidden">
@@ -99,7 +189,7 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
               </div>
               <h2 className="text-xl font-bold text-slate-900">End Gate Session</h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-500 font-medium">
-                Are you sure you want to log out? The terminal will be disabled and unable to process student IDs until an operator signs back in.
+                Are you sure you want to log out? The terminal will be disabled and unable to process scans until an operator signs back in.
               </p>
             </div>
             

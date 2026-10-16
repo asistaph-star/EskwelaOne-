@@ -9,8 +9,7 @@ interface GateTerminalScreenProps {
   scannerState: ScannerState;
   hasFocus: boolean;
   recentScans: RecentScan[];
-  terminalContext: 'student' | 'faculty';
-  onTerminalContextChange: (mode: 'student' | 'faculty') => void;
+  terminalType: 'student' | 'faculty';
 }
 
 const GATE_IDLE_MEDIA_DELAY_MS = 60_000;
@@ -19,8 +18,7 @@ export function GateTerminalScreen({
   scannerState,
   hasFocus,
   recentScans,
-  terminalContext,
-  onTerminalContextChange,
+  terminalType,
 }: GateTerminalScreenProps) {
   const [isIdleMedia, setIsIdleMedia] = useState(false);
 
@@ -69,10 +67,7 @@ export function GateTerminalScreen({
 
       {/* 1. Header Section */}
       <div className="relative z-20">
-        <GateHeader
-          terminalContext={terminalContext}
-          onTerminalContextChange={onTerminalContextChange}
-        />
+        <GateHeader terminalType={terminalType} />
       </div>
 
       {/* Campus Media Layer (Takes up main and bottom sections when idle) */}
@@ -169,9 +164,9 @@ export function GateTerminalScreen({
       {/* 4. Footer Section (Status Bar) */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between gap-6 bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-slate-500">STATION:</span>
-          <span className={terminalContext === 'faculty' ? 'text-indigo-400' : 'text-blue-400'}>
-            {terminalContext === 'faculty' ? 'FACULTY ATTENDANCE INGESTION' : 'STUDENT ATTENDANCE INGESTION'}
+          <span className="text-slate-500">STATION ROLE:</span>
+          <span className={terminalType === 'faculty' ? 'text-indigo-400 font-bold' : 'text-blue-400 font-bold'}>
+            {terminalType === 'faculty' ? 'FACULTY GATE ATTENDANCE (LOCKED)' : 'STUDENT GATE ATTENDANCE (LOCKED)'}
           </span>
         </div>
         <div className="flex items-center gap-3">
