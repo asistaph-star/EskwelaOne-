@@ -10,7 +10,6 @@ import { useAppContext } from '../../shared/AppContext';
 const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
   { category: "Overview", items: [
     { id: "p-dashboard",  label: "Dashboard Overview", icon: LayoutDashboard },
-    { id: "p-monitoring", label: "Gate Attendance Monitoring", icon: Monitor },
   ]},
   { category: "Administration", items: [
     { id: "p-analytics",  label: "Academic Analytics",  icon: BarChart2 },
@@ -21,10 +20,9 @@ const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
     { id: "p-doc-requests", label: "Document Requests", icon: FileText },
   ]},
   { category: "Operations", items: [
+    { id: "p-monitoring", label: "Gate Attendance Monitoring", icon: Monitor },
     { id: "p-inventory",  label: "Inventory",           icon: Package },
-    { id: "p-faculty-attendance", label: "Gate Attendance Monitoring (TV)", icon: Monitor },
-
-    { id: "p-behavior", label: "Behavioral Reports", icon: ShieldAlert },
+    { id: "p-behavior",   label: "Behavioral Reports",  icon: ShieldAlert },
   ]},
 ];
 
