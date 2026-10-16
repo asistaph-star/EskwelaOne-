@@ -192,12 +192,14 @@ Per user instruction, the Faculty live monitoring screen (`src/app/principal/att
 | **Footer** | `bg-slate-900` status bar: `BIOMETRIC SYSTEM - STATUS: ONLINE`, `SCANNER READY` LED | `bg-slate-900` status bar: `BIOMETRIC SYSTEM - STATUS: ONLINE`, `SCANNER READY` LED | **SAME STRUCTURE** |
 | **TV / Fullscreen Sizing** | `h-screen w-full overflow-hidden`, responsive multi-columns | `h-screen w-full overflow-hidden`, responsive multi-columns | **SAME STRUCTURE** |
 
-#### 7.3 Data Source & Policy Alignment
+#### 7.3 Data Source & Physical Architecture Boundary
 - **Student Data Source:** `GateAttendance` from `AppContext` / `POST /api/attendance/gate/scan`.
 - **Faculty Data Source:** `FacultyAttendance` from PostgreSQL via `GET /api/attendance/faculty/list`.
+- **Physical Architecture Boundary:**
+  - **Gate Terminal (`src/app/gate/GateTerminalScreen.tsx` & `GateTerminalApp.tsx`):** Exclusively owns physical scanner capture via `useHardwareScanner()`, keystroke burst validation, and submission to `POST /api/attendance/gate/scan`.
+  - **Principal Office TV (`src/app/principal/attendance/PLiveFacultyAttendance.tsx`):** Strictly **READ-ONLY**. Does NOT mount `useHardwareScanner()`, does NOT listen for keyboard scan bursts, and does NOT perform scan mutations.
 - **Unauthorized Classifications:** Zero "LATE", "Late Arrivals", or "Absent" classifications exist on this screen.
-- **SSE Behavior:** Invalidation-only real-time refetch on `faculty-attendance-changed` via `useGateAttendanceSSE(loadData)`.
-- **Hardware USB Scanner:** Real-time burst detection via `useHardwareScanner()`; automatically updates data upon scan.
+- **SSE Behavior:** Invalidation-only real-time refetch on `faculty-attendance-changed` via `useGateAttendanceSSE(loadData)` without requiring page reloads or local scanner attachments.
 
 ---
 
@@ -225,7 +227,7 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 - **Backend TypeScript Compilation (`tsc`):** Clean, 0 errors
 - **Backend Test Suite (Vitest):** **20 test files passed (20/20), 180 total tests passed (180/180)**
 - **Frontend TypeScript (`tsc --noEmit`):** Clean, 0 errors
-- **Frontend Production Build (`vite build`):** Built in 48.57s, 0 errors
+- **Frontend Production Build (`vite build`):** Built in 44.53s, 0 errors
 
 ---
 
@@ -240,6 +242,7 @@ File: [`backend/tests/gateFacultyScan.test.ts`](file:///C:/Users/Admin/Documents
 | `e6fcd36` | `test(gate): add unified dispatcher integration tests and physical audit` | Automated test suite, audit document, test QR |
 | `98b96eb` | `fix(principal): align faculty live monitor with student gate feed` | Excise 4-column dashboard & LATE labels |
 | `298288a` | `fix(principal): mirror student gate monitor for faculty` | 1:1 duplicate of accepted Student Gate Monitor UI structure |
+| `73dbb35` | `fix(principal): keep faculty monitor read-only` | Remove useHardwareScanner and scan submission from Principal TV monitor |
 
 ---
 
