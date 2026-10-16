@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, ArrowLeft } from 'lucide-react';
-import { toast, Toaster } from 'sonner';
-import { useHardwareScanner } from '../../shared/hooks/useHardwareScanner';
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
 import { facultyAttendanceApi, FacultyAttendanceItem } from '../../../api/facultyAttendance.api';
 import { useAppContext } from '../../shared/AppContext';
@@ -53,27 +51,9 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
     loadData();
   }, [loadData]);
 
-  // Real-Time SSE Listener
+  // Real-Time SSE Listener — Invalidation-only refetch upon gate scan
+  // Principal TV is strictly READ-ONLY: it does NOT capture scanner input or submit scans.
   const sseStatus = useGateAttendanceSSE(loadData);
-
-  // Hardware Scanner Integration
-  const scannerState = useHardwareScanner();
-  useEffect(() => {
-    if (scannerState.status === 'success') {
-      loadData();
-      if (scannerState.payload) {
-        const p = scannerState.payload;
-        const who = p.teacherName || p.studentName || 'Identifier';
-        toast.success(`${who} — ${p.action} Recorded`, {
-          description: `${p.employeeId || p.studentId || ''} • Verified Gate Scan`,
-        });
-      }
-    } else if (scannerState.status === 'error' && scannerState.errorMessage) {
-      toast.error('Scan Error', {
-        description: scannerState.errorMessage,
-      });
-    }
-  }, [scannerState.status, scannerState.payload, scannerState.errorMessage, loadData]);
 
   // Transform Authoritative Faculty Attendance into Chronological Gate Events (Newest First)
   // Per locked requirements: ZERO Late or Absent classification is applied.
@@ -288,24 +268,6 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
           </div>
         )}
 
-        {/* State Overlays — Identical to Student Gate Monitor */}
-        {scannerState.status === 'submitting' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-sm">
-            <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-6 py-4 shadow-xl">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-              <span className="text-sm font-semibold tracking-widest text-slate-700 uppercase">Processing</span>
-            </div>
-          </div>
-        )}
-
-        {scannerState.status === 'error' && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center rounded-lg border border-red-100 bg-red-50/80 px-8 py-6 shadow-2xl max-w-sm text-center">
-              <div className="text-sm font-bold tracking-widest text-red-600 uppercase">Scan Failed</div>
-              <div className="mt-2 text-base font-medium text-slate-800">{scannerState.errorMessage}</div>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* 3. Bottom Detailed Profile Section (Two side-by-side featured panels) — Identical to Student Gate Monitor */}
@@ -331,8 +293,6 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
           </div>
         </div>
       </footer>
-
-      <Toaster position="top-right" richColors />
     </div>
   );
 }
