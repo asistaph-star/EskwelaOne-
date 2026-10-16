@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcrypt';
 import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { authMiddleware, requirePermissions, requireAnyPermission, AuthenticatedUser } from '../common/middleware/auth.js';
@@ -421,6 +422,94 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
       message: 'Unified scanner endpoint has been separated. Use /api/attendance/gate/student/scan for Students or /api/attendance/gate/faculty/scan for Faculty.'
     }
   });
+});
+
+const reconfigureTerminalSchema = z.object({
+  email: z.string().email('Valid email is required.'),
+  password: z.string().min(1, 'Password is required.'),
+  terminalType: z.enum(['student', 'faculty']),
+});
+
+/**
+ * POST /api/attendance/gate/terminal/reconfigure
+ * Physical Station Reconfiguration Endpoint.
+ * Strictly requires authenticated Admin or ITAdmin credentials.
+ * GateOperators, Teachers, Students, and invalid credentials are rejected.
+ */
+router.post('/gate/terminal/reconfigure', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const input = reconfigureTerminalSchema.parse(req.body);
+    const correlationId = (req as any).correlationId;
+
+    const user = await prisma.user.findUnique({
+      where: { email: input.email },
+      include: {
+        user_roles: {
+          include: { role: true },
+        },
+      },
+    });
+
+    if (!user || user.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Invalid administrator credentials.' },
+      });
+    }
+
+    const isValidPassword = await bcrypt.compare(input.password, user.password_hash);
+    if (!isValidPassword) {
+      await createAuditLog({
+        actorUserId: user.id,
+        action: 'GATE_TERMINAL_RECONFIG_FAILED',
+        resourceType: 'gate_terminal',
+        reason: 'Invalid password',
+        correlationId,
+      });
+      return res.status(401).json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Invalid administrator credentials.' },
+      });
+    }
+
+    const roles = user.user_roles.map(ur => ur.role.name);
+    const isAuthorized = roles.includes('Admin') || roles.includes('ITAdmin');
+
+    if (!isAuthorized) {
+      await createAuditLog({
+        actorUserId: user.id,
+        action: 'GATE_TERMINAL_RECONFIG_FORBIDDEN',
+        resourceType: 'gate_terminal',
+        reason: 'User lacks Admin or ITAdmin role',
+        correlationId,
+      });
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only Admin or ITAdmin can reconfigure attendance terminals.',
+        },
+      });
+    }
+
+    await createAuditLog({
+      actorUserId: user.id,
+      action: 'GATE_TERMINAL_RECONFIGURED',
+      resourceType: 'gate_terminal',
+      newState: { terminalType: input.terminalType },
+      correlationId,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        terminalType: input.terminalType,
+        authorizedBy: `${user.first_name} ${user.last_name} (${user.email})`,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**

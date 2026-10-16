@@ -1,24 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useHardwareScanner } from '../shared/hooks/useHardwareScanner';
 import { GateTerminalScreen, RecentScan } from './GateTerminalScreen';
+import { apiClient } from '../../api/client';
 
 export type GateTerminalType = 'student' | 'faculty';
 
 /**
  * Resolves the physical station terminal type from deployment configuration:
- * 1. URL search param (e.g. ?terminal=faculty or ?terminal=student) for kiosk shortcuts.
- * 2. Persisted deployment station setting in localStorage ('digiskwela_station_terminal_type').
- * 3. Environment configuration (VITE_GATE_TERMINAL_TYPE, defaulting to 'student').
+ * 1. Persisted deployment station setting in localStorage ('digiskwela_station_terminal_type').
+ * 2. Environment configuration (VITE_GATE_TERMINAL_TYPE, defaulting to 'student').
+ * 
+ * NOTE: Unauthenticated query parameters (e.g. ?terminal=...) are explicitly NOT permitted
+ * to mutate the persistent terminal role. Station reassignment requires Admin/ITAdmin authorization.
  */
 export function getStationTerminalType(): GateTerminalType {
   if (typeof window !== 'undefined') {
-    const urlParams = new URLSearchParams(window.location.search);
-    const param = urlParams.get('terminal')?.toLowerCase();
-    if (param === 'faculty' || param === 'student') {
-      localStorage.setItem('digiskwela_station_terminal_type', param);
-      return param;
-    }
-
     const stored = localStorage.getItem('digiskwela_station_terminal_type')?.toLowerCase();
     if (stored === 'faculty' || stored === 'student') {
       return stored;
@@ -40,22 +36,53 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
   const [showAdminConfig, setShowAdminConfig] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Admin Credential Challenge State
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [targetTerminalType, setTargetTerminalType] = useState<GateTerminalType>(terminalType);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   // Administrative station reconfiguration hotkey: Ctrl + Shift + F12
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'F12') {
         e.preventDefault();
+        setAuthError(null);
+        setAdminPassword('');
+        setTargetTerminalType(terminalType);
         setShowAdminConfig(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [terminalType]);
 
-  const handleAdminSetTerminal = (type: GateTerminalType) => {
-    localStorage.setItem('digiskwela_station_terminal_type', type);
-    setTerminalType(type);
-    setShowAdminConfig(false);
+  const handleAdminAuthorizeReconfigure = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setIsAuthorizing(true);
+
+    try {
+      const res = await apiClient.post<any>('/attendance/gate/terminal/reconfigure', {
+        email: adminEmail.trim(),
+        password: adminPassword,
+        terminalType: targetTerminalType,
+      });
+
+      if (res) {
+        localStorage.setItem('digiskwela_station_terminal_type', targetTerminalType);
+        setTerminalType(targetTerminalType);
+        setShowAdminConfig(false);
+        setAdminPassword('');
+      }
+    } catch (err: unknown) {
+      const error = err as { status?: number; error?: { message?: string }; message?: string };
+      const message = error?.error?.message || error?.message || 'Authorization failed. Admin or ITAdmin credentials required.';
+      setAuthError(message);
+    } finally {
+      setIsAuthorizing(false);
+    }
   };
 
   // Hardware scanner hook binds strictly to the configured terminal endpoint
@@ -115,10 +142,13 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
         terminalType={terminalType}
       />
 
-      {/* Hidden Staff Hot-Corner: Click opens Logout, Shift+Click opens Admin Station Config */}
+      {/* Hidden Staff Hot-Corner: Click opens Logout, Shift+Click prompts Admin Station Reconfiguration */}
       <button
         onClick={(e) => {
           if (e.shiftKey) {
+            setAuthError(null);
+            setAdminPassword('');
+            setTargetTerminalType(terminalType);
             setShowAdminConfig(true);
           } else {
             setShowLogoutConfirm(true);
@@ -128,51 +158,109 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
         aria-label="Staff Session Control"
       />
 
-      {/* Administrative Station Reconfiguration Modal */}
+      {/* Authenticated Admin Station Reconfiguration Modal */}
       {showAdminConfig && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md">
           <div className="flex flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-black/10 max-w-md w-full mx-4 overflow-hidden">
             <div className="p-6 sm:p-8 flex flex-col items-center text-center">
               <div className="mb-4 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
                 <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold text-slate-900">Station Configuration</h2>
-              <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                Lock this physical hardware terminal to its dedicated attendance role. Normal gate operators cannot change this setting.
+              <h2 className="text-xl font-bold text-slate-900">Station Authorization</h2>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                Administrator credentials (Admin or ITAdmin) are required to reassign this physical attendance station.
               </p>
-              <div className="mt-4 flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700">
-                <span>Active Deployment:</span>
+              
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                <span>Current Role:</span>
                 <span className="font-extrabold text-blue-700 uppercase">{terminalType} Attendance Terminal</span>
               </div>
             </div>
-            
-            <div className="flex flex-col gap-2 bg-slate-50 px-6 py-4 border-t border-slate-100 sm:px-8">
-              <button 
-                onClick={() => handleAdminSetTerminal('student')}
-                className={`inline-flex w-full justify-center items-center rounded-lg px-4 py-2.5 text-xs font-bold text-white transition-colors ${
-                  terminalType === 'student' ? 'bg-blue-700 ring-2 ring-blue-500' : 'bg-blue-600 hover:bg-blue-500'
-                }`}
-              >
-                Deploy as Student Terminal (Students Only)
-              </button>
-              <button 
-                onClick={() => handleAdminSetTerminal('faculty')}
-                className={`inline-flex w-full justify-center items-center rounded-lg px-4 py-2.5 text-xs font-bold text-white transition-colors ${
-                  terminalType === 'faculty' ? 'bg-indigo-700 ring-2 ring-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500'
-                }`}
-              >
-                Deploy as Faculty Terminal (Faculty Only)
-              </button>
-              <button 
-                onClick={() => setShowAdminConfig(false)}
-                className="mt-1 inline-flex w-full justify-center rounded-lg bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+
+            <form onSubmit={handleAdminAuthorizeReconfigure} className="px-6 pb-6 sm:px-8 space-y-4">
+              {authError && (
+                <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200">
+                  {authError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Target Station Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTargetTerminalType('student')}
+                    className={`rounded-lg py-2 text-xs font-bold transition border ${
+                      targetTerminalType === 'student'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Student Terminal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetTerminalType('faculty')}
+                    className={`rounded-lg py-2 text-xs font-bold transition border ${
+                      targetTerminalType === 'faculty'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Faculty Terminal
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Administrator Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@calulut.edu.ph"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Administrator Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isAuthorizing}
+                  className="inline-flex w-full justify-center items-center rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50 transition"
+                >
+                  {isAuthorizing ? 'Authorizing Reconfiguration...' : 'Authorize & Lock Station Role'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAdminConfig(false)}
+                  className="inline-flex w-full justify-center rounded-lg bg-white px-4 py-2 text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

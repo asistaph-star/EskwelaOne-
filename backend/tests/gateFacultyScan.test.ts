@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import app from '../src/app.js';
 import prisma from '../src/config/database.js';
 import { generateId } from '../src/common/utils/uuid.js';
@@ -11,6 +12,12 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
   const ts = Date.now();
   let gateOperatorToken: string;
   let principalToken: string;
+  let gateOperatorEmail: string;
+  let adminEmail: string;
+  let itAdminEmail: string;
+  let teacherEmail: string;
+  const rawTestPassword = 'password123';
+  const hashedTestPassword = bcrypt.hashSync(rawTestPassword, 10);
 
   let testStudentId: string;
   let testStudentUserId: string;
@@ -37,7 +44,7 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       data: {
         id,
         email,
-        password_hash: 'test_hash',
+        password_hash: hashedTestPassword,
         first_name: 'GateTest',
         last_name: 'User',
         status: 'active',
@@ -73,12 +80,20 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
     // 1. GateOperator user with attendance:write (least privilege: NO faculty_attendance:write)
     const gateUser = await createUserWithToken(`gate-op-${ts}@test.com`, ['GateOperator'], ['attendance:write', 'attendance:read']);
     gateOperatorToken = gateUser.token;
+    gateOperatorEmail = gateUser.user.email;
 
-    // 2. Principal user with faculty_attendance:read
+    // 2. Admin & ITAdmin users for terminal reconfiguration tests
+    const adminUser = await createUserWithToken(`admin-${ts}@test.com`, ['Admin'], ['user:read', 'user:write']);
+    adminEmail = adminUser.user.email;
+
+    const itAdminUser = await createUserWithToken(`itadmin-${ts}@test.com`, ['ITAdmin'], ['user:read', 'user:write']);
+    itAdminEmail = itAdminUser.user.email;
+
+    // 3. Principal user with faculty_attendance:read
     const principalUser = await createUserWithToken(`principal-${ts}@test.com`, ['Principal'], ['faculty_attendance:read', 'attendance:read']);
     principalToken = principalUser.token;
 
-    // 3. Test Student
+    // 4. Test Student
     const studentUser = await createUserWithToken(`student-${ts}@test.com`, ['Student'], []);
     testStudentUserId = studentUser.user.id;
     testStudentId = generateId();
@@ -92,11 +107,12 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       },
     });
 
-    // 4. Test Teacher with TeacherScanCredential
+    // 5. Test Teacher with TeacherScanCredential
     const teacherUser = await createUserWithToken(`teacher-${ts}@test.com`, ['Teacher'], []);
     testTeacherUserId = teacherUser.user.id;
     testTeacherId = generateId();
     createdTeacherIds.push(testTeacherId);
+    teacherEmail = teacherUser.user.email;
     await prisma.teacher.create({
       data: {
         id: testTeacherId,
@@ -462,6 +478,137 @@ describe('Unified Gate Attendance Dispatcher (Student & Faculty Physical Scan)',
       expect(matched.captureSource).toBe('gate_scanner');
       expect(matched.timeIn).not.toBeNull();
       expect(matched.timeOut).not.toBeNull();
+    });
+  });
+
+  describe('5. Physical Terminal Reconfiguration Authorization', () => {
+    it('should reject unauthenticated reconfiguration request (401 UNAUTHORIZED)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .send({
+          email: adminEmail,
+          password: rawTestPassword,
+          terminalType: 'faculty',
+        });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should forbid GateOperator from reconfiguring station terminal role (403 FORBIDDEN)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: gateOperatorEmail,
+          password: rawTestPassword,
+          terminalType: 'faculty',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+      expect(res.body.error.message).toContain('Only Admin or ITAdmin');
+    });
+
+    it('should forbid Teacher from reconfiguring station terminal role (403 FORBIDDEN)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: teacherEmail,
+          password: rawTestPassword,
+          terminalType: 'student',
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
+    it('should reject invalid administrator credentials (401 UNAUTHORIZED)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: adminEmail,
+          password: 'wrongpassword',
+          terminalType: 'faculty',
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should reject non-existent user credentials (401 UNAUTHORIZED)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: 'nonexistent@test.com',
+          password: 'password123',
+          terminalType: 'faculty',
+        });
+
+      expect(res.status).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('should reject invalid terminalType values (422 Unprocessable Entity)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: adminEmail,
+          password: rawTestPassword,
+          terminalType: 'invalid_role',
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.success).toBe(false);
+    });
+
+    it('should allow authenticated Admin to reconfigure terminal to faculty (200 OK)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: adminEmail,
+          password: rawTestPassword,
+          terminalType: 'faculty',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.terminalType).toBe('faculty');
+      expect(res.body.data.authorizedBy).toContain(adminEmail);
+
+      // Verify audit log
+      const audit = await prisma.auditLog.findFirst({
+        where: {
+          action: 'GATE_TERMINAL_RECONFIGURED',
+        },
+        orderBy: { created_at: 'desc' },
+      });
+      expect(audit).toBeDefined();
+      expect((audit?.new_state as any)?.terminalType).toBe('faculty');
+    });
+
+    it('should allow authenticated ITAdmin to reconfigure terminal to student (200 OK)', async () => {
+      const res = await request(app)
+        .post('/api/attendance/gate/terminal/reconfigure')
+        .set('Authorization', `Bearer ${gateOperatorToken}`)
+        .send({
+          email: itAdminEmail,
+          password: rawTestPassword,
+          terminalType: 'student',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.terminalType).toBe('student');
+      expect(res.body.data.authorizedBy).toContain(itAdminEmail);
     });
   });
 });
