@@ -5,13 +5,32 @@ import { apiClient } from '../../api/client';
 
 export type GateTerminalType = 'student' | 'faculty';
 
+export interface GateTerminalInfo {
+  id: string;
+  terminal_name: string;
+  terminal_type: GateTerminalType;
+}
+
+/**
+ * Resolves the physical station terminal ID from deployment configuration:
+ * 1. Persisted identity in localStorage ('digiskwela_gate_terminal_id').
+ * 2. Environment configuration (VITE_GATE_TERMINAL_ID).
+ * 3. Fallback to canonical default 'term-gate-1'.
+ */
+export function getPersistentTerminalId(): string {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('digiskwela_gate_terminal_id');
+    if (stored) return stored;
+  }
+  const envId = (import.meta as any).env?.VITE_GATE_TERMINAL_ID;
+  if (envId) return envId;
+  return 'term-gate-1';
+}
+
 /**
  * Resolves the physical station terminal type from deployment configuration:
  * 1. Persisted deployment station setting in localStorage ('digiskwela_station_terminal_type').
  * 2. Environment configuration (VITE_GATE_TERMINAL_TYPE, defaulting to 'student').
- * 
- * NOTE: Unauthenticated query parameters (e.g. ?terminal=...) are explicitly NOT permitted
- * to mutate the persistent terminal role. Station reassignment requires Admin/ITAdmin authorization.
  */
 export function getStationTerminalType(): GateTerminalType {
   if (typeof window !== 'undefined') {
@@ -31,32 +50,81 @@ interface GateTerminalAppProps {
 }
 
 export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
-  // Terminal role is locked to physical station deployment configuration
+  // Persistent hardware terminal identity
+  const [terminalId, setTerminalId] = useState<string>(() => getPersistentTerminalId());
+  const [terminalName, setTerminalName] = useState<string>('');
   const [terminalType, setTerminalType] = useState<GateTerminalType>(() => getStationTerminalType());
   const [showAdminConfig, setShowAdminConfig] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Admin Credential Challenge State
+  const [availableTerminals, setAvailableTerminals] = useState<GateTerminalInfo[]>([]);
+  const [selectedTerminalId, setSelectedTerminalId] = useState<string>(terminalId);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [targetTerminalType, setTargetTerminalType] = useState<GateTerminalType>(terminalType);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Centralized Server-Side Terminal Synchronization
+  // Periodically polls the server for role assignment changes from Admin Portal
+  const syncTerminalConfig = useCallback(async () => {
+    try {
+      const res: any = await apiClient.get(`/attendance/gate/terminals/${terminalId}`);
+      const info = res?.data ?? res;
+      if (info) {
+        if (info.terminal_type === 'faculty' || info.terminal_type === 'student') {
+          setTerminalType(info.terminal_type);
+          localStorage.setItem('digiskwela_station_terminal_type', info.terminal_type);
+        }
+        if (info.terminal_name) {
+          setTerminalName(info.terminal_name);
+        }
+      }
+    } catch {
+      // Offline fallback: keep current role from localStorage
+    }
+  }, [terminalId]);
+
+  useEffect(() => {
+    syncTerminalConfig();
+    const interval = setInterval(syncTerminalConfig, 15_000);
+    return () => clearInterval(interval);
+  }, [syncTerminalConfig]);
+
+  // Load available terminals when opening Admin Config modal
+  const loadAvailableTerminals = useCallback(async () => {
+    try {
+      const res: any = await apiClient.get('/attendance/gate/terminals');
+      const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      if (list && list.length > 0) {
+        setAvailableTerminals(list);
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const openAdminModal = useCallback(() => {
+    setAuthError(null);
+    setAdminPassword('');
+    setSelectedTerminalId(terminalId);
+    setTargetTerminalType(terminalType);
+    setShowAdminConfig(true);
+    loadAvailableTerminals();
+  }, [terminalId, terminalType, loadAvailableTerminals]);
+
   // Administrative station reconfiguration hotkey: Ctrl + Shift + F12
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'F12') {
         e.preventDefault();
-        setAuthError(null);
-        setAdminPassword('');
-        setTargetTerminalType(terminalType);
-        setShowAdminConfig(prev => !prev);
+        openAdminModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [terminalType]);
+  }, [openAdminModal]);
 
   const handleAdminAuthorizeReconfigure = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,11 +135,14 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
       const res = await apiClient.post<any>('/attendance/gate/terminal/reconfigure', {
         email: adminEmail.trim(),
         password: adminPassword,
+        terminalId: selectedTerminalId,
         terminalType: targetTerminalType,
       });
 
       if (res) {
+        localStorage.setItem('digiskwela_gate_terminal_id', selectedTerminalId);
         localStorage.setItem('digiskwela_station_terminal_type', targetTerminalType);
+        setTerminalId(selectedTerminalId);
         setTerminalType(targetTerminalType);
         setShowAdminConfig(false);
         setAdminPassword('');
@@ -111,15 +182,20 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
 
   const [hasFocus, setHasFocus] = useState(() => document.hasFocus());
 
-  const handleFocus = useCallback(() => setHasFocus(true), []);
+  const handleFocus = useCallback(() => {
+    setHasFocus(true);
+    syncTerminalConfig();
+  }, [syncTerminalConfig]);
+
   const handleBlur = useCallback(() => setHasFocus(false), []);
   const handleVisibilityChange = useCallback(() => {
     if (document.visibilityState === 'visible' && document.hasFocus()) {
       setHasFocus(true);
+      syncTerminalConfig();
     } else if (document.visibilityState === 'hidden') {
       setHasFocus(false);
     }
-  }, []);
+  }, [syncTerminalConfig]);
 
   useEffect(() => {
     window.addEventListener('focus', handleFocus);
@@ -140,22 +216,14 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
         hasFocus={hasFocus}
         recentScans={recentScans}
         terminalType={terminalType}
-        onOpenAdminConfig={() => {
-          setAuthError(null);
-          setAdminPassword('');
-          setTargetTerminalType(terminalType);
-          setShowAdminConfig(true);
-        }}
+        onOpenAdminConfig={openAdminModal}
       />
 
       {/* Hidden Staff Hot-Corner: Click opens Logout, Shift+Click prompts Admin Station Reconfiguration */}
       <button
         onClick={(e) => {
           if (e.shiftKey) {
-            setAuthError(null);
-            setAdminPassword('');
-            setTargetTerminalType(terminalType);
-            setShowAdminConfig(true);
+            openAdminModal();
           } else {
             setShowLogoutConfirm(true);
           }
@@ -179,9 +247,9 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
                 Administrator credentials (Admin or ITAdmin) are required to reassign this physical attendance station.
               </p>
               
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                <span>Current Role:</span>
-                <span className="font-extrabold text-blue-700 uppercase">{terminalType} Attendance Terminal</span>
+              <div className="mt-3 flex flex-col items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                <div>Station ID: <code className="font-mono text-blue-700">{terminalId}</code> {terminalName ? `(${terminalName})` : ''}</div>
+                <div className="font-extrabold text-slate-900 uppercase">Current Role: {terminalType} Terminal</div>
               </div>
             </div>
 
@@ -189,6 +257,30 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
               {authError && (
                 <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 border border-red-200">
                   {authError}
+                </div>
+              )}
+
+              {availableTerminals.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Terminal Identity
+                  </label>
+                  <select
+                    value={selectedTerminalId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedTerminalId(id);
+                      const match = availableTerminals.find(t => t.id === id);
+                      if (match) setTargetTerminalType(match.terminal_type);
+                    }}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                  >
+                    {availableTerminals.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.terminal_name} ({t.id}) - {t.terminal_type.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -231,7 +323,7 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@calulut.edu.ph"
+                  placeholder="admin@school.edu.ph"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 />
               </div>
@@ -245,7 +337,7 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
                   required
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="Enter administrator password"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600"
                 />
               </div>

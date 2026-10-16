@@ -29,6 +29,8 @@ export function PMonitoring() {
 
   useEffect(() => {
     fetchFacultyAttendance();
+    const interval = setInterval(fetchFacultyAttendance, 5000);
+    return () => clearInterval(interval);
   }, [fetchFacultyAttendance]);
 
   const sseStatus = useGateAttendanceSSE(fetchFacultyAttendance);
@@ -114,6 +116,24 @@ export function PMonitoring() {
 
   return (
     <div style={{ flex:1, minHeight: 0, overflowY:"auto", background: "transparent", padding:24 }}>
+      {/* Page Title & Purpose Banner */}
+      <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
+            Gate Attendance Monitoring
+          </h1>
+          <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>
+            Read-only live attendance monitoring. Events are captured at physical Gate Attendance Terminals and streamed here in real-time.
+          </p>
+        </div>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "6px 14px", borderRadius: 20, border: "1px solid #cbd5e1" }}>
+          <span style={{ width: 8, height: 8, borderRadius: 4, background: sseStatus === 'live' ? C.green : C.amber }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Read-Only Spectator View
+          </span>
+        </div>
+      </div>
+
       {/* Redesigned Gate Cards Grid */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14, marginBottom:20 }}>
         {[
@@ -245,7 +265,7 @@ export function PMonitoring() {
               background: sseStatus === 'live' ? C.green : C.amber,
               boxShadow: sseStatus === 'live' ? `0 0 0 3px ${C.greenBg}` : `0 0 0 3px ${C.amberBg}`
             }}/>
-            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Live Gate & Presence Feed</span>
+            <span style={{ color:"#fff", fontSize:12, fontWeight:700, fontFamily:"'Fraunces',serif" }}>Gate Attendance Monitoring Feed (Read-Only)</span>
             
             {/* Segmented Control */}
             <div style={{ display:"inline-flex", background:"rgba(255,255,255,0.15)", borderRadius:4, padding:2, marginLeft:12 }}>

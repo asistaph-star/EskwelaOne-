@@ -24,7 +24,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
       case "inventory": return "Inventory Management";
       case "accounts": return "Account Management";
       case "campus-media": return "Campus Media Management";
-      case "terminals": return "Gate Terminals Configuration";
+      case "terminals": return "Gate Terminals";
       default: return "";
     }
   };

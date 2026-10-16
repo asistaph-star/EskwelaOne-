@@ -166,15 +166,15 @@ export function GateTerminalScreen({
       {/* 4. Footer Section (Status Bar) */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between gap-6 bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-slate-500 font-semibold tracking-wider">STATION:</span>
+          <span className="text-slate-500 font-semibold tracking-wider">TERMINAL:</span>
           <span className={`font-bold tracking-wider uppercase ${
             terminalType === 'faculty' ? 'text-indigo-400' : 'text-blue-400'
           }`}>
-            {terminalType === 'faculty' ? 'FACULTY GATE ATTENDANCE' : 'STUDENT GATE ATTENDANCE'}
+            {terminalType === 'faculty' ? 'FACULTY GATE ATTENDANCE TERMINAL' : 'STUDENT GATE ATTENDANCE TERMINAL'}
           </span>
         </div>
         <div className="flex items-center gap-3">
-           <span className="text-slate-400">SCANNER READY</span>
+           <span className="text-slate-400">HARDWARE SCANNER READY</span>
            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]" />
         </div>
       </footer>

@@ -157,8 +157,8 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
             <h1 className="text-lg font-semibold tracking-normal text-white md:text-xl lg:text-2xl leading-tight">
               CALULUT INTEGRATED SCHOOL
             </h1>
-            <div className="text-[10px] font-semibold text-amber-400 tracking-wider uppercase">
-              {feedMode === 'faculty' ? 'LIVE FACULTY GATE ATTENDANCE' : 'LIVE STUDENT GATE ATTENDANCE'}
+            <div className="text-[10px] font-bold text-amber-400 tracking-wider uppercase">
+              {feedMode === 'faculty' ? 'GATE ATTENDANCE MONITORING — FACULTY (READ-ONLY)' : 'GATE ATTENDANCE MONITORING — STUDENTS (READ-ONLY)'}
             </div>
           </div>
         </div>
@@ -278,15 +278,15 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
         </div>
       </section>
 
-      {/* 4. Footer Section (Status Bar) — Identical to Student Gate Monitor */}
+      {/* 4. Footer Section (Status Bar) — Read-Only Monitoring */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
-        <div className="text-[10px] text-slate-400">
-          BIOMETRIC SYSTEM - STATUS: ONLINE
+        <div className="text-[10px] text-slate-400 tracking-wider">
+          GATE ATTENDANCE MONITORING • READ-ONLY SPECTATOR
         </div>
         <div className="flex items-center gap-6">
           <span className="text-xs text-slate-400 font-mono">{activeScans.length} Total Today</span>
           <div className="flex items-center gap-3">
-            <span className="text-slate-400">SCANNER READY</span>
+            <span className="text-slate-400">LIVE FEED ACTIVE</span>
             <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]" />
           </div>
         </div>
@@ -299,7 +299,7 @@ function ProfileCard({ scan }: { scan: GateScanItem | null }) {
   if (!scan) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/50">
-        <span className="text-sm font-bold tracking-widest text-slate-400 uppercase">Awaiting Scan</span>
+        <span className="text-sm font-bold tracking-widest text-slate-400 uppercase">Awaiting Gate Event</span>
       </div>
     );
   }

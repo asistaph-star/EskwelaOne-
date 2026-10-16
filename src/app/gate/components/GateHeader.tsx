@@ -43,7 +43,7 @@ export function GateHeader({ terminalType, onOpenAdminConfig }: GateHeaderProps)
             CALULUT INTEGRATED SCHOOL
           </h1>
           <div className="text-[10px] font-bold tracking-wider uppercase text-amber-400">
-            {isFaculty ? 'FACULTY GATE ATTENDANCE' : 'STUDENT GATE ATTENDANCE'}
+            {isFaculty ? 'FACULTY GATE ATTENDANCE TERMINAL' : 'STUDENT GATE ATTENDANCE TERMINAL'}
           </div>
         </div>
       </div>

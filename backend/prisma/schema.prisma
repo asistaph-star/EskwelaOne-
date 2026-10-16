@@ -783,3 +783,15 @@ model FacultyAttendance {
   @@index([teacher_id, date], map: "faculty_attendance_teacher_id_date_idx")
   @@map("faculty_attendance")
 }
+
+model GateTerminal {
+  id            String   @id @db.VarChar(36)
+  terminal_name String   @db.VarChar(100)
+  terminal_type String   @default("student") @db.VarChar(20) // 'student' | 'faculty'
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([active], map: "gate_terminals_active_idx")
+  @@map("gate_terminals")
+}

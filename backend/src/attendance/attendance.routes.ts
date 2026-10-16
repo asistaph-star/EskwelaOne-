@@ -424,15 +424,185 @@ router.post('/gate/scan', requireAnyPermission('attendance:write', 'attendance:w
   });
 });
 
+const createTerminalSchema = z.object({
+  id: z.string().optional(),
+  terminal_name: z.string().min(1, 'Terminal name is required.'),
+  terminal_type: z.enum(['student', 'faculty']).default('student'),
+});
+
+const updateTerminalSchema = z.object({
+  terminal_type: z.enum(['student', 'faculty']).optional(),
+  terminal_name: z.string().min(1).optional(),
+  active: z.boolean().optional(),
+  adminPassword: z.string().optional(),
+});
+
+/**
+ * GET /api/attendance/gate/terminals
+ * List all registered physical gate terminals.
+ */
+router.get('/gate/terminals', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const terminals = await prisma.gateTerminal.findMany({
+      orderBy: { terminal_name: 'asc' },
+    });
+    return res.json({
+      success: true,
+      data: terminals,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/attendance/gate/terminals/:id
+ * Retrieve a single physical gate terminal configuration by ID.
+ * Kiosks poll this endpoint to discover their assigned role ('student' | 'faculty').
+ */
+router.get('/gate/terminals/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const terminal = await prisma.gateTerminal.findUnique({
+      where: { id },
+    });
+    if (!terminal) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Gate terminal not found.' },
+      });
+    }
+    return res.json({
+      success: true,
+      data: terminal,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/attendance/gate/terminals
+ * Register a new physical gate terminal.
+ * Strictly restricted to Admin and ITAdmin roles.
+ */
+router.post('/gate/terminals', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isAuthorized = authUser.roles.includes('Admin') || authUser.roles.includes('ITAdmin');
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only Admin or ITAdmin can register gate terminals.' },
+      });
+    }
+
+    const input = createTerminalSchema.parse(req.body);
+    const id = input.id || generateId();
+
+    const terminal = await prisma.gateTerminal.create({
+      data: {
+        id,
+        terminal_name: input.terminal_name,
+        terminal_type: input.terminal_type,
+        active: true,
+      },
+    });
+
+    await createAuditLog({
+      actorUserId: authUser.id,
+      action: 'GATE_TERMINAL_REGISTERED',
+      resourceType: 'gate_terminal',
+      resourceId: terminal.id,
+      newState: { terminal_name: terminal.terminal_name, terminal_type: terminal.terminal_type },
+      correlationId: (req as any).correlationId,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: terminal,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/attendance/gate/terminals/:id
+ * Remotely reconfigure a physical gate terminal.
+ * Strictly restricted to Admin and ITAdmin roles.
+ * GateOperators are rejected with 403 Forbidden.
+ */
+router.patch('/gate/terminals/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isAuthorized = authUser.roles.includes('Admin') || authUser.roles.includes('ITAdmin');
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Only Admin or ITAdmin can reconfigure gate terminals.' },
+      });
+    }
+
+    const id = req.params.id as string;
+    const input = updateTerminalSchema.parse(req.body);
+
+    if (input.adminPassword) {
+      const user = await prisma.user.findUnique({ where: { id: authUser.id } });
+      if (!user || !(await bcrypt.compare(input.adminPassword, user.password_hash))) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'Invalid administrator password.' },
+        });
+      }
+    }
+
+    const existing = await prisma.gateTerminal.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'Gate terminal not found.' },
+      });
+    }
+
+    const updated = await prisma.gateTerminal.update({
+      where: { id },
+      data: {
+        ...(input.terminal_type !== undefined ? { terminal_type: input.terminal_type } : {}),
+        ...(input.terminal_name !== undefined ? { terminal_name: input.terminal_name } : {}),
+        ...(input.active !== undefined ? { active: input.active } : {}),
+      },
+    });
+
+    await createAuditLog({
+      actorUserId: authUser.id,
+      action: 'GATE_TERMINAL_RECONFIGURED',
+      resourceType: 'gate_terminal',
+      resourceId: updated.id,
+      previousState: { terminal_type: existing.terminal_type, terminal_name: existing.terminal_name },
+      newState: { terminal_type: updated.terminal_type, terminal_name: updated.terminal_name },
+      correlationId: (req as any).correlationId,
+    });
+
+    return res.json({
+      success: true,
+      data: updated,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 const reconfigureTerminalSchema = z.object({
   email: z.string().email('Valid email is required.'),
   password: z.string().min(1, 'Password is required.'),
   terminalType: z.enum(['student', 'faculty']),
+  terminalId: z.string().optional(),
 });
 
 /**
  * POST /api/attendance/gate/terminal/reconfigure
- * Physical Station Reconfiguration Endpoint.
+ * Physical Station Reconfiguration Endpoint (Fallback On-Device Maintenance).
  * Strictly requires authenticated Admin or ITAdmin credentials.
  * GateOperators, Teachers, Students, and invalid credentials are rejected.
  */
@@ -492,11 +662,22 @@ router.post('/gate/terminal/reconfigure', async (req: Request, res: Response, ne
       });
     }
 
+    // If terminalId provided, update server-side database assignment
+    if (input.terminalId) {
+      const target = await prisma.gateTerminal.findUnique({ where: { id: input.terminalId } });
+      if (target) {
+        await prisma.gateTerminal.update({
+          where: { id: input.terminalId },
+          data: { terminal_type: input.terminalType },
+        });
+      }
+    }
+
     await createAuditLog({
       actorUserId: user.id,
       action: 'GATE_TERMINAL_RECONFIGURED',
       resourceType: 'gate_terminal',
-      newState: { terminalType: input.terminalType },
+      newState: { terminalType: input.terminalType, terminalId: input.terminalId },
       correlationId,
     });
 
@@ -504,6 +685,7 @@ router.post('/gate/terminal/reconfigure', async (req: Request, res: Response, ne
       success: true,
       data: {
         terminalType: input.terminalType,
+        terminalId: input.terminalId,
         authorizedBy: `${user.first_name} ${user.last_name} (${user.email})`,
       },
     });

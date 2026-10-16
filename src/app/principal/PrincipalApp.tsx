@@ -32,14 +32,14 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for admin */
 
   const TITLES: Record<PScreen,string> = {
-    "p-dashboard": "Dashboard Overview", "p-monitoring":"Real-Time Monitoring",
+    "p-dashboard": "Dashboard Overview", "p-monitoring":"Gate Attendance Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
     "p-inventory": "Inventory",          "p-behavior":  "Behavioral Reports",
     "p-settings": "Settings",            "p-help":      "Help & Feedback",
-    "p-events":   "School Events",       "p-faculty-attendance": "Live Faculty Attendance",
+    "p-events":   "School Events",       "p-faculty-attendance": "Gate Attendance Monitoring (TV)",
     "p-doc-requests": "Document Requests",
     "p-leaves": "Leave Management",      "p-announcements": "Announcements",
-    "p-scanner": "ID Scanner"
+    "p-scanner": "Gate Attendance Monitoring"
   };
 
   if (screen === "p-faculty-attendance") {

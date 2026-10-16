@@ -35,7 +35,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       window.dispatchEvent(new CustomEvent('api_conflict', { detail: { endpoint } }));
     }
     if (response.status === 401) {
-      window.dispatchEvent(new CustomEvent('api_unauthorized'));
+      // Professional session management:
+      // A 401 during secondary verification/sudo-mode (such as entering a confirmation password)
+      // must NOT terminate the user's active session.
+      // Only true session-level authentication failures (e.g., token expired/missing) trigger global logout.
+      const isPasswordMismatch =
+        data?.error?.message?.toLowerCase().includes('password') ||
+        data?.error?.code === 'INVALID_PASSWORD' ||
+        data?.error?.code === 'INVALID_ADMIN_PASSWORD';
+
+      if (!isPasswordMismatch) {
+        window.dispatchEvent(new CustomEvent('api_unauthorized'));
+      }
     }
     throw new ApiError(
       response.status,
