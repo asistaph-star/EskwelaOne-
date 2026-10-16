@@ -140,6 +140,12 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
         hasFocus={hasFocus}
         recentScans={recentScans}
         terminalType={terminalType}
+        onOpenAdminConfig={() => {
+          setAuthError(null);
+          setAdminPassword('');
+          setTargetTerminalType(terminalType);
+          setShowAdminConfig(true);
+        }}
       />
 
       {/* Hidden Staff Hot-Corner: Click opens Logout, Shift+Click prompts Admin Station Reconfiguration */}
