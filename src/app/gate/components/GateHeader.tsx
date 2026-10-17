@@ -69,19 +69,8 @@ export function GateHeader({ terminalType, terminalName, terminalId, onOpenAdmin
             <span className={`h-2.5 w-2.5 rounded-full ${isFaculty ? 'bg-indigo-400 animate-pulse' : 'bg-blue-400 animate-pulse'}`} />
             <span>{isFaculty ? 'FACULTY ONLY' : 'STUDENTS ONLY'}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-wider">
-            <span>STATION: {terminalId || (isFaculty ? 'term-gate-2' : 'term-gate-1')}</span>
-            {onOpenAdminConfig && (
-              <button
-                type="button"
-                onClick={onOpenAdminConfig}
-                className="text-slate-500 hover:text-amber-400 transition ml-1 px-1 py-0.5 rounded hover:bg-slate-800"
-                title="Admin Station Pairing (Administrator Credentials Required)"
-                aria-label="Admin Station Pairing"
-              >
-                ⚙ Pair
-              </button>
-            )}
+          <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-wider">
+            STATION: {terminalId || (isFaculty ? 'term-gate-2' : 'term-gate-1')}
           </div>
         </div>
       </div>
