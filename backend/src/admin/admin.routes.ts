@@ -12,6 +12,7 @@ import rankingRoutes from './ranking.routes.js';
 import notificationsRoutes from './notifications.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import academicAnalyticsRoutes from './academicAnalytics.routes.js';
+import welfareAlertsRoutes from './welfareAlerts.routes.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -20,6 +21,7 @@ router.use('/inventory', inventoryRoutes);
 router.use('/leaves', leavesRoutes);
 router.use('/ranking', rankingRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/welfare-alerts', welfareAlertsRoutes);
 router.use('/', dashboardRoutes);
 router.use('/analytics/academics', academicAnalyticsRoutes);
 

@@ -20,6 +20,7 @@ import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
 import { PAnnouncementsScreen } from './announcements/PAnnouncementsScreen';
 import { PBehaviorScreen } from './behavior/PBehaviorScreen';
 import { PSettingsScreen } from './settings/PSettingsScreen';
+import { PWelfareAlertsScreen } from './welfare/PWelfareAlertsScreen';
 
 import { Toaster } from 'sonner';
 
@@ -37,7 +38,8 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-events":   "School Events",       "p-faculty-attendance": "Gate Attendance Monitoring",
     "p-doc-requests": "Document Requests",
     "p-leaves": "Leave Management",      "p-announcements": "Announcements",
-    "p-scanner": "Gate Attendance Monitoring"
+    "p-scanner": "Gate Attendance Monitoring",
+    "p-welfare": "Welfare Alerts"
   };
 
   // Dedicated full-screen live spectator monitoring view for Gate Attendance
@@ -78,6 +80,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           {screen==="p-doc-requests" && <PDocRequestsScreen />}
           {screen==="p-announcements" && <PAnnouncementsScreen />}
           {screen==="p-behavior"      && <PBehaviorScreen />}
+          {screen==="p-welfare"       && <PWelfareAlertsScreen onNav={setScreen} />}
           {screen==="p-settings"      && <PSettingsScreen />}
           {screen==="p-help" && (
             <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: C.m50, padding: 32, textAlign: "center" }}>

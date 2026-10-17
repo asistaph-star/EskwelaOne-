@@ -3,7 +3,7 @@ import { apiClient } from '../../../api/client';
 import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Users, CalendarCheck, Activity, GraduationCap, BookMarked, Stethoscope, AlertCircle, Building2 } from 'lucide-react';
+import { Sparkles, Users, CalendarCheck, Activity, GraduationCap, BookMarked, Stethoscope, AlertCircle, Building2, HeartHandshake } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RBarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 export interface GateTrendPoint {
@@ -16,6 +16,8 @@ export interface PrincipalDashboardResponse {
   totalTeachers: number;
   gateToday: number;
   pendingApprovals: number;
+  pendingDisciplineCases?: number;
+  studentsRequiringAttention?: number;
   gateTrend: GateTrendPoint[];
 }
 
@@ -31,6 +33,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [dashData, setDashData] = useState<PrincipalDashboardResponse | null>(null);
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
   const [facultySummary, setFacultySummary] = useState<FacultyAttendanceSummary | null>(null);
+  const [welfareAlerts, setWelfareAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -41,8 +44,9 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       facultyAttendanceApi.getSummary().catch((err) => {
         console.error('Failed to load faculty summary:', err);
         return null;
-      })
-    ]).then(([dData, lData, fData]: any) => {
+      }),
+      apiClient.get<any>('/admin/welfare-alerts').catch(() => null)
+    ]).then(([dData, lData, fData, wData]: any) => {
       if (!dData) setError(true);
       else setDashData(dData.data || dData);
       
@@ -50,6 +54,8 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       if (fData) {
         setFacultySummary(fData);
       }
+      const wList = wData?.data?.alerts || wData?.alerts || [];
+      setWelfareAlerts(Array.isArray(wList) ? wList : []);
       setLoading(false);
     });
   }, []);
@@ -77,8 +83,26 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       icon: GraduationCap, 
       dest: "p-teachers" 
     },
-    { v: loading ? "..." : "0 Active", l: "Active Clinic Cases", sub: "Clinic module unavailable", subColor: C.t3, color: C.teal, bg: C.tealBg, icon: Stethoscope, dest: "p-welfare" },
-    { v: loading ? "..." : "0 Pending", l: "Pending Discipline Cases", sub: "Welfare module unavailable", subColor: C.t3, color: C.red, bg: C.redBg, icon: AlertCircle, dest: "p-welfare" }
+    { 
+      v: loading ? "..." : `${dashData?.studentsRequiringAttention ?? 0} Flagged`, 
+      l: "Students Requiring Attention", 
+      sub: (dashData?.studentsRequiringAttention ?? 0) > 0 ? "Active Disciplinary Concerns" : "No active flags", 
+      subColor: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.red : C.t3, 
+      color: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.red : C.m700, 
+      bg: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.redBg : C.m100, 
+      icon: AlertCircle, 
+      dest: "p-welfare" 
+    },
+    { 
+      v: loading ? "..." : `${dashData?.pendingDisciplineCases ?? 0} Active`, 
+      l: "Open Welfare Cases", 
+      sub: (dashData?.pendingDisciplineCases ?? 0) > 0 ? "Under Investigation / Notified" : "All cases resolved", 
+      subColor: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
+      color: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
+      bg: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amberBg : C.greenBg, 
+      icon: HeartHandshake, 
+      dest: "p-welfare" 
+    }
   ];
 
   if (error) {
@@ -117,16 +141,58 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
 
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>Critical Alerts</span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>
+                Critical Alerts ({welfareAlerts.filter(a => a.status === 'Under investigation').length})
+              </span>
+              <span onClick={() => onNav('p-welfare' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
+                View All Alerts →
+              </span>
             </div>
-            <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>No critical alerts at this time.</div>
+            {welfareAlerts.filter(a => a.status === 'Under investigation').length === 0 ? (
+              <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>
+                No critical alerts under active investigation at this time.
+              </div>
+            ) : (
+              <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                {welfareAlerts.filter(a => a.status === 'Under investigation').slice(0, 4).map((alert, idx) => (
+                  <div key={idx} onClick={() => onNav('p-welfare' as PScreen)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #eee", cursor: "pointer" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{alert.studentName}</div>
+                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{alert.incidentType} {alert.sectionName ? `· ${alert.sectionName}` : ''}</div>
+                    </div>
+                    <Stamp label={alert.status} color={C.purple} bg={C.purpleBg} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>Students Requiring Attention</span>
+              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>
+                Students Requiring Attention ({welfareAlerts.length})
+              </span>
+              <span onClick={() => onNav('p-welfare' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
+                View All Alerts →
+              </span>
             </div>
-            <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>No students flagged.</div>
+            {welfareAlerts.length === 0 ? (
+              <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>
+                No students currently flagged for welfare attention.
+              </div>
+            ) : (
+              <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                {welfareAlerts.slice(0, 4).map((alert, idx) => (
+                  <div key={idx} onClick={() => onNav('p-welfare' as PScreen)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #eee", cursor: "pointer" }}>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{alert.studentName}</div>
+                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{alert.incidentType} {alert.sectionName ? `· ${alert.sectionName}` : ''}</div>
+                    </div>
+                    <Stamp label={alert.status} color={alert.status === 'Parent notified' ? C.blue : C.amber} bg={alert.status === 'Parent notified' ? C.blueBg : C.amberBg} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>

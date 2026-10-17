@@ -57,7 +57,22 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
     // Note: status might just be "Pending" and current_stage might indicate whose turn it is.
     // For safety, let's just aggregate Leaves since that is definitively Principal responsibility.
 
-    // 5. Gate Trend (Last 7 Days)
+    // 5. Unresolved Behavior / Welfare Alerts (Excluding 'Resolved')
+    const pendingBehaviorCases = await prisma.behaviorLog.count({
+      where: {
+        status: { in: ['Reported', 'Under investigation', 'Parent notified'] }
+      }
+    });
+
+    const flaggedStudents = await prisma.behaviorLog.findMany({
+      where: {
+        status: { in: ['Reported', 'Under investigation', 'Parent notified'] }
+      },
+      distinct: ['student_id'],
+      select: { student_id: true }
+    });
+
+    // 6. Gate Trend (Last 7 Days)
     const gateTrend = [];
     for (let i = 6; i >= 0; i--) {
       const d = subDays(today, i);
@@ -84,6 +99,8 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
         totalTeachers: teachersCount,
         gateToday: gateScansTodayCount,
         pendingApprovals: pendingLeaves,
+        pendingDisciplineCases: pendingBehaviorCases,
+        studentsRequiringAttention: flaggedStudents.length,
         gateTrend
       }
     });

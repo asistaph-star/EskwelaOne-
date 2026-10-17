@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { PTableHeader } from '../shared/PTableHeader';
 import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { P_WELFARE } from '../../shared/constants/seedData';
 import { useAppContext } from '../../shared/AppContext';
 import { Stamp } from '../../shared/components/Stamp';
 import { Users, LogOut, Clock, School } from 'lucide-react';
