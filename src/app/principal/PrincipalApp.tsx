@@ -7,11 +7,11 @@ import { PSidebar } from './shared/PSidebar';
 import { PHeaderBand } from './shared/PHeaderBand';
 import { ReadOnlyBanner } from '../shared/components/ReadOnlyBanner';
 import { PDashboard } from './dashboard/PDashboard';
-import { PMonitoring } from './monitoring/PMonitoring';
 import { PAcademics } from './analytics/PAcademics';
 import { PTeachers } from './teachers/PTeachers';
 import { PInventory } from './inventory/PInventory';
 import { PEventsScreen } from './events/PEventsScreen';
+import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
@@ -29,12 +29,6 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const { isMobile, isTablet }  = useLayout();
   const showGradeCard = (_info:GradeCardInfo) => {}; /* read-only: no grade drawer for admin */
 
-  React.useEffect(() => {
-    if (screen === "p-faculty-attendance") {
-      setScreen("p-monitoring");
-    }
-  }, [screen, setScreen]);
-
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Gate Attendance Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
@@ -45,6 +39,11 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
     "p-leaves": "Leave Management",      "p-announcements": "Announcements",
     "p-scanner": "Gate Attendance Monitoring"
   };
+
+  // Dedicated full-screen live spectator monitoring view for Gate Attendance
+  if (screen === "p-monitoring" || screen === "p-faculty-attendance") {
+    return <PLiveFacultyAttendance onExit={() => setScreen("p-dashboard")} initialMode="student" />;
+  }
 
   return (
     <div style={{ display:"flex", height:"100vh", overflow:"hidden", background:C.paper, fontFamily:"'Inter',sans-serif" }}>
@@ -70,7 +69,6 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
         <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position: "relative" }}>
           
           {screen==="p-dashboard"  && <PDashboard  onNav={setScreen} onShowGradeCard={showGradeCard} />}
-          {(screen==="p-monitoring" || screen==="p-faculty-attendance") && <PMonitoring />}
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
           {screen==="p-inventory"  && <PInventory   />}

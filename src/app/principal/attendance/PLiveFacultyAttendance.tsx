@@ -22,7 +22,7 @@ interface PLiveFacultyAttendanceProps {
   initialMode?: 'student' | 'faculty';
 }
 
-export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiveFacultyAttendanceProps) {
+export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiveFacultyAttendanceProps) {
   const [feedMode, setFeedMode] = useState<'student' | 'faculty'>(initialMode);
   const [facultyList, setFacultyList] = useState<FacultyAttendanceItem[]>([]);
   const [time, setTime] = useState(new Date());
@@ -49,6 +49,8 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
   }, [loadData]);
 
   // Real-Time SSE Listener — Invalidation-only refetch upon gate scan
@@ -149,7 +151,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'faculty' }: PLiv
             className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition"
           >
             <ArrowLeft size={16} />
-            <span>Exit TV</span>
+            <span>Exit to Dashboard</span>
           </button>
 
           <img src="/school_seal.png" alt="School Seal" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
