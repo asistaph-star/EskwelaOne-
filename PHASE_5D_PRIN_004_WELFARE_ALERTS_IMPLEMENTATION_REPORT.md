@@ -1,7 +1,7 @@
 # PHASE 5D — PRIN-004 WELFARE ALERTS IMPLEMENTATION REPORT
 **Feature:** PRIN-004 — Welfare Alerts  
 **Scope:** Option B (Dedicated Principal Welfare Alerts Screen) with Privacy Boundaries & Least Privilege  
-**Status:** IMPLEMENTED — IN PROGRESS (Awaiting User Manual Review)  
+**Status:** MANUAL REVIEW PENDING  
 **Portal Progress:** Principal 28 / 29 (96.55%) — *Do NOT mark 29/29 until manual verification completes*  
 **Date:** October 18, 2026  
 
@@ -13,8 +13,8 @@
 - **Portal & Navigation Path:** `Principal → Operations → Welfare Alerts` (Screen ID: `p-welfare`)
 - **Nature of Screen:** Read-only executive oversight screen designed specifically for the School Principal to monitor students currently requiring administrative/disciplinary attention.
 - **Interactivity:**
-  - Executive KPI summary cards (Students Requiring Attention, Open Behavior Cases, Follow-up Cases).
-  - Search by student name/ID/incident type, status filter (`All`, `Reported`, `Under investigation`, `Parent notified`).
+  - Executive KPI summary cards (Students Requiring Attention, Total Active Cases, Under Investigation, Parent Notified).
+  - Search by student name/ID/incident type, status filter (`All`, `Under investigation`, `Parent notified`, `Reported`).
   - Read-only incident detail inspection drawer/modal (behavior log type, date, status, reporter, and notes authorized under `behavior:read`).
   - Zero Principal mutation controls (no case resolution or log modification from this screen).
   - Clean, truthful zero-mock empty state when no active welfare alerts exist.
@@ -41,14 +41,18 @@ DigiSkwela enforces strict separation of concerns across student health, counsel
 
 ## 3. Data Source & Alert Rules (No Invented Urgency)
 - **Primary Data Source:** `BehaviorLog` model via Prisma ORM.
-- **Active Alert Qualification:**
+- **Valid BehaviorLog Statuses:**
+  - Stored and displayed case statuses remain strictly:
+    - `Reported`
+    - `Under investigation`
+    - `Parent notified`
+    - `Resolved`
   - Active cases include records with status: `Reported`, `Under investigation`, `Parent notified`.
   - Resolved cases (`status = 'Resolved'`) are strictly excluded from active counts and active alert tables.
-- **No Manufactured Urgency:**
-  - The `BehaviorLog` database model contains `id`, `student_id`, `type`, `date`, `status`, `note`, `reported_by`.
-  - It does **not** contain a `severity` or `priority` column.
+- **Strict Prohibition Against Fabricated Statuses:**
+  - **"Requires Attention" is NOT a `BehaviorLog.status`:** It is never stored or rendered as a case status badge. It is used strictly as an aggregate summary heading (`Students Requiring Attention`) representing the distinct count of students with unresolved disciplinary records.
   - Urgency is not fabricated (e.g., "Under investigation" is not artificially converted into "URGENT").
-  - The UI uses transparent, deterministic case statuses (`Under investigation`, `Parent notified`, `Reported`) and neutral badges (`Requires Attention` / `Follow-up`).
+  - The UI uses transparent, deterministic case statuses (`Under investigation`, `Parent notified`, `Reported`).
 - **Attendance Rules Excluded:**
   - No late, absence, or chronic absence alerts generated from `GateAttendance`. The school has not yet formalized official bell schedules, grace periods, or absence thresholds.
 - **Academic Risk Excluded:**
@@ -61,9 +65,9 @@ DigiSkwela enforces strict separation of concerns across student health, counsel
   - Replaced static placeholder `0 Active Clinic Cases` (removed entirely).
   - Replaced static placeholder `0 Pending Discipline Cases`.
   - Replaced static placeholder text `No critical alerts at this time` and `No students flagged`.
-- **Live Widgets Added:**
+- **Accurate Live Widgets:**
   - `Students Requiring Attention`: Real count of distinct students with unresolved behavior cases.
-  - `Open Welfare Cases`: Real count of unresolved behavior incidents.
+  - `Open Behavior Cases`: Real count of unresolved behavior incidents. (Explicitly labeled "Open Behavior Cases" rather than "Open Welfare Cases" to ensure no implication of clinic or counseling inclusion).
   - Both cards feature a live navigation button (`Review Alerts →`) linking directly to `p-welfare`.
   - Overview panel displays top unresolved cases with real student names, incident types, and timestamps.
 
@@ -79,25 +83,16 @@ DigiSkwela enforces strict separation of concerns across student health, counsel
      ```json
      {
        "summary": {
-         "totalAlerts": 2,
-         "studentsRequiringAttention": 2,
-         "openBehaviorCases": 1,
-         "followUpCases": 1
-       },
-       "alerts": [
-         {
-           "id": "...",
-           "alertType": "BEHAVIOR",
-           "studentId": "...",
-           "studentName": "...",
-           "gradeSection": "Grade 10 - Rizal",
-           "incident": "Bullying incident during recess",
-           "status": "Under investigation",
-           "date": "2026-10-18T...",
-           "reportedBy": "Teacher Santos",
-           "note": "..."
+         "totalActiveAlerts": 0,
+         "studentsRequiringAttention": 0,
+         "openCases": 0,
+         "byStatus": {
+           "reported": 0,
+           "underInvestigation": 0,
+           "parentNotified": 0
          }
-       ]
+       },
+       "alerts": []
      }
      ```
 2. `backend/src/admin/admin.routes.ts` *(MODIFIED)*:
@@ -116,13 +111,14 @@ DigiSkwela enforces strict separation of concerns across student health, counsel
 3. `src/app/principal/PrincipalApp.tsx` *(MODIFIED)*:
    - Imported and wired `PWelfareAlertsScreen` for `activeScreen === 'p-welfare'`.
 4. `src/app/principal/welfare/PWelfareAlertsScreen.tsx` *(NEW)*:
-   - Full dedicated executive oversight screen matching DigiSkwela Principal visual design language (Indigo/Slate palette, rounded cards, Tailwind CSS).
+   - Dedicated executive oversight screen matching DigiSkwela Principal visual design language (Indigo/Slate palette, rounded cards, Tailwind CSS).
    - Summary statistics cards with real counts.
    - Status filters and live search.
    - Student incident table with status badges and detail drawer modal.
-   - Empty state rendering `ShieldCheck` when no unresolved welfare alerts exist.
+   - Empty state rendering `HeartHandshake` icon when no unresolved welfare alerts exist.
 5. `src/app/principal/dashboard/PDashboard.tsx` *(MODIFIED)*:
    - Removed fake clinic card.
+   - Renamed KPI card to `Open Behavior Cases`.
    - Wired live welfare alerts summary and cards linked to `p-welfare`.
 6. `src/app/principal/monitoring/PMonitoring.tsx` *(MODIFIED)*:
    - Cleaned up obsolete `P_WELFARE` import.
@@ -139,7 +135,7 @@ Test file: `backend/tests/welfareAlerts.test.ts`
 - **Privacy Boundary (Clinic):** Response payload contains zero `ClinicReferral` fields, diagnosis strings, or medical notes.
 - **Privacy Boundary (Guidance):** Response payload contains zero `GuidanceRecord` fields, counseling notes, or confidential counseling content.
 - **Dashboard Count Parity:** Admin/Principal dashboard endpoint returns counts matching `GET /api/admin/welfare-alerts`.
-- **Empty State Behavior:** When zero unresolved cases exist, returns `totalAlerts: 0` and empty array.
+- **Empty State Behavior:** When zero unresolved cases exist, returns `totalActiveAlerts: 0` and empty array.
 
 **Overall Test Suite Status:**
 - Vitest: All 22 test files passed (211 of 211 tests passed).
@@ -157,27 +153,52 @@ Test file: `backend/tests/welfareAlerts.test.ts`
 
 ---
 
-## 8. Progress & Current State
-- **Previous Progress:** Principal 28 / 29 (96.55%)
-- **Current Progress:** Principal 28 / 29 (96.55%)
-- **PRIN-004 Status:** **IN PROGRESS (Implemented & Automated Tests Passed — Awaiting User Manual Review)**
-- **Rule Enforcement:** We do NOT mark Principal 29 / 29 (100%) until the user performs manual verification and confirms acceptance.
+## 8. Current Development Database Audit
+Direct database check executed via `scripts/check_behavior_logs.cjs`:
+- **Principal User:** `principal@demo.com` (Name: "Jose Rizal", ID: `demo-principal-1`, Role: `Principal`)
+- **Total `BehaviorLog` Records:** **0**
+- **Unresolved `BehaviorLog` Records:** **0**
+- **Resolved `BehaviorLog` Records:** **0**
+
+> [!IMPORTANT]
+> **No Mock/Injected Data:** Per requirements, zero fake data has been directly seeded into the database. Manual testing begins with validating the honest empty state.
 
 ---
 
 ## 9. Manual Verification Guide for User
-1. Log in as Principal (`principal@school.edu.ph` / `Password123!`).
-2. Verify **Principal Dashboard**:
-   - Confirm that the old `0 Active Clinic Cases` card is gone.
-   - Observe real `Students Requiring Attention` and `Open Welfare Cases` cards.
-   - Click **Review Alerts →** or click the card to navigate to Welfare Alerts.
-3. Verify **Sidebar Navigation**:
-   - Go to `Operations → Welfare Alerts`.
-   - Confirm the route loads `PWelfareAlertsScreen` at `p-welfare`.
-4. Verify **Welfare Alerts Screen**:
-   - Verify KPI cards: Students Requiring Attention, Open Behavior Cases, Follow-up Cases.
-   - Test the search filter (search by student name or incident keyword).
-   - Test the status filter dropdown (`All`, `Reported`, `Under investigation`, `Parent notified`).
-   - Click "View Details" on an alert row to verify the read-only incident detail modal.
-   - Confirm no mutation controls exist (read-only executive oversight).
-   - Confirm no clinic diagnosis or guidance counseling notes appear anywhere.
+
+### Phase 1: Verify Honest Empty State
+1. Log in using the **canonical seeded Principal account**:
+   - **Email:** `principal@demo.com`
+   - **Password:** `password123`
+2. **Principal Dashboard:**
+   - Confirm that `0 Active Clinic Cases` is gone.
+   - Confirm `Open Behavior Cases` KPI displays `0 Active` ("All cases resolved").
+   - Confirm `Students Requiring Attention` KPI displays `0 Flagged` ("No active flags").
+   - Click either card or click **View All Alerts →** to navigate to `Operations → Welfare Alerts`.
+3. **Welfare Alerts Screen (`p-welfare`):**
+   - Confirm summary KPIs show `0` for Students Requiring Attention, Total Active Cases, Under Investigation, and Parent Notified.
+   - Confirm honest empty state displays: *"No Active Welfare Alerts — All reported student disciplinary cases are resolved, or no cases currently require administrative attention."*
+   - Confirm no errors are thrown.
+
+### Phase 2: (Optional) Testing Real End-to-End Workflow via Supported UI
+To verify search, status filtering, and the read-only detail drawer with real data without manual DB tampering:
+1. Log in as the **canonical Guidance Counselor account**:
+   - **Email:** `guidance@demo.com`
+   - **Password:** `password123`
+2. Navigate to: `Guidance Portal → Student Services → Behavior Logs`.
+3. Click **Log Incident**:
+   - Select an enrolled student (e.g., *Juan Dela Cruz*).
+   - Select Incident Type (e.g., *Bullying* or *Misconduct*).
+   - Set Status: `Under investigation` or `Parent notified`.
+   - Enter Note: `Incident logged for verification testing.`
+   - Click Save.
+4. Log back in as Principal (`principal@demo.com` / `password123`):
+   - Check Dashboard: `Open Behavior Cases` should now show `1 Active`, `Students Requiring Attention` shows `1 Flagged`.
+   - Navigate to `Operations → Welfare Alerts`:
+     - Row appears with student name, grade/section, incident type, date, and status.
+     - Test search input (type student name or incident keyword).
+     - Test status filter dropdown (`Under investigation`, `Parent notified`, etc.).
+     - Click **View Details**: inspect the read-only incident detail modal.
+     - Confirm no edit/mutation controls exist.
+     - Confirm no clinic diagnosis or guidance counseling notes are exposed.

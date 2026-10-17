@@ -95,7 +95,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     },
     { 
       v: loading ? "..." : `${dashData?.pendingDisciplineCases ?? 0} Active`, 
-      l: "Open Welfare Cases", 
+      l: "Open Behavior Cases", 
       sub: (dashData?.pendingDisciplineCases ?? 0) > 0 ? "Under Investigation / Notified" : "All cases resolved", 
       subColor: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
       color: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
