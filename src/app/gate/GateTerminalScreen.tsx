@@ -10,6 +10,8 @@ interface GateTerminalScreenProps {
   hasFocus: boolean;
   recentScans: RecentScan[];
   terminalType: 'student' | 'faculty';
+  terminalName?: string;
+  terminalId?: string;
   onOpenAdminConfig?: () => void;
 }
 
@@ -20,6 +22,8 @@ export function GateTerminalScreen({
   hasFocus,
   recentScans,
   terminalType,
+  terminalName,
+  terminalId,
   onOpenAdminConfig,
 }: GateTerminalScreenProps) {
   const [isIdleMedia, setIsIdleMedia] = useState(false);
@@ -69,7 +73,12 @@ export function GateTerminalScreen({
 
       {/* 1. Header Section */}
       <div className="relative z-20">
-        <GateHeader terminalType={terminalType} onOpenAdminConfig={onOpenAdminConfig} />
+        <GateHeader
+          terminalType={terminalType}
+          terminalName={terminalName}
+          terminalId={terminalId}
+          onOpenAdminConfig={onOpenAdminConfig}
+        />
       </div>
 
       {/* Campus Media Layer (Takes up main and bottom sections when idle) */}

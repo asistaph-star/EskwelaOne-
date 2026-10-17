@@ -216,6 +216,8 @@ export function GateTerminalApp({ onLogout }: GateTerminalAppProps) {
         hasFocus={hasFocus}
         recentScans={recentScans}
         terminalType={terminalType}
+        terminalName={terminalName}
+        terminalId={terminalId}
         onOpenAdminConfig={openAdminModal}
       />
 

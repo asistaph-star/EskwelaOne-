@@ -19,6 +19,26 @@ export function GateTerminalsManagement() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [pairedTerminalId, setPairedTerminalId] = useState<string>(() => {
+    return typeof window !== 'undefined'
+      ? (localStorage.getItem('digiskwela_gate_terminal_id') || 'term-gate-1')
+      : 'term-gate-1';
+  });
+
+  const handlePairBrowserToTerminal = (t: GateTerminalRecord) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('digiskwela_gate_terminal_id', t.id);
+      localStorage.setItem('digiskwela_station_terminal_type', t.terminal_type);
+      setPairedTerminalId(t.id);
+      setFeedback({
+        type: 'success',
+        message: `This device is now paired as '${t.terminal_name}' (${t.id}). Launching Gate Attendance Terminal...`
+      });
+      setTimeout(() => {
+        window.location.hash = '#gate';
+      }, 800);
+    }
+  };
 
   // New Terminal Modal State
   const [showNewModal, setShowNewModal] = useState(false);
@@ -234,6 +254,11 @@ export function GateTerminalsManagement() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {t.id === pairedTerminalId && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Paired to this Device
+                    </span>
+                  )}
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                     t.terminal_type === 'faculty'
                       ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
@@ -241,6 +266,18 @@ export function GateTerminalsManagement() {
                   }`}>
                     {t.terminal_type === 'faculty' ? 'Faculty Terminal' : 'Student Terminal'}
                   </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePairBrowserToTerminal(t);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-blue-700 bg-white hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-blue-300 transition shadow-sm"
+                    title={t.id === pairedTerminalId ? "Launch Kiosk on this paired device" : "Pair this physical machine/browser to this terminal and launch kiosk"}
+                  >
+                    <ExternalLink size={13} />
+                    <span>{t.id === pairedTerminalId ? 'Launch Kiosk' : 'Pair & Launch'}</span>
+                  </button>
                   <span className="text-xs font-semibold text-slate-400">
                     {isSelected ? '● Editing' : 'Select'}
                   </span>
