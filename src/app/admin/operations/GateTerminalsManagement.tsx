@@ -392,68 +392,103 @@ export function GateTerminalsManagement() {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 max-w-md space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase">
-                <ShieldCheck size={16} className="text-slate-500" />
-                <span>Administrator Password Confirmation</span>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-600 font-medium mb-1">
-                  Re-enter your administrator password to authorize reconfiguration:
-                </label>
-                <input
-                  type="password"
-                  value={adminPassword}
-                  onChange={(e) => {
-                    setAdminPassword(e.target.value);
-                    if (feedback?.type === 'error') setFeedback(null);
-                  }}
-                  placeholder="Enter administrator password"
-                  className={`w-full rounded-lg border px-3 py-2 text-sm bg-white transition focus:outline-none focus:ring-1 ${
-                    feedback?.type === 'error' && (feedback.message.toLowerCase().includes('password') || feedback.message.toLowerCase().includes('unauthorized'))
-                      ? 'border-red-500 text-red-900 bg-red-50/20 focus:border-red-600 focus:ring-red-600'
-                      : 'border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-blue-600'
-                  }`}
-                />
-                {feedback?.type === 'error' && (feedback.message.toLowerCase().includes('password') || feedback.message.toLowerCase().includes('unauthorized')) && (
-                  <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1">
-                    <AlertCircle size={13} />
-                    <span>Incorrect administrator password. Please try again.</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Inline Feedback Banner */}
-              {feedback && (
-                <div className={`p-3 rounded-lg border flex items-start gap-2.5 text-xs font-medium ${
-                  feedback.type === 'success'
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                    : 'bg-red-50 border-red-200 text-red-800'
-                }`}>
-                  {feedback.type === 'success' ? (
-                    <CheckCircle2 className="text-emerald-600 shrink-0 mt-0.5" size={16} />
-                  ) : (
-                    <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={16} />
-                  )}
-                  <span>{feedback.message}</span>
+            {targetRole !== selectedTerminal.terminal_type ? (
+              <div className="bg-slate-50 p-5 rounded-xl border-2 border-amber-300 max-w-lg space-y-4 shadow-sm animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wide">
+                    <ShieldCheck size={18} className="text-amber-600" />
+                    <span>Reassign Station Role: {selectedTerminal.terminal_type === 'faculty' ? 'Faculty' : 'Student'} → {targetRole === 'faculty' ? 'Faculty' : 'Student'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetRole(selectedTerminal.terminal_type);
+                      setAdminPassword('');
+                      setFeedback(null);
+                    }}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              )}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-sm flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Updating Server...</span>
-                  </>
-                ) : (
-                  <span>Save & Deploy Role to Server</span>
+                <div>
+                  <label className="block text-xs text-slate-600 font-medium mb-1">
+                    Enter your administrator password to authorize this role change:
+                  </label>
+                  <input
+                    type="password"
+                    autoFocus
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      if (feedback?.type === 'error') setFeedback(null);
+                    }}
+                    placeholder="Enter administrator password"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm bg-white transition focus:outline-none focus:ring-1 ${
+                      feedback?.type === 'error' && (feedback.message.toLowerCase().includes('password') || feedback.message.toLowerCase().includes('unauthorized'))
+                        ? 'border-red-500 text-red-900 bg-red-50/20 focus:border-red-600 focus:ring-red-600'
+                        : 'border-slate-300 text-slate-900 focus:border-blue-600 focus:ring-blue-600'
+                    }`}
+                  />
+                  {feedback?.type === 'error' && (feedback.message.toLowerCase().includes('password') || feedback.message.toLowerCase().includes('unauthorized')) && (
+                    <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1">
+                      <AlertCircle size={13} />
+                      <span>Incorrect administrator password. Please try again.</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Inline Feedback Banner */}
+                {feedback && (
+                  <div className={`p-3 rounded-lg border flex items-start gap-2.5 text-xs font-medium ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-red-50 border-red-200 text-red-800'
+                  }`}>
+                    {feedback.type === 'success' ? (
+                      <CheckCircle2 className="text-emerald-600 shrink-0 mt-0.5" size={16} />
+                    ) : (
+                      <AlertCircle className="text-red-600 shrink-0 mt-0.5" size={16} />
+                    )}
+                    <span>{feedback.message}</span>
+                  </div>
                 )}
-              </button>
-            </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !adminPassword.trim()}
+                    className="rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-sm flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Updating Server...</span>
+                      </>
+                    ) : (
+                      <span>Authorize & Deploy Role</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetRole(selectedTerminal.terminal_type);
+                      setAdminPassword('');
+                      setFeedback(null);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3.5 max-w-lg">
+                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <span>Station is active as <strong>{selectedTerminal.terminal_type === 'faculty' ? 'Faculty Terminal' : 'Student Terminal'}</strong>. Click the opposite option above if you wish to reassign its role.</span>
+              </div>
+            )}
           </form>
         </div>
       )}
