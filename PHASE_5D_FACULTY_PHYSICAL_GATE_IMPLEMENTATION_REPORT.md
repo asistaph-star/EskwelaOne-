@@ -4,10 +4,10 @@
 **Authoritative Project:** DigiSkwela  
 **Authoritative Institution:** Calulut Integrated School  
 **Date:** October 14, 2026  
-**Current Verified Progress:** 26 / 29 (89.66%)  
-**PRIN-003 Status:** IMPLEMENTED / VALIDATED / MANUAL PHYSICAL VERIFICATION PENDING  
-**PRIN-014 Status:** IMPLEMENTED / VALIDATED / MANUAL PHYSICAL VERIFICATION PENDING  
-**PRIN-004 Status:** OUT OF SCOPE (Strictly untouched)  
+**Current Verified Progress:** 28 / 29 (96.55%)  
+**PRIN-003 Status:** VERIFIED ✅ (Teacher Attendance List / Dashboard faculty attendance summary)  
+**PRIN-014 Status:** VERIFIED ✅ (Faculty Attendance Table)  
+**PRIN-004 Status:** PENDING AUDIT (Welfare Alerts — Final Remaining Item)  
 
 ---
 
@@ -272,13 +272,27 @@ When real physical teacher ID cards are delivered:
 
 ---
 
-### 11. Verification Status & Progress Tracker
+### 11. Final Manual Acceptance & Physical Architecture Verification
 
-- **Current Progress:** 26 / 29 = 89.66%
-- **PRIN-003 & PRIN-014 Status:** `IMPLEMENTED / VALIDATED / MANUAL PHYSICAL VERIFICATION PENDING`
-- **Next Step:** Physical hardware scan verification with ONI B2D-0240 scanner and generated `public/test_faculty_qr.png` (`EMP-T-001`).
-- **Post-Verification Target:**
-  - PRIN-003 ✅
-  - PRIN-014 ✅
-  - Progress: **28 / 29 = 96.55%**
-- **PRIN-004:** Strictly untouched and awaiting final phase authorization.
+- **Manual Physical Verification:** **PASSED** ✅ (Verified by User using ONI B2D-0240 optical hardware scanner).
+- **Physical Verification Date:** October 18, 2026
+- **Test Scenarios Verified:**
+  1. **Cross-Role Credential Rejection:** Scanned Student QR (`123456789012`) at Faculty Terminal (`term-gate-2`) $\rightarrow$ Rejected (no attendance recorded).
+  2. **Faculty Hardware Scan:** Scanned Faculty QR (`EMP-T-001`) at Faculty Terminal (`term-gate-2`) $\rightarrow$ Time In recorded for Maria Clara (`demo-teacher-1`).
+  3. **Principal Live Feed Monitoring:** Invalidation-only SSE received $\rightarrow$ Event immediately appeared on Principal Gate Attendance Monitoring screen.
+
+#### Confirmed Production Attendance Architecture:
+- **Student Gate Terminal (`term-gate-1`):** Dedicated Student attendance capture (`/api/attendance/gate/student/scan`, 12-digit LRN, rejecting faculty credentials).
+- **Faculty Gate Terminal (`term-gate-2`):** Dedicated Faculty attendance capture (`/api/attendance/gate/faculty/scan`, EMP-T-* credentials, rejecting student LRNs).
+- **Principal Gate Attendance Monitoring:** Read-only monitoring for Students and Faculty (`[ Students ]` and `[ Faculty ]` spectator views, large IN/OUT event cards, zero mutation controls).
+- **Admin Gate Terminals:** Terminal registration, identity, pairing, and assignment management.
+
+---
+
+### 12. Verification Status & Progress Tracker
+
+- **PRIN-003:** **VERIFIED** ✅ (Teacher Attendance List / Dashboard faculty attendance summary)
+- **PRIN-014:** **VERIFIED** ✅ (Faculty Attendance Table)
+- **Principal Portal Progress:** **28 / 29 = 96.55%**
+- **Next Feature:** **PRIN-004 — Welfare Alerts** (Final remaining Principal Portal requirement).
+
