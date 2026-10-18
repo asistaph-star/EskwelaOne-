@@ -22,6 +22,12 @@ describe('Phase 5D: Admin Inventory Authorization', () => {
 
   beforeAll(async () => {
     // Defensive cleanup from prior failed runs
+    await prisma.inventoryUpdate.deleteMany({
+      where: { item: { name: 'Test Item' } }
+    });
+    await prisma.inventoryItem.deleteMany({
+      where: { name: 'Test Item' }
+    });
     await prisma.user.deleteMany({
       where: { email: { in: ['p_inv@calulut.edu.ph', 'a_inv@calulut.edu.ph', 's_inv@calulut.edu.ph'] } }
     });
@@ -112,18 +118,23 @@ describe('Phase 5D: Admin Inventory Authorization', () => {
   });
 
   afterAll(async () => {
-    const userIds = [principalUserId, adminUserId, studentUserId].filter(Boolean) as string[];
-    if (itemId) {
-      await prisma.inventoryUpdate.deleteMany({ where: { item_id: itemId } });
-      await prisma.inventoryItem.delete({ where: { id: itemId } });
+    try {
+      const userIds = [principalUserId, adminUserId, studentUserId].filter(Boolean) as string[];
+      if (itemId) {
+        await prisma.inventoryUpdate.deleteMany({ where: { item_id: itemId } });
+        await prisma.inventoryItem.deleteMany({ where: { id: itemId } });
+      }
+      await prisma.inventoryUpdate.deleteMany({ where: { item: { name: 'Test Item' } } });
+      await prisma.inventoryItem.deleteMany({ where: { name: 'Test Item' } });
+      
+      if (userIds.length > 0) {
+        await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
+        await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: userIds } } });
+        await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+      }
+    } finally {
+      await prisma.$disconnect();
     }
-    
-    if (userIds.length > 0) {
-      await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
-      await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: userIds } } });
-      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
-    }
-    await prisma.$disconnect();
   });
 
   it('Principal GET inventory -> 200', async () => {
@@ -154,6 +165,21 @@ describe('Phase 5D: Admin Inventory Authorization', () => {
       .patch(`/api/admin/inventory/${itemId}`)
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ status: 'Lost' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('Principal inventory DELETE -> 403', async () => {
+    const res = await request(app)
+      .delete(`/api/admin/inventory/${itemId}`)
+      .set('Authorization', `Bearer ${principalToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('authorized inventory manager (Admin) DELETE -> success', async () => {
+    const res = await request(app)
+      .delete(`/api/admin/inventory/${itemId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
   });

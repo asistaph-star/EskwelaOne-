@@ -27,6 +27,8 @@ let inventoryItemId: string;
 describe('Phase 4G: Clinic Records Characterization Tests', () => {
   beforeAll(async () => {
     try {
+      await prisma.inventoryUpdate.deleteMany({ where: { item: { name: 'Test Med' } } });
+      await prisma.inventoryItem.deleteMany({ where: { name: 'Test Med' } });
       const orphanedUsers = await prisma.user.findMany({
         where: { email: { in: ['nurse_g@calulut.edu.ph', 'student1_g@calulut.edu.ph', 'student2_g@calulut.edu.ph'] } }
       });
@@ -119,23 +121,29 @@ describe('Phase 4G: Clinic Records Characterization Tests', () => {
   });
 
   afterAll(async () => {
-    // Cleanup
-    if (inventoryItemId) {
-      await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItemId } });
-      await prisma.inventoryItem.deleteMany({ where: { id: inventoryItemId } });
-    }
-    const validStudentIds = [student1Id, student2Id].filter(Boolean) as string[];
-    if (validStudentIds.length > 0) {
-      await prisma.clinicReferral.deleteMany({ where: { student_id: { in: validStudentIds } } });
-    }
-    
-    const userIds = [nurseUserId, student1UserId, student2UserId].filter(Boolean) as string[];
-    if (userIds.length > 0) {
-      await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
-      await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: userIds } } });
-      await prisma.staff.deleteMany({ where: { user_id: { in: userIds } } });
-      await prisma.student.deleteMany({ where: { user_id: { in: userIds } } });
-      await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    try {
+      // Cleanup
+      if (inventoryItemId) {
+        await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItemId } });
+        await prisma.inventoryItem.deleteMany({ where: { id: inventoryItemId } });
+      }
+      await prisma.inventoryUpdate.deleteMany({ where: { item: { name: 'Test Med' } } });
+      await prisma.inventoryItem.deleteMany({ where: { name: 'Test Med' } });
+      const validStudentIds = [student1Id, student2Id].filter(Boolean) as string[];
+      if (validStudentIds.length > 0) {
+        await prisma.clinicReferral.deleteMany({ where: { student_id: { in: validStudentIds } } });
+      }
+      
+      const userIds = [nurseUserId, student1UserId, student2UserId].filter(Boolean) as string[];
+      if (userIds.length > 0) {
+        await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
+        await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: userIds } } });
+        await prisma.staff.deleteMany({ where: { user_id: { in: userIds } } });
+        await prisma.student.deleteMany({ where: { user_id: { in: userIds } } });
+        await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+      }
+    } finally {
+      await prisma.$disconnect();
     }
   });
 

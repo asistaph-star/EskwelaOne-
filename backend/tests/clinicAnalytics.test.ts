@@ -22,7 +22,13 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
   const getDaysAgoStr = (days: number) => getDaysAgo(days).toISOString().split('T')[0];
 
   beforeAll(async () => {
-    // 0. Targeted cleanup of known interfering seeded fixture
+    // 0. Defensive cleanup of inventory and fixtures from prior runs
+    await prisma.inventoryUpdate.deleteMany({
+      where: { item: { name: { in: ['Paracetamol', 'Bandages'] } } }
+    });
+    await prisma.inventoryItem.deleteMany({
+      where: { name: { in: ['Paracetamol', 'Bandages'] } }
+    });
     await prisma.clinicReferral.deleteMany({ where: { id: 'demo-clinic-ref-1' } });
 
     // 1. Setup Actor Tokens
@@ -176,19 +182,29 @@ describe('Phase 4H: Clinic Analytics Characterization Tests', () => {
   });
 
   afterAll(async () => {
-    // Cleanup
-    await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
-    await prisma.inventoryItem.deleteMany({ where: { id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
-    await prisma.clinicReferral.deleteMany({ where: { recorded_by: testUserId } });
     try {
-      await prisma.student.deleteMany({ where: { id: testStudentId } });
-    } catch(e) {}
-    try {
-      await prisma.userRole.deleteMany({ where: { user: { email: { contains: 'unauth' } } } });
-      await prisma.userRole.deleteMany({ where: { user: { email: { contains: 'analytics' } } } });
-    } catch (e) {}
-    await prisma.user.deleteMany({ where: { email: { contains: 'analytics' } } });
-    await prisma.user.deleteMany({ where: { email: { contains: 'unauth' } } });
+      // Cleanup
+      await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
+      await prisma.inventoryItem.deleteMany({ where: { id: { in: [inventoryItem1, inventoryItem2].filter(Boolean) } } });
+      await prisma.inventoryUpdate.deleteMany({
+        where: { item: { name: { in: ['Paracetamol', 'Bandages'] } } }
+      });
+      await prisma.inventoryItem.deleteMany({
+        where: { name: { in: ['Paracetamol', 'Bandages'] } }
+      });
+      await prisma.clinicReferral.deleteMany({ where: { recorded_by: testUserId } });
+      try {
+        await prisma.student.deleteMany({ where: { id: testStudentId } });
+      } catch(e) {}
+      try {
+        await prisma.userRole.deleteMany({ where: { user: { email: { contains: 'unauth' } } } });
+        await prisma.userRole.deleteMany({ where: { user: { email: { contains: 'analytics' } } } });
+      } catch (e) {}
+      await prisma.user.deleteMany({ where: { email: { contains: 'analytics' } } });
+      await prisma.user.deleteMany({ where: { email: { contains: 'unauth' } } });
+    } finally {
+      await prisma.$disconnect();
+    }
   });
 
   it('should return 401/403 for unauthorized users', async () => {

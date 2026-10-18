@@ -150,4 +150,26 @@ router.patch('/:id', requirePermissions('inventory:write'), async (req: Request,
   }
 });
 
+/**
+ * DELETE /api/admin/inventory/:id
+ */
+router.delete('/:id', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id);
+    const existing = await prisma.inventoryItem.findUnique({ where: { id } });
+    if (!existing) {
+      throw new AppError(404, 'NOT_FOUND', 'Inventory item not found');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.inventoryUpdate.deleteMany({ where: { item_id: id } });
+      await tx.inventoryItem.delete({ where: { id } });
+    });
+
+    res.json({ success: true, message: 'Inventory item deleted' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

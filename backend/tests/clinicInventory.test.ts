@@ -16,10 +16,17 @@ let unauthorizedToken: string;
 
 let inventoryItem1Id: string;
 let inventoryItem2Id: string;
+const testItemIds: string[] = [];
 
 describe('Phase 4I.1: Clinic Inventory Characterization Tests', () => {
   beforeAll(async () => {
     try {
+      await prisma.inventoryUpdate.deleteMany({
+        where: { item: { name: { in: ['Test Paracetamol', 'Concurrent Item'] } } }
+      });
+      await prisma.inventoryItem.deleteMany({
+        where: { name: { in: ['Test Paracetamol', 'Concurrent Item'] } }
+      });
       const users = await prisma.user.findMany({
         where: { email: { in: ['admin_inv_test@calulut.edu.ph', 'unauth_inv_test@calulut.edu.ph'] } }
       });
@@ -73,26 +80,45 @@ describe('Phase 4I.1: Clinic Inventory Characterization Tests', () => {
   });
 
   afterAll(async () => {
-    // Narrow cleanup
-    if (inventoryItem1Id) {
-      await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItem1Id } });
-      await prisma.inventoryItem.deleteMany({ where: { id: inventoryItem1Id } });
+    try {
+      if (testItemIds.length > 0) {
+        await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: testItemIds } } });
+        await prisma.inventoryItem.deleteMany({ where: { id: { in: testItemIds } } });
+      }
+      if (inventoryItem1Id) {
+        await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItem1Id } });
+        await prisma.inventoryItem.deleteMany({ where: { id: inventoryItem1Id } });
+      }
+      if (inventoryItem2Id) {
+        await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItem2Id } });
+        await prisma.inventoryItem.deleteMany({ where: { id: inventoryItem2Id } });
+      }
+      
+      await prisma.inventoryUpdate.deleteMany({
+        where: { item: { name: { in: ['Test Paracetamol', 'Concurrent Item'] } } }
+      });
+      await prisma.inventoryItem.deleteMany({
+        where: { name: { in: ['Test Paracetamol', 'Concurrent Item'] } }
+      });
+
+      if (adminUserId) {
+        const userItems = await prisma.inventoryUpdate.findMany({ where: { user_id: adminUserId }, select: { item_id: true } });
+        const itemIds = userItems.map(ui => ui.item_id);
+        if (itemIds.length > 0) {
+          await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: itemIds } } });
+          await prisma.inventoryItem.deleteMany({ where: { id: { in: itemIds } } });
+        }
+      }
+      
+      const uids = [adminUserId, unauthUserId].filter(Boolean);
+      if (uids.length > 0) {
+        await prisma.userRole.deleteMany({ where: { user_id: { in: uids } } });
+        await prisma.staff.deleteMany({ where: { user_id: { in: uids } } });
+        await prisma.user.deleteMany({ where: { id: { in: uids } } });
+      }
+    } finally {
+      await prisma.$disconnect();
     }
-    if (inventoryItem2Id) {
-      await prisma.inventoryUpdate.deleteMany({ where: { item_id: inventoryItem2Id } });
-      await prisma.inventoryItem.deleteMany({ where: { id: inventoryItem2Id } });
-    }
-    
-    // Cleanup items created by this user
-    const userItems = await prisma.inventoryUpdate.findMany({ where: { user_id: adminUserId }, select: { item_id: true } });
-    const itemIds = userItems.map(ui => ui.item_id);
-    await prisma.inventoryUpdate.deleteMany({ where: { item_id: { in: itemIds } } });
-    await prisma.inventoryItem.deleteMany({ where: { id: { in: itemIds } } });
-    
-    const uids = [adminUserId, unauthUserId];
-    await prisma.userRole.deleteMany({ where: { user_id: { in: uids } } });
-    await prisma.staff.deleteMany({ where: { user_id: { in: uids } } });
-    await prisma.user.deleteMany({ where: { id: { in: uids } } });
   });
 
   describe('POST /api/student-services/clinic/inventory', () => {
@@ -115,6 +141,7 @@ describe('Phase 4I.1: Clinic Inventory Characterization Tests', () => {
       expect(res.body.data.name).toBe('Test Paracetamol');
       expect(res.body.data.quantity).toBe(100);
       inventoryItem1Id = res.body.data.id;
+      testItemIds.push(inventoryItem1Id);
 
       // Verify Database state and atomic InventoryUpdate creation
       const item = await prisma.inventoryItem.findUnique({ where: { id: inventoryItem1Id }, include: { updates: true } });
@@ -255,6 +282,7 @@ describe('Phase 4I.1: Clinic Inventory Characterization Tests', () => {
         });
       
       const concurrentItemId = createRes.body.data.id;
+      testItemIds.push(concurrentItemId);
 
       // Fire two concurrent requests, each asking for 4
       const req1 = request(app)
