@@ -8,6 +8,8 @@ export interface GateScanItem {
   id: string;
   entityType: 'STUDENT' | 'FACULTY';
   studentName?: string;
+  gradeLevel?: number | null;
+  sectionName?: string | null;
   teacherName?: string;
   employeeId?: string;
   department?: string;
@@ -102,12 +104,17 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
     const scans: GateScanItem[] = [];
 
     (gateAttendance || []).forEach(record => {
+      const studentGrade = (record as any).gradeLevel ?? (record as any).grade_level ?? null;
+      const studentSection = (record as any).sectionName ?? (record as any).section ?? null;
+
       if (record.timeIn) {
         const d = new Date(record.timeIn);
         scans.push({
           id: `${record.id}-in`,
           entityType: 'STUDENT',
           studentName: record.studentName || 'Student',
+          gradeLevel: studentGrade,
+          sectionName: studentSection,
           action: 'Time In',
           time: record.timeIn,
           timeFormatted: d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
@@ -120,6 +127,8 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
           id: `${record.id}-out`,
           entityType: 'STUDENT',
           studentName: record.studentName || 'Student',
+          gradeLevel: studentGrade,
+          sectionName: studentSection,
           action: 'Time Out',
           time: record.timeOut,
           timeFormatted: d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
@@ -242,7 +251,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
               const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
               const subTitle = isFaculty 
                 ? `${scan.employeeId || 'ID'} • ${scan.department || 'FACULTY'}${scan.position ? ` • ${scan.position}` : ''}`
-                : 'GRADE 10 • RIZAL';
+                : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel} • ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
               const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
 
               return (
@@ -311,7 +320,7 @@ function ProfileCard({ scan }: { scan: GateScanItem | null }) {
   const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
   const subTitle = isFaculty 
     ? `${scan.employeeId || 'ID'} • ${scan.department || 'FACULTY'}${scan.position ? ` • ${scan.position}` : ''}`
-    : 'GRADE 10 • RIZAL';
+    : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel} • ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
   const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
   
   return (

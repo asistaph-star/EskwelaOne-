@@ -4,7 +4,6 @@ import { AdminDashboard } from "./dashboard/AdminDashboard";
 import { CreateTeacher } from "./operations/CreateTeacher";
 import { InventoryManagement } from "./operations/InventoryManagement";
 import { AccountManagement } from "./operations/AccountManagement";
-import { AttendanceSummary } from "../principal/reports/AttendanceSummary";
 import { PHeaderBand } from "../principal/shared/PHeaderBand";
 import { C } from "../shared/constants/tokens";
 

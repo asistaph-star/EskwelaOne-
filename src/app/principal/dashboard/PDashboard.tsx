@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiClient } from '../../../api/client';
 import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Users, CalendarCheck, Activity, GraduationCap, BookMarked, Stethoscope, AlertCircle, Building2, HeartHandshake } from 'lucide-react';
+import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, ArrowRight } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RBarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 export interface GateTrendPoint {
@@ -14,6 +14,7 @@ export interface GateTrendPoint {
 export interface PrincipalDashboardResponse {
   enrolledStudents: number;
   totalTeachers: number;
+  activeSections?: number;
   gateToday: number;
   pendingApprovals: number;
   pendingDisciplineCases?: number;
@@ -34,6 +35,8 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
   const [facultySummary, setFacultySummary] = useState<FacultyAttendanceSummary | null>(null);
   const [attentionStudents, setAttentionStudents] = useState<any[]>([]);
+  const [academicData, setAcademicData] = useState<any | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -45,8 +48,10 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
         console.error('Failed to load faculty summary:', err);
         return null;
       }),
-      apiClient.get<any>('/admin/welfare-alerts').catch(() => null)
-    ]).then(([dData, lData, fData, wData]: any) => {
+      apiClient.get<any>('/admin/welfare-alerts').catch(() => null),
+      apiClient.get<any>('/admin/analytics/academics').catch(() => null),
+      apiClient.get<any[]>('/admin/events').catch(() => [])
+    ]).then(([dData, lData, fData, wData, aData, eData]: any) => {
       if (!dData) setError(true);
       else setDashData(dData.data || dData);
       
@@ -56,23 +61,45 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       }
       const attList = wData?.data?.attentionStudents || wData?.attentionStudents || [];
       setAttentionStudents(Array.isArray(attList) ? attList : []);
+
+      setAcademicData(aData?.data || aData || null);
+
+      const evList = Array.isArray(eData?.data) ? eData.data : (Array.isArray(eData) ? eData : []);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const filteredEvents = evList
+        .filter((ev: any) => new Date(ev.date).getTime() >= todayStart.getTime())
+        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setUpcomingEvents(filteredEvents);
+
       setLoading(false);
     });
   }, []);
 
   const pendingLeavesList = teacherLeaves.filter(l => l.status === "Pending");
   
-  const scansToday = dashData?.gateToday || 0;
   const enrolled = dashData?.enrolledStudents || 0;
   const teachers = dashData?.totalTeachers || 0;
+  const activeSections = dashData?.activeSections || 0;
   const pendingApprovalsCount = dashData?.pendingApprovals || 0;
 
+  const overallPassRate = useMemo(() => {
+    const list = academicData?.passingVsFailingByGradeLevel;
+    if (!Array.isArray(list) || list.length === 0) return null;
+    let passing = 0;
+    let total = 0;
+    list.forEach((item: any) => {
+      passing += item.passing || 0;
+      total += (item.passing || 0) + (item.failing || 0);
+    });
+    return total > 0 ? (passing / total) * 100 : null;
+  }, [academicData]);
+
+  // Clean, verified 6-card grid with zero fake metrics
   const KPI_CARDS = [
     { v: loading ? "..." : `${enrolled} Enrolled`, l: "Total Students", sub: "Active Current Year", subColor: C.t3, color: C.m700, bg: C.m100, icon: Users, dest: "p-monitoring" },
     { v: loading ? "..." : `${teachers} Faculty`, l: "Total Teachers", sub: "Registered Profiles", subColor: C.t3, color: C.m700, bg: C.m100, icon: GraduationCap, dest: "p-teachers" },
-    { v: loading ? "..." : "0 Staff", l: "Total Staff", sub: "Support & Administration", subColor: C.t3, color: C.m700, bg: C.m100, icon: Building2, dest: "p-teachers" },
-    { v: loading ? "..." : "0 Sections", l: "Total Active Sections", sub: "Grades 7 to 10", subColor: C.t3, color: C.m700, bg: C.m100, icon: BookMarked, dest: "p-templates" },
-    { v: loading ? "..." : "0%", l: "Overall Attendance Rate", sub: "No data available", subColor: C.t3, color: C.green, bg: C.greenBg, icon: Activity, dest: "p-monitoring" },
+    { v: loading ? "..." : `${activeSections} Sections`, l: "Total Active Sections", sub: "Grades 7 to 10", subColor: C.t3, color: C.m700, bg: C.m100, icon: BookMarked, dest: "p-teachers" },
     { 
       v: loading ? "..." : `${facultySummary?.checkedInCount ?? 0} / ${facultySummary?.totalActiveFaculty ?? 0} Checked In`, 
       l: "Faculty Checked In Today", 
@@ -232,18 +259,88 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             </div>
           </div>
 
+          {/* Academic Health Overview (Backed by real /admin/analytics/academics) */}
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", fontWeight: 700, fontSize: 13, fontFamily: "'Fraunces', serif" }}>
-              Academic Health
+            <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 13, fontFamily: "'Fraunces', serif" }}>
+                Academic Health
+              </span>
+              <span onClick={() => onNav('p-analytics' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
+                View Academic Analytics →
+              </span>
             </div>
-            <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>Academic health analytics module unavailable.</div>
+            <div style={{ padding: "16px 14px" }}>
+              {!academicData || (!academicData.schoolAverageByGradeLevel?.length && !academicData.passingVsFailingByGradeLevel?.length) ? (
+                <div style={{ fontSize: 12, color: C.t3, textAlign: "center", padding: "8px 0" }}>
+                  No quarterly grade records submitted for the active academic year.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {overallPassRate !== null && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.paper, padding: "8px 12px", borderRadius: 4, border: `1px solid ${C.borderMed}` }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase" }}>Overall Pass Rate</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: overallPassRate >= 75 ? C.green : C.red }}>
+                        {overallPassRate.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                  {academicData.schoolAverageByGradeLevel?.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                        Grade Level Averages
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                        {academicData.schoolAverageByGradeLevel.map((g: any) => (
+                          <div key={g.gradeLevel} style={{ textAlign: "center", padding: "6px 4px", background: "#f8fafc", borderRadius: 4, border: `1px solid #e2e8f0` }}>
+                            <div style={{ fontSize: 9, color: C.t3, fontWeight: 600 }}>Gr {g.gradeLevel}</div>
+                            <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: g.average >= 75 ? C.t1 : C.red }}>
+                              {g.average.toFixed(1)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Upcoming Events (Backed by real /admin/events) */}
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", fontWeight: 700, fontSize: 13, fontFamily: "'Fraunces', serif" }}>
-              Upcoming Events
+            <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 13, fontFamily: "'Fraunces', serif" }}>
+                Upcoming Events ({upcomingEvents.length})
+              </span>
+              <span onClick={() => onNav('p-events' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
+                Manage Events →
+              </span>
             </div>
-            <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>No upcoming events scheduled.</div>
+            <div style={{ padding: 12 }}>
+              {upcomingEvents.length === 0 ? (
+                <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>
+                  No upcoming events scheduled.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {upcomingEvents.slice(0, 3).map((ev: any) => {
+                    const d = new Date(ev.date);
+                    const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    return (
+                      <div key={ev.id} onClick={() => onNav('p-events' as PScreen)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderBottom: "1px solid #f1f5f9", cursor: "pointer" }} className="hover:bg-slate-50 transition">
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{ev.title}</div>
+                          <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
+                            {dateFormatted} {ev.audience ? `· For: ${ev.audience}` : ''}
+                          </div>
+                        </div>
+                        <Stamp label={ev.type || 'Event'} color={C.m700} bg={C.m100} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

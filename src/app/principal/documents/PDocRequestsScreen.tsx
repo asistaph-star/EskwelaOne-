@@ -158,7 +158,7 @@ export function PDocRequestsScreen() {
         <div style={{ display: "flex", gap: 8, borderBottom: `2px solid ${C.border}` }}>
           {[
             { id: "pending" as const, label: "Awaiting Principal Approval", count: actualPending.length },
-            { id: "history" as const, label: "Approval History", count: 0 },
+            { id: "history" as const, label: "Approval History", count: processedRequests.length },
           ].map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
               padding: "12px 24px", background: "transparent", border: "none",
@@ -168,7 +168,7 @@ export function PDocRequestsScreen() {
               transition: "all 0.15s", display: "flex", alignItems: "center", gap: 8, marginBottom: -2
             }}>
               {t.label}
-              {t.count > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: C.red, borderRadius: 12, padding: "2px 8px" }}>{t.count}</span>}
+              {t.count > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: t.id === "pending" ? C.red : C.m700, borderRadius: 12, padding: "2px 8px" }}>{t.count}</span>}
             </button>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { apiClient } from '../../../api/client';
 import { PTableHeader } from '../shared/PTableHeader';
@@ -18,6 +18,31 @@ export function PTeachers() {
   const [assignScheduleModal, setAssignScheduleModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [rankings, setRankings] = useState<any[]>([]);
+
+  const rankDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (teachers || []).forEach((t: any) => {
+      const pos = t.teacher?.position?.trim();
+      if (pos) {
+        counts[pos] = (counts[pos] || 0) + 1;
+      } else {
+        counts['Unassigned'] = (counts['Unassigned'] || 0) + 1;
+      }
+    });
+
+    const standardRanks = ["Teacher I", "Teacher II", "Teacher III", "Master Teacher I", "Master Teacher II"];
+    const rows: [string, number][] = standardRanks.map(r => [r, counts[r] || 0]);
+
+    if (counts['Unassigned']) {
+      rows.push(['Unassigned', counts['Unassigned']]);
+    }
+    Object.keys(counts).forEach(k => {
+      if (!standardRanks.includes(k) && k !== 'Unassigned') {
+        rows.push([k, counts[k]]);
+      }
+    });
+    return rows;
+  }, [teachers]);
 
   useEffect(() => {
     // Only attempt to fetch rankings if the user has academic:read, or just gracefully catch
@@ -103,10 +128,10 @@ export function PTeachers() {
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
                   <thead><PTableHeader cols={["Rank","Count"]} /></thead>
                   <tbody>
-                    {[["Teacher I","3"],["Teacher II","4"],["Teacher III","3"],["Master Teacher I","1"],["Master Teacher II","1"]].map(([r,c])=>(
-                      <tr key={r} style={{ borderBottom:`0.5px solid ${C.border}` }}>
-                        <td style={{ padding:"9px 14px", fontSize:12, color:C.t1 }}>{r}</td>
-                        <td style={{ padding:"9px 14px", fontSize:14, fontWeight:700, fontFamily:"'JetBrains Mono',monospace", color:C.m700 }}>{c}</td>
+                    {rankDistribution.map(([r, c]) => (
+                      <tr key={r} style={{ borderBottom: `0.5px solid ${C.border}` }}>
+                        <td style={{ padding: "9px 14px", fontSize: 12, color: C.t1 }}>{r}</td>
+                        <td style={{ padding: "9px 14px", fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: C.m700 }}>{c}</td>
                       </tr>
                     ))}
                   </tbody>

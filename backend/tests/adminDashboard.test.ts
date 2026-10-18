@@ -227,6 +227,9 @@ describe('Phase 5D: Principal Dashboard Aggregation API', () => {
     // Teachers: 2
     expect(data.totalTeachers).toBe(baselineTeachers + 2);
     
+    // Active Sections: type check
+    expect(typeof data.activeSections).toBe('number');
+    
     // Gate Today: 3
     expect(data.gateToday).toBe(baselineGateToday + 3);
     

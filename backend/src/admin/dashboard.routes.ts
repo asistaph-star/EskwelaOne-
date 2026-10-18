@@ -23,11 +23,17 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
     });
 
     let enrolledStudentsCount = 0;
+    let activeSectionsCount = 0;
     if (currentYear) {
       enrolledStudentsCount = await prisma.enrollment.count({
         where: {
           academic_year_id: currentYear.id,
           status: 'Enrolled' // Assuming 'Enrolled' is the active status based on standard semantics
+        }
+      });
+      activeSectionsCount = await prisma.section.count({
+        where: {
+          academic_year_id: currentYear.id
         }
       });
     }
@@ -97,6 +103,7 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
       data: {
         enrolledStudents: enrolledStudentsCount,
         totalTeachers: teachersCount,
+        activeSections: activeSectionsCount,
         gateToday: gateScansTodayCount,
         pendingApprovals: pendingLeaves,
         pendingDisciplineCases: pendingBehaviorCases,
