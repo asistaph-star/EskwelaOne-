@@ -79,6 +79,8 @@ function InventoryForm({
                   <option value="Borrowed">Borrowed</option>
                   <option value="Lost">Lost</option>
                   <option value="Damaged">Damaged</option>
+                  <option value="Retired">Retired</option>
+                  <option value="Disposed">Disposed</option>
                 </select>
               </div>
             </div>
@@ -251,11 +253,22 @@ export function PInventory() {
 
   const shown = filter === "All" ? inventory : inventory.filter(i => i.status === filter);
 
-  // Quick stats - Model B (Physical Unit Consistency)
-  const totalUnits = inventory.reduce((acc, curr) => acc + curr.quantity, 0);
-  const repairUnits = inventory.filter(i => i.status === "Repair").reduce((acc, curr) => acc + curr.quantity, 0);
-  const borrowedUnits = inventory.filter(i => i.status === "Borrowed").reduce((acc, curr) => acc + curr.quantity, 0);
-  const lostDamagedUnits = inventory.filter(i => i.status === "Lost" || i.status === "Damaged").reduce((acc, curr) => acc + curr.quantity, 0);
+  // Quick stats - Model B (Physical Unit Consistency) with Retirement Lifecycle
+  const currentAccountableUnits = inventory
+    .filter(i => !['Retired', 'Disposed'].includes(i.status))
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+  const repairUnits = inventory
+    .filter(i => i.status === "Repair")
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+  const borrowedUnits = inventory
+    .filter(i => i.status === "Borrowed")
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+  const lostDamagedUnits = inventory
+    .filter(i => i.status === "Lost" || i.status === "Damaged")
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+  const retiredDisposedUnits = inventory
+    .filter(i => i.status === "Retired" || i.status === "Disposed")
+    .reduce((acc, curr) => acc + curr.quantity, 0);
 
   const handleSave = async (itemData: Omit<InventoryItem, 'id' | 'updates'>) => {
     try {
@@ -287,15 +300,26 @@ export function PInventory() {
     }
   };
 
-  const getStatusColor = (s:string) => s==="Good"?C.green:s==="Repair"?C.amber:s==="Borrowed"?C.blue:C.red;
-  const getStatusBg = (s:string) => s==="Good"?C.greenBg:s==="Repair"?C.amberBg:s==="Borrowed"?C.blueBg:C.redBg;
+  const getStatusColor = (s:string) =>
+    s === "Good" ? C.green :
+    s === "Repair" ? C.amber :
+    s === "Borrowed" ? C.blue :
+    s === "Retired" ? C.purple :
+    s === "Disposed" ? C.t3 : C.red;
+
+  const getStatusBg = (s:string) =>
+    s === "Good" ? C.greenBg :
+    s === "Repair" ? C.amberBg :
+    s === "Borrowed" ? C.blueBg :
+    s === "Retired" ? C.purpleBg :
+    s === "Disposed" ? C.m50 : C.redBg;
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent", padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>Inventory Management</h2>
-          <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Track and manage school assets and equipment</p>
+          <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Executive asset oversight and property lifecycle tracking</p>
         </div>
         {canWrite && (
           <button onClick={() => setIsAddFormOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 4, background: C.m700, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
@@ -306,20 +330,21 @@ export function PInventory() {
 
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, display: "flex", marginBottom: 16, borderRadius: 6, overflow: "hidden" }}>
         {[
-          [totalUnits.toString(), "Total Inventory Units", C.t1],
+          [currentAccountableUnits.toString(), "Current Accountable Units", C.t1],
           [repairUnits.toString(), "Units Under Repair", C.amber],
           [borrowedUnits.toString(), "Units Borrowed", C.blue],
-          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red]
+          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red],
+          [retiredDisposedUnits.toString(), "Retired / Disposed", C.purple]
         ].map(([v, l, c], i) => (
-          <div key={l} style={{ flex: 1, padding: "16px 20px", borderRight: i < 3 ? `1px solid ${C.borderMed}` : "none", background: i === 0 ? C.m50 : "#fff" }}>
+          <div key={l} style={{ flex: 1, padding: "16px 18px", borderRight: i < 4 ? `1px solid ${C.borderMed}` : "none", background: i === 0 ? C.m50 : "#fff" }}>
             <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>{l}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, fontFamily: "'Plus Jakarta Sans',sans-serif", color: c as string, lineHeight: 1 }}>{v}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'Plus Jakarta Sans',sans-serif", color: c as string, lineHeight: 1 }}>{v}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        {["All", "Good", "Repair", "Borrowed", "Lost", "Damaged"].map(f => (
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+        {["All", "Good", "Repair", "Borrowed", "Lost", "Damaged", "Retired", "Disposed"].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{
               padding: "6px 14px", borderRadius: 16, fontSize: 11, fontWeight: filter === f ? 700 : 500, cursor: "pointer", transition: "all 0.15s",

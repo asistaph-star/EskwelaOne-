@@ -4,6 +4,7 @@ import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { requirePermissions, AuthenticatedUser } from '../common/middleware/auth.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { createAuditLog } from '../audit/audit.service.js';
 
 const router = Router();
 
@@ -20,11 +21,25 @@ const createInventorySchema = z.object({
   reorder_level: z.number().int().min(0).optional().nullable(),
   condition: z.string().min(1),
   location: z.string().optional().nullable(),
-  status: z.enum(['Good', 'Repair', 'Borrowed', 'Lost', 'Damaged']).default('Good')
+  status: z.enum(['Good', 'Repair', 'Borrowed', 'Lost', 'Damaged', 'Retired', 'Disposed']).default('Good')
 });
 
 const updateInventorySchema = createInventorySchema.partial().extend({
   update_details: z.string().min(1).optional()
+});
+
+const retireSchema = z.object({
+  reason: z.string().min(1, 'Retirement reason is required'),
+  reference_number: z.string().optional().nullable()
+});
+
+const disposeSchema = z.object({
+  reason: z.string().min(1, 'Disposal reason is required'),
+  reference_number: z.string().optional().nullable()
+});
+
+const voidSchema = z.object({
+  reason: z.string().min(3, 'Void reason must be at least 3 characters')
 });
 
 /**
@@ -57,7 +72,6 @@ router.post('/', requirePermissions('inventory:write'), async (req: Request, res
     const input = createInventorySchema.parse(req.body);
     const authUser = (req as any).user as AuthenticatedUser;
     
-    // Create inventory item and initial update history in a transaction
     const itemId = generateId();
     const result = await prisma.$transaction(async (tx) => {
       const item = await tx.inventoryItem.create({
@@ -87,6 +101,14 @@ router.post('/', requirePermissions('inventory:write'), async (req: Request, res
           details: `Added to inventory: ${input.quantity} ${input.unit}`
         }
       });
+
+      await createAuditLog({
+        actorUserId: authUser.id,
+        action: 'CREATE',
+        resourceType: 'inventory_item',
+        resourceId: itemId,
+        newState: item
+      }, tx);
       
       return item;
     });
@@ -123,7 +145,6 @@ router.patch('/:id', requirePermissions('inventory:write'), async (req: Request,
         }
       });
       
-      // Determine what action took place
       let action = 'Updated';
       if (input.status && input.status !== existing.status) {
         action = `Status changed to ${input.status}`;
@@ -140,6 +161,16 @@ router.patch('/:id', requirePermissions('inventory:write'), async (req: Request,
           details: update_details || `Updated inventory item`
         }
       });
+
+      await createAuditLog({
+        actorUserId: authUser.id,
+        action: 'UPDATE',
+        resourceType: 'inventory_item',
+        resourceId: id,
+        previousState: existing,
+        newState: updatedItem,
+        reason: update_details || action
+      }, tx);
       
       return updatedItem;
     });
@@ -151,25 +182,176 @@ router.patch('/:id', requirePermissions('inventory:write'), async (req: Request,
 });
 
 /**
- * DELETE /api/admin/inventory/:id
+ * POST /api/admin/inventory/:id/retire
+ * Lifecycle transition: Active -> Retired
  */
-router.delete('/:id', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/retire', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = String(req.params.id);
+    const input = retireSchema.parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+
     const existing = await prisma.inventoryItem.findUnique({ where: { id } });
     if (!existing) {
       throw new AppError(404, 'NOT_FOUND', 'Inventory item not found');
     }
+    if (existing.status === 'Retired') {
+      throw new AppError(400, 'BAD_REQUEST', 'Asset is already retired');
+    }
+    if (existing.status === 'Disposed') {
+      throw new AppError(400, 'BAD_REQUEST', 'Cannot retire an asset that has already been disposed');
+    }
+
+    const details = input.reason + (input.reference_number ? ` (Ref: ${input.reference_number})` : '');
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedItem = await tx.inventoryItem.update({
+        where: { id },
+        data: { status: 'Retired' }
+      });
+
+      await tx.inventoryUpdate.create({
+        data: {
+          id: generateId(),
+          item_id: id,
+          user_id: authUser.id,
+          action: 'Retired',
+          details
+        }
+      });
+
+      await createAuditLog({
+        actorUserId: authUser.id,
+        action: 'RETIRE',
+        resourceType: 'inventory_item',
+        resourceId: id,
+        previousState: { status: existing.status },
+        newState: { status: 'Retired' },
+        reason: details
+      }, tx);
+
+      return updatedItem;
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/admin/inventory/:id/dispose
+ * Lifecycle transition: Retired -> Disposed
+ */
+router.post('/:id/dispose', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id);
+    const input = disposeSchema.parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+
+    const existing = await prisma.inventoryItem.findUnique({ where: { id } });
+    if (!existing) {
+      throw new AppError(404, 'NOT_FOUND', 'Inventory item not found');
+    }
+    if (existing.status !== 'Retired') {
+      throw new AppError(400, 'BAD_REQUEST', 'Asset must be retired before it can be marked as disposed');
+    }
+
+    const details = input.reason + (input.reference_number ? ` (Ref: ${input.reference_number})` : '');
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedItem = await tx.inventoryItem.update({
+        where: { id },
+        data: { status: 'Disposed' }
+      });
+
+      await tx.inventoryUpdate.create({
+        data: {
+          id: generateId(),
+          item_id: id,
+          user_id: authUser.id,
+          action: 'Disposed',
+          details
+        }
+      });
+
+      await createAuditLog({
+        actorUserId: authUser.id,
+        action: 'DISPOSE',
+        resourceType: 'inventory_item',
+        resourceId: id,
+        previousState: { status: existing.status },
+        newState: { status: 'Disposed' },
+        reason: details
+      }, tx);
+
+      return updatedItem;
+    });
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/admin/inventory/:id/void
+ * Exceptional correction workflow: ITAdmin only, strictly for records with zero operational history
+ */
+router.post('/:id/void', requirePermissions('inventory:write'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = String(req.params.id);
+    const input = voidSchema.parse(req.body);
+    const authUser = (req as any).user as AuthenticatedUser;
+
+    // Authorization: ITAdmin role required for Void Entry
+    if (!authUser.roles.includes('ITAdmin')) {
+      throw new AppError(403, 'FORBIDDEN', 'Void Entry is an exceptional correction workflow restricted to ITAdmin authorization.');
+    }
+
+    const existing = await prisma.inventoryItem.findUnique({
+      where: { id },
+      include: { updates: true }
+    });
+    if (!existing) {
+      throw new AppError(404, 'NOT_FOUND', 'Inventory item not found');
+    }
+
+    // Strict checks: Must not have operational history beyond initial entry
+    if (existing.updates.length > 1 || (existing.updates.length === 1 && existing.updates[0].action !== 'Added')) {
+      throw new AppError(400, 'BAD_REQUEST', 'Cannot void an asset with operational history (maintenance, custody, or status adjustments). Use the Retire Asset workflow instead.');
+    }
+
+    if (['Retired', 'Disposed'].includes(existing.status)) {
+      throw new AppError(400, 'BAD_REQUEST', 'Cannot void an asset that has already been retired or disposed.');
+    }
 
     await prisma.$transaction(async (tx) => {
+      await createAuditLog({
+        actorUserId: authUser.id,
+        action: 'VOID',
+        resourceType: 'inventory_item',
+        resourceId: id,
+        previousState: existing,
+        reason: input.reason
+      }, tx);
+
       await tx.inventoryUpdate.deleteMany({ where: { item_id: id } });
       await tx.inventoryItem.delete({ where: { id } });
     });
 
-    res.json({ success: true, message: 'Inventory item deleted' });
+    res.json({ success: true, message: 'Inventory record voided successfully' });
   } catch (err) {
     next(err);
   }
+});
+
+/**
+ * DELETE /api/admin/inventory/:id
+ * Ordinary hard delete is disabled to preserve property accountability.
+ */
+router.delete('/:id', requirePermissions('inventory:write'), async (_req: Request, _res: Response, next: NextFunction) => {
+  next(new AppError(405, 'METHOD_NOT_ALLOWED', 'Ordinary deletion of inventory items is disabled. Real property must use the Retire Asset / Mark as Disposed lifecycle workflow. Exceptional data-entry corrections must use Void Entry.'));
 });
 
 export default router;

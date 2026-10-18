@@ -107,7 +107,7 @@ export interface InventoryItem {
   purchaseDate: string;
   condition: string;
   location: string;
-  status: "Good" | "Repair" | "Borrowed" | "Lost" | "Damaged";
+  status: "Good" | "Repair" | "Borrowed" | "Lost" | "Damaged" | "Retired" | "Disposed";
   updates: InventoryUpdate[];
 }
 
