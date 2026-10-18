@@ -188,11 +188,24 @@ describe('Phase 4O: Excuse Letters Characterization Tests', () => {
     await prisma.student.deleteMany({ where: { user: { email: { contains: 'test.com' } } } });
     await prisma.teacher.deleteMany({ where: { user: { email: { contains: 'test.com' } } } });
 
-    // Only delete academic year if we created a temporary one (though tests usually shouldn't delete global seed data)
-    // Actually, since we might have just reused the global one, let's NOT delete the academic year to be safe, 
-    // or just let it be. But wait, if we created it, we should delete it. 
-    // Actually, deleting section is enough.
-    // Skip deleting section to avoid assignment FK violations
+    // Clean section dependencies and section itself
+    if (validSectionId) {
+      await prisma.teacherSubjectAssignment.deleteMany({ where: { section_id: validSectionId } });
+      await prisma.enrollment.deleteMany({ where: { section_id: validSectionId } });
+      await prisma.section.deleteMany({ where: { id: validSectionId } });
+    }
+
+    // Defensive sweep for test sections matching pattern
+    await prisma.teacherSubjectAssignment.deleteMany({
+      where: { section: { name: { startsWith: 'Section A-' } } }
+    });
+    await prisma.enrollment.deleteMany({
+      where: { section: { name: { startsWith: 'Section A-' } } }
+    });
+    await prisma.section.deleteMany({
+      where: { name: { startsWith: 'Section A-' } }
+    });
+
     await prisma.subject.deleteMany({ where: { id: subjectId } });
 
     await prisma.userRole.deleteMany({
