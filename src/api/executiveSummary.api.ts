@@ -1,5 +1,7 @@
 import { apiClient } from './client';
 
+export type AcademicCompleteness = 'complete_annual' | 'partial_terms' | 'insufficient_data';
+
 export interface ExecutiveSummaryMetrics {
   students: {
     enrolled: number | null;
@@ -11,8 +13,10 @@ export interface ExecutiveSummaryMetrics {
     totalActive: number | null;
   };
   academics: {
-    passRate: number | null;
-    lowestPerformingGrade: number | null;
+    academicCompleteness: AcademicCompleteness;
+    annualPassRate: number | null;
+    lowestTermAverageGradeLevel: number | null;
+    assessedGradeLevelsCount: number;
   };
   welfare: {
     studentsRequiringAttention: number;

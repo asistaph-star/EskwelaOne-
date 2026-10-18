@@ -90,12 +90,16 @@ export async function buildSchoolFactSheet(): Promise<SchoolFactSheet> {
   }
 
   // 4. Academic Performance (PRIN-002 service)
-  let passRate: number | null = null;
-  let gradeLevelPerformance: { gradeLevel: number; average: number }[] | null = null;
-  let lowestPerformingGrade: number | null = null;
+  let annualPassRate: number | null = null;
+  let termGradeAverages: { gradeLevel: number; average: number }[] | null = null;
+  let lowestTermAverageGradeLevel: number | null = null;
+  let assessedGradeLevelsCount = 0;
+  let academicCompleteness: 'complete_annual' | 'partial_terms' | 'insufficient_data' = 'insufficient_data';
 
   try {
     const analytics = await getAcademicAnalytics();
+
+    // A. Annual Complete Promotion Pass Rate (DepEd SF10 Annual Average across all quarters/subjects)
     if (analytics && Array.isArray(analytics.passingVsFailingByGradeLevel) && analytics.passingVsFailingByGradeLevel.length > 0) {
       let totalPassing = 0;
       let totalAssessed = 0;
@@ -104,23 +108,45 @@ export async function buildSchoolFactSheet(): Promise<SchoolFactSheet> {
         totalAssessed += ((item.passing || 0) + (item.failing || 0));
       }
       if (totalAssessed > 0) {
-        passRate = Math.round((totalPassing / totalAssessed) * 100);
+        annualPassRate = Math.round((totalPassing / totalAssessed) * 100);
       }
     }
 
+    // B. Submitted Term Grades Pulse
     if (analytics && Array.isArray(analytics.schoolAverageByGradeLevel) && analytics.schoolAverageByGradeLevel.length > 0) {
-      const validAverages = analytics.schoolAverageByGradeLevel.filter(g => typeof g.average === 'number' && !isNaN(g.average) && g.average > 0);
+      const validAverages = analytics.schoolAverageByGradeLevel.filter(
+        g => typeof g.average === 'number' && !isNaN(g.average) && g.average > 0
+      );
       if (validAverages.length > 0) {
-        gradeLevelPerformance = validAverages;
-        const sorted = [...validAverages].sort((a, b) => a.average - b.average);
-        lowestPerformingGrade = sorted[0].gradeLevel;
+        termGradeAverages = validAverages;
+        assessedGradeLevelsCount = validAverages.length;
+
+        // Semantic Rule: Only designate a comparative "lowest" if at least 2 grade levels are assessed!
+        // A single grade level cannot be considered "the lowest" when there are no other grade levels to compare.
+        if (validAverages.length >= 2) {
+          const sorted = [...validAverages].sort((a, b) => a.average - b.average);
+          lowestTermAverageGradeLevel = sorted[0].gradeLevel;
+        } else {
+          lowestTermAverageGradeLevel = null;
+        }
       }
+    }
+
+    // Determine Provenance & Completeness
+    if (annualPassRate !== null) {
+      academicCompleteness = 'complete_annual';
+    } else if (termGradeAverages !== null && termGradeAverages.length > 0) {
+      academicCompleteness = 'partial_terms';
+    } else {
+      academicCompleteness = 'insufficient_data';
     }
   } catch {
     // If no grades or analytics available, retain strict null (no fabrication)
-    passRate = null;
-    gradeLevelPerformance = null;
-    lowestPerformingGrade = null;
+    annualPassRate = null;
+    termGradeAverages = null;
+    lowestTermAverageGradeLevel = null;
+    assessedGradeLevelsCount = 0;
+    academicCompleteness = 'insufficient_data';
   }
 
   // 5. Welfare & Behavior (Zero Clinic/Guidance cross-contamination)
@@ -200,9 +226,11 @@ export async function buildSchoolFactSheet(): Promise<SchoolFactSheet> {
       totalActive: totalActiveFaculty
     },
     academics: {
-      passRate,
-      gradeLevelPerformance,
-      lowestPerformingGrade
+      academicCompleteness,
+      annualPassRate,
+      termGradeAverages,
+      lowestTermAverageGradeLevel,
+      assessedGradeLevelsCount
     },
     welfare: {
       studentsRequiringAttention,

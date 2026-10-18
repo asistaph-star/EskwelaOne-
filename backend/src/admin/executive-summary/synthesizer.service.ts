@@ -51,8 +51,10 @@ export class ExecutiveSummarySynthesizer {
           totalActive: factSheet.faculty.totalActive
         },
         academics: {
-          passRate: factSheet.academics.passRate,
-          lowestPerformingGrade: factSheet.academics.lowestPerformingGrade
+          academicCompleteness: factSheet.academics.academicCompleteness,
+          annualPassRate: factSheet.academics.annualPassRate,
+          lowestTermAverageGradeLevel: factSheet.academics.lowestTermAverageGradeLevel,
+          assessedGradeLevelsCount: factSheet.academics.assessedGradeLevelsCount
         },
         welfare: {
           studentsRequiringAttention: factSheet.welfare.studentsRequiringAttention,
@@ -77,8 +79,9 @@ export class ExecutiveSummarySynthesizer {
    * Strict Grounding Principles:
    * - Uses ONLY supplied facts from SchoolFactSheet.
    * - Contains NO invented values or external numbers.
-   * - Omits unsupported claims (e.g. if passRate is null, no pass rate claim is made).
+   * - Omits unsupported claims (e.g. if annualPassRate is null, no annual pass rate claim is made).
    * - Never predicts, forecasts, or interprets medical/counseling data.
+   * - Distinguishes between complete annual DepEd ratings vs partial submitted term grades.
    * - Generates 2 to 4 concise, executive-level sentences.
    */
   public synthesizeDeterministic(facts: SchoolFactSheet): string {
@@ -105,17 +108,22 @@ export class ExecutiveSummarySynthesizer {
       sentences.push(`School operations are currently active.`);
     }
 
-    // 2. Academic Performance (Only asserted if passRate is grounded)
-    if (facts.academics.passRate !== null) {
-      if (facts.academics.lowestPerformingGrade !== null) {
+    // 2. Academic Performance (Semantic grounding: never overstate incomplete term data as annual failure)
+    if (facts.academics.academicCompleteness === 'complete_annual' && facts.academics.annualPassRate !== null) {
+      if (facts.academics.lowestTermAverageGradeLevel !== null) {
         sentences.push(
-          `Academic performance reflects an overall pass rate of ${facts.academics.passRate}%, with Grade ${facts.academics.lowestPerformingGrade} recording the lowest grade-level average.`
+          `Academic performance reflects an overall annual pass rate of ${facts.academics.annualPassRate}%, with Grade ${facts.academics.lowestTermAverageGradeLevel} recording the lowest general average.`
         );
       } else {
         sentences.push(
-          `Academic performance reflects an overall pass rate of ${facts.academics.passRate}% across active sections.`
+          `Academic performance reflects an overall annual pass rate of ${facts.academics.annualPassRate}% across active sections.`
         );
       }
+    } else if (facts.academics.academicCompleteness === 'partial_terms' && facts.academics.lowestTermAverageGradeLevel !== null) {
+      // Precise term-only wording: Option B from prompt
+      sentences.push(
+        `Among currently submitted term grades across ${facts.academics.assessedGradeLevelsCount} grade levels, Grade ${facts.academics.lowestTermAverageGradeLevel} currently records the lowest average.`
+      );
     }
 
     // 3. Welfare & Administrative Action Items

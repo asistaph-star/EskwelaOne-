@@ -6,7 +6,10 @@
  * - NO Guidance fields (no GuidanceRecord, counseling notes, private sessions).
  * - NO predictive or speculative metrics.
  * - Missing or insufficient data remains strictly null.
+ * - Clear semantic distinction between complete annual performance vs partial term submissions.
  */
+
+export type AcademicCompleteness = 'complete_annual' | 'partial_terms' | 'insufficient_data';
 
 export interface SchoolFactSheet {
   asOf: string; // ISO 8601 string
@@ -25,9 +28,11 @@ export interface SchoolFactSheet {
   };
 
   academics: {
-    passRate: number | null; // Overall academic pass rate % (or null if grades missing)
-    gradeLevelPerformance: { gradeLevel: number; average: number }[] | null;
-    lowestPerformingGrade: number | null; // Grade level with lowest average, or null
+    academicCompleteness: AcademicCompleteness;
+    annualPassRate: number | null; // DepEd promotion pass rate based on complete T1-T4 ratings across all subjects
+    termGradeAverages: { gradeLevel: number; average: number }[] | null; // Averages of submitted term grades
+    lowestTermAverageGradeLevel: number | null; // Grade level with lowest average; ONLY populated if >= 2 grade levels assessed
+    assessedGradeLevelsCount: number; // Number of grade levels with at least one submitted term grade
   };
 
   welfare: {
@@ -67,8 +72,10 @@ export interface ExecutiveSummaryResponse {
       totalActive: number | null;
     };
     academics: {
-      passRate: number | null;
-      lowestPerformingGrade: number | null;
+      academicCompleteness: AcademicCompleteness;
+      annualPassRate: number | null;
+      lowestTermAverageGradeLevel: number | null;
+      assessedGradeLevelsCount: number;
     };
     welfare: {
       studentsRequiringAttention: number;

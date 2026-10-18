@@ -109,9 +109,9 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
       expect(facts.students).toHaveProperty('enrolled');
       expect(facts.students).toHaveProperty('onCampusNow');
       expect(facts.faculty).toHaveProperty('checkedInToday');
-      expect(facts.faculty).toHaveProperty('totalActive');
-      expect(facts.academics).toHaveProperty('passRate');
-      expect(facts.welfare).toHaveProperty('studentsRequiringAttention');
+      expect(facts.academics).toHaveProperty('annualPassRate');
+      expect(facts.academics).toHaveProperty('lowestTermAverageGradeLevel');
+      expect(facts.academics).toHaveProperty('academicCompleteness');
       expect(facts.welfare).toHaveProperty('openBehaviorCases');
       expect(facts.operations).toHaveProperty('pendingLeaves');
       expect(facts.inventory).toHaveProperty('currentAccountableUnits');
@@ -154,9 +154,11 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
           totalActive: 12,
         },
         academics: {
-          passRate: null, // Null should remain omitted
-          gradeLevelPerformance: null,
-          lowestPerformingGrade: null,
+          academicCompleteness: 'insufficient_data',
+          annualPassRate: null, // Null should remain omitted
+          termGradeAverages: null,
+          lowestTermAverageGradeLevel: null,
+          assessedGradeLevelsCount: 0,
         },
         welfare: {
           studentsRequiringAttention: 2,
@@ -201,7 +203,13 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
         asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
         students: { enrolled: 50, onCampusNow: 40 },
         faculty: { checkedInNow: 5, checkedInToday: 5, timedOutToday: 0, totalActive: 5 },
-        academics: { passRate: null, gradeLevelPerformance: null, lowestPerformingGrade: null },
+        academics: {
+          academicCompleteness: 'insufficient_data',
+          annualPassRate: null,
+          termGradeAverages: null,
+          lowestTermAverageGradeLevel: null,
+          assessedGradeLevelsCount: 0,
+        },
         welfare: { studentsRequiringAttention: 0, openBehaviorCases: 0 },
         operations: { pendingLeaves: 0, upcomingEventsCount: 0, nextUpcomingEvents: [] },
         inventory: { currentAccountableUnits: 5, repairUnits: 0, borrowedUnits: 0, lostDamagedUnits: 0, retiredDisposedUnits: 0 },
@@ -213,25 +221,75 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
       expect(summary).not.toContain('%');
     });
 
-    it('accurately includes pass rate and lowest performing grade when grounded in fact sheet', () => {
-      const factsWithGrades: SchoolFactSheet = {
+    it('accurately uses precise term phrasing when only partial term grades exist across multiple grades', () => {
+      const factsWithPartialTerms: SchoolFactSheet = {
         asOf: '2026-10-18T12:00:00.000Z',
         asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
         students: { enrolled: 200, onCampusNow: 150 },
         faculty: { checkedInNow: 20, checkedInToday: 20, timedOutToday: 0, totalActive: 22 },
         academics: {
-          passRate: 88,
-          gradeLevelPerformance: [{ gradeLevel: 7, average: 85 }, { gradeLevel: 8, average: 78 }],
-          lowestPerformingGrade: 8,
+          academicCompleteness: 'partial_terms',
+          annualPassRate: null, // Quarters 2-4 pending
+          termGradeAverages: [{ gradeLevel: 7, average: 85 }, { gradeLevel: 8, average: 78 }],
+          lowestTermAverageGradeLevel: 8,
+          assessedGradeLevelsCount: 2,
         },
         welfare: { studentsRequiringAttention: 0, openBehaviorCases: 0 },
         operations: { pendingLeaves: 0, upcomingEventsCount: 0, nextUpcomingEvents: [] },
         inventory: { currentAccountableUnits: 30, repairUnits: 0, borrowedUnits: 0, lostDamagedUnits: 0, retiredDisposedUnits: 0 },
       };
 
-      const summary = synthesizer.synthesizeDeterministic(factsWithGrades);
+      const summary = synthesizer.synthesizeDeterministic(factsWithPartialTerms);
+      expect(summary).toContain('Among currently submitted term grades across 2 grade levels, Grade 8 currently records the lowest average.');
+      expect(summary).not.toContain('lowest-performing grade');
+      expect(summary).not.toContain('pass rate');
+    });
+
+    it('accurately reports annual pass rate when full academic year ratings are complete', () => {
+      const factsWithCompleteAnnual: SchoolFactSheet = {
+        asOf: '2026-10-18T12:00:00.000Z',
+        asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
+        students: { enrolled: 200, onCampusNow: 150 },
+        faculty: { checkedInNow: 20, checkedInToday: 20, timedOutToday: 0, totalActive: 22 },
+        academics: {
+          academicCompleteness: 'complete_annual',
+          annualPassRate: 88,
+          termGradeAverages: [{ gradeLevel: 7, average: 88 }, { gradeLevel: 8, average: 82 }],
+          lowestTermAverageGradeLevel: 8,
+          assessedGradeLevelsCount: 2,
+        },
+        welfare: { studentsRequiringAttention: 0, openBehaviorCases: 0 },
+        operations: { pendingLeaves: 0, upcomingEventsCount: 0, nextUpcomingEvents: [] },
+        inventory: { currentAccountableUnits: 30, repairUnits: 0, borrowedUnits: 0, lostDamagedUnits: 0, retiredDisposedUnits: 0 },
+      };
+
+      const summary = synthesizer.synthesizeDeterministic(factsWithCompleteAnnual);
       expect(summary).toContain('88%');
       expect(summary).toContain('Grade 8');
+      expect(summary).toContain('annual pass rate');
+    });
+
+    it('does NOT make comparative lowest claims when only 1 single grade level has grades', () => {
+      const singleGradeLevelFacts: SchoolFactSheet = {
+        asOf: '2026-10-18T12:00:00.000Z',
+        asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
+        students: { enrolled: 50, onCampusNow: 30 },
+        faculty: { checkedInNow: 5, checkedInToday: 5, timedOutToday: 0, totalActive: 5 },
+        academics: {
+          academicCompleteness: 'partial_terms',
+          annualPassRate: null,
+          termGradeAverages: [{ gradeLevel: 10, average: 85 }],
+          lowestTermAverageGradeLevel: null, // Single grade level cannot be "the lowest"
+          assessedGradeLevelsCount: 1,
+        },
+        welfare: { studentsRequiringAttention: 0, openBehaviorCases: 0 },
+        operations: { pendingLeaves: 0, upcomingEventsCount: 0, nextUpcomingEvents: [] },
+        inventory: { currentAccountableUnits: 5, repairUnits: 0, borrowedUnits: 0, lostDamagedUnits: 0, retiredDisposedUnits: 0 },
+      };
+
+      const summary = synthesizer.synthesizeDeterministic(singleGradeLevelFacts);
+      expect(summary).not.toContain('lowest');
+      expect(summary).not.toContain('lowest-performing');
     });
 
     it('NEVER introduces predictive or speculative claims', () => {
@@ -240,7 +298,13 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
         asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
         students: { enrolled: 100, onCampusNow: 50 },
         faculty: { checkedInNow: 5, checkedInToday: 5, timedOutToday: 0, totalActive: 10 },
-        academics: { passRate: 75, gradeLevelPerformance: null, lowestPerformingGrade: 9 },
+        academics: {
+          academicCompleteness: 'complete_annual',
+          annualPassRate: 75,
+          termGradeAverages: null,
+          lowestTermAverageGradeLevel: 9,
+          assessedGradeLevelsCount: 2,
+        },
         welfare: { studentsRequiringAttention: 3, openBehaviorCases: 4 },
         operations: { pendingLeaves: 2, upcomingEventsCount: 1, nextUpcomingEvents: ['PTA Assembly'] },
         inventory: { currentAccountableUnits: 20, repairUnits: 2, borrowedUnits: 1, lostDamagedUnits: 1, retiredDisposedUnits: 0 },
