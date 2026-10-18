@@ -251,11 +251,11 @@ export function PInventory() {
 
   const shown = filter === "All" ? inventory : inventory.filter(i => i.status === filter);
 
-  // Quick stats
-  const totalItems = inventory.reduce((acc, curr) => acc + curr.quantity, 0);
-  const repairCount = inventory.filter(i => i.status === "Repair").length;
-  const borrowedCount = inventory.filter(i => i.status === "Borrowed").length;
-  const lostCount = inventory.filter(i => i.status === "Lost" || i.status === "Damaged").length;
+  // Quick stats - Model B (Physical Unit Consistency)
+  const totalUnits = inventory.reduce((acc, curr) => acc + curr.quantity, 0);
+  const repairUnits = inventory.filter(i => i.status === "Repair").reduce((acc, curr) => acc + curr.quantity, 0);
+  const borrowedUnits = inventory.filter(i => i.status === "Borrowed").reduce((acc, curr) => acc + curr.quantity, 0);
+  const lostDamagedUnits = inventory.filter(i => i.status === "Lost" || i.status === "Damaged").reduce((acc, curr) => acc + curr.quantity, 0);
 
   const handleSave = async (itemData: Omit<InventoryItem, 'id' | 'updates'>) => {
     try {
@@ -306,10 +306,10 @@ export function PInventory() {
 
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, display: "flex", marginBottom: 16, borderRadius: 6, overflow: "hidden" }}>
         {[
-          [totalItems.toString(), "Total Assets", C.t1],
-          [repairCount.toString(), "Under Repair", C.amber],
-          [borrowedCount.toString(), "Borrowed", C.blue],
-          [lostCount.toString(), "Lost/Damaged", C.red]
+          [totalUnits.toString(), "Total Inventory Units", C.t1],
+          [repairUnits.toString(), "Units Under Repair", C.amber],
+          [borrowedUnits.toString(), "Units Borrowed", C.blue],
+          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red]
         ].map(([v, l, c], i) => (
           <div key={l} style={{ flex: 1, padding: "16px 20px", borderRight: i < 3 ? `1px solid ${C.borderMed}` : "none", background: i === 0 ? C.m50 : "#fff" }}>
             <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>{l}</div>

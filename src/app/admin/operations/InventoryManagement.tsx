@@ -177,11 +177,11 @@ export function InventoryManagement() {
   const getStatusBg = (s: string) =>
     s === "Good" ? C.greenBg : s === "Repair" ? C.amberBg : s === "Borrowed" ? C.blueBg : C.redBg;
 
-  // KPI Calculations
-  const totalPhysicalQuantity = items.reduce((acc, curr) => acc + curr.quantity, 0);
-  const underRepairCount = items.filter((i) => i.status === "Repair").length;
-  const borrowedCount = items.filter((i) => i.status === "Borrowed").length;
-  const lostDamagedCount = items.filter((i) => i.status === "Lost" || i.status === "Damaged").length;
+  // KPI Calculations - Model B (Physical Unit Consistency)
+  const totalUnits = items.reduce((acc, curr) => acc + curr.quantity, 0);
+  const repairUnits = items.filter((i) => i.status === "Repair").reduce((acc, curr) => acc + curr.quantity, 0);
+  const borrowedUnits = items.filter((i) => i.status === "Borrowed").reduce((acc, curr) => acc + curr.quantity, 0);
+  const lostDamagedUnits = items.filter((i) => i.status === "Lost" || i.status === "Damaged").reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
     <div style={{ padding: 32, maxWidth: 1200, margin: "0 auto" }}>
@@ -226,10 +226,10 @@ export function InventoryManagement() {
       {/* KPI Stats Cards */}
       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, display: "flex", marginBottom: 24, borderRadius: 8, overflow: "hidden" }}>
         {[
-          [totalPhysicalQuantity.toString(), "Total Assets", C.t1],
-          [underRepairCount.toString(), "Under Repair", C.amber],
-          [borrowedCount.toString(), "Borrowed", C.blue],
-          [lostDamagedCount.toString(), "Lost / Damaged", C.red],
+          [totalUnits.toString(), "Total Inventory Units", C.t1],
+          [repairUnits.toString(), "Units Under Repair", C.amber],
+          [borrowedUnits.toString(), "Units Borrowed", C.blue],
+          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red],
         ].map(([val, label, col], idx) => (
           <div
             key={label}
