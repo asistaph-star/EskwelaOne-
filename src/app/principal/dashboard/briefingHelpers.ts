@@ -208,3 +208,120 @@ export function buildBriefingSections(data: ExecutiveSummaryResponse | null): Fo
     upcomingEvents: upcomingEventsText,
   };
 }
+
+export interface SynthesizedNarrative {
+  paragraphs: string[];
+  actions: {
+    label: string;
+    screen: 'p-behavior' | 'p-leaves' | 'p-inventory';
+  }[];
+}
+
+/**
+ * Builds a concise, executive-level synthesized narrative (2-4 paragraphs)
+ * interpreting the school's operational, attention, and academic status,
+ * paired with compact action triggers.
+ */
+export function buildSynthesizedNarrative(data: ExecutiveSummaryResponse | null): SynthesizedNarrative {
+  if (!data || !data.metrics) {
+    return {
+      paragraphs: [
+        'School operations are underway.',
+        'No current administrative action items require your attention.',
+        'Annual academic performance is not yet available because complete T1–T4 grades have not been submitted.',
+      ],
+      actions: [],
+    };
+  }
+
+  const sections = buildBriefingSections(data);
+  const { welfare, operations, inventory, students, faculty } = data.metrics;
+  const paragraphs: string[] = [];
+  const actions: { label: string; screen: 'p-behavior' | 'p-leaves' | 'p-inventory' }[] = [];
+
+  // Paragraph 1: School Operations Synthesis
+  const onCampus = students?.onCampusNow;
+  const checkedToday = faculty?.checkedInToday;
+  const totalFaculty = faculty?.totalActive;
+
+  if (onCampus === 0 && typeof checkedToday === 'number' && typeof totalFaculty === 'number' && checkedToday === totalFaculty) {
+    paragraphs.push(
+      'School operations are currently stable. All active faculty have checked in today, while no students are currently recorded on campus.'
+    );
+  } else if (typeof onCampus === 'number' && typeof checkedToday === 'number' && typeof totalFaculty === 'number') {
+    let text = `School operations are underway with ${onCampus} ${onCampus === 1 ? 'student' : 'students'} currently recorded on campus, and ${checkedToday} of ${totalFaculty} active faculty checked in today`;
+    if (typeof faculty?.checkedInNow === 'number' && faculty.checkedInNow !== checkedToday) {
+      text += ` (${faculty.checkedInNow} currently on campus)`;
+    }
+    text += '.';
+    paragraphs.push(text);
+  } else {
+    paragraphs.push(sections.operations.join(' '));
+  }
+
+  // Paragraph 2: Attention Items Synthesis
+  const attentionParts: string[] = [];
+  if ((welfare?.openBehaviorCases ?? 0) > 0) {
+    const cases = welfare.openBehaviorCases;
+    const studentsCount = welfare.studentsRequiringAttention ?? 1;
+    attentionParts.push(
+      `${studentsCount} ${studentsCount === 1 ? 'student has' : 'students have'} an unresolved behavioral concern across ${cases} open ${cases === 1 ? 'case' : 'cases'}`
+    );
+    actions.push({
+      label: cases === 1 ? 'Review Behavior Case' : 'Review Behavior Cases',
+      screen: 'p-behavior',
+    });
+  }
+
+  if ((operations?.pendingLeaves ?? 0) > 0) {
+    const leaves = operations.pendingLeaves;
+    attentionParts.push(
+      `${leaves} faculty leave ${leaves === 1 ? 'request is' : 'requests are'} awaiting review`
+    );
+    actions.push({
+      label: leaves === 1 ? 'Review Leave Request' : 'Review Leave Requests',
+      screen: 'p-leaves',
+    });
+  }
+
+  const inventoryIssues = (inventory?.repairUnits ?? 0) + (inventory?.lostDamagedUnits ?? 0);
+  if (inventoryIssues > 0) {
+    const repair = inventory.repairUnits ?? 0;
+    const lostDamaged = inventory.lostDamagedUnits ?? 0;
+    const parts: string[] = [];
+    if (repair > 0) parts.push(`${repair} under repair`);
+    if (lostDamaged > 0) parts.push(`${lostDamaged} lost or damaged`);
+    attentionParts.push(
+      `${inventoryIssues} property ${inventoryIssues === 1 ? 'unit requires' : 'units require'} attention (${parts.join(', ')})`
+    );
+    actions.push({
+      label: 'View Inventory',
+      screen: 'p-inventory',
+    });
+  }
+
+  if (attentionParts.length > 0) {
+    const countWord =
+      attentionParts.length === 1
+        ? 'One item requires'
+        : attentionParts.length === 2
+        ? 'Two items require'
+        : `${attentionParts.length} items require`;
+    paragraphs.push(`${countWord} your attention: ${attentionParts.join(' and ')}.`);
+  } else {
+    paragraphs.push('No current administrative action items require your attention.');
+  }
+
+  // Paragraph 3: Academic Status Synthesis
+  paragraphs.push(sections.academics);
+
+  // Optional Paragraph 4: Upcoming Events (if calendar events scheduled)
+  if (sections.upcomingEvents) {
+    paragraphs.push(sections.upcomingEvents);
+  }
+
+  return {
+    paragraphs,
+    actions,
+  };
+}

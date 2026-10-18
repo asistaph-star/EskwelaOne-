@@ -3,6 +3,7 @@ import {
   getPhilippineDayPart,
   formatPrincipalGreeting,
   buildBriefingSections,
+  buildSynthesizedNarrative,
   PhilippineDayPart,
 } from '../../src/app/principal/dashboard/briefingHelpers';
 import { ExecutiveSummaryResponse } from '../../src/api/executiveSummary.api';
@@ -289,6 +290,78 @@ describe('DIGISKWELA — MILESTONE 2B: DAILY EXECUTIVE BRIEFING UX', () => {
           ? 'AI-generated from grounded DigiSkwela data'
           : 'Deterministic grounded synthesis';
       expect(label).toBe('AI-generated from grounded DigiSkwela data');
+    });
+  });
+
+  // ─── 4. Narrative-First Synthesis & Compact Action Items ───────────────────
+  describe('4. Narrative-First Synthesis & Compact Action Items', () => {
+    const baseSummaryData: ExecutiveSummaryResponse = {
+      summary: 'School operations are underway.',
+      asOf: '2026-10-18T13:44:00.000Z',
+      asOfFormatted: 'Oct 18, 2026 • 9:44 PM',
+      generationMode: 'deterministic',
+      sourceDomains: ['Gate Attendance', 'Faculty Attendance', 'Academics'],
+      metrics: {
+        students: { enrolled: 500, onCampusNow: 420 },
+        faculty: { checkedInToday: 21, checkedInNow: 19, totalActive: 23 },
+        academics: {
+          academicCompleteness: 'complete_annual',
+          annualPassRate: 87,
+          lowestTermAverageGradeLevel: null,
+          assessedGradeLevelsCount: 4,
+        },
+        welfare: { studentsRequiringAttention: 1, openBehaviorCases: 1 },
+        operations: { pendingLeaves: 2, upcomingEventsCount: 2 },
+        inventory: { currentAccountableUnits: 50, repairUnits: 0, lostDamagedUnits: 0 },
+      },
+    };
+
+    it('produces concise management narrative paragraphs instead of raw metric lists', () => {
+      const narrative = buildSynthesizedNarrative(baseSummaryData);
+      expect(narrative.paragraphs.length).toBeGreaterThanOrEqual(3);
+      expect(narrative.paragraphs[0]).toContain('420 students');
+      expect(narrative.paragraphs[1]).toContain('Two items require your attention');
+      expect(narrative.paragraphs[2]).toContain('The current annual promotion pass rate is 87%');
+
+      // Actions shortcuts:
+      expect(narrative.actions).toEqual([
+        { label: 'Review Behavior Case', screen: 'p-behavior' },
+        { label: 'Review Leave Requests', screen: 'p-leaves' },
+      ]);
+    });
+
+    it('produces calm reassurance when no attention items exist', () => {
+      const cleanData: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          welfare: { studentsRequiringAttention: 0, openBehaviorCases: 0 },
+          operations: { pendingLeaves: 0, upcomingEventsCount: 0 },
+          inventory: { currentAccountableUnits: 50, repairUnits: 0, lostDamagedUnits: 0 },
+        },
+      };
+
+      const narrative = buildSynthesizedNarrative(cleanData);
+      expect(narrative.paragraphs[1]).toBe(
+        'No current administrative action items require your attention.'
+      );
+      expect(narrative.actions.length).toBe(0);
+    });
+
+    it('synthesizes stable operations narrative when all faculty checked in and 0 students on campus', () => {
+      const demoData: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 0 },
+          faculty: { checkedInToday: 1, checkedInNow: 0, totalActive: 1 },
+        },
+      };
+
+      const narrative = buildSynthesizedNarrative(demoData);
+      expect(narrative.paragraphs[0]).toBe(
+        'School operations are currently stable. All active faculty have checked in today, while no students are currently recorded on campus.'
+      );
     });
   });
 });
