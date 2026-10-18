@@ -108,19 +108,16 @@ export class ExecutiveSummarySynthesizer {
       sentences.push(`School operations are currently active.`);
     }
 
-    // 2. Academic Performance (Semantic grounding: never overstate incomplete term data as annual failure)
+    // 2. Academic Performance (Semantic grounding: matching fact semantics strictly to statements)
+    // Option A: When annual data is complete, state the overall annual promotion pass rate only.
+    // lowestTermAverageGradeLevel represents submitted term averages, NOT annual general averages,
+    // so it must NEVER be conflated with annual performance or used to claim a "lowest general average".
     if (facts.academics.academicCompleteness === 'complete_annual' && facts.academics.annualPassRate !== null) {
-      if (facts.academics.lowestTermAverageGradeLevel !== null) {
-        sentences.push(
-          `Academic performance reflects an overall annual pass rate of ${facts.academics.annualPassRate}%, with Grade ${facts.academics.lowestTermAverageGradeLevel} recording the lowest general average.`
-        );
-      } else {
-        sentences.push(
-          `Academic performance reflects an overall annual pass rate of ${facts.academics.annualPassRate}% across active sections.`
-        );
-      }
+      sentences.push(
+        `Academic performance reflects an overall annual promotion pass rate of ${facts.academics.annualPassRate}%.`
+      );
     } else if (facts.academics.academicCompleteness === 'partial_terms' && facts.academics.lowestTermAverageGradeLevel !== null) {
-      // Precise term-only wording: Option B from prompt
+      // Precise term-only wording: among currently submitted term grades only
       sentences.push(
         `Among currently submitted term grades across ${facts.academics.assessedGradeLevelsCount} grade levels, Grade ${facts.academics.lowestTermAverageGradeLevel} currently records the lowest average.`
       );
@@ -171,9 +168,23 @@ export class ExecutiveSummarySynthesizer {
   }
 
   /**
-   * Engine A: External LLM Synthesizer (Staging hook)
+   * Engine A: External LLM Synthesizer (Staging hook & Semantic Contract)
    * 
-   * Constrained strictly with temperature 0.0 and prompt schema prohibiting predictions.
+   * Strict LLM Contract Rules for Academic Semantics:
+   * 1. annualPassRate:
+   *    - Governed solely by complete DepEd T1-T4 ratings across all subjects.
+   *    - May ONLY produce an annual promotion/pass statement (e.g. "Academic performance reflects an overall annual promotion pass rate of {annualPassRate}%.").
+   *    - Must NEVER state or imply a lowest annual grade level, because no annual general average by grade level is provided.
+   * 2. lowestTermAverageGradeLevel:
+   *    - Derived solely from submitted term grade averages across grade levels.
+   *    - Must strictly use "among currently submitted term grades..." phrasing.
+   *    - Must NEVER be described as an "annual general average" or "lowest-performing grade overall".
+   * 3. Null / Incomplete values:
+   *    - If annualPassRate is null or completeness is 'partial_terms' / 'insufficient_data', OMIT all annual pass/promotion claims.
+   *    - If lowestTermAverageGradeLevel is null (e.g. single grade level or no grades), OMIT all comparative grade-level performance claims.
+   * 4. Zero Hallucination:
+   *    - Temperature 0.0.
+   *    - No speculative, predictive, clinical, or guidance claims.
    */
   private async synthesizeWithLLM(facts: SchoolFactSheet): Promise<string> {
     // In Milestone 2, if no LLM provider is explicitly enabled via environment,

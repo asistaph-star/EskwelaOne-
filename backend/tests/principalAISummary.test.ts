@@ -221,7 +221,7 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
       expect(summary).not.toContain('%');
     });
 
-    it('accurately uses precise term phrasing when only partial term grades exist across multiple grades', () => {
+    it('partial-term fact cannot produce annual-general-average or promotion wording', () => {
       const factsWithPartialTerms: SchoolFactSheet = {
         asOf: '2026-10-18T12:00:00.000Z',
         asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
@@ -240,12 +240,17 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
       };
 
       const summary = synthesizer.synthesizeDeterministic(factsWithPartialTerms);
+      // Strictly term wording only
       expect(summary).toContain('Among currently submitted term grades across 2 grade levels, Grade 8 currently records the lowest average.');
-      expect(summary).not.toContain('lowest-performing grade');
+      // Proves: partial-term fact cannot produce annual-general-average wording
+      expect(summary).not.toContain('lowest general average');
+      expect(summary).not.toContain('lowest-performing');
+      expect(summary).not.toContain('annual');
+      expect(summary).not.toContain('promotion');
       expect(summary).not.toContain('pass rate');
     });
 
-    it('accurately reports annual pass rate when full academic year ratings are complete', () => {
+    it('accurately reports annual promotion pass rate without implying a lowest annual grade level', () => {
       const factsWithCompleteAnnual: SchoolFactSheet = {
         asOf: '2026-10-18T12:00:00.000Z',
         asOfFormatted: 'Oct 18, 2026 • 8:00 PM',
@@ -264,9 +269,11 @@ describe('DIGISKWELA — MILESTONE 2: PRINCIPAL AI EXECUTIVE SUMMARY', () => {
       };
 
       const summary = synthesizer.synthesizeDeterministic(factsWithCompleteAnnual);
-      expect(summary).toContain('88%');
-      expect(summary).toContain('Grade 8');
-      expect(summary).toContain('annual pass rate');
+      expect(summary).toContain('Academic performance reflects an overall annual promotion pass rate of 88%.');
+      // Proves: annual pass rate does NOT automatically imply a lowest annual grade level
+      expect(summary).not.toContain('lowest general average');
+      expect(summary).not.toContain('lowest');
+      expect(summary).not.toContain('Grade 8');
     });
 
     it('does NOT make comparative lowest claims when only 1 single grade level has grades', () => {
