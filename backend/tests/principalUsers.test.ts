@@ -99,9 +99,34 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     
     if (userIds.length > 0) {
       await prisma.userRole.deleteMany({ where: { user_id: { in: userIds } } });
-      await prisma.auditLog.deleteMany({ where: { actor_user_id: { in: userIds } } });
+      await prisma.auditLog.deleteMany({
+        where: {
+          OR: [
+            { actor_user_id: { in: userIds } },
+            { resource_id: { in: userIds } }
+          ]
+        }
+      });
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     }
+
+    // Defensive sweep for any test artifacts created by this test suite
+    const sweepUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { startsWith: 'new_teacher_' } },
+          { email: { startsWith: 'admin_created_' } }
+        ]
+      },
+      select: { id: true }
+    });
+    if (sweepUsers.length > 0) {
+      const sweepIds = sweepUsers.map(u => u.id);
+      await prisma.userRole.deleteMany({ where: { user_id: { in: sweepIds } } });
+      await prisma.auditLog.deleteMany({ where: { resource_id: { in: sweepIds } } });
+      await prisma.user.deleteMany({ where: { id: { in: sweepIds } } });
+    }
+
     await prisma.$disconnect();
   });
 
@@ -119,7 +144,8 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    createdUsers.push(res.body.data.id);
+    const newId = res.body.data?.user?.id || res.body.data?.id;
+    if (newId) createdUsers.push(newId);
   });
 
   it('Principal attempts Admin creation -> denied', async () => {
@@ -181,7 +207,8 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
       });
     
     expect(res.status).toBe(201);
-    createdUsers.push(res.body.data.id);
+    const newId = res.body.data?.user?.id || res.body.data?.id;
+    if (newId) createdUsers.push(newId);
   });
 
   it('Student -> denied', async () => {
