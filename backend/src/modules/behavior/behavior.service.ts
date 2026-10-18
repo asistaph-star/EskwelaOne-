@@ -6,7 +6,15 @@ import { createAuditLog } from '../../audit/audit.service.js';
 export const BehaviorService = {
   async getBehaviorLogs() {
     const rawRecords = await prisma.behaviorLog.findMany({
-      include: { reporter: true, student: { include: { user: true } } },
+      include: {
+        reporter: true,
+        student: {
+          include: {
+            user: true,
+            current_section: true,
+          },
+        },
+      },
       orderBy: { date: 'desc' },
       take: 100
     });
@@ -14,7 +22,9 @@ export const BehaviorService = {
     return rawRecords.map(r => ({
       ...r,
       reporter_name: r.reporter ? `${r.reporter.first_name} ${r.reporter.last_name}` : r.reported_by,
-      studentName: r.student ? `${r.student.user.first_name} ${r.student.user.last_name}` : r.student_id
+      studentName: r.student ? `${r.student.user.first_name} ${r.student.user.last_name}` : r.student_id,
+      gradeLevel: r.student?.current_section?.grade_level ?? r.student?.grade_level ?? null,
+      sectionName: r.student?.current_section?.name ?? null,
     }));
   },
 

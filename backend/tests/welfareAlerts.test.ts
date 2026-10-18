@@ -382,4 +382,50 @@ describe('PRIN-004: Welfare Alerts Domain & Privacy Boundaries', () => {
     expect(dashRes.body.data.pendingDisciplineCases).toBe(welfareRes.body.data.summary.totalActiveAlerts);
     expect(dashRes.body.data.studentsRequiringAttention).toBe(welfareRes.body.data.summary.studentsRequiringAttention);
   });
+
+  it('10. should aggregate unresolved concerns by student in attentionStudents (one entry per student)', async () => {
+    const res = await request(app)
+      .get('/api/admin/welfare-alerts')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(res.status).toBe(200);
+    const { attentionStudents } = res.body.data;
+    expect(Array.isArray(attentionStudents)).toBe(true);
+
+    // Arthur Dent had 2 active logs (Reported + Under investigation) -> must appear exactly once with openConcernsCount: 2
+    const arthur = attentionStudents.find((s: any) => s.studentId === testStudentId1);
+    expect(arthur).toBeDefined();
+    expect(arthur.studentName).toBe('Arthur Dent');
+    expect(arthur.openConcernsCount).toBe(2);
+    expect(arthur.incidentTypes).toContain('Classroom Disruption');
+    expect(arthur.incidentTypes).toContain('Bullying Allegation');
+
+    // Ford Prefect had 1 active log (Parent notified) and 1 resolved log -> openConcernsCount must be 1
+    const ford = attentionStudents.find((s: any) => s.studentId === testStudentId2);
+    expect(ford).toBeDefined();
+    expect(ford.studentName).toBe('Ford Prefect');
+    expect(ford.openConcernsCount).toBe(1);
+    expect(ford.latestStatus).toBe('Parent notified');
+
+    // Total unique attention students count should match summary
+    expect(attentionStudents.length).toBe(res.body.data.summary.studentsRequiringAttention);
+  });
+
+  it('11. should verify Behavioral Reports API (/student-services/behavior) includes both active and resolved records', async () => {
+    const res = await request(app)
+      .get('/api/student-services/behavior')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(res.status).toBe(200);
+    const logs = res.body.data;
+    expect(Array.isArray(logs)).toBe(true);
+
+    const logIds = logs.map((l: any) => l.id);
+    // Active logs must be present
+    expect(logIds).toContain(logReportedId);
+    expect(logIds).toContain(logInvestigationId);
+    expect(logIds).toContain(logNotifiedId);
+    // Resolved log MUST also be present in full Behavioral Reports
+    expect(logIds).toContain(logResolvedId);
+  });
 });

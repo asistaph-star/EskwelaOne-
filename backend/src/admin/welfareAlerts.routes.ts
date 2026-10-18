@@ -74,6 +74,54 @@ router.get('/', requirePermissions('behavior:read'), async (req: Request, res: R
       createdAt: c.created_at.toISOString(),
     }));
 
+    // Aggregate by student for student-centric Welfare Alerts (PRIN-004)
+    const studentMap = new Map<string, {
+      studentId: string;
+      studentName: string;
+      gradeLevel: number | null;
+      sectionName: string | null;
+      openConcernsCount: number;
+      latestIncident: string;
+      latestStatus: string;
+      lastActivity: string;
+      incidentTypes: string[];
+      notes: string[];
+    }>();
+
+    for (const c of activeCases) {
+      const studentId = c.student_id;
+      const studentName = c.student?.user
+        ? `${c.student.user.first_name} ${c.student.user.last_name}`
+        : 'Unknown Student';
+      const gradeLevel = c.student?.current_section?.grade_level ?? c.student?.grade_level ?? null;
+      const sectionName = c.student?.current_section?.name ?? null;
+
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, {
+          studentId,
+          studentName,
+          gradeLevel,
+          sectionName,
+          openConcernsCount: 1,
+          latestIncident: c.type,
+          latestStatus: c.status,
+          lastActivity: c.date.toISOString(),
+          incidentTypes: [c.type],
+          notes: c.note ? [c.note] : [],
+        });
+      } else {
+        const entry = studentMap.get(studentId)!;
+        entry.openConcernsCount += 1;
+        if (!entry.incidentTypes.includes(c.type)) {
+          entry.incidentTypes.push(c.type);
+        }
+        if (c.note) {
+          entry.notes.push(c.note);
+        }
+      }
+    }
+
+    const attentionStudents = Array.from(studentMap.values());
     const uniqueStudentIds = new Set(activeCases.map((c) => c.student_id));
 
     const summary = {
@@ -93,6 +141,7 @@ router.get('/', requirePermissions('behavior:read'), async (req: Request, res: R
       success: true,
       data: {
         summary,
+        attentionStudents,
         alerts,
       },
     });

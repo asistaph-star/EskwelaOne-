@@ -33,7 +33,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [dashData, setDashData] = useState<PrincipalDashboardResponse | null>(null);
   const [teacherLeaves, setTeacherLeaves] = useState<any[]>([]);
   const [facultySummary, setFacultySummary] = useState<FacultyAttendanceSummary | null>(null);
-  const [welfareAlerts, setWelfareAlerts] = useState<any[]>([]);
+  const [attentionStudents, setAttentionStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -54,8 +54,8 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       if (fData) {
         setFacultySummary(fData);
       }
-      const wList = wData?.data?.alerts || wData?.alerts || [];
-      setWelfareAlerts(Array.isArray(wList) ? wList : []);
+      const attList = wData?.data?.attentionStudents || wData?.attentionStudents || [];
+      setAttentionStudents(Array.isArray(attList) ? attList : []);
       setLoading(false);
     });
   }, []);
@@ -84,14 +84,14 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       dest: "p-teachers" 
     },
     { 
-      v: loading ? "..." : `${dashData?.studentsRequiringAttention ?? 0} Flagged`, 
+      v: loading ? "..." : `${dashData?.studentsRequiringAttention ?? attentionStudents.length} Flagged`, 
       l: "Students Requiring Attention", 
-      sub: (dashData?.studentsRequiringAttention ?? 0) > 0 ? "Active Disciplinary Concerns" : "No active flags", 
-      subColor: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.red : C.t3, 
-      color: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.red : C.m700, 
-      bg: (dashData?.studentsRequiringAttention ?? 0) > 0 ? C.redBg : C.m100, 
+      sub: (dashData?.studentsRequiringAttention ?? attentionStudents.length) > 0 ? "Active Disciplinary Concerns" : "No active flags", 
+      subColor: (dashData?.studentsRequiringAttention ?? attentionStudents.length) > 0 ? C.red : C.t3, 
+      color: (dashData?.studentsRequiringAttention ?? attentionStudents.length) > 0 ? C.red : C.m700, 
+      bg: (dashData?.studentsRequiringAttention ?? attentionStudents.length) > 0 ? C.redBg : C.m100, 
       icon: AlertCircle, 
-      dest: "p-welfare" 
+      dest: "p-behavior" 
     },
     { 
       v: loading ? "..." : `${dashData?.pendingDisciplineCases ?? 0} Active`, 
@@ -101,7 +101,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       color: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
       bg: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amberBg : C.greenBg, 
       icon: HeartHandshake, 
-      dest: "p-welfare" 
+      dest: "p-behavior" 
     }
   ];
 
@@ -139,58 +139,54 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             <div style={{ fontSize: 12, color: C.t3 }}>AI Insights are currently unavailable.</div>
           </div>
 
+          {/* PRIN-004: Student-Centric Welfare Alerts Attention Layer */}
           <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
             <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>
-                Critical Alerts ({welfareAlerts.filter(a => a.status === 'Under investigation').length})
+                Students Requiring Attention ({attentionStudents.length})
               </span>
-              <span onClick={() => onNav('p-welfare' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
-                View All Alerts →
+              <span onClick={() => onNav('p-behavior' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
+                View Behavioral Reports →
               </span>
             </div>
-            {welfareAlerts.filter(a => a.status === 'Under investigation').length === 0 ? (
-              <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>
-                No critical alerts under active investigation at this time.
+            {attentionStudents.length === 0 ? (
+              <div style={{ padding: "18px 16px", fontSize: 12, color: C.t3, textAlign: "center" }}>
+                No students currently flagged for administrative attention. All cases resolved.
               </div>
             ) : (
               <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                {welfareAlerts.filter(a => a.status === 'Under investigation').slice(0, 4).map((alert, idx) => (
-                  <div key={idx} onClick={() => onNav('p-welfare' as PScreen)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #eee", cursor: "pointer" }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{alert.studentName}</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{alert.incidentType} {alert.sectionName ? `· ${alert.sectionName}` : ''}</div>
-                    </div>
-                    <Stamp label={alert.status} color={C.purple} bg={C.purpleBg} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                {attentionStudents.slice(0, 5).map((student, idx) => {
+                  const statusColors: Record<string, { color: string; bg: string }> = {
+                    'Under investigation': { color: C.purple, bg: C.purpleBg },
+                    'Parent notified': { color: C.blue, bg: C.blueBg },
+                    'Reported': { color: C.amber, bg: C.amberBg },
+                  };
+                  const sc = statusColors[student.latestStatus] || { color: C.t2, bg: C.paper };
 
-          <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, overflow: "hidden" }}>
-            <div style={{ background: C.m800, color: "#fff", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>
-                Students Requiring Attention ({welfareAlerts.length})
-              </span>
-              <span onClick={() => onNav('p-welfare' as PScreen)} style={{ fontSize: 11, cursor: "pointer", color: "#fef08a", fontWeight: 600 }}>
-                View All Alerts →
-              </span>
-            </div>
-            {welfareAlerts.length === 0 ? (
-              <div style={{ padding: "16px 12px", fontSize: 12, color: C.t3, textAlign: "center" }}>
-                No students currently flagged for welfare attention.
-              </div>
-            ) : (
-              <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                {welfareAlerts.slice(0, 4).map((alert, idx) => (
-                  <div key={idx} onClick={() => onNav('p-welfare' as PScreen)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: "1px solid #eee", cursor: "pointer" }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{alert.studentName}</div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>{alert.incidentType} {alert.sectionName ? `· ${alert.sectionName}` : ''}</div>
+                  return (
+                    <div
+                      key={student.studentId || idx}
+                      onClick={() => onNav('p-behavior' as PScreen)}
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderBottom: idx < attentionStudents.length - 1 ? "1px solid #eee" : "none", cursor: "pointer" }}
+                      className="hover:bg-slate-50 transition"
+                    >
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
+                          {student.studentName}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.t2, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontWeight: 600, color: C.red }}>
+                            {student.openConcernsCount} {student.openConcernsCount === 1 ? 'Open Concern' : 'Open Concerns'}
+                          </span>
+                          <span style={{ color: C.t3 }}>•</span>
+                          <span style={{ color: C.t3 }}>Latest: {student.latestIncident}</span>
+                          {student.sectionName && <span style={{ color: C.t3 }}>· {student.sectionName}</span>}
+                        </div>
+                      </div>
+                      <Stamp label={student.latestStatus} color={sc.color} bg={sc.bg} />
                     </div>
-                    <Stamp label={alert.status} color={alert.status === 'Parent notified' ? C.blue : C.amber} bg={alert.status === 'Parent notified' ? C.blueBg : C.amberBg} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

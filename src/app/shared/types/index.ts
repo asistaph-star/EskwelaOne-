@@ -11,7 +11,7 @@ export type PScreen =
   | "p-analytics" | "p-teachers"
   | "p-inventory" | "p-doc-requests"
   | "p-events" | "p-faculty-attendance"
-  | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner" | "p-announcements" | "p-welfare";
+  | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner" | "p-announcements";
 
 export type GScreen =
   | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";

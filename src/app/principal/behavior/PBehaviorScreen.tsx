@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { C } from '../../shared/constants/tokens';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../../../api/client';
-import { PTableHeader } from '../shared/PTableHeader';
 import {
   ShieldAlert,
   Search,
-  Filter,
+  RefreshCw,
+  AlertCircle,
   Eye,
   X,
-  AlertTriangle,
+  User,
+  Calendar,
+  FileText,
+  Users,
+  CheckCircle2,
   Clock,
-  RotateCcw,
-  FileText
+  Filter
 } from 'lucide-react';
 
 export interface BehaviorLogItem {
@@ -19,13 +21,15 @@ export interface BehaviorLogItem {
   student_id: string;
   type: string;
   date: string;
-  status: string;
+  status: 'Reported' | 'Under investigation' | 'Parent notified' | 'Resolved' | string;
   note: string | null;
   reported_by: string | null;
   created_at: string;
   updated_at: string;
   reporter_name?: string | null;
   studentName?: string;
+  gradeLevel?: number | null;
+  sectionName?: string | null;
   reporter?: {
     id: string;
     first_name: string;
@@ -48,541 +52,430 @@ export function PBehaviorScreen() {
   const [logs, setLogs] = useState<BehaviorLogItem[]>([]);
   const [summary, setSummary] = useState<BehaviorSummaryData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filters (for recent incident table)
+  // Filters & Search
   const [search, setSearch] = useState<string>('');
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Detail Drawer
+  // Detail Modal
   const [selectedLog, setSelectedLog] = useState<BehaviorLogItem | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(false);
-      const [logsData, summaryData] = await Promise.all([
+      const [logsRes, summaryRes]: any = await Promise.all([
         apiClient.get<BehaviorLogItem[]>('/student-services/behavior'),
         apiClient.get<BehaviorSummaryData>('/student-services/behavior/summary')
       ]);
-      setLogs(Array.isArray(logsData) ? logsData : []);
-      setSummary(summaryData || null);
-    } catch (err) {
-      console.error('Failed to fetch behavioral data:', err);
-      setError(true);
+      const logsData = Array.isArray(logsRes?.data) ? logsRes.data : Array.isArray(logsRes) ? logsRes : [];
+      const summaryData = summaryRes?.data || summaryRes || null;
+      setLogs(logsData);
+      setSummary(summaryData);
+    } catch (err: any) {
+      console.error('Failed to load behavioral reports:', err);
+      setError(err?.error?.message || err?.message || 'Failed to load behavioral reports.');
+      setLogs([]);
+      setSummary(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  // Collect distinct types from loaded logs and distinct statuses from summary/logs
+  // Distinct types for type filter dropdown
   const availableTypes = Array.from(new Set(logs.map(l => l.type).filter(Boolean)));
-  const availableStatuses = summary
-    ? Array.from(new Set([...Object.keys(summary.statusCounts), ...logs.map(l => l.status)].filter(Boolean)))
-    : Array.from(new Set(logs.map(l => l.status).filter(Boolean)));
 
-  // Filter & sort logs within the recent list
-  const filteredLogs = logs.filter(log => {
-    const s = search.toLowerCase();
-    const studentMatch = (log.studentName || '').toLowerCase().includes(s) || (log.student_id || '').toLowerCase().includes(s);
-    const typeMatch = (log.type || '').toLowerCase().includes(s);
-    const noteMatch = (log.note || '').toLowerCase().includes(s);
-    const reporterMatch = (log.reporter_name || '').toLowerCase().includes(s);
-    const matchesSearch = !search || studentMatch || typeMatch || noteMatch || reporterMatch;
+  // Client-side filtering
+  const filteredLogs = logs.filter((log) => {
+    const q = search.toLowerCase().trim();
+    const studentMatch = (log.studentName || '').toLowerCase().includes(q) || (log.student_id || '').toLowerCase().includes(q);
+    const typeMatch = (log.type || '').toLowerCase().includes(q);
+    const noteMatch = (log.note || '').toLowerCase().includes(q);
+    const reporterMatch = (log.reporter_name || '').toLowerCase().includes(q);
+    const sectionMatch = (log.sectionName || '').toLowerCase().includes(q);
+    const matchesSearch = !q || studentMatch || typeMatch || noteMatch || reporterMatch || sectionMatch;
 
-    const matchesType = selectedType === 'all' || log.type === selectedType;
-    const matchesStatus = selectedStatus === 'all' || log.status === selectedStatus;
+    const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
+    const matchesType = typeFilter === 'all' || log.type === typeFilter;
 
-    return matchesSearch && matchesType && matchesStatus;
-  }).sort((a, b) => {
-    const timeA = new Date(a.date).getTime();
-    const timeB = new Date(b.date).getTime();
-    return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  const resetFilters = () => {
-    setSearch('');
-    setSelectedType('all');
-    setSelectedStatus('all');
-    setSortOrder('desc');
-  };
-
-  const getStatusColor = (status: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'resolved') return { color: C.green, bg: C.greenBg };
-    if (s === 'under investigation') return { color: C.blue, bg: C.blueBg };
-    if (s === 'parent notified') return { color: C.amber, bg: C.amberBg };
-    if (s === 'reported') return { color: C.red, bg: C.redBg };
-    return { color: C.t2, bg: C.paper };
-  };
+  const activeCasesCount = (summary?.reported ?? 0) + (summary?.underInvestigation ?? 0) + (summary?.parentNotified ?? 0);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: 'transparent', padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8 space-y-6">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Behavioral Reports</h1>
-            <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: C.m100, color: C.m700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Read-Only · Administrative Oversight
-            </span>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+              <ShieldAlert size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Behavioral Reports</h1>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wider">
+                  Read-Only Oversight
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Full incident-level history and active disciplinary records across the institution.
+              </p>
+            </div>
           </div>
-          <p style={{ fontSize: 12, color: C.t3, marginTop: 4, marginBottom: 0 }}>
-            Institutional overview of student conduct logs, incident cases, and disciplinary statuses across the school.
-          </p>
-        </div>
-        <button
-          onClick={fetchData}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            background: '#fff',
-            border: `1px solid ${C.borderMed}`,
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            color: C.t2,
-            cursor: 'pointer'
-          }}
-        >
-          <RotateCcw size={13} /> Refresh Data
-        </button>
-      </div>
-
-      {/* Database-Wide Aggregate KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.m700}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Total Incidents</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : (summary?.total ?? 0)}
-          </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>School-wide database total</div>
         </div>
 
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.red}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Reported</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.red, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : (summary?.reported ?? 0)}
-          </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Initial intake status</div>
-        </div>
-
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.blue}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Under Investigation</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.blue, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : (summary?.underInvestigation ?? 0)}
-          </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Active Guidance inquiry</div>
-        </div>
-
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.green}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Resolved Cases</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.green, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : (summary?.resolved ?? 0)}
-          </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Concluded incidents</div>
-        </div>
-
-        <div style={{ background: '#fff', border: `1.5px solid ${C.borderMed}`, borderLeft: `5px solid ${C.t2}`, borderRadius: 4, padding: '14px 18px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Students Involved</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-            {loading ? '...' : (summary?.studentsCount ?? 0)}
-          </div>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>Distinct individuals logged</div>
-        </div>
-      </div>
-
-      {/* Filter Toolbar (Applied to Recent Incident View) */}
-      <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '12px 16px', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
-          <Search size={14} color={C.t3} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-          <input
-            type="text"
-            placeholder="Search recent incidents by student, type, note, or reporter..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px 8px 34px',
-              border: `1px solid ${C.borderMed}`,
-              borderRadius: 4,
-              fontSize: 12,
-              outline: 'none',
-              color: C.t1,
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-
-        {availableTypes.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: C.t3 }}>Type:</label>
-            <select
-              value={selectedType}
-              onChange={e => setSelectedType(e.target.value)}
-              style={{ padding: '8px 10px', fontSize: 12, border: `1px solid ${C.borderMed}`, borderRadius: 4, background: '#fff', color: C.t1, outline: 'none' }}
-            >
-              <option value="all">All Incident Types</option>
-              {availableTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {availableStatuses.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: C.t3 }}>Status:</label>
-            <select
-              value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value)}
-              style={{ padding: '8px 10px', fontSize: 12, border: `1px solid ${C.borderMed}`, borderRadius: 4, background: '#fff', color: C.t1, outline: 'none' }}
-            >
-              <option value="all">All Statuses</option>
-              {availableStatuses.map(st => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: C.t3 }}>Sort:</label>
-          <select
-            value={sortOrder}
-            onChange={e => setSortOrder(e.target.value as 'desc' | 'asc')}
-            style={{ padding: '8px 10px', fontSize: 12, border: `1px solid ${C.borderMed}`, borderRadius: 4, background: '#fff', color: C.t1, outline: 'none' }}
-          >
-            <option value="desc">Newest First</option>
-            <option value="asc">Oldest First</option>
-          </select>
-        </div>
-
-        {(search || selectedType !== 'all' || selectedStatus !== 'all' || sortOrder !== 'desc') && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={resetFilters}
-            style={{
-              padding: '6px 12px',
-              background: C.m50,
-              border: `1px solid ${C.border}`,
-              borderRadius: 4,
-              fontSize: 11,
-              fontWeight: 600,
-              color: C.m700,
-              cursor: 'pointer'
-            }}
-          >
-            Clear Filters
-          </button>
-        )}
-      </div>
-
-      {/* Section Title & Description */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <div>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: C.t1, margin: 0 }}>Recent Behavioral Incidents</h2>
-          <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>
-            Displaying the latest recorded incidents (up to 100). Search and filters operate within this recent incident view.
-          </div>
-        </div>
-      </div>
-
-      {/* Content Area: Table / Loading / Error / Empty States */}
-      {loading ? (
-        <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: 48, textAlign: 'center' }}>
-          <Clock size={28} color={C.m700} style={{ animation: 'spin 1.5s linear infinite', marginBottom: 12 }} />
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.t2 }}>Loading behavioral records & metrics...</div>
-        </div>
-      ) : error ? (
-        <div style={{ background: '#fff', border: `1px solid ${C.red}`, borderRadius: 6, padding: 36, textAlign: 'center' }}>
-          <AlertTriangle size={32} color={C.red} style={{ marginBottom: 10 }} />
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 4 }}>Failed to load behavioral records</div>
-          <div style={{ fontSize: 12, color: C.t3, marginBottom: 16 }}>Please verify your network connectivity or database service.</div>
-          <button
+            type="button"
             onClick={fetchData}
-            style={{ padding: '8px 18px', background: C.m700, color: '#fff', border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
           >
-            Retry
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
         </div>
-      ) : (summary?.total ?? 0) === 0 && logs.length === 0 ? (
-        <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '56px 24px', textAlign: 'center' }}>
-          <div style={{ width: 56, height: 56, borderRadius: 28, background: C.m50, border: `1.5px solid ${C.borderMed}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: C.m700 }}>
-            <ShieldAlert size={28} />
+      </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start gap-3 text-sm font-medium">
+          <AlertCircle size={18} className="text-red-600 shrink-0 mt-0.5" />
+          <span className="flex-1">{error}</span>
+        </div>
+      )}
+
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Incidents */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Total Recorded Logs
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-1">
+              {loading ? '...' : (summary?.total ?? logs.length)}
+            </div>
+            <div className="text-xs text-slate-500 font-medium mt-1">
+              Historical & Active
+            </div>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", marginBottom: 6 }}>
-            No Behavioral Incident Records in Database
-          </div>
-          <div style={{ fontSize: 12, color: C.t3, maxWidth: 440, margin: '0 auto', lineHeight: 1.5 }}>
-            No student behavioral logs or disciplinary incident records currently exist in the school database. When faculty or Guidance Counselors submit incident reports, they will be aggregated here for administrative review.
+          <div className="h-11 w-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+            <FileText size={20} />
           </div>
         </div>
-      ) : filteredLogs.length === 0 ? (
-        <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '40px 24px', textAlign: 'center' }}>
-          <Filter size={28} color={C.t3} style={{ marginBottom: 10, opacity: 0.6 }} />
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, marginBottom: 4 }}>No Matching Records</div>
-          <div style={{ fontSize: 12, color: C.t3, marginBottom: 14 }}>No behavioral logs match your active filter criteria within the recent incidents list.</div>
-          <button
-            onClick={resetFilters}
-            style={{ padding: '6px 14px', background: C.m50, color: C.m700, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-          >
-            Reset Filters
-          </button>
+
+        {/* Active Cases */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Active Cases
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-1">
+              {loading ? '...' : activeCasesCount}
+            </div>
+            <div className="text-xs text-amber-600 font-semibold mt-1">
+              Pending Resolution
+            </div>
+          </div>
+          <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Clock size={20} />
+          </div>
         </div>
-      ) : (
-        <div style={{ background: '#fff', border: `1px solid ${C.borderMed}`, borderRadius: 6, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+
+        {/* Under Investigation */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Under Investigation
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-1">
+              {loading ? '...' : (summary?.underInvestigation ?? 0)}
+            </div>
+            <div className="text-xs text-indigo-600 font-semibold mt-1">
+              Active Administrative Inquiry
+            </div>
+          </div>
+          <div className="h-11 w-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <ShieldAlert size={20} />
+          </div>
+        </div>
+
+        {/* Resolved Cases */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Resolved Cases
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-1">
+              {loading ? '...' : (summary?.resolved ?? 0)}
+            </div>
+            <div className="text-xs text-emerald-600 font-semibold mt-1">
+              Concluded Successfully
+            </div>
+          </div>
+          <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Incident History Table Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Table Filters Header */}
+        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 max-w-md">
+            <div className="relative w-full">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by student, section, incident type, reporter, or note..."
+                className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 transition"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400 font-medium">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+              >
+                <option value="all">All Statuses</option>
+                <option value="Under investigation">Under Investigation</option>
+                <option value="Parent notified">Parent Notified</option>
+                <option value="Reported">Reported</option>
+                <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+
+            {availableTypes.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-400 font-medium">Type:</span>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                >
+                  <option value="all">All Types</option>
+                  {availableTypes.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Table Content */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <PTableHeader cols={['Date', 'Student Name', 'Incident Type', 'Reported By', 'Status', 'Action']} />
+              <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3 px-5">Student</th>
+                <th className="py-3 px-4">Grade & Section</th>
+                <th className="py-3 px-4">Incident Type</th>
+                <th className="py-3 px-4">Date Reported</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Reported By</th>
+                <th className="py-3 px-5 text-right">Action</th>
+              </tr>
             </thead>
-            <tbody>
-              {filteredLogs.map((log, idx) => {
-                const statusStyle = getStatusColor(log.status);
-                const formattedDate = log.date ? new Date(log.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {filteredLogs.map((item) => {
+                const statusStyles: Record<string, string> = {
+                  'Under investigation': 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+                  'Parent notified': 'bg-blue-50 text-blue-700 border-blue-200/80',
+                  'Reported': 'bg-amber-50 text-amber-700 border-amber-200/80',
+                  'Resolved': 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+                };
+                const badgeClass = statusStyles[item.status] || 'bg-slate-50 text-slate-700 border-slate-200';
+                const sName = item.studentName || 'Student';
 
                 return (
-                  <tr
-                    key={log.id}
-                    style={{
-                      borderBottom: `1px solid ${C.borderLight}`,
-                      background: idx % 2 === 0 ? '#fff' : C.ledger,
-                      transition: 'background 0.15s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = C.m50}
-                    onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : C.ledger}
-                  >
-                    <td style={{ padding: '12px 14px', fontSize: 12, color: C.t2, whiteSpace: 'nowrap' }}>
-                      {formattedDate}
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>
-                        {log.studentName || 'Student ID: ' + log.student_id}
-                      </div>
-                      <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
-                        Ref: {log.student_id ? log.student_id.substring(0, 8) + '...' : 'N/A'}
+                  <tr key={item.id} className="hover:bg-slate-50/60 transition">
+                    <td className="py-3.5 px-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200">
+                          {sName.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900">{sName}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">ID: {item.student_id.slice(0, 8)}</div>
+                        </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 4, background: C.m100, color: C.m700, fontSize: 11, fontWeight: 700 }}>
-                        <AlertTriangle size={12} />
-                        {log.type}
-                      </div>
+                    <td className="py-3.5 px-4 font-medium text-slate-600">
+                      {item.gradeLevel ? `Grade ${item.gradeLevel}` : '—'}
+                      {item.sectionName ? ` • ${item.sectionName}` : ''}
                     </td>
-                    <td style={{ padding: '12px 14px', fontSize: 12, color: C.t2 }}>
-                      {log.reporter_name || 'Staff / Faculty'}
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '3px 8px',
-                          borderRadius: 4,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
-                          color: statusStyle.color,
-                          background: statusStyle.bg
-                        }}
-                      >
-                        {log.status}
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-900">{item.type}</div>
+                      <span className="inline-block text-[10px] font-medium text-slate-400">
+                        Disciplinary Record
                       </span>
                     </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'left' }}>
+                    <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                      {new Date(item.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${badgeClass}`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                        <span>{item.status}</span>
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                      {item.reporter_name || item.reported_by || 'Staff'}
+                    </td>
+                    <td className="py-3.5 px-5 text-right whitespace-nowrap">
                       <button
-                        onClick={() => setSelectedLog(log)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '5px 10px',
-                          background: '#fff',
-                          border: `1px solid ${C.borderMed}`,
-                          borderRadius: 4,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          color: C.m700,
-                          cursor: 'pointer'
-                        }}
+                        type="button"
+                        onClick={() => setSelectedLog(item)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition shadow-sm"
                       >
-                        <Eye size={12} /> View
+                        <Eye size={13} />
+                        <span>View Details</span>
                       </button>
                     </td>
                   </tr>
                 );
               })}
+
+              {filteredLogs.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center">
+                    <div className="max-w-sm mx-auto flex flex-col items-center justify-center text-slate-400">
+                      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                        <ShieldAlert size={24} />
+                      </div>
+                      <div className="text-sm font-bold text-slate-700">No Behavioral Reports Found</div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        No student behavioral incident records match the current filter criteria.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          <div style={{ padding: '10px 16px', background: C.paper, borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.t3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Showing {filteredLogs.length} of {logs.length} recent record(s)</span>
-            <span>Total Recorded in Database: {summary?.total ?? 0}</span>
+        </div>
+      </div>
+
+      {/* Read-Only Incident Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded">
+                    Disciplinary Record Details
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">Incident #{selectedLog.id.slice(0, 8)}</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mt-1.5">{selectedLog.type}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs text-slate-700">
+              {/* Student Metadata Card */}
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Student</div>
+                  <div className="font-bold text-sm text-slate-900 mt-0.5">{selectedLog.studentName || 'Student'}</div>
+                  <div className="text-slate-500 mt-0.5">
+                    {selectedLog.gradeLevel ? `Grade ${selectedLog.gradeLevel}` : ''}
+                    {selectedLog.sectionName ? ` • Section ${selectedLog.sectionName}` : ''}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Current Status</div>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-white border border-slate-200 text-slate-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
+                      <span>{selectedLog.status}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Incident Details Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border border-slate-200 bg-white">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Date Reported</div>
+                  <div className="font-semibold text-slate-800 mt-1">
+                    {new Date(selectedLog.date).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg border border-slate-200 bg-white">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Reported By</div>
+                  <div className="font-semibold text-slate-800 mt-1">
+                    {selectedLog.reporter_name || selectedLog.reported_by || 'Staff'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Case Notes */}
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1.5">
+                  Administrative Incident Notes
+                </div>
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 leading-relaxed min-h-[4rem]">
+                  {selectedLog.note ? selectedLog.note : <span className="text-slate-400 italic">No notes provided.</span>}
+                </div>
+              </div>
+
+              {/* Least-Privilege Notice */}
+              <div className="p-3 rounded-lg bg-blue-50/60 border border-blue-200 text-blue-800 text-[11px] leading-relaxed flex items-start gap-2">
+                <AlertCircle size={15} className="text-blue-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Executive Oversight:</strong> This record reflects administrative disciplinary logging under <code className="font-mono text-blue-900">behavior:read</code>. Confidential counseling and clinic treatments remain strictly protected under guidance and medical privacy.
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition"
+              >
+                Close Case Details
+              </button>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Read-Only Slide-Over Detail Drawer */}
-      {selectedLog && (
-        <>
-          <div
-            onClick={() => setSelectedLog(null)}
-            style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(10,5,5,0.45)' }}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 401,
-              width: 460,
-              maxWidth: '90vw',
-              background: '#fff',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '-8px 0 32px rgba(0,0,0,0.18)',
-              overflow: 'hidden'
-            }}
-          >
-            {/* Drawer Header */}
-            <div style={{ background: C.m800, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff' }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Fraunces', serif" }}>
-                  Incident Report Details
-                </div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-                  Ref ID: {selectedLog.id}
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedLog(null)}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 4,
-                  background: 'rgba(255,255,255,0.12)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff'
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Drawer Body */}
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Notice Banner */}
-              <div style={{ padding: '10px 14px', background: C.m50, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 11, color: C.m700, lineHeight: 1.5 }}>
-                <strong>Administrative Oversight:</strong> This record is displayed in read-only mode. Case investigation, counseling notes, and status updates are strictly governed by the Guidance & Counseling Office.
-              </div>
-
-              {/* Incident Details Card */}
-              <div style={{ background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: '16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Student</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginTop: 2 }}>
-                      {selectedLog.studentName || selectedLog.student_id}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Incident Type</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginTop: 2 }}>
-                      {selectedLog.type}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Date of Incident</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.t2, marginTop: 2 }}>
-                      {selectedLog.date ? new Date(selectedLog.date).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</div>
-                    <div style={{ marginTop: 2 }}>
-                      {(() => {
-                        const st = getStatusColor(selectedLog.status);
-                        return (
-                          <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: st.color, background: st.bg }}>
-                            {selectedLog.status}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Reported By</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginTop: 2 }}>
-                    {selectedLog.reporter_name || 'Staff / Faculty'}
-                  </div>
-                  {selectedLog.reporter?.email && (
-                    <div style={{ fontSize: 11, color: C.t3 }}>
-                      {selectedLog.reporter.email}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Narrative / Incident Notes */}
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <FileText size={14} color={C.m700} /> Incident Narrative & Remarks
-                </div>
-                <div
-                  style={{
-                    padding: '14px',
-                    background: '#fff',
-                    border: `1px solid ${C.borderMed}`,
-                    borderRadius: 4,
-                    fontSize: 12,
-                    lineHeight: 1.6,
-                    color: selectedLog.note ? C.t1 : C.t3,
-                    fontStyle: selectedLog.note ? 'normal' : 'italic',
-                    minHeight: 100,
-                    whiteSpace: 'pre-wrap'
-                  }}
-                >
-                  {selectedLog.note || 'No narrative notes or descriptive remarks were recorded for this incident.'}
-                </div>
-              </div>
-            </div>
-
-            {/* Drawer Footer */}
-            <div style={{ padding: '14px 24px', background: C.paper, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setSelectedLog(null)}
-                style={{
-                  padding: '8px 18px',
-                  background: '#fff',
-                  border: `1px solid ${C.borderMed}`,
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: C.t1,
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </>
       )}
     </div>
   );

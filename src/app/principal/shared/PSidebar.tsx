@@ -2,7 +2,7 @@ import React from 'react';
 import { PScreen } from '../../shared/types';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, Package,
-  FileText, Calendar, ShieldAlert, ClipboardList, Scan, HeartHandshake
+  FileText, Calendar, ShieldAlert, ClipboardList, Scan
 } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
 import { useAppContext } from '../../shared/AppContext';
@@ -23,7 +23,6 @@ const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
     { id: "p-monitoring", label: "Gate Attendance Monitoring", icon: Monitor },
     { id: "p-inventory",  label: "Inventory",           icon: Package },
     { id: "p-behavior",   label: "Behavioral Reports",  icon: ShieldAlert },
-    { id: "p-welfare",    label: "Welfare Alerts",      icon: HeartHandshake },
   ]},
 ];
 
