@@ -713,7 +713,7 @@ export function InventoryManagement() {
                       <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: "8px 12px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{u.action}</span>
-                          <span style={{ fontSize: 10, color: C.t3 }}>by {u.user ? `${u.user.first_name} ${u.user.last_name}` : "Admin"}</span>
+                          <span style={{ fontSize: 10, color: C.t3 }}>by {typeof u.user === 'object' && u.user ? (`${u.user.first_name || ''} ${u.user.last_name || ''}`.trim() || "Admin") : (typeof u.user === 'string' ? u.user : "Admin")}</span>
                         </div>
                         <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4 }}>{u.details}</div>
                       </div>

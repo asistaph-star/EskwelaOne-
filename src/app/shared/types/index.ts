@@ -90,8 +90,9 @@ export type GradeLevel = "gr7" | "gr8" | "gr9" | "gr10";
 
 export interface InventoryUpdate {
   id: string;
-  date: string;
-  user: string;
+  date?: string;
+  created_at?: string;
+  user?: string | { id: string; first_name: string; last_name: string };
   action: string;
   details: string;
 }

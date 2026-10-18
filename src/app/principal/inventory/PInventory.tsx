@@ -200,20 +200,24 @@ function InventoryDetailsDrawer({ item, onClose }: { item: InventoryItem, onClos
             </div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {item.updates.slice().reverse().map((u, i) => (
+              {(item.updates || []).slice().reverse().map((u, i) => (
                 <div key={u.id} style={{ borderLeft: `2px solid ${C.borderMed}`, paddingLeft: 16, position: "relative" }}>
                   <div style={{ position: "absolute", left: -6, top: 0, width: 10, height: 10, borderRadius: 5, background: C.m600, border: "2px solid #fff" }} />
-                  <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>{u.date}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>
+                    {u.date || ((u as any).created_at ? new Date((u as any).created_at).toLocaleDateString() : "—")}
+                  </div>
                   <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 6, padding: "10px 14px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{u.action}</span>
-                      <span style={{ fontSize: 10, color: C.t3 }}>by {u.user}</span>
+                      <span style={{ fontSize: 10, color: C.t3 }}>
+                        by {typeof u.user === 'object' && u.user ? (`${(u.user as any).first_name || ''} ${(u.user as any).last_name || ''}`.trim() || "Admin") : (typeof u.user === 'string' ? u.user : "Admin")}
+                      </span>
                     </div>
                     <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4 }}>{u.details}</div>
                   </div>
                 </div>
               ))}
-              {item.updates.length === 0 && (
+              {(!item.updates || item.updates.length === 0) && (
                 <div style={{ fontSize: 12, color: C.t3, fontStyle: "italic" }}>No updates recorded.</div>
               )}
             </div>
@@ -388,16 +392,6 @@ export function PInventory() {
                     <button onClick={() => setViewingItem(item)} style={{ width: 28, height: 28, borderRadius: 4, background: C.paper, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2 }} title="View Details">
                       <Eye size={14} />
                     </button>
-                    {canWrite && (
-                      <>
-                        <button onClick={() => setEditingItem(item)} style={{ width: 28, height: 28, borderRadius: 4, background: C.m50, border: `1px solid ${C.m200}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.m700 }} title="Edit Item">
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(item.id)} style={{ width: 28, height: 28, borderRadius: 4, background: C.redBg, border: `1px solid rgba(153,27,27,0.2)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.red }} title="Delete Item">
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
                   </div>
                 </td>
               </tr>
