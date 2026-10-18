@@ -13,6 +13,7 @@ import notificationsRoutes from './notifications.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import academicAnalyticsRoutes from './academicAnalytics.routes.js';
 import welfareAlertsRoutes from './welfareAlerts.routes.js';
+import executiveSummaryRoutes from './executive-summary/executiveSummary.routes.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -22,6 +23,7 @@ router.use('/leaves', leavesRoutes);
 router.use('/ranking', rankingRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/welfare-alerts', welfareAlertsRoutes);
+router.use('/ai-summary', executiveSummaryRoutes);
 router.use('/', dashboardRoutes);
 router.use('/analytics/academics', academicAnalyticsRoutes);
 

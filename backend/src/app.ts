@@ -14,6 +14,7 @@ import documentRoutes from './documents/document.routes.js';
 import studentServicesRoutes from './student-services/studentServices.routes.js';
 import adminRoutes from './admin/admin.routes.js';
 import mediaRoutes from './admin/media.routes.js';
+import principalRoutes from './principal/principal.routes.js';
 
 import { initMediaStorage } from './config/storage.config.js';
 
@@ -56,6 +57,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/student-services', studentServicesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/principal', principalRoutes);
 app.use('/api/media', mediaRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────

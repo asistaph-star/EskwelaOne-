@@ -4,8 +4,9 @@ import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/fac
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight } from 'lucide-react';
+import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RBarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { executiveSummaryApi, ExecutiveSummaryResponse } from '../../../api/executiveSummary.api';
 
 export interface GateTrendPoint {
   date: string;
@@ -41,6 +42,26 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Executive Summary State
+  const [summaryData, setSummaryData] = useState<ExecutiveSummaryResponse | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(false);
+
+  // Stable callback for loading and manually refreshing Executive Summary
+  const loadSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    setSummaryError(false);
+    try {
+      const res = await executiveSummaryApi.getSummary();
+      setSummaryData(res);
+    } catch (err) {
+      console.error('Failed to load executive summary:', err);
+      setSummaryError(true);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, []);
 
   // Stable callback for refreshing Student Gate / Admin Dashboard metrics
   const loadDashboardData = useCallback(async () => {
@@ -111,7 +132,8 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
 
       setLoading(false);
     });
-  }, []);
+    loadSummary();
+  }, [loadSummary]);
 
   const pendingLeavesList = teacherLeaves.filter(l => l.status === "Pending");
   
@@ -212,12 +234,91 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
 
       <div style={{ display: "grid", gridTemplateColumns: "65fr 35fr", gap: 24, alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderLeft: `4px solid ${C.gold}`, padding: "18px 22px", borderRadius: 4 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Sparkles size={16} color={C.gold} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>AI School Executive Summary</span>
+          {/* School Executive Summary */}
+          <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderLeft: `4px solid ${C.gold}`, padding: "20px 22px", borderRadius: 6, boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 14, background: "#fef9c3", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Sparkles size={16} color={C.gold} />
+                </div>
+                <div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+                    School Executive Summary
+                  </span>
+                  <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 12, background: summaryData?.generationMode === 'llm' ? '#e0e7ff' : '#f1f5f9', color: summaryData?.generationMode === 'llm' ? '#4338ca' : '#475569' }}>
+                    {summaryData?.generationMode === 'llm' ? 'AI-Generated from Live Data' : 'Grounded Synthesis'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={loadSummary}
+                disabled={summaryLoading}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 12px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: C.m800,
+                  background: C.m50,
+                  border: `1px solid ${C.m200}`,
+                  cursor: summaryLoading ? "not-allowed" : "pointer",
+                  transition: "all 0.15s ease",
+                  opacity: summaryLoading ? 0.7 : 1,
+                }}
+                className="hover:bg-red-100 transition"
+                title="Refresh live PostgreSQL operational summary"
+              >
+                <RefreshCw size={12} className={summaryLoading ? "animate-spin" : ""} />
+                <span>{summaryLoading ? 'Refreshing...' : 'Refresh Summary'}</span>
+              </button>
             </div>
-            <div style={{ fontSize: 12, color: C.t3 }}>AI Insights are currently unavailable.</div>
+
+            {summaryLoading && !summaryData ? (
+              <div style={{ padding: "12px 0", fontSize: 12, color: C.t3, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 14, height: 14, border: `2px solid ${C.gold}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                <span>Compiling live PostgreSQL operational facts...</span>
+              </div>
+            ) : summaryError ? (
+              <div style={{ padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: C.red }}>
+                  Executive summary is temporarily unavailable. Live metric panels remain accessible below.
+                </span>
+                <button onClick={loadSummary} style={{ fontSize: 11, fontWeight: 600, color: C.red, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 13, lineHeight: 1.65, color: C.t1, margin: 0, fontWeight: 500, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                  {summaryData?.summary}
+                </p>
+
+                <div style={{ marginTop: 14, paddingTop: 10, borderTop: `1px solid #f1f5f9`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ fontSize: 11, color: C.t3, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 3, background: C.green, display: "inline-block" }} />
+                    <span>
+                      {summaryData?.generationMode === 'llm'
+                        ? 'AI-generated from live DigiSkwela data'
+                        : 'Generated from live DigiSkwela data'}
+                    </span>
+                    <span>•</span>
+                    <span>As of {summaryData?.asOfFormatted}</span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {(summaryData?.sourceDomains || ['Attendance', 'Academics', 'Behavior', 'Operations', 'Inventory']).map((domain) => (
+                      <span key={domain} style={{ fontSize: 9.5, fontWeight: 600, padding: "2px 6px", borderRadius: 3, background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0" }}>
+                        {domain}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* PRIN-004: Student-Centric Welfare Alerts Attention Layer */}
