@@ -24,11 +24,34 @@ const SSE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
 
 export type SseStatus = 'connecting' | 'live' | 'error';
 
-export function useGateAttendanceSSE(onFacultyAttendanceChanged?: () => void): SseStatus {
+export interface UseGateAttendanceSSEOptions {
+  onStudentAttendanceChanged?: () => void;
+  onFacultyAttendanceChanged?: () => void;
+}
+
+export function useGateAttendanceSSE(
+  handlerOrOptions?: (() => void) | UseGateAttendanceSSEOptions
+): SseStatus {
   const { refreshGateAttendance, addInvalidScan } = useAppContext();
   const [status, setStatus] = useState<SseStatus>('connecting');
-  const facultyCbRef = useRef(onFacultyAttendanceChanged);
-  facultyCbRef.current = onFacultyAttendanceChanged;
+
+  const studentCbRef = useRef<(() => void) | undefined>(undefined);
+  const facultyCbRef = useRef<(() => void) | undefined>(undefined);
+  const legacyCbRef = useRef<(() => void) | undefined>(undefined);
+
+  if (typeof handlerOrOptions === 'function') {
+    legacyCbRef.current = handlerOrOptions;
+    studentCbRef.current = undefined;
+    facultyCbRef.current = undefined;
+  } else if (handlerOrOptions) {
+    legacyCbRef.current = undefined;
+    studentCbRef.current = handlerOrOptions.onStudentAttendanceChanged;
+    facultyCbRef.current = handlerOrOptions.onFacultyAttendanceChanged;
+  } else {
+    legacyCbRef.current = undefined;
+    studentCbRef.current = undefined;
+    facultyCbRef.current = undefined;
+  }
 
   useEffect(() => {
     // EventSource automatically sends cookies (credentials are included for
@@ -42,8 +65,11 @@ export function useGateAttendanceSSE(onFacultyAttendanceChanged?: () => void): S
     es.addEventListener('attendance-changed', () => {
       // The event carries no data — we fetch the authoritative state from the API.
       refreshGateAttendance();
-      if (facultyCbRef.current) {
-        facultyCbRef.current();
+      if (studentCbRef.current) {
+        studentCbRef.current();
+      }
+      if (legacyCbRef.current) {
+        legacyCbRef.current();
       }
     });
 
@@ -51,6 +77,9 @@ export function useGateAttendanceSSE(onFacultyAttendanceChanged?: () => void): S
       // Invalidation event for faculty gate attendance
       if (facultyCbRef.current) {
         facultyCbRef.current();
+      }
+      if (legacyCbRef.current) {
+        legacyCbRef.current();
       }
     });
 

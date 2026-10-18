@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { apiClient } from '../../../api/client';
 import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
+import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
 import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight } from 'lucide-react';
@@ -40,6 +41,41 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Stable callback for refreshing Student Gate / Admin Dashboard metrics
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const dData: any = await apiClient.get<PrincipalDashboardResponse>('/admin/dashboard').catch(() => null);
+      if (dData) {
+        setDashData(dData.data || dData);
+      }
+    } catch (e) {
+      console.error('Failed to refresh dashboard data:', e);
+    }
+  }, []);
+
+  // Stable callback for refreshing Faculty Attendance summary
+  const loadFacultySummary = useCallback(async () => {
+    try {
+      const fData = await facultyAttendanceApi.getSummary().catch((err) => {
+        console.error('Failed to load faculty summary:', err);
+        return null;
+      });
+      if (fData) {
+        setFacultySummary(fData);
+      }
+    } catch (e) {
+      console.error('Failed to refresh faculty summary:', e);
+    }
+  }, []);
+
+  // Connect to authoritative Gate Attendance SSE for real-time KPI updates:
+  // Student Gate scan -> 'attendance-changed' -> loadDashboardData()
+  // Faculty Gate scan -> 'faculty-attendance-changed' -> loadFacultySummary()
+  useGateAttendanceSSE({
+    onStudentAttendanceChanged: loadDashboardData,
+    onFacultyAttendanceChanged: loadFacultySummary,
+  });
 
   useEffect(() => {
     Promise.all([
