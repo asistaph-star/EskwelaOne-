@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authMiddleware, requirePermissions } from '../common/middleware/auth.js';
 import prisma from '../config/database.js';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
+import { getPhilippineCalendarDate } from '../common/utils/dateTime.js';
 
 const router = Router();
 
@@ -41,13 +42,26 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
     // 2. Total Teachers
     const teachersCount = await prisma.teacher.count();
 
-    // 3. Gate Attendance Today
+    // 3. Gate Attendance Today & Live Students on Campus (Asia/Manila Date)
+    const { dateObj: phToday } = getPhilippineCalendarDate();
+
+    const studentsOnCampusCount = await prisma.gateAttendance.count({
+      where: {
+        OR: [
+          { date: phToday },
+          { date: { gte: startOfToday, lte: endOfToday } }
+        ],
+        time_in: { not: null },
+        time_out: null,
+      }
+    });
+
     const gateScansTodayCount = await prisma.gateAttendance.count({
       where: {
-        date: {
-          gte: startOfToday,
-          lte: endOfToday
-        }
+        OR: [
+          { date: phToday },
+          { date: { gte: startOfToday, lte: endOfToday } }
+        ]
       }
     });
 
@@ -104,6 +118,7 @@ router.get('/dashboard', authMiddleware, requirePermissions('user:read'), async 
         enrolledStudents: enrolledStudentsCount,
         totalTeachers: teachersCount,
         activeSections: activeSectionsCount,
+        studentsOnCampus: studentsOnCampusCount,
         gateToday: gateScansTodayCount,
         pendingApprovals: pendingLeaves,
         pendingDisciplineCases: pendingBehaviorCases,

@@ -3,7 +3,7 @@ import { apiClient } from '../../../api/client';
 import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, ArrowRight } from 'lucide-react';
+import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RBarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 
 export interface GateTrendPoint {
@@ -15,6 +15,7 @@ export interface PrincipalDashboardResponse {
   enrolledStudents: number;
   totalTeachers: number;
   activeSections?: number;
+  studentsOnCampus?: number;
   gateToday: number;
   pendingApprovals: number;
   pendingDisciplineCases?: number;
@@ -95,11 +96,22 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     return total > 0 ? (passing / total) * 100 : null;
   }, [academicData]);
 
-  // Clean, verified 6-card grid with zero fake metrics
+  const onCampusCount = dashData?.studentsOnCampus ?? 0;
+
+  // Real, live operational KPI cards backed by PostgreSQL
   const KPI_CARDS = [
     { v: loading ? "..." : `${enrolled} Enrolled`, l: "Total Students", sub: "Active Current Year", subColor: C.t3, color: C.m700, bg: C.m100, icon: Users, dest: "p-monitoring" },
+    { 
+      v: loading ? "..." : `${onCampusCount} Checked In`, 
+      l: "Students on Campus Now", 
+      sub: onCampusCount > 0 ? "Currently Inside Campus" : "Live Gate Scan Activity", 
+      subColor: onCampusCount > 0 ? C.green : C.t3, 
+      color: onCampusCount > 0 ? C.green : C.m700, 
+      bg: onCampusCount > 0 ? C.greenBg : C.m100, 
+      icon: CalendarCheck, 
+      dest: "p-monitoring" 
+    },
     { v: loading ? "..." : `${teachers} Faculty`, l: "Total Teachers", sub: "Registered Profiles", subColor: C.t3, color: C.m700, bg: C.m100, icon: GraduationCap, dest: "p-teachers" },
-    { v: loading ? "..." : `${activeSections} Sections`, l: "Total Active Sections", sub: "Grades 7 to 10", subColor: C.t3, color: C.m700, bg: C.m100, icon: BookMarked, dest: "p-teachers" },
     { 
       v: loading ? "..." : `${facultySummary?.checkedInCount ?? 0} / ${facultySummary?.totalActiveFaculty ?? 0} Checked In`, 
       l: "Faculty Checked In Today", 
@@ -110,6 +122,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
       icon: GraduationCap, 
       dest: "p-teachers" 
     },
+    { v: loading ? "..." : `${activeSections} Sections`, l: "Total Active Sections", sub: "Grades 7 to 10", subColor: C.t3, color: C.m700, bg: C.m100, icon: BookMarked, dest: "p-teachers" },
     { 
       v: loading ? "..." : `${dashData?.studentsRequiringAttention ?? attentionStudents.length} Flagged`, 
       l: "Students Requiring Attention", 
@@ -138,7 +151,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent", padding: "20px 24px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginBottom: 24 }}>
         {KPI_CARDS.map((kpi) => {
           const Icon = kpi.icon;
           return (
