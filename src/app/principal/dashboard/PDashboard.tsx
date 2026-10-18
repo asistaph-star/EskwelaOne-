@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { apiClient } from '../../../api/client';
 import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/facultyAttendance.api';
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
@@ -50,11 +50,23 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   const [summaryData, setSummaryData] = useState<ExecutiveSummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(false);
+  const [isLiveUpdating, setIsLiveUpdating] = useState(false);
+  const [liveUpdateError, setLiveUpdateError] = useState(false);
 
-  // Stable callback for loading and manually refreshing Executive Summary
+  // Debounce timer for coalescing rapid SSE attendance arrivals into one briefing fetch
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const DEBOUNCE_MS = 2500; // 2.5s debounce window (recommended 2–5 seconds)
+
+  // Stable callback for loading and manually refreshing Executive Summary (button or mount)
   const loadSummary = useCallback(async () => {
+    // If a debounce timer is running, cancel it as explicit manual refresh takes precedence
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
     setSummaryLoading(true);
     setSummaryError(false);
+    setLiveUpdateError(false);
     try {
       const res = await executiveSummaryApi.getSummary();
       setSummaryData(res);
@@ -64,6 +76,43 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     } finally {
       setSummaryLoading(false);
     }
+  }, []);
+
+  // Stable callback for background SSE auto-refresh:
+  // Retains the last valid briefing on screen (no blanking, no skeleton flash)
+  const loadSummaryBackground = useCallback(async () => {
+    setIsLiveUpdating(true);
+    setLiveUpdateError(false);
+    try {
+      const res = await executiveSummaryApi.getSummary();
+      setSummaryData(res);
+    } catch (err) {
+      console.error('Failed to live-refresh executive summary:', err);
+      // Retain last valid briefing and display non-intrusive notification
+      setLiveUpdateError(true);
+    } finally {
+      setIsLiveUpdating(false);
+    }
+  }, []);
+
+  // Debounced trigger: coalesces rapid bursts of scans into ONE summary fetch
+  const triggerDebouncedSummaryRefresh = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      loadSummaryBackground();
+      debounceTimerRef.current = null;
+    }, DEBOUNCE_MS);
+  }, [loadSummaryBackground]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, []);
 
   // Stable callback for refreshing Student Gate / Admin Dashboard metrics
@@ -93,12 +142,25 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     }
   }, []);
 
-  // Connect to authoritative Gate Attendance SSE for real-time KPI updates:
-  // Student Gate scan -> 'attendance-changed' -> loadDashboardData()
-  // Faculty Gate scan -> 'faculty-attendance-changed' -> loadFacultySummary()
+  // Stable callbacks for SSE events:
+  // Student Gate scan -> 'attendance-changed' -> refresh dashboard KPI + debounced briefing refresh
+  const handleStudentAttendanceChanged = useCallback(() => {
+    loadDashboardData();
+    triggerDebouncedSummaryRefresh();
+  }, [loadDashboardData, triggerDebouncedSummaryRefresh]);
+
+  // Faculty Gate scan -> 'faculty-attendance-changed' -> refresh faculty KPI + debounced briefing refresh
+  const handleFacultyAttendanceChanged = useCallback(() => {
+    loadFacultySummary();
+    triggerDebouncedSummaryRefresh();
+  }, [loadFacultySummary, triggerDebouncedSummaryRefresh]);
+
+  // Connect to authoritative Gate Attendance SSE for real-time KPI & briefing updates:
+  // Student Gate scan -> 'attendance-changed' -> handleStudentAttendanceChanged()
+  // Faculty Gate scan -> 'faculty-attendance-changed' -> handleFacultyAttendanceChanged()
   useGateAttendanceSSE({
-    onStudentAttendanceChanged: loadDashboardData,
-    onFacultyAttendanceChanged: loadFacultySummary,
+    onStudentAttendanceChanged: handleStudentAttendanceChanged,
+    onFacultyAttendanceChanged: handleFacultyAttendanceChanged,
   });
 
   useEffect(() => {
@@ -222,6 +284,8 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
         summaryData={summaryData}
         loading={summaryLoading}
         error={summaryError}
+        isLiveUpdating={isLiveUpdating}
+        liveUpdateError={liveUpdateError}
         onRefresh={loadSummary}
         onNav={onNav}
         currentUser={currentUser}

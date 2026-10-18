@@ -348,7 +348,7 @@ describe('DIGISKWELA — MILESTONE 2B: DAILY EXECUTIVE BRIEFING UX', () => {
       expect(narrative.actions.length).toBe(0);
     });
 
-    it('synthesizes stable operations narrative when all faculty checked in and 0 students on campus', () => {
+    it('synthesizes neutral factual operations narrative when all faculty checked in and 0 students on campus', () => {
       const demoData: ExecutiveSummaryResponse = {
         ...baseSummaryData,
         metrics: {
@@ -360,8 +360,104 @@ describe('DIGISKWELA — MILESTONE 2B: DAILY EXECUTIVE BRIEFING UX', () => {
 
       const narrative = buildSynthesizedNarrative(demoData);
       expect(narrative.paragraphs[0]).toBe(
-        'School operations are currently stable. All active faculty have checked in today, while no students are currently recorded on campus.'
+        'Current attendance records show that all active faculty have checked in today, while no students are currently recorded on campus.'
       );
+      // Ensure zero subjective words
+      ['stable', 'healthy', 'normal', 'concerning', 'excellent'].forEach(word => {
+        expect(narrative.paragraphs[0].toLowerCase()).not.toContain(word);
+      });
+    });
+
+    it('synthesizes updated narrative when student scans Time In (0 -> 1 student)', () => {
+      const timeInData: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 1 },
+          faculty: { checkedInToday: 1, checkedInNow: 1, totalActive: 1 },
+        },
+      };
+
+      const narrative = buildSynthesizedNarrative(timeInData);
+      expect(narrative.paragraphs[0]).toBe(
+        'Current attendance records show that 1 student is currently recorded on campus, and all active faculty have checked in today.'
+      );
+    });
+
+    it('synthesizes updated narrative when student scans Time Out (1 -> 0 students)', () => {
+      const timeOutData: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 0 },
+          faculty: { checkedInToday: 1, checkedInNow: 0, totalActive: 1 },
+        },
+      };
+
+      const narrative = buildSynthesizedNarrative(timeOutData);
+      expect(narrative.paragraphs[0]).toBe(
+        'Current attendance records show that all active faculty have checked in today, while no students are currently recorded on campus.'
+      );
+    });
+
+    it('preserves domain isolation: student scan does NOT alter faculty facts', () => {
+      const beforeScan: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 0 },
+          faculty: { checkedInToday: 1, checkedInNow: 1, totalActive: 2 },
+        },
+      };
+
+      const afterStudentScan: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 1 },
+          faculty: { checkedInToday: 1, checkedInNow: 1, totalActive: 2 }, // unchanged!
+        },
+      };
+
+      const narBefore = buildSynthesizedNarrative(beforeScan);
+      const narAfter = buildSynthesizedNarrative(afterStudentScan);
+
+      // Faculty text remains identical
+      expect(narBefore.paragraphs[0]).toContain('1 of 2 active faculty checked in today');
+      expect(narAfter.paragraphs[0]).toContain('1 of 2 active faculty checked in today');
+      // Only student count changed
+      expect(narBefore.paragraphs[0]).toContain('no students are currently recorded on campus');
+      expect(narAfter.paragraphs[0]).toContain('1 student is currently recorded on campus');
+    });
+
+    it('preserves domain isolation: faculty scan does NOT alter student facts', () => {
+      const beforeFacultyScan: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 1 },
+          faculty: { checkedInToday: 1, checkedInNow: 1, totalActive: 2 },
+        },
+      };
+
+      const afterFacultyScan: ExecutiveSummaryResponse = {
+        ...baseSummaryData,
+        metrics: {
+          ...baseSummaryData.metrics,
+          students: { enrolled: 1, onCampusNow: 1 }, // unchanged!
+          faculty: { checkedInToday: 2, checkedInNow: 2, totalActive: 2 }, // updated!
+        },
+      };
+
+      const narBefore = buildSynthesizedNarrative(beforeFacultyScan);
+      const narAfter = buildSynthesizedNarrative(afterFacultyScan);
+
+      // Student text remains identical
+      expect(narBefore.paragraphs[0]).toContain('1 student is currently recorded on campus');
+      expect(narAfter.paragraphs[0]).toContain('1 student is currently recorded on campus');
+      // Faculty text updated
+      expect(narBefore.paragraphs[0]).toContain('1 of 2 active faculty checked in today');
+      expect(narAfter.paragraphs[0]).toContain('all active faculty have checked in today');
     });
   });
 });

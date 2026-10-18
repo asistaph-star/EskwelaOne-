@@ -20,6 +20,8 @@ export interface DailyExecutiveBriefingProps {
   summaryData: ExecutiveSummaryResponse | null;
   loading: boolean;
   error: boolean;
+  isLiveUpdating?: boolean;
+  liveUpdateError?: boolean;
   onRefresh: () => void;
   onNav: (s: PScreen) => void;
   currentUser: { name?: string; firstName?: string; [key: string]: any } | null;
@@ -29,6 +31,8 @@ export function DailyExecutiveBriefing({
   summaryData,
   loading,
   error,
+  isLiveUpdating = false,
+  liveUpdateError = false,
   onRefresh,
   onNav,
   currentUser,
@@ -200,7 +204,7 @@ export function DailyExecutiveBriefing({
       </div>
 
       {/* ── 2. Refresh Error Notice (if background refresh failed while preserving old data) ── */}
-      {error && summaryData && (
+      {(error || liveUpdateError) && summaryData && (
         <div 
           style={{
             background: '#fffbeb',
@@ -216,7 +220,11 @@ export function DailyExecutiveBriefing({
           }}
         >
           <AlertCircle size={14} color="#b45309" />
-          <span>Unable to refresh right now. Showing the last available briefing.</span>
+          <span>
+            {liveUpdateError
+              ? 'Unable to update live briefing. Showing the last available data.'
+              : 'Unable to refresh right now. Showing the last available briefing.'}
+          </span>
         </div>
       )}
 
@@ -290,12 +298,14 @@ export function DailyExecutiveBriefing({
               width: 6, 
               height: 6, 
               borderRadius: '50%', 
-              background: '#16a34a', 
-              display: 'inline-block' 
+              background: isLiveUpdating ? '#2563eb' : '#16a34a', 
+              display: 'inline-block',
+              transition: 'background-color 0.2s ease',
             }} 
+            className={isLiveUpdating ? 'animate-ping' : ''}
           />
-          <span style={{ fontWeight: 600, color: '#334155' }}>
-            Generated from live DigiSkwela data
+          <span style={{ fontWeight: 600, color: isLiveUpdating ? '#1d4ed8' : '#334155' }}>
+            {isLiveUpdating ? 'Updating…' : '● Live DigiSkwela data'}
           </span>
           <span>•</span>
           <span>Updated {summaryData?.asOfFormatted || 'Just now'}</span>

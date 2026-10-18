@@ -107,11 +107,15 @@ export function buildBriefingSections(data: ExecutiveSummaryResponse | null): Fo
   const opLines: string[] = [];
   const onCampus = students?.onCampusNow;
   if (typeof onCampus === 'number') {
-    opLines.push(`${onCampus} ${onCampus === 1 ? 'student is' : 'students are'} currently on campus.`);
+    if (onCampus === 0) {
+      opLines.push('No students are currently recorded on campus.');
+    } else {
+      opLines.push(`${onCampus} ${onCampus === 1 ? 'student is' : 'students are'} currently on campus.`);
+    }
   } else if (typeof students?.enrolled === 'number') {
     opLines.push(`${students.enrolled} enrolled students recorded for the academic year.`);
   } else {
-    opLines.push('School operations are underway.');
+    opLines.push('Current attendance records show school operations are underway.');
   }
 
   const checkedToday = faculty?.checkedInToday;
@@ -226,7 +230,7 @@ export function buildSynthesizedNarrative(data: ExecutiveSummaryResponse | null)
   if (!data || !data.metrics) {
     return {
       paragraphs: [
-        'School operations are underway.',
+        'Current attendance records show school operations are underway.',
         'No current administrative action items require your attention.',
         'Annual academic performance is not yet available because complete T1–T4 grades have not been submitted.',
       ],
@@ -246,10 +250,16 @@ export function buildSynthesizedNarrative(data: ExecutiveSummaryResponse | null)
 
   if (onCampus === 0 && typeof checkedToday === 'number' && typeof totalFaculty === 'number' && checkedToday === totalFaculty) {
     paragraphs.push(
-      'School operations are currently stable. All active faculty have checked in today, while no students are currently recorded on campus.'
+      'Current attendance records show that all active faculty have checked in today, while no students are currently recorded on campus.'
     );
   } else if (typeof onCampus === 'number' && typeof checkedToday === 'number' && typeof totalFaculty === 'number') {
-    let text = `School operations are underway with ${onCampus} ${onCampus === 1 ? 'student' : 'students'} currently recorded on campus, and ${checkedToday} of ${totalFaculty} active faculty checked in today`;
+    const studentPart = onCampus === 0
+      ? 'no students are currently recorded on campus'
+      : `${onCampus} ${onCampus === 1 ? 'student is' : 'students are'} currently recorded on campus`;
+    const facultyPart = checkedToday === totalFaculty
+      ? 'all active faculty have checked in today'
+      : `${checkedToday} of ${totalFaculty} active faculty checked in today`;
+    let text = `Current attendance records show that ${studentPart}, and ${facultyPart}`;
     if (typeof faculty?.checkedInNow === 'number' && faculty.checkedInNow !== checkedToday) {
       text += ` (${faculty.checkedInNow} currently on campus)`;
     }
@@ -265,7 +275,7 @@ export function buildSynthesizedNarrative(data: ExecutiveSummaryResponse | null)
     const cases = welfare.openBehaviorCases;
     const studentsCount = welfare.studentsRequiringAttention ?? 1;
     attentionParts.push(
-      `${studentsCount} ${studentsCount === 1 ? 'student has' : 'students have'} an unresolved behavioral concern across ${cases} open ${cases === 1 ? 'case' : 'cases'}`
+      `${studentsCount} ${studentsCount === 1 ? 'student is' : 'students are'} recorded across ${cases} open behavior ${cases === 1 ? 'case' : 'cases'}`
     );
     actions.push({
       label: cases === 1 ? 'Review Behavior Case' : 'Review Behavior Cases',
