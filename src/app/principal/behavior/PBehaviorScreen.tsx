@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../../../api/client';
 import {
   ShieldAlert,
@@ -13,7 +13,9 @@ import {
   Users,
   CheckCircle2,
   Clock,
-  Filter
+  Filter,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 export interface BehaviorLogItem {
@@ -46,6 +48,102 @@ export interface BehaviorSummaryData {
   underInvestigation: number;
   parentNotified: number;
   resolved: number;
+}
+
+interface DropdownOption {
+  value: string;
+  label: string;
+  dotColor?: string;
+}
+
+interface FilterDropdownProps {
+  label: string;
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  width?: string;
+}
+
+function FilterDropdown({ label, value, options, onChange, width = "w-44" }: FilterDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
+
+  const selectedOption = options.find((o) => o.value === value) || options[0];
+
+  return (
+    <div className="relative inline-block text-left" ref={containerRef}>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-slate-400 font-medium">{label}:</span>
+        <button
+          type="button"
+          onClick={() => setOpen((prev) => !prev)}
+          className={`inline-flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${width}`}
+        >
+          <div className="flex items-center gap-2 truncate">
+            {selectedOption.dotColor && (
+              <span className={`h-2 w-2 rounded-full shrink-0 ${selectedOption.dotColor}`} />
+            )}
+            <span className="truncate">{selectedOption.label}</span>
+          </div>
+          <ChevronDown
+            size={14}
+            className={`text-slate-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180 text-indigo-600' : ''}`}
+          />
+        </button>
+      </div>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-40 w-52 bg-white rounded-2xl border border-slate-200/90 shadow-xl py-1.5 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
+            Filter by {label}
+          </div>
+          <div className="max-h-60 overflow-y-auto py-0.5">
+            {options.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-2 text-xs font-medium flex items-center justify-between cursor-pointer rounded-lg mx-1 transition text-left ${
+                    isSelected
+                      ? 'bg-indigo-50 text-indigo-700 font-bold'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                  style={{ width: 'calc(100% - 8px)' }}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {opt.dotColor && (
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${opt.dotColor}`} />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+                  {isSelected && <Check size={14} className="text-indigo-600 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function PBehaviorScreen() {
@@ -108,6 +206,19 @@ export function PBehaviorScreen() {
   });
 
   const activeCasesCount = (summary?.reported ?? 0) + (summary?.underInvestigation ?? 0) + (summary?.parentNotified ?? 0);
+
+  const statusOptions: DropdownOption[] = [
+    { value: 'all', label: 'All Statuses', dotColor: 'bg-slate-400' },
+    { value: 'Under investigation', label: 'Under Investigation', dotColor: 'bg-indigo-500' },
+    { value: 'Parent notified', label: 'Parent Notified', dotColor: 'bg-blue-500' },
+    { value: 'Reported', label: 'Reported', dotColor: 'bg-amber-500' },
+    { value: 'Resolved', label: 'Resolved', dotColor: 'bg-emerald-500' },
+  ];
+
+  const typeOptions: DropdownOption[] = [
+    { value: 'all', label: 'All Types' },
+    ...availableTypes.map((t) => ({ value: t, label: t })),
+  ];
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8 space-y-6">
@@ -245,36 +356,37 @@ export function PBehaviorScreen() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400 font-medium">Status:</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
-              >
-                <option value="all">All Statuses</option>
-                <option value="Under investigation">Under Investigation</option>
-                <option value="Parent notified">Parent Notified</option>
-                <option value="Reported">Reported</option>
-                <option value="Resolved">Resolved</option>
-              </select>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <FilterDropdown
+              label="Status"
+              value={statusFilter}
+              options={statusOptions}
+              onChange={setStatusFilter}
+              width="w-44"
+            />
 
             {availableTypes.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 font-medium">Type:</span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white text-slate-700 font-medium focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
-                >
-                  <option value="all">All Types</option>
-                  {availableTypes.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+              <FilterDropdown
+                label="Type"
+                value={typeFilter}
+                options={typeOptions}
+                onChange={setTypeFilter}
+                width="w-40"
+              />
+            )}
+
+            {(statusFilter !== 'all' || typeFilter !== 'all' || search.trim() !== '') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setTypeFilter('all');
+                }}
+                className="px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              >
+                Reset
+              </button>
             )}
           </div>
         </div>
