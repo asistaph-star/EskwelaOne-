@@ -53,7 +53,6 @@ export interface BehaviorSummaryData {
 interface DropdownOption {
   value: string;
   label: string;
-  dotColor?: string;
 }
 
 interface FilterDropdownProps {
@@ -93,12 +92,7 @@ function FilterDropdown({ label, value, options, onChange, width = "w-44" }: Fil
           onClick={() => setOpen((prev) => !prev)}
           className={`inline-flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${width}`}
         >
-          <div className="flex items-center gap-2 truncate">
-            {selectedOption.dotColor && (
-              <span className={`h-2 w-2 rounded-full shrink-0 ${selectedOption.dotColor}`} />
-            )}
-            <span className="truncate">{selectedOption.label}</span>
-          </div>
+          <span className="truncate">{selectedOption.label}</span>
           <ChevronDown
             size={14}
             className={`text-slate-400 transition-transform duration-200 shrink-0 ${open ? 'rotate-180 text-indigo-600' : ''}`}
@@ -124,17 +118,12 @@ function FilterDropdown({ label, value, options, onChange, width = "w-44" }: Fil
                   }}
                   className={`w-full px-3 py-2 text-xs font-medium flex items-center justify-between cursor-pointer rounded-lg mx-1 transition text-left ${
                     isSelected
-                      ? 'bg-indigo-50 text-indigo-700 font-bold'
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold'
                       : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                   style={{ width: 'calc(100% - 8px)' }}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    {opt.dotColor && (
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${opt.dotColor}`} />
-                    )}
-                    <span className="truncate">{opt.label}</span>
-                  </div>
+                  <span className="truncate">{opt.label}</span>
                   {isSelected && <Check size={14} className="text-indigo-600 shrink-0" />}
                 </button>
               );
@@ -208,11 +197,11 @@ export function PBehaviorScreen() {
   const activeCasesCount = (summary?.reported ?? 0) + (summary?.underInvestigation ?? 0) + (summary?.parentNotified ?? 0);
 
   const statusOptions: DropdownOption[] = [
-    { value: 'all', label: 'All Statuses', dotColor: 'bg-slate-400' },
-    { value: 'Under investigation', label: 'Under Investigation', dotColor: 'bg-indigo-500' },
-    { value: 'Parent notified', label: 'Parent Notified', dotColor: 'bg-blue-500' },
-    { value: 'Reported', label: 'Reported', dotColor: 'bg-amber-500' },
-    { value: 'Resolved', label: 'Resolved', dotColor: 'bg-emerald-500' },
+    { value: 'all', label: 'All Statuses' },
+    { value: 'Under investigation', label: 'Under Investigation' },
+    { value: 'Parent notified', label: 'Parent Notified' },
+    { value: 'Reported', label: 'Reported' },
+    { value: 'Resolved', label: 'Resolved' },
   ];
 
   const typeOptions: DropdownOption[] = [
