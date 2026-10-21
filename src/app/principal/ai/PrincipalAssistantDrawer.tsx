@@ -359,32 +359,50 @@ export function PrincipalAssistantDrawer({
                 </span>
               </div>
 
-              {/* Clean Welcome Bubble — Profile below the bubble */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                <div
-                  style={{
-                    background: '#F1F5F9',
-                    padding: '10px 14px',
-                    borderRadius: '14px 14px 14px 4px',
-                    fontSize: 13,
-                    color: '#1E293B',
-                    lineHeight: 1.5,
-                    border: '1px solid #E2E8F0',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-                    maxWidth: '85%',
-                  }}
-                >
-                  Good day, Principal. How can I help with school operations today?
+              {/* Clean Welcome Bubble — Avatar beside bottom of bubble, metadata below bubble */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  gap: 8,
+                  maxWidth: '85%',
+                  alignSelf: 'flex-start',
+                }}
+              >
+                {/* Avatar column, aligned near bottom of bubble */}
+                <div style={{ marginBottom: 18, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      background: '#1D4ED8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 1px 3px rgba(29, 78, 216, 0.25)',
+                    }}
+                  >
+                    <MessageSquare size={13} color="#FFFFFF" />
+                  </div>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    marginLeft: 4,
-                  }}
-                >
-                  <MessageSquare size={11} color="#64748B" />
+
+                {/* Content column */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      background: '#F1F5F9',
+                      padding: '10px 14px',
+                      borderRadius: '14px 14px 14px 4px',
+                      fontSize: 13,
+                      color: '#1E293B',
+                      lineHeight: 1.5,
+                      border: '1px solid #E2E8F0',
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                    }}
+                  >
+                    Good day, Principal. How can I help with school operations today?
+                  </div>
                   <span
                     style={{
                       fontSize: 9.5,
@@ -392,6 +410,7 @@ export function PrincipalAssistantDrawer({
                       fontFamily: "'Inter', sans-serif",
                       fontWeight: 500,
                       letterSpacing: '0.01em',
+                      marginLeft: 4,
                     }}
                   >
                     DigiSkwela AI Agent
@@ -481,41 +500,49 @@ export function PrincipalAssistantDrawer({
                   data-testid="assistant-loading-indicator"
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
+                    alignItems: 'flex-end',
+                    gap: 8,
                     alignSelf: 'flex-start',
                   }}
                 >
-                  {/* Messenger-style light gray rounded typing bubble with 3 sequential animated dots */}
-                  <div
-                    style={{
-                      background: '#F1F5F9',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '14px 14px 14px 4px',
-                      padding: '9px 13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4.5,
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-                      height: 34,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <div className="typing-dot" style={{ animationDelay: '0ms' }} />
-                    <div className="typing-dot" style={{ animationDelay: '180ms' }} />
-                    <div className="typing-dot" style={{ animationDelay: '360ms' }} />
+                  {/* Avatar column, aligned near bottom of bubble */}
+                  <div style={{ marginBottom: 18, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: '#1D4ED8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(29, 78, 216, 0.25)',
+                      }}
+                    >
+                      <MessageSquare size={13} color="#FFFFFF" />
+                    </div>
                   </div>
 
-                  {/* Profile metadata below bubble */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      marginLeft: 4,
-                    }}
-                  >
-                    <MessageSquare size={11} color="#64748B" />
+                  {/* Content column */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                    <div
+                      style={{
+                        background: '#F1F5F9',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '14px 14px 14px 4px',
+                        padding: '9px 13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4.5,
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                        height: 34,
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <div className="typing-dot" style={{ animationDelay: '0ms' }} />
+                      <div className="typing-dot" style={{ animationDelay: '180ms' }} />
+                      <div className="typing-dot" style={{ animationDelay: '360ms' }} />
+                    </div>
                     <span
                       style={{
                         fontSize: 9.5,
@@ -523,6 +550,7 @@ export function PrincipalAssistantDrawer({
                         fontFamily: "'Inter', sans-serif",
                         fontWeight: 500,
                         letterSpacing: '0.01em',
+                        marginLeft: 4,
                       }}
                     >
                       DigiSkwela AI Agent
