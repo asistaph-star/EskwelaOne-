@@ -177,60 +177,62 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
           onRetryLastMessage={handleRetryLastMessage}
         />
 
-        {/* Draggable Launcher Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div
-            title="Drag to reposition AI Assistant button"
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            style={{
-              cursor: 'grab',
-              padding: '4px 8px',
-              background: 'rgba(0,0,0,0.06)',
-              borderRadius: '12px 12px 0 0',
-              marginBottom: -4,
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
-            <GripHorizontal size={14} color={C.t3} />
-          </div>
+        {/* Draggable Launcher Button — hidden when chat card is open */}
+        {!isOpen && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              title="Drag to reposition AI Assistant button"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              style={{
+                cursor: 'grab',
+                padding: '4px 8px',
+                background: 'rgba(0,0,0,0.06)',
+                borderRadius: '12px 12px 0 0',
+                marginBottom: -4,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <GripHorizontal size={14} color={C.t3} />
+            </div>
 
-          <button
-            type="button"
-            data-testid="principal-ai-assistant-trigger"
-            aria-label="Open DigiSkwela Principal Operations Assistant"
-            onClick={() => setIsOpen(prev => !prev)}
-            style={{
-              padding: '0 20px',
-              height: 48,
-              borderRadius: 24,
-              background: C.m700,
-              border: 'none',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 6px 18px rgba(29, 78, 216, 0.35)',
-              cursor: 'pointer',
-              transition: 'transform 0.15s ease, background 0.15s ease',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'scale(1.03)';
-              e.currentTarget.style.background = C.m800;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.background = C.m700;
-            }}
-          >
-            <Sparkles size={18} color="#FFFFFF" />
-            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.02em' }}>
-              AI Assistant
-            </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              data-testid="principal-ai-assistant-trigger"
+              aria-label="Open DigiSkwela Principal Operations Assistant"
+              onClick={() => setIsOpen(true)}
+              style={{
+                padding: '0 20px',
+                height: 48,
+                borderRadius: 24,
+                background: 'linear-gradient(135deg, #1D4ED8, #2563EB)',
+                border: 'none',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: '0 6px 20px rgba(29,78,216,0.35), 0 2px 6px rgba(0,0,0,0.08)',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(1.04)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(29,78,216,0.45), 0 2px 8px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(29,78,216,0.35), 0 2px 6px rgba(0,0,0,0.08)';
+              }}
+            >
+              <Sparkles size={18} color="#FFFFFF" />
+              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.02em' }}>
+                AI Assistant
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

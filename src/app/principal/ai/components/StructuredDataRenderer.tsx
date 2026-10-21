@@ -53,7 +53,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Faculty Gate Attendance Audit
           </div>
           <span style={{ fontSize: 10, color: C.t3 }}>Date: {raw.asOfDate}</span>
@@ -61,7 +61,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         {/* Attendance Summary Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Active Faculty</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{s.totalActiveFaculty ?? 0}</div>
           </div>
@@ -81,7 +81,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         {/* Neutral Attendance Presence Note */}
         {s.noGateCheckInNoApprovedLeaveFoundCount > 0 && (
-          <div style={{ padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.borderMed}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.t2, fontSize: 11, fontWeight: 600 }}>
               <Clock size={13} color={C.m700} />
               <span>{s.noGateCheckInNoApprovedLeaveFoundCount} faculty members:</span>
@@ -94,26 +94,42 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         {/* Detailed Records Preview if present */}
         {records.length > 0 && (
-          <div style={{ maxHeight: 180, overflowY: 'auto', border: `1px solid ${C.borderLight}`, borderRadius: 6 }}>
+          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #CBD5E1', borderRadius: 6, background: C.paper }}>
             {records.map((r: any, idx: number) => {
               const statusDisplay = r.attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
                 ? 'No gate check-in was recorded today and no approved leave record was found'
                 : r.attendanceStatus;
               return (
-                <div key={idx} style={{ padding: '6px 8px', borderBottom: `1px solid ${C.borderLight}`, fontSize: 11, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
+                <div
+                  key={idx}
+                  style={{
+                    padding: '8px 10px',
+                    borderBottom: idx < records.length - 1 ? '1px solid #E2E8F0' : 'none',
+                    fontSize: 11,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: C.t1 }}>{r.teacherName}</span>
-                    <span style={{ fontSize: 10, color: C.t3, marginLeft: 6 }}>({r.department || 'General'})</span>
+                    <span style={{ fontSize: 10, color: C.t3 }}>{r.department || 'General'}</span>
                   </div>
-                  <span style={{ 
-                    fontSize: 10, 
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: 4,
-                    background: r.attendanceStatus === 'COMPLETED' ? C.greenBg : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blueBg : C.paper),
-                    color: r.attendanceStatus === 'COMPLETED' ? C.green : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blue : C.t2)
-                  }}>
-                    {statusDisplay}
+                  <span
+                    style={{ 
+                      alignSelf: 'flex-start',
+                      fontSize: 9.5, 
+                      fontWeight: 600,
+                      padding: '2px 7px',
+                      borderRadius: 4,
+                      background: r.attendanceStatus === 'COMPLETED' ? C.greenBg : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blueBg : '#E2E8F0'),
+                      color: r.attendanceStatus === 'COMPLETED' ? C.green : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blue : C.t2),
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {r.attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
+                      ? 'No gate check-in / No approved leave'
+                      : statusDisplay}
                   </span>
                 </div>
               );
@@ -134,31 +150,31 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
   if (type === 'fact_sheet') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
           School Operational Pulse Fact Sheet
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Enrolled Students</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.students?.enrolled ?? 'N/A'}</div>
           </div>
-          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Students On Campus</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.students?.onCampusNow ?? 'N/A'}</div>
           </div>
-          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Active Faculty</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.faculty?.totalActive ?? 'N/A'}</div>
           </div>
-          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Pending Leaves</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.m700 }}>{raw.operations?.pendingLeaves ?? 0}</div>
           </div>
         </div>
 
         {raw.academics && (
-          <div style={{ padding: '8px 10px', background: C.m50, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '8px 10px', background: C.m50, borderRadius: 6, border: '1px solid rgba(29,78,216,0.18)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.m700 }}>Academic Grading Completeness</div>
             <div style={{ fontSize: 11, color: C.t2, marginTop: 2 }}>
               Status: <span style={{ fontWeight: 600 }}>{raw.academics.completenessStatus}</span>
@@ -184,20 +200,20 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Pending Faculty Leave Applications
           </div>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.m700 }}>{count} Pending</span>
         </div>
 
         {count === 0 ? (
-          <div style={{ padding: 12, background: C.paper, borderRadius: 6, fontSize: 11, color: C.t2, textAlign: 'center' }}>
+          <div style={{ padding: 12, background: C.paper, borderRadius: 6, fontSize: 11, color: C.t2, textAlign: 'center', border: '1px solid #CBD5E1' }}>
             No pending leave requests found. All faculty leave applications have been reviewed.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
             {leaves.map((l: any, i: number) => (
-              <div key={i} style={{ padding: '8px 10px', background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 6 }}>
+              <div key={i} style={{ padding: '8px 10px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: 11, color: C.t1 }}>{l.teacherName}</span>
                   <span style={{ fontSize: 10, color: C.m700, background: C.m50, padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
@@ -229,20 +245,20 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Scheduled School Events
           </div>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.m700 }}>{count} Scheduled</span>
         </div>
 
         {count === 0 ? (
-          <div style={{ padding: 12, background: C.paper, borderRadius: 6, fontSize: 11, color: C.t2, textAlign: 'center' }}>
+          <div style={{ padding: 12, background: C.paper, borderRadius: 6, fontSize: 11, color: C.t2, textAlign: 'center', border: '1px solid #CBD5E1' }}>
             No upcoming events were found for the selected period.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
             {events.map((e: any, i: number) => (
-              <div key={i} style={{ padding: '8px 10px', background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 6 }}>
+              <div key={i} style={{ padding: '8px 10px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 700, fontSize: 11, color: C.t1 }}>{e.title}</span>
                   <span style={{ fontSize: 10, color: C.t3 }}>{e.startDate}</span>
@@ -269,26 +285,26 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Administrative Behavior Summary
           </div>
           <span style={{ fontSize: 11, fontWeight: 700, color: C.m700 }}>{count} Total Cases</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-          <div style={{ padding: '6px 4px', background: C.paper, borderRadius: 4, textAlign: 'center' }}>
+          <div style={{ padding: '6px 4px', background: C.paper, borderRadius: 4, textAlign: 'center', border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 8, color: C.t3, textTransform: 'uppercase' }}>Reported</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.t1 }}>{sb.reported ?? 0}</div>
           </div>
-          <div style={{ padding: '6px 4px', background: C.amberBg, borderRadius: 4, textAlign: 'center' }}>
+          <div style={{ padding: '6px 4px', background: C.amberBg, borderRadius: 4, textAlign: 'center', border: '1px solid rgba(146,64,14,0.2)' }}>
             <div style={{ fontSize: 8, color: C.amber, textTransform: 'uppercase' }}>Investigating</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.amber }}>{sb.underInvestigation ?? 0}</div>
           </div>
-          <div style={{ padding: '6px 4px', background: C.blueBg, borderRadius: 4, textAlign: 'center' }}>
+          <div style={{ padding: '6px 4px', background: C.blueBg, borderRadius: 4, textAlign: 'center', border: '1px solid rgba(30,58,138,0.2)' }}>
             <div style={{ fontSize: 8, color: C.blue, textTransform: 'uppercase' }}>Parent Notified</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.blue }}>{sb.parentNotified ?? 0}</div>
           </div>
-          <div style={{ padding: '6px 4px', background: C.greenBg, borderRadius: 4, textAlign: 'center' }}>
+          <div style={{ padding: '6px 4px', background: C.greenBg, borderRadius: 4, textAlign: 'center', border: '1px solid rgba(21,94,54,0.2)' }}>
             <div style={{ fontSize: 8, color: C.green, textTransform: 'uppercase' }}>Resolved</div>
             <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{sb.resolved ?? 0}</div>
           </div>
@@ -297,7 +313,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
         {cases.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
             {cases.map((c: any, i: number) => (
-              <div key={i} style={{ padding: '6px 8px', background: '#fff', border: `1px solid ${C.borderLight}`, borderRadius: 4, fontSize: 10 }}>
+              <div key={i} style={{ padding: '6px 8px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 4, fontSize: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 600, color: C.t1 }}>{c.studentName} (Gr. {c.gradeLevel})</span>
                   <span style={{ fontWeight: 600, color: C.m700 }}>{c.category}</span>
@@ -322,7 +338,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     const isComplete = raw.completenessStatus === 'complete_annual_evaluation';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
           School-Wide Academic Completeness & Evaluation
         </div>
 
@@ -360,7 +376,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             {raw.briefTitle || 'Executive Meeting Brief'}
           </div>
           <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
@@ -376,7 +392,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
               {highlights.map((h: any, i: number) => (
-                <div key={i} style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+                <div key={i} style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
                   <div style={{ fontSize: 9, color: C.t3 }}>{h.label}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{h.value}</div>
                 </div>
@@ -407,7 +423,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {pending.map((p: any, i: number) => (
-                <div key={i} style={{ fontSize: 11, color: C.t2, padding: '4px 6px', background: '#fff', borderRadius: 4, border: `1px solid ${C.borderLight}` }}>
+                <div key={i} style={{ fontSize: 11, color: C.t2, padding: '4px 6px', background: C.paper, borderRadius: 4, border: '1px solid #CBD5E1' }}>
                   <span style={{ fontWeight: 600, color: C.t1 }}>[{p.category}]</span> {p.summary}
                 </div>
               ))}
@@ -446,7 +462,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Weekly Operations Review
           </div>
           <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
@@ -456,19 +472,19 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         {/* Key Indicators */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3 }}>Enrolled Students</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{exec.enrolledStudents ?? 'N/A'}</div>
           </div>
-          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3 }}>Students On Campus</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{exec.studentsOnCampusToday ?? 'N/A'}</div>
           </div>
-          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3 }}>Faculty Checked In</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{fac.checkedInToday ?? 0} / {fac.totalActiveFaculty ?? 0}</div>
           </div>
-          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3 }}>Pending Leave Approvals</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.m700 }}>{leaves.pendingApprovalsCount ?? 0}</div>
           </div>
@@ -476,14 +492,14 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         {/* Administrative Behavior */}
         {behav.openCasesCount !== undefined && (
-          <div style={{ padding: '6px 8px', background: '#fff', borderRadius: 6, border: `1px solid ${C.borderLight}`, fontSize: 11 }}>
+          <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1', fontSize: 11 }}>
             <span style={{ fontWeight: 600, color: C.t1 }}>Administrative Disciplinary Cases:</span> {behav.openCasesCount} open case(s) requiring executive attention.
           </div>
         )}
 
         {/* Academic Completeness */}
         {acad.completenessStatus && (
-          <div style={{ padding: '6px 8px', background: C.m50, borderRadius: 6, border: `1px solid ${C.borderLight}`, fontSize: 11 }}>
+          <div style={{ padding: '6px 8px', background: C.m50, borderRadius: 6, border: '1px solid rgba(29,78,216,0.18)', fontSize: 11 }}>
             <div style={{ fontWeight: 700, color: C.m700 }}>Academic Completeness: {acad.completenessStatus}</div>
             <div style={{ fontSize: 10, color: C.t2, marginTop: 2 }}>{acad.note}</div>
           </div>

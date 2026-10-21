@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Activity, Users, FileText, Calendar, Shield, 
   BarChart2, Briefcase, Clock, Sparkles 
@@ -13,53 +13,129 @@ interface QuickPromptsGridProps {
 }
 
 export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridProps) {
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   const getIcon = (iconName: QuickPrompt['iconName']) => {
+    const size = 13;
+    const color = C.m700;
     switch (iconName) {
-      case 'activity': return <Activity size={13} color={C.m700} />;
-      case 'users': return <Users size={13} color={C.m700} />;
-      case 'file-text': return <FileText size={13} color={C.m700} />;
-      case 'calendar': return <Calendar size={13} color={C.m700} />;
-      case 'shield': return <Shield size={13} color={C.m700} />;
-      case 'bar-chart': return <BarChart2 size={13} color={C.m700} />;
-      case 'briefcase': return <Briefcase size={13} color={C.m700} />;
-      case 'clock': return <Clock size={13} color={C.m700} />;
-      default: return <Sparkles size={13} color={C.m700} />;
+      case 'activity': return <Activity size={size} color={color} />;
+      case 'users': return <Users size={size} color={color} />;
+      case 'file-text': return <FileText size={size} color={color} />;
+      case 'calendar': return <Calendar size={size} color={color} />;
+      case 'shield': return <Shield size={size} color={color} />;
+      case 'bar-chart': return <BarChart2 size={size} color={color} />;
+      case 'briefcase': return <Briefcase size={size} color={color} />;
+      case 'clock': return <Clock size={size} color={color} />;
+      default: return <Sparkles size={size} color={color} />;
     }
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-500 uppercase tracking-wider px-0.5">
-        <Sparkles size={11} className="text-blue-700" />
-        <span>Grounded Operational Prompts</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 10,
+          fontWeight: 700,
+          color: C.t3,
+          textTransform: 'uppercase',
+          letterSpacing: '0.06em',
+          paddingLeft: 2,
+        }}
+      >
+        <Sparkles size={10} color={C.m700} />
+        <span>Suggested Prompts</span>
       </div>
 
       <div 
         data-testid="quick-prompts-container"
-        className="grid grid-cols-2 gap-1.5"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 6,
+        }}
       >
-        {PRINCIPAL_QUICK_PROMPTS.map(qp => (
-          <button
-            key={qp.id}
-            type="button"
-            data-testid={`quick-prompt-${qp.id}`}
-            disabled={disabled}
-            onClick={() => onSelectPrompt(qp.prompt)}
-            className="flex flex-col items-start gap-1 p-2 bg-white border border-slate-200/80 rounded-xl text-left hover:border-blue-500 hover:bg-blue-50/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer group"
-          >
-            <div className="flex items-center gap-1.5 w-full min-w-0">
-              <div className="w-5 h-5 rounded-md bg-blue-50 group-hover:bg-blue-100/70 flex items-center justify-center shrink-0 transition-colors">
-                {getIcon(qp.iconName)}
+        {PRINCIPAL_QUICK_PROMPTS.map(qp => {
+          const isHovered = hoveredId === qp.id;
+          return (
+            <button
+              key={qp.id}
+              type="button"
+              data-testid={`quick-prompt-${qp.id}`}
+              disabled={disabled}
+              onClick={() => onSelectPrompt(qp.prompt)}
+              onMouseEnter={() => setHoveredId(qp.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                gap: 4,
+                padding: '8px 10px',
+                background: isHovered ? C.m50 : C.paper,
+                border: `1px solid ${isHovered ? 'rgba(59,130,246,0.4)' : '#CBD5E1'}`,
+                borderRadius: 10,
+                textAlign: 'left',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'all 0.15s ease',
+                boxShadow: isHovered
+                  ? '0 2px 6px rgba(29,78,216,0.08)'
+                  : '0 1px 2px rgba(0,0,0,0.03)',
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', minWidth: 0 }}>
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    background: isHovered ? C.m200 : C.m100,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'background 0.15s ease',
+                  }}
+                >
+                  {getIcon(qp.iconName)}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: isHovered ? C.m700 : C.t1,
+                    lineHeight: 1.25,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    transition: 'color 0.15s ease',
+                  }}
+                >
+                  {qp.label}
+                </span>
               </div>
-              <span className="text-[11px] font-bold text-slate-800 leading-tight truncate group-hover:text-blue-700 transition-colors">
-                {qp.label}
+              <span
+                style={{
+                  fontSize: 9,
+                  color: C.t3,
+                  lineHeight: 1.3,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  width: '100%',
+                  paddingLeft: 28,
+                }}
+              >
+                {qp.description}
               </span>
-            </div>
-            <span className="text-[9px] text-slate-500 leading-tight line-clamp-1 pl-6">
-              {qp.description}
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -390,7 +390,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS, 
     const drawerPath = path.resolve(__dirname, '../../src/app/principal/ai/PrincipalAssistantDrawer.tsx');
     const content = fs.readFileSync(drawerPath, 'utf-8');
 
-    expect(content).toContain('Development mode · Grounded DigiSkwela data');
+    expect(content).toContain('Dev · Live data');
     expect(content).toContain('data-testid="mock-provider-badge"');
   });
 });

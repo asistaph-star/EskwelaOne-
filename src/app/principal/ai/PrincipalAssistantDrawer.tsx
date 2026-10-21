@@ -84,157 +84,260 @@ export function PrincipalAssistantDrawer({
         style={{ display: 'none' }}
       />
 
-      {/* Restored Compact Assistant Card */}
+      {/* Premium Compact Assistant Card */}
       <aside
         data-testid="principal-assistant-drawer"
         role="dialog"
         aria-label="DigiSkwela Principal Operations Assistant"
         style={{
-          width: 360,
+          width: 370,
           maxWidth: 'calc(100vw - 32px)',
-          height: 500,
-          maxHeight: 'min(520px, calc(100vh - 120px))',
-          background: '#fff',
-          borderRadius: 12,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-          border: `1px solid ${C.m700}`,
+          height: 540,
+          maxHeight: '70vh',
+          background: '#EEF2F6',
+          borderRadius: 14,
+          boxShadow: '0 8px 32px rgba(10,25,47,0.18), 0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid rgba(29,78,216,0.18)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          animation: 'popIn 0.2s ease-out',
+          animation: 'assistantPopIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         }}
       >
         <style>{`
-          @keyframes popIn {
-            0% { opacity: 0; transform: scale(0.95); }
-            100% { opacity: 1; transform: scale(1); }
+          @keyframes assistantPopIn {
+            0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(74,222,128,0.1); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .assistant-scrollbar::-webkit-scrollbar { width: 5px; }
+          .assistant-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          .assistant-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(29,78,216,0.15);
+            border-radius: 10px;
+          }
+          .assistant-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(29,78,216,0.28);
           }
         `}</style>
 
-        {/* Restored Header: White with Green Status Dot */}
-        <div
-          style={{
-            background: '#fff',
-            borderBottom: `1px solid ${C.borderMed}`,
-            padding: '12px 14px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                background: C.green,
-                boxShadow: '0 0 6px rgba(21,94,54,0.4)',
-              }}
-            />
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.m800, fontFamily: "'Inter', sans-serif" }}>
-                  DigiSkwela Assistant
-                </span>
-                <span
-                  data-testid="mock-provider-badge"
-                  style={{
-                    fontSize: 8.5,
-                    padding: '1px 5px',
-                    borderRadius: 6,
-                    background: C.m50,
-                    color: C.m700,
-                    border: `1px solid ${C.borderLight}`,
-                    fontWeight: 600,
-                  }}
-                >
-                  Development mode · Grounded DigiSkwela data
-                </span>
+        {/* Premium DigiSkwela Navy Header */}
+        <div style={{ flexShrink: 0 }}>
+          {/* Top brand accent line */}
+          <div
+            style={{
+              height: 2.5,
+              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 50%, #F59E0B 100%)',
+              borderRadius: '14px 14px 0 0',
+            }}
+          />
+          <div
+            style={{
+              background: C.m900,
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              padding: '10px 12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Assistant avatar icon */}
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: 'rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                  flexShrink: 0,
+                }}
+              >
+                <Sparkles size={14} color="#93C5FD" />
               </div>
-              <div style={{ fontSize: 10, color: C.green, fontWeight: 500, marginTop: 1 }}>
-                Principal Operations · Online
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: '#FFFFFF',
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    DigiSkwela Assistant
+                  </span>
+                  <span
+                    data-testid="mock-provider-badge"
+                    style={{
+                      fontSize: 9,
+                      padding: '2px 7px',
+                      borderRadius: 20,
+                      background: 'rgba(255,255,255,0.12)',
+                      color: '#BFDBFE',
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      fontWeight: 600,
+                      letterSpacing: '0.02em',
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Dev · Live data
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      background: '#4ADE80',
+                      animation: 'pulseGlow 2.5s ease-in-out infinite',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: '#4ADE80',
+                      fontWeight: 500,
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    Online
+                  </span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>·</span>
+                  <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                    Principal Operations
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {messages.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  data-testid="clear-session-button"
+                  onClick={onClearSession}
+                  title="Clear Session Conversation"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255,255,255,0.6)',
+                    cursor: 'pointer',
+                    padding: 6,
+                    borderRadius: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#FCA5A5';
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.2)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+                    e.currentTarget.style.background = 'none';
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
               <button
                 type="button"
-                data-testid="clear-session-button"
-                onClick={onClearSession}
-                title="Clear Session Conversation"
+                data-testid="close-drawer-button"
+                onClick={onClose}
+                aria-label="Close Assistant"
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: C.t3,
+                  color: 'rgba(255,255,255,0.75)',
                   cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 4,
+                  padding: 6,
+                  borderRadius: 8,
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => e.currentTarget.style.color = C.red}
-                onMouseLeave={e => e.currentTarget.style.color = C.t3}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = '#FFFFFF';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.75)';
+                  e.currentTarget.style.background = 'none';
+                }}
               >
-                <Trash2 size={14} />
+                <X size={16} />
               </button>
-            )}
-            <button
-              type="button"
-              data-testid="close-drawer-button"
-              onClick={onClose}
-              aria-label="Close Assistant"
-              style={{
-                background: 'none',
-                border: 'none',
-                color: C.t3,
-                cursor: 'pointer',
-                padding: 4,
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = C.t1}
-              onMouseLeave={e => e.currentTarget.style.color = C.t3}
-            >
-              <X size={16} />
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Restored Message Body */}
+        {/* Message Body — flex:1, soft cool blue-gray off-white background */}
         <div
           data-testid="assistant-messages-container"
+          className="assistant-scrollbar"
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: 12,
+            overflowX: 'hidden',
+            padding: '12px 12px',
             display: 'flex',
             flexDirection: 'column',
             gap: 10,
-            background: C.paper,
+            background: '#EEF2F6',
+            minHeight: 0,
           }}
         >
           {messages.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* Initial Greeting Card */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Welcome Card with soft neutral styling */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <div
                   style={{
-                    background: '#f3f4f6',
-                    padding: '10px 12px',
-                    borderRadius: '10px 10px 10px 0',
-                    fontSize: 11.5,
-                    color: C.t1,
-                    lineHeight: 1.45,
-                    border: `1px solid ${C.borderLight}`,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 7,
+                    background: C.m100,
+                    border: '1px solid rgba(29,78,216,0.18)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    marginTop: 2,
                   }}
                 >
-                  Good day, Principal! I can audit faculty gate presence, review pending leave requests, check behavioral cases, and synthesize executive operational briefs from live DigiSkwela records.
+                  <Sparkles size={12} color={C.m700} />
+                </div>
+                <div
+                  style={{
+                    background: '#E2E8F0',
+                    padding: '10px 12px',
+                    borderRadius: '12px 12px 12px 4px',
+                    fontSize: 12,
+                    color: C.t2,
+                    lineHeight: 1.5,
+                    border: '1px solid rgba(203,213,225,0.85)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  Good day, Principal! I can help audit faculty attendance, review leave requests, check behavioral cases, and generate operational briefs from live DigiSkwela data.
                 </div>
               </div>
 
@@ -261,20 +364,45 @@ export function PrincipalAssistantDrawer({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 12px',
-                    background: '#FFFFFF',
-                    border: `1px solid ${C.borderLight}`,
-                    borderRadius: '10px 10px 10px 0',
+                    gap: 10,
+                    padding: '10px 14px',
+                    background: '#E8EEF5',
+                    border: '1px solid rgba(203,213,225,0.85)',
+                    borderRadius: '14px 14px 14px 4px',
                     maxWidth: '85%',
                     alignSelf: 'flex-start',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
                   }}
                 >
-                  <Loader2 size={13} color={C.m700} className="animate-spin" />
-                  <span style={{ fontSize: 11, color: C.t2, fontWeight: 500 }}>
-                    Querying verified DigiSkwela domain services...
-                  </span>
+                  <div
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 6,
+                      background: C.m100,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Loader2 size={12} color={C.m700} className="animate-spin" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 11.5, color: C.t2, fontWeight: 500 }}>
+                      Querying verified services…
+                    </span>
+                    <div
+                      style={{
+                        width: 80,
+                        height: 2,
+                        borderRadius: 1,
+                        background: 'linear-gradient(90deg, #3B82F6, #93C5FD, #3B82F6)',
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 1.8s ease-in-out infinite',
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -283,15 +411,15 @@ export function PrincipalAssistantDrawer({
           )}
         </div>
 
-        {/* Restored Input Area */}
+        {/* Integrated DigiSkwela Input Composer */}
         <div
           style={{
-            padding: '10px 12px',
-            borderTop: `1px solid ${C.borderMed}`,
-            background: '#fff',
+            padding: '8px 12px',
+            borderTop: '1px solid #CBD5E1',
+            background: C.ledger,
             display: 'flex',
-            gap: 8,
-            alignItems: 'center',
+            gap: 6,
+            alignItems: 'flex-end',
             flexShrink: 0,
           }}
         >
@@ -304,23 +432,31 @@ export function PrincipalAssistantDrawer({
             disabled={isLoading}
             rows={1}
             maxLength={2000}
-            placeholder="Ask about DigiSkwela operations..."
+            placeholder="Ask about DigiSkwela operations…"
             style={{
               flex: 1,
               padding: '8px 12px',
-              borderRadius: 6,
-              border: `1px solid ${C.borderMed}`,
-              background: isLoading ? C.paper : '#fff',
-              fontSize: 11.5,
+              borderRadius: 10,
+              border: '1.5px solid #CBD5E1',
+              background: isLoading ? '#F8FAFC' : '#FFFFFF',
+              fontSize: 12,
               outline: 'none',
               resize: 'none',
-              fontFamily: "'Inter', sans-serif",
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               lineHeight: 1.4,
-              maxHeight: 70,
+              maxHeight: 68,
               minHeight: 34,
+              color: C.t1,
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
-            onFocus={e => e.currentTarget.style.borderColor = C.m700}
-            onBlur={e => e.currentTarget.style.borderColor = C.borderMed}
+            onFocus={e => {
+              e.currentTarget.style.borderColor = C.m500;
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+            }}
+            onBlur={e => {
+              e.currentTarget.style.borderColor = '#CBD5E1';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           />
           <button
             type="submit"
@@ -328,18 +464,33 @@ export function PrincipalAssistantDrawer({
             disabled={isLoading || !inputText.trim()}
             onClick={handleSubmit}
             style={{
-              background: isLoading || !inputText.trim() ? C.ledger : C.m700,
-              color: isLoading || !inputText.trim() ? C.t3 : '#fff',
+              background: isLoading || !inputText.trim()
+                ? '#E2E8F0'
+                : C.m700,
+              color: isLoading || !inputText.trim() ? '#94A3B8' : '#FFFFFF',
               border: 'none',
               width: 34,
               height: 34,
-              borderRadius: 6,
+              borderRadius: 9,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
               flexShrink: 0,
               transition: 'all 0.15s ease',
+              boxShadow: isLoading || !inputText.trim()
+                ? 'none'
+                : '0 1px 3px rgba(29,78,216,0.25)',
+            }}
+            onMouseEnter={e => {
+              if (!isLoading && inputText.trim()) {
+                e.currentTarget.style.background = C.m800;
+              }
+            }}
+            onMouseLeave={e => {
+              if (!isLoading && inputText.trim()) {
+                e.currentTarget.style.background = C.m700;
+              }
             }}
           >
             {isLoading ? (
@@ -350,12 +501,12 @@ export function PrincipalAssistantDrawer({
           </button>
         </div>
 
-        {/* Restored Subtle Footnote */}
+        {/* Subtle Security Footnote */}
         <div
           style={{
-            padding: '6px 12px',
-            background: '#fff',
-            borderTop: `1px solid ${C.borderLight}`,
+            padding: '4px 12px',
+            background: '#E8EDF2',
+            borderTop: '1px solid #CBD5E1',
             textAlign: 'center',
             fontSize: 9,
             color: C.t3,
@@ -363,11 +514,12 @@ export function PrincipalAssistantDrawer({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 4,
+            gap: 3,
+            letterSpacing: '0.01em',
           }}
         >
-          <ShieldCheck size={10} color={C.green} />
-          <span>Session-scoped · Grounded in live PostgreSQL database</span>
+          <ShieldCheck size={9} color="#16A34A" />
+          <span>Session-scoped · Grounded in live DigiSkwela data</span>
         </div>
       </aside>
     </>
