@@ -146,6 +146,32 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           };
         }
       }
+
+      // Check for meeting brief intent
+      if (content.includes('brief') || content.includes('meeting') || content.includes('prepare')) {
+        const briefTool = availableTools.find(t => t.name === 'generatePrincipalMeetingBrief');
+        if (briefTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_brief_1', name: briefTool.name, arguments: { meetingType: 'GENERAL' } }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
+
+      // Check for weekly operations report intent
+      if (content.includes('weekly') || content.includes('operations report') || content.includes('weekly report')) {
+        const reportTool = availableTools.find(t => t.name === 'generateWeeklyOperationsReport');
+        if (reportTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_wrep_1', name: reportTool.name, arguments: {} }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
     }
 
     // 4. Default Informational Response
