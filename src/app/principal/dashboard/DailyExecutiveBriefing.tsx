@@ -305,7 +305,7 @@ export function DailyExecutiveBriefing({
             className={isLiveUpdating ? 'animate-ping' : ''}
           />
           <span style={{ fontWeight: 600, color: isLiveUpdating ? '#1d4ed8' : '#334155' }}>
-            {isLiveUpdating ? 'Updating…' : '● Live DigiSkwela data'}
+            {isLiveUpdating ? 'Updating…' : 'Live DigiSkwela data'}
           </span>
           <span>•</span>
           <span>Updated {summaryData?.asOfFormatted || 'Just now'}</span>
