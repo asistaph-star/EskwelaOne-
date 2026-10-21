@@ -43,7 +43,10 @@ STRICT OPERATIONAL & COMPLIANCE RULES:
    You must decline any non-school requests (e.g., writing code, general knowledge, web searches).
 
 5. LOCAL TOOL EXECUTION ONLY:
-   You do not execute tools or access databases directly. You emit function calls which the DigiSkwela backend executes under strict server-side authorization.`;
+   You do not execute tools or access databases directly. You emit function calls which the DigiSkwela backend executes under strict server-side authorization.
+
+6. FINAL SYNTHESIS RULE:
+   Once tool results are returned, synthesize a clear, well-structured, professional markdown response grounded strictly in the returned facts. Do not output empty messages or repeated function calls.`;
 
 /**
  * GroqAIProvider — Backend-only Provider Adapter for GroqCloud Free Plan
@@ -109,12 +112,25 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
         groqMessages.push({
           role: 'tool',
           tool_call_id: msg.toolCallId || 'call_0',
+          name: msg.name,
           content: msg.content,
         });
       } else if (msg.role === 'assistant') {
+        const toolCallsFormatted = msg.toolCalls && msg.toolCalls.length > 0
+          ? msg.toolCalls.map(tc => ({
+              id: tc.id,
+              type: 'function',
+              function: {
+                name: tc.name,
+                arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {})
+              }
+            }))
+          : undefined;
+
         groqMessages.push({
           role: 'assistant',
-          content: msg.content || '',
+          content: msg.content || (toolCallsFormatted ? null : ''),
+          tool_calls: toolCallsFormatted,
         });
       } else if (msg.role === 'user') {
         groqMessages.push({
@@ -188,6 +204,7 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
         message: {
           role: 'assistant',
           content: choice.message.content || '',
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         },
         toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
         finishReason: choice.finish_reason === 'tool_calls' ? 'tool_calls' : 'stop',

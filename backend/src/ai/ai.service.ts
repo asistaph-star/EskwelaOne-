@@ -260,11 +260,45 @@ export const AIService = {
         }
 
         // 6. Grounded Synthesis Turn
-        const finalTurn = await provider.generateResponse({
+        let finalTurn = await provider.generateResponse({
           messages: conversationWithTools,
           tools: authorizedDeclarations,
           context: { portal, authenticatedRole: userRole }
         });
+
+        // If the model requested another tool call and hasn't exceeded limits, execute it
+        if (finalTurn.toolCalls && finalTurn.toolCalls.length > 0 && toolsExecuted.length < aiConfig.limits.maxToolCallsPerTurn) {
+          conversationWithTools.push(finalTurn.message);
+          for (const call of finalTurn.toolCalls.slice(0, aiConfig.limits.maxToolCallsPerTurn - toolsExecuted.length)) {
+            toolsRequested.push(call.name);
+            const result = await dispatchTool(call.name, call.arguments, {
+              user: authUser,
+              correlationId,
+              portal
+            });
+            toolsExecuted.push(call.name);
+            lastToolResult = result.data;
+            lastToolName = call.name;
+
+            conversationWithTools.push({
+              role: 'tool',
+              name: call.name,
+              toolCallId: call.id,
+              content: JSON.stringify(result.data)
+            });
+          }
+
+          finalTurn = await provider.generateResponse({
+            messages: conversationWithTools,
+            tools: authorizedDeclarations,
+            context: { portal, authenticatedRole: userRole }
+          });
+        }
+
+        // Guarantee non-empty grounded narrative if tool execution succeeded
+        if ((!finalTurn.message.content || finalTurn.message.content.trim() === '') && lastToolResult) {
+          finalTurn.message.content = 'Here is the verified operational data retrieved from authoritative school records.';
+        }
 
         if (finalTurn.usage && tokenUsage) {
           tokenUsage = {

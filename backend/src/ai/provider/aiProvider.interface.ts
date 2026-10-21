@@ -12,14 +12,16 @@ export interface AIMessage {
   content: string;
   toolCallId?: string;
   name?: string;
+  toolCalls?: AIToolCall[];
 }
 
 export interface AIToolParameterProperty {
-  type: string;
+  type?: string | string[];
   description?: string;
   enum?: string[];
   items?: Record<string, any>;
   properties?: Record<string, any>;
+  anyOf?: Array<Record<string, any>>;
 }
 
 export interface AIToolParametersSchema {

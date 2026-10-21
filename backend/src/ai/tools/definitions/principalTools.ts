@@ -23,7 +23,7 @@ export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
   declaration: {
     id: 'PRIN-AI-01',
     name: 'getSchoolOperationalFactSheet',
-    description: 'Retrieves the authoritative daily executive operational fact sheet.',
+    description: 'Retrieves the authoritative daily executive operational fact sheet for daily attention items, overall school pulse, student attendance, faculty presence, open cases, and pending operations.',
     parameters: {
       type: 'object',
       properties: {},
@@ -570,7 +570,7 @@ export const generateWeeklyOperationsReportTool: DigiSkwelaTool = {
   allowedRoles: ['Principal'],
   requiredPermissions: ['faculty_attendance:read', 'attendance:read'],
   inputSchema: z.object({
-    weekStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional()
+    weekStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional()
   }).strict(),
   declaration: {
     id: 'PRIN-AI-08',
@@ -580,8 +580,8 @@ export const generateWeeklyOperationsReportTool: DigiSkwelaTool = {
       type: 'object',
       properties: {
         weekStartDate: {
-          type: 'string',
-          description: 'Optional ISO date string (YYYY-MM-DD) designating Monday of the target school week'
+          type: ['string', 'null'],
+          description: 'Optional ISO date string (YYYY-MM-DD) designating Monday of the target school week, or null to audit the active current week.'
         }
       },
       required: [],
@@ -592,7 +592,7 @@ export const generateWeeklyOperationsReportTool: DigiSkwelaTool = {
     // Calls WeeklyReportService with authenticated user's verified permissions for dynamic domain authorization
     return await weeklyReportService.generateReport(
       {
-        weekStartDate: args.weekStartDate
+        weekStartDate: args.weekStartDate || undefined
       },
       context.user.permissions || []
     );

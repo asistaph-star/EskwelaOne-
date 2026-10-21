@@ -19,8 +19,12 @@ describe('DIGISKWELA — MILESTONE 3: AI FOUNDATION & SECURITY TESTS (PHASE A/B)
 
   let teacherToken: string;
   let teacherUserId: string;
+  let originalProviderMode: any;
 
   beforeAll(async () => {
+    originalProviderMode = aiConfig.providerMode;
+    aiConfig.providerMode = 'mock';
+
     principalUserId = generateId();
     teacherUserId = generateId();
 
@@ -83,6 +87,7 @@ describe('DIGISKWELA — MILESTONE 3: AI FOUNDATION & SECURITY TESTS (PHASE A/B)
   });
 
   afterAll(async () => {
+    aiConfig.providerMode = originalProviderMode;
     // Clean up test audit logs, user_roles, and users
     await prisma.aIAuditLog.deleteMany({
       where: { user_id: { in: [principalUserId, teacherUserId] } }

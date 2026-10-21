@@ -13,12 +13,17 @@ import {
 } from '../../src/app/principal/ai/utils/parseAssistantResponse.js';
 import { PRINCIPAL_QUICK_PROMPTS } from '../../src/app/principal/ai/constants/quickPrompts.js';
 import { AIChatResponse } from '../../src/api/ai.api.js';
+import { aiConfig } from '../src/config/ai.config.js';
 
 describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS, CONVERSATION & SECURITY', () => {
   let principalToken: string;
   let principalUserId: string;
+  let originalProviderMode: any;
 
   beforeAll(async () => {
+    originalProviderMode = aiConfig.providerMode;
+    aiConfig.providerMode = 'mock';
+
     principalUserId = generateId();
 
     await prisma.user.create({
@@ -50,6 +55,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS, 
   });
 
   afterAll(async () => {
+    aiConfig.providerMode = originalProviderMode;
     await prisma.aIAuditLog.deleteMany({ where: { user_id: principalUserId } });
     await prisma.userRole.deleteMany({ where: { user_id: principalUserId } });
     await prisma.user.deleteMany({ where: { id: principalUserId } });

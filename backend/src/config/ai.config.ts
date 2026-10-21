@@ -7,6 +7,8 @@
  * - Runtime limits are configurable, tunable safe defaults.
  */
 
+import './env.js';
+
 export interface AIConfig {
   providerMode: 'mock' | 'groq' | 'disabled';
   allowPaidProvider: boolean;
