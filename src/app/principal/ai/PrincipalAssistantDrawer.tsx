@@ -142,9 +142,22 @@ export function PrincipalAssistantDrawer({
             0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
             50% { box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.1); }
           }
-          @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
+          @keyframes typingBounce {
+            0%, 60%, 100% {
+              transform: translateY(0);
+              opacity: 0.35;
+            }
+            30% {
+              transform: translateY(-4px);
+              opacity: 1;
+            }
+          }
+          .typing-dot {
+            width: 5.5px;
+            height: 5.5px;
+            border-radius: 50%;
+            background-color: #64748B;
+            animation: typingBounce 1.25s infinite ease-in-out;
           }
           .assistant-scrollbar::-webkit-scrollbar { width: 4px; }
           .assistant-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -502,45 +515,47 @@ export function PrincipalAssistantDrawer({
                   data-testid="assistant-loading-indicator"
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 14px',
-                    background: '#F1F5F9',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '14px 14px 14px 4px',
-                    maxWidth: '85%',
+                    gap: 8,
                     alignSelf: 'flex-start',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                    alignItems: 'flex-end',
                   }}
                 >
+                  {/* DigiSkwela AI avatar/icon beside typing bubble */}
                   <div
                     style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 6,
+                      width: 26,
+                      height: 26,
+                      borderRadius: 7,
                       background: '#EFF6FF',
+                      border: '1px solid rgba(29, 78, 216, 0.18)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
+                      marginBottom: 1,
                     }}
                   >
-                    <Loader2 size={12} color={C.m700} className="animate-spin" />
+                    <Sparkles size={13} color={C.m700} />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 11.5, color: '#475569', fontWeight: 500 }}>
-                      Checking DigiSkwela data…
-                    </span>
-                    <div
-                      style={{
-                        width: 80,
-                        height: 2,
-                        borderRadius: 1,
-                        background: 'linear-gradient(90deg, #3B82F6, #93C5FD, #3B82F6)',
-                        backgroundSize: '200% 100%',
-                        animation: 'shimmer 1.8s ease-in-out infinite',
-                      }}
-                    />
+
+                  {/* Messenger-style light gray rounded typing bubble with 3 sequential animated dots */}
+                  <div
+                    style={{
+                      background: '#F1F5F9',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '14px 14px 14px 4px',
+                      padding: '9px 13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4.5,
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                      height: 34,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <div className="typing-dot" style={{ animationDelay: '0ms' }} />
+                    <div className="typing-dot" style={{ animationDelay: '180ms' }} />
+                    <div className="typing-dot" style={{ animationDelay: '360ms' }} />
                   </div>
                 </div>
               )}

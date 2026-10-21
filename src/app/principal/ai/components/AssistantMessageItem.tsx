@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, User, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { C } from '../../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from '../types.js';
@@ -13,30 +13,59 @@ interface AssistantMessageItemProps {
   onRetry?: () => void;
 }
 
+// Compute dynamic relative time according to Sendbird chatbot reference
+function formatRelativeTime(timestamp?: string): string {
+  if (!timestamp) return '';
+  try {
+    const diffMs = Date.now() - new Date(timestamp).getTime();
+    const diffSecs = Math.max(0, Math.floor(diffMs / 1000));
+    if (diffSecs < 60) return 'Just now';
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins === 1) return '1 min ago';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return '1 hr ago';
+    if (diffHours < 24) return `${diffHours} hrs ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return '1 day ago';
+    return `${diffDays} days ago`;
+  } catch {
+    return '';
+  }
+}
+
 export function AssistantMessageItem({ message, onNavigate, onRetry }: AssistantMessageItemProps) {
   const isUser = message.role === 'user';
   const isError = Boolean(message.errorState);
 
-  // Format message timestamp and recent indicator
+  // Dynamic relative time for Assistant messages, updating automatically without refresh
+  const [relativeTime, setRelativeTime] = useState<string>(() => formatRelativeTime(message.timestamp));
+
+  useEffect(() => {
+    if (!message.timestamp) return;
+    setRelativeTime(formatRelativeTime(message.timestamp));
+
+    const interval = setInterval(() => {
+      setRelativeTime(formatRelativeTime(message.timestamp));
+    }, 10000); // Check every 10 seconds to smoothly transition from 'Just now' to '1 min ago'
+
+    return () => clearInterval(interval);
+  }, [message.timestamp]);
+
+  const assistantMeta = relativeTime
+    ? `DigiSkwela AI Agent • ${relativeTime}`
+    : 'DigiSkwela AI Agent';
+
+  // Format timestamp for user messages
   let formattedTime = '';
-  let isRecent = false;
   if (message.timestamp) {
     try {
       const d = new Date(message.timestamp);
       formattedTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      const diffMs = Date.now() - d.getTime();
-      isRecent = diffMs >= 0 && diffMs < 60000;
     } catch {
       formattedTime = '';
-      isRecent = false;
     }
   }
-
-  const assistantMeta = isRecent
-    ? 'DigiSkwela AI Agent • Just now'
-    : formattedTime
-      ? `DigiSkwela AI Agent • ${formattedTime}`
-      : 'DigiSkwela AI Agent';
 
   if (isUser) {
     return (
