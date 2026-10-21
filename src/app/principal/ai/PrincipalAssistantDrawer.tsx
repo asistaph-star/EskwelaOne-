@@ -74,6 +74,12 @@ export function PrincipalAssistantDrawer({
     }
   };
 
+  const todayFormatted = new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date());
+
   if (!isOpen) return null;
 
   return (
@@ -305,6 +311,32 @@ export function PrincipalAssistantDrawer({
             minHeight: 0,
           }}
         >
+          {/* Subtle Date Separator matching Sendbird Bot reference */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '2px 0 4px',
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: '#64748B',
+                background: 'rgba(226, 232, 240, 0.75)',
+                border: '1px solid rgba(203, 213, 225, 0.6)',
+                padding: '2px 10px',
+                borderRadius: 12,
+                letterSpacing: '0.02em',
+              }}
+            >
+              {todayFormatted}
+            </span>
+          </div>
+
           {messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Welcome Card with soft neutral styling */}
