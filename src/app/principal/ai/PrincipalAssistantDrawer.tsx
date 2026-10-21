@@ -168,24 +168,17 @@ export function PrincipalAssistantDrawer({
 
         {/* DigiSkwela Dark Navy Header */}
         <div style={{ flexShrink: 0 }}>
-          {/* Top subtle brand accent line */}
-          <div
-            style={{
-              height: 2.5,
-              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 50%, #F59E0B 100%)',
-              borderRadius: '14px 14px 0 0',
-            }}
-          />
           <div
             style={{
               background: C.m900,
-              padding: '10px 14px',
+              borderRadius: '14px 14px 0 0',
+              padding: '11px 14px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
-            {/* Left Header Controls: Back Button (if in conversation) + AI Icon + Title */}
+            {/* Left Header Controls: Back Button (if in conversation) + Circular Logo + Title */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {viewState === 'conversation' && (
                 <button
@@ -195,42 +188,48 @@ export function PrincipalAssistantDrawer({
                   title="Back to Suggested Prompts"
                   aria-label="Back to Suggested Prompts"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.12)',
+                    background: 'none',
                     border: 'none',
-                    color: '#FFFFFF',
+                    color: 'rgba(255, 255, 255, 0.85)',
                     cursor: 'pointer',
                     width: 26,
                     height: 26,
-                    borderRadius: 6,
+                    borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 0.15s ease',
                     flexShrink: 0,
+                    padding: 0,
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = '#FFFFFF';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.85)';
+                    e.currentTarget.style.background = 'none';
+                  }}
                 >
-                  <ArrowLeft size={15} />
+                  <ArrowLeft size={16} />
                 </button>
               )}
 
-              {/* DigiSkwela Assistant Icon */}
+              {/* DigiSkwela Assistant Circular Avatar Icon */}
               <div
                 style={{
                   width: 28,
                   height: 28,
-                  borderRadius: 7,
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #1D4ED8, #2563EB)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
+                  boxShadow: '0 2px 5px rgba(0, 0, 0, 0.25)',
                 }}
               >
-                <MessageSquare size={15} color="#93C5FD" />
+                <MessageSquare size={14} color="#FFFFFF" />
               </div>
 
               <span
@@ -253,7 +252,7 @@ export function PrincipalAssistantDrawer({
             </div>
 
             {/* Right Header Controls: Clear + Close */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {messages.length > 0 && (
                 <button
                   type="button"
@@ -266,12 +265,14 @@ export function PrincipalAssistantDrawer({
                     border: 'none',
                     color: 'rgba(255, 255, 255, 0.65)',
                     cursor: 'pointer',
-                    padding: 5,
-                    borderRadius: 6,
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 0.15s ease',
+                    padding: 0,
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.color = '#FCA5A5';
@@ -296,12 +297,14 @@ export function PrincipalAssistantDrawer({
                   border: 'none',
                   color: 'rgba(255, 255, 255, 0.8)',
                   cursor: 'pointer',
-                  padding: 5,
-                  borderRadius: 6,
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.15s ease',
+                  padding: 0,
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.color = '#FFFFFF';
