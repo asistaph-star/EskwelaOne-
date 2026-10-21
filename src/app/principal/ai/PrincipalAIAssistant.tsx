@@ -5,7 +5,7 @@ import { PScreen } from '../../shared/types';
 import { PrincipalAIMessage } from './types.js';
 import { aiApi, AIMessagePayload } from '../../../api/ai.api.js';
 import { ApiError } from '../../../api/client.js';
-import { parseAssistantResponse } from './utils/parseAssistantResponse.js';
+import { normalizeAssistantResponse } from './utils/parseAssistantResponse.js';
 import { PrincipalAssistantDrawer } from './PrincipalAssistantDrawer.js';
 
 interface PrincipalAIAssistantProps {
@@ -59,7 +59,9 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
 
     try {
       // Build conversation payload for backend POST /api/ai/chat
-      const payloadMessages: AIMessagePayload[] = newConversation.map(m => ({
+      // Send minimum conversation window needed (last 6 turns)
+      const recentConversation = newConversation.slice(-6);
+      const payloadMessages: AIMessagePayload[] = recentConversation.map(m => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content,
       }));
@@ -69,11 +71,7 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
         portal: 'Principal',
       });
 
-      const assistantContent = res.message?.content || '';
-      const toolsExecuted = res.toolsExecuted || [];
-      const traceId = res.traceId;
-
-      const parsed = parseAssistantResponse(assistantContent, toolsExecuted);
+      const parsed = normalizeAssistantResponse(res);
 
       const assistantMsgId = `asst_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const assistantMessage: PrincipalAIMessage = {
@@ -81,9 +79,12 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
         role: 'assistant',
         content: parsed.displayText,
         timestamp: new Date().toISOString(),
-        traceId,
-        toolsExecuted,
+        traceId: res.traceId,
+        responseType: parsed.responseType,
+        toolsExecuted: res.toolsExecuted,
         structuredData: parsed.structuredData,
+        provenance: parsed.provenance,
+        navigationActions: parsed.navigationActions,
       };
 
       setMessages(prev => [...prev, assistantMessage]);

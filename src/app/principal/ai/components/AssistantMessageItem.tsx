@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, User, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, User, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { C } from '../../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from '../types.js';
 import { PScreen } from '../../../shared/types';
@@ -144,19 +144,63 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           {/* Normal Assistant content */}
           {!isError && (
             <>
-              {message.structuredData ? (
-                <StructuredDataRenderer 
-                  data={message.structuredData} 
-                  onNavigate={onNavigate} 
-                />
-              ) : (
-                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {/* Natural language narrative */}
+              {message.content && (
+                <div 
+                  data-testid="assistant-narrative-text"
+                  style={{ 
+                    whiteSpace: 'pre-wrap', 
+                    wordBreak: 'break-word', 
+                    marginBottom: message.structuredData ? 12 : 0 
+                  }}
+                >
                   {message.content}
                 </div>
               )}
 
+              {/* Structured Tool Data (if present) */}
+              {message.structuredData && (
+                <StructuredDataRenderer 
+                  data={message.structuredData} 
+                  onNavigate={onNavigate} 
+                />
+              )}
+
+              {/* Navigation Actions (if present) */}
+              {message.navigationActions && message.navigationActions.length > 0 && onNavigate && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                  {message.navigationActions.map((action, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      data-testid={`safe-nav-${action.screen}`}
+                      onClick={() => onNavigate(action.screen)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 12px',
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#fff',
+                        background: C.m700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = C.m800}
+                      onMouseLeave={e => e.currentTarget.style.background = C.m700}
+                    >
+                      <span>{action.label}</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Provenance Footer */}
-              <ProvenanceFooter provenance={message.structuredData?.provenance} />
+              <ProvenanceFooter provenance={message.provenance || message.structuredData?.provenance} />
             </>
           )}
         </div>

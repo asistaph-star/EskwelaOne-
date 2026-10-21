@@ -14,11 +14,131 @@ export interface ProcessChatRequestInput {
   portal: string;
 }
 
+export interface NormalizedProvenance {
+  sourceDomains: string[];
+  asOf?: string;
+}
+
+export interface NormalizedNavigationAction {
+  label: string;
+  screen: string;
+  description?: string;
+}
+
+export interface NormalizedStructuredData {
+  type: 'fact_sheet' | 'attendance' | 'leaves' | 'events' | 'behavior' | 'academics' | 'meeting_brief' | 'weekly_report' | 'generic';
+  raw: any;
+  provenance?: NormalizedProvenance;
+}
+
 export interface ProcessChatResponseOutput {
   message: AIMessage;
+  responseType: 'text' | 'structured';
+  structuredData?: NormalizedStructuredData;
+  provenance?: NormalizedProvenance;
+  navigationActions?: NormalizedNavigationAction[];
   traceId: string;
   scopeDecision: string;
   toolsExecuted: string[];
+}
+
+function mapToolToNormalizedOutput(toolName: string, data: any): {
+  structuredData: NormalizedStructuredData;
+  provenance?: NormalizedProvenance;
+  navigationActions?: NormalizedNavigationAction[];
+} {
+  let type: NormalizedStructuredData['type'] = 'generic';
+  let navAction: NormalizedNavigationAction | undefined = undefined;
+
+  switch (toolName) {
+    case 'getFacultyAttendanceAudit':
+      type = 'attendance';
+      navAction = {
+        label: 'View Faculty Attendance',
+        screen: 'p-monitoring',
+        description: 'Open Faculty Attendance monitoring tab',
+      };
+      break;
+    case 'getSchoolOperationalFactSheet':
+      type = 'fact_sheet';
+      navAction = {
+        label: 'View Executive Dashboard',
+        screen: 'p-dashboard',
+        description: 'Open Executive Dashboard',
+      };
+      break;
+    case 'getPendingLeaves':
+      type = 'leaves';
+      navAction = {
+        label: 'View Leave Approvals',
+        screen: 'p-leaves',
+        description: 'Open Leave Management tab',
+      };
+      break;
+    case 'getUpcomingEvents':
+      type = 'events';
+      navAction = {
+        label: 'View School Calendar',
+        screen: 'p-events',
+        description: 'Open Calendar & Events tab',
+      };
+      break;
+    case 'getAdministrativeBehaviorSummary':
+      type = 'behavior';
+      navAction = {
+        label: 'View Behavior Records',
+        screen: 'p-behavior',
+        description: 'Open Student Behavior tab',
+      };
+      break;
+    case 'getAcademicAnalytics':
+      type = 'academics';
+      navAction = {
+        label: 'View Academic Analytics',
+        screen: 'p-analytics',
+        description: 'Open Academic Performance tab',
+      };
+      break;
+    case 'generatePrincipalMeetingBrief':
+      type = 'meeting_brief';
+      navAction = {
+        label: 'View Executive Summary',
+        screen: 'p-dashboard',
+        description: 'Open Executive Briefing',
+      };
+      break;
+    case 'generateWeeklyOperationsReport':
+      type = 'weekly_report';
+      navAction = {
+        label: 'View Operations Reports',
+        screen: 'p-dashboard',
+        description: 'Open Executive Reports',
+      };
+      break;
+  }
+
+  let provenance: NormalizedProvenance | undefined = undefined;
+  if (data?.provenance && Array.isArray(data.provenance.sourceDomains)) {
+    provenance = {
+      sourceDomains: data.provenance.sourceDomains,
+      asOf: data.provenance.asOf || data.provenance.generatedAt || data.asOf,
+    };
+  } else if (Array.isArray(data?.sourceDomains)) {
+    provenance = {
+      sourceDomains: data.sourceDomains,
+      asOf: data.asOf || data.generatedAt,
+    };
+  }
+
+  return {
+    structuredData: {
+      type,
+      raw: data,
+      provenance,
+    },
+    provenance,
+    navigationActions: navAction ? [navAction] : undefined,
+  };
 }
 
 export const AIService = {
@@ -76,6 +196,7 @@ export const AIService = {
           role: 'assistant',
           content: scopeResult.userMessage || 'Request is out of scope for DigiSkwela operations.'
         },
+        responseType: 'text',
         traceId,
         scopeDecision: scopeResult.reason || 'OUT_OF_SCOPE',
         toolsExecuted: []
@@ -113,6 +234,8 @@ export const AIService = {
       if (firstTurn.toolCalls && firstTurn.toolCalls.length > 0) {
         const toolCallsToExecute = firstTurn.toolCalls.slice(0, aiConfig.limits.maxToolCallsPerTurn);
         const conversationWithTools = [...messages, firstTurn.message];
+        let lastToolResult: any = null;
+        let lastToolName: string | null = null;
 
         for (const call of toolCallsToExecute) {
           toolsRequested.push(call.name);
@@ -125,6 +248,8 @@ export const AIService = {
           });
 
           toolsExecuted.push(call.name);
+          lastToolResult = result.data;
+          lastToolName = call.name;
 
           conversationWithTools.push({
             role: 'tool',
@@ -163,8 +288,23 @@ export const AIService = {
           tokenUsage
         });
 
+        let structuredData: NormalizedStructuredData | undefined = undefined;
+        let provenance: NormalizedProvenance | undefined = undefined;
+        let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
+
+        if (lastToolResult && lastToolName) {
+          const mapping = mapToolToNormalizedOutput(lastToolName, lastToolResult);
+          structuredData = mapping.structuredData;
+          provenance = mapping.provenance;
+          navigationActions = mapping.navigationActions;
+        }
+
         return {
           message: finalTurn.message,
+          responseType: 'structured',
+          structuredData,
+          provenance,
+          navigationActions,
           traceId,
           scopeDecision: 'ALLOWED',
           toolsExecuted
@@ -188,6 +328,7 @@ export const AIService = {
 
       return {
         message: firstTurn.message,
+        responseType: 'text',
         traceId,
         scopeDecision: 'ALLOWED',
         toolsExecuted: []
@@ -218,6 +359,7 @@ export const AIService = {
               role: 'assistant',
               content: 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.'
             },
+            responseType: 'text',
             traceId,
             scopeDecision: 'RATE_LIMITED',
             toolsExecuted
@@ -230,6 +372,7 @@ export const AIService = {
               role: 'assistant',
               content: 'DigiSkwela AI is temporarily unavailable. Please try again later.'
             },
+            responseType: 'text',
             traceId,
             scopeDecision: 'PROVIDER_UNAVAILABLE',
             toolsExecuted

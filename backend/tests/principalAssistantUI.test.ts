@@ -1,10 +1,60 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { parseAssistantResponse } from '../../src/app/principal/ai/utils/parseAssistantResponse.js';
+import request from 'supertest';
+import app from '../src/app.js';
+import prisma from '../src/config/database.js';
+import { generateId } from '../src/common/utils/uuid.js';
+import { sign } from 'jsonwebtoken';
+import { config } from '../src/config/env.js';
+import { 
+  normalizeAssistantResponse, 
+  parseAssistantResponse 
+} from '../../src/app/principal/ai/utils/parseAssistantResponse.js';
 import { PRINCIPAL_QUICK_PROMPTS } from '../../src/app/principal/ai/constants/quickPrompts.js';
+import { AIChatResponse } from '../../src/api/ai.api.js';
 
-describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS & SECURITY', () => {
+describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS, CONVERSATION & SECURITY', () => {
+  let principalToken: string;
+  let principalUserId: string;
+
+  beforeAll(async () => {
+    principalUserId = generateId();
+
+    await prisma.user.create({
+      data: {
+        id: principalUserId,
+        email: `prin_ui_hard_${Date.now()}@calulut.edu.ph`,
+        password_hash: 'hashed_pw',
+        first_name: 'Principal',
+        last_name: 'Hardening',
+        status: 'active',
+      },
+    });
+
+    const role = await prisma.role.findFirst({ where: { name: 'Principal' } });
+    if (role) {
+      await prisma.userRole.create({
+        data: {
+          user_id: principalUserId,
+          role_id: role.id,
+        },
+      });
+    }
+
+    principalToken = sign(
+      { userId: principalUserId },
+      config.jwt.secret,
+      { expiresIn: '1h' }
+    );
+  });
+
+  afterAll(async () => {
+    await prisma.aIAuditLog.deleteMany({ where: { user_id: principalUserId } });
+    await prisma.userRole.deleteMany({ where: { user_id: principalUserId } });
+    await prisma.user.deleteMany({ where: { id: principalUserId } });
+  });
+
   // ─── 1. Quick Prompts Coverage & Integrity ─────────────────────────────
   it('TC-PUI-01: Quick Prompts cover all 8 locked Principal tools with grounded natural-language prompts', () => {
     expect(PRINCIPAL_QUICK_PROMPTS).toHaveLength(8);
@@ -19,164 +69,227 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
     expect(promptIds).toContain('qp-brief');
     expect(promptIds).toContain('qp-weekly');
 
-    // Verify natural language without internal tool names leaked
     PRINCIPAL_QUICK_PROMPTS.forEach(qp => {
-      expect(qp.prompt).not.toMatch(/get[A-Z]/); // No camelCase internal names
+      expect(qp.prompt).not.toMatch(/get[A-Z]/);
       expect(qp.prompt).not.toMatch(/generate[A-Z]/);
       expect(qp.prompt.length).toBeGreaterThan(10);
       expect(qp.label.length).toBeGreaterThan(5);
     });
   });
 
-  // ─── 2. Neutral Attendance Semantics ───────────────────────────────────
-  it('TC-PUI-02: Parsing faculty attendance output strictly preserves neutral presence semantics', () => {
-    const mockToolOutput = {
-      asOfDate: '2026-10-21',
-      summary: {
-        totalActiveFaculty: 30,
-        completedCount: 22,
-        timeOutPendingCount: 4,
-        onApprovedLeaveCount: 1,
-        noGateCheckInNoApprovedLeaveFoundCount: 3,
+  // ─── 2. Provider Independence: Zero Mock Scraper in parseAssistantResponse ──
+  it('TC-PUI-02: Frontend is provider-agnostic and contains ZERO MockAIProvider-specific text or JSON scraping', () => {
+    const parseUtilPath = path.resolve(__dirname, '../../src/app/principal/ai/utils/parseAssistantResponse.ts');
+    const content = fs.readFileSync(parseUtilPath, 'utf-8');
+
+    // Must NOT contain MockAIProvider grounding prefix
+    expect(content).not.toContain('Verified DigiSkwela Data Grounding:\n');
+    // Must NOT scrape markdown code fence
+    expect(content).not.toContain('```json');
+    // Must NOT contain provider-specific logic
+    expect(content).not.toContain('MockAIProvider');
+    expect(content).not.toContain('Groq');
+    expect(content).not.toContain('OpenAI');
+  });
+
+  // ─── 3. Normalized Response Contract: Attendance Typing ─────────────────
+  it('TC-PUI-03: Normalized response contract maps attendance data without client-side JSON parsing', () => {
+    const mockApiResponse: AIChatResponse = {
+      message: {
+        role: 'assistant',
+        content: "Here is today's faculty attendance audit based on verified gate records and leave logs.",
       },
-      records: [
+      responseType: 'structured',
+      structuredData: {
+        type: 'attendance',
+        raw: {
+          asOfDate: '2026-10-21',
+          summary: {
+            totalActiveFaculty: 30,
+            completedCount: 22,
+            timeOutPendingCount: 4,
+            onApprovedLeaveCount: 1,
+            noGateCheckInNoApprovedLeaveFoundCount: 3,
+          },
+          records: [],
+        },
+        provenance: {
+          sourceDomains: ['Faculty Attendance', 'Gate Attendance', 'Leave Management'],
+          asOf: '2026-10-21T07:00:00Z',
+        },
+      },
+      provenance: {
+        sourceDomains: ['Faculty Attendance', 'Gate Attendance', 'Leave Management'],
+        asOf: '2026-10-21T07:00:00Z',
+      },
+      navigationActions: [
         {
-          teacherId: 't-1',
-          teacherName: 'Santos, Maria',
-          department: 'Science',
-          attendanceStatus: 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND',
+          label: 'View Faculty Attendance',
+          screen: 'p-monitoring',
+          description: 'Open Faculty Attendance monitoring tab',
         },
       ],
-      provenance: {
-        sourceDomains: ['Faculty Attendance', 'Leave Management'],
-        asOf: '2026-10-21T07:00:00Z',
-      },
+      traceId: 'tr_test_123',
+      scopeDecision: 'ALLOWED',
+      toolsExecuted: ['getFacultyAttendanceAudit'],
     };
 
-    const rawMessage = `Verified DigiSkwela Data Grounding:\n${JSON.stringify(mockToolOutput, null, 2)}`;
-    const parsed = parseAssistantResponse(rawMessage, ['getFacultyAttendanceAudit']);
+    const normalized = normalizeAssistantResponse(mockApiResponse);
 
-    expect(parsed.structuredData).toBeDefined();
-    expect(parsed.structuredData?.type).toBe('attendance');
-    expect(parsed.structuredData?.raw.summary.noGateCheckInNoApprovedLeaveFoundCount).toBe(3);
-
-    // Verify provenance extracted accurately
-    expect(parsed.structuredData?.provenance?.sourceDomains).toEqual([
+    expect(normalized.displayText).toBe("Here is today's faculty attendance audit based on verified gate records and leave logs.");
+    expect(normalized.responseType).toBe('structured');
+    expect(normalized.structuredData?.type).toBe('attendance');
+    expect(normalized.structuredData?.raw.summary.noGateCheckInNoApprovedLeaveFoundCount).toBe(3);
+    expect(normalized.provenance?.sourceDomains).toEqual([
       'Faculty Attendance',
+      'Gate Attendance',
       'Leave Management',
     ]);
+    expect(normalized.navigationActions?.[0].screen).toBe('p-monitoring');
   });
 
-  // ─── 3. Academic Completeness Rules ────────────────────────────────────
-  it('TC-PUI-03: Parsing academic analytics preserves completeness rules and explains partial records', () => {
-    const mockAcademicOutput = {
-      academicYear: '2025-2026',
-      completenessStatus: 'partial_term_record',
-      annualPassRate: null,
-      interpretationNote: 'Annual pass rate is null because Term 4 grades are not submitted.',
-      termSummaries: [],
-      provenance: {
-        sourceDomains: ['Academic Analytics'],
-        asOf: '2026-10-21T07:00:00Z',
+  // ─── 4. Normalized Response Contract: Academic Analytics Typing ──────────
+  it('TC-PUI-04: Normalized response contract maps academic analytics with completeness rules', () => {
+    const mockApiResponse: AIChatResponse = {
+      message: {
+        role: 'assistant',
+        content: 'Here are the authorized academic performance analytics for Calulut Integrated School.',
       },
+      responseType: 'structured',
+      structuredData: {
+        type: 'academics',
+        raw: {
+          academicYear: '2025-2026',
+          completenessStatus: 'partial_term_record',
+          annualPassRate: null,
+          interpretationNote: 'Annual pass rate is null because Term 4 grades are not submitted.',
+        },
+        provenance: {
+          sourceDomains: ['Academic Analytics'],
+          asOf: '2026-10-21T07:00:00Z',
+        },
+      },
+      traceId: 'tr_acad_123',
+      scopeDecision: 'ALLOWED',
+      toolsExecuted: ['getAcademicAnalytics'],
     };
 
-    const rawMessage = `Verified DigiSkwela Data Grounding:\n${JSON.stringify(mockAcademicOutput, null, 2)}`;
-    const parsed = parseAssistantResponse(rawMessage, ['getAcademicAnalytics']);
+    const normalized = normalizeAssistantResponse(mockApiResponse);
 
-    expect(parsed.structuredData?.type).toBe('academics');
-    expect(parsed.structuredData?.raw.annualPassRate).toBeNull();
-    expect(parsed.structuredData?.raw.completenessStatus).toBe('partial_term_record');
-    expect(parsed.structuredData?.provenance?.sourceDomains).toContain('Academic Analytics');
+    expect(normalized.responseType).toBe('structured');
+    expect(normalized.structuredData?.type).toBe('academics');
+    expect(normalized.structuredData?.raw.annualPassRate).toBeNull();
+    expect(normalized.structuredData?.raw.completenessStatus).toBe('partial_term_record');
   });
 
-  // ─── 4. Provenance Extraction ──────────────────────────────────────────
-  it('TC-PUI-04: Provenance correctly surfaces verified source domains and timestamp without leaking internal paths', () => {
-    const mockBriefOutput = {
-      briefTitle: 'Executive Committee Brief',
-      reportingPeriod: 'Today',
-      meetingType: 'EXECUTIVE_COMMITTEE',
-      operationalHighlights: [{ label: 'Enrolled Students', value: 1250 }],
-      discussionItems: ['Review campus security'],
-      pendingAdministrativeItems: [],
-      upcomingDates: [],
-      sourceDomains: ['Executive Summary', 'Leave Management', 'Events Calendar'],
-      asOf: '2026-10-21T07:30:00Z',
+  // ─── 5. Plain Text Messages Return responseType: 'text' ───────────────────
+  it('TC-PUI-05: Plain messages return responseType text without structuredData', () => {
+    const mockPlainResponse: AIChatResponse = {
+      message: {
+        role: 'assistant',
+        content: 'Hello Principal, how can I assist you with DigiSkwela operations today?',
+      },
+      responseType: 'text',
+      traceId: 'tr_plain_123',
+      scopeDecision: 'ALLOWED',
+      toolsExecuted: [],
     };
 
-    const rawMessage = `Verified DigiSkwela Data Grounding:\n${JSON.stringify(mockBriefOutput, null, 2)}`;
-    const parsed = parseAssistantResponse(rawMessage, ['generatePrincipalMeetingBrief']);
+    const normalized = normalizeAssistantResponse(mockPlainResponse);
 
-    expect(parsed.structuredData?.type).toBe('meeting_brief');
-    expect(parsed.structuredData?.provenance?.sourceDomains).toEqual([
-      'Executive Summary',
-      'Leave Management',
-      'Events Calendar',
-    ]);
-    expect(parsed.structuredData?.provenance?.asOf).toBe('2026-10-21T07:30:00Z');
+    expect(normalized.displayText).toBe('Hello Principal, how can I assist you with DigiSkwela operations today?');
+    expect(normalized.responseType).toBe('text');
+    expect(normalized.structuredData).toBeUndefined();
   });
 
-  // ─── 5. Provenance Omission When Absent ────────────────────────────────
-  it('TC-PUI-05: Provenance is undefined if the backend response contains no provenance metadata', () => {
-    const plainMessage = 'Hello Principal, how can I assist you with DigiSkwela operations today?';
-    const parsed = parseAssistantResponse(plainMessage, []);
+  // ─── 6. Conversational Follow-Up: Turn 1 -> Turn 2 Resolution ───────────
+  it('TC-PUI-06: Conversational follow-up Turn 1 (attendance) -> Turn 2 (which of them are on approved leave) resolves contextually', async () => {
+    // Turn 1: Initial query
+    const turn1Res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [{ role: 'user', content: "Review today's faculty attendance." }],
+        portal: 'Principal',
+      });
 
-    expect(parsed.displayText).toBe(plainMessage);
-    expect(parsed.structuredData).toBeUndefined();
+    expect(turn1Res.status).toBe(200);
+    expect(turn1Res.body.data.responseType).toBe('structured');
+    expect(turn1Res.body.data.toolsExecuted).toContain('getFacultyAttendanceAudit');
+    expect(turn1Res.body.data.structuredData.type).toBe('attendance');
+
+    const assistantTurn1Narrative = turn1Res.body.data.message.content;
+
+    // Turn 2: Follow-up referencing "them"
+    const turn2Res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [
+          { role: 'user', content: "Review today's faculty attendance." },
+          { role: 'assistant', content: assistantTurn1Narrative },
+          { role: 'user', content: 'Which of them are on approved leave?' },
+        ],
+        portal: 'Principal',
+      });
+
+    expect(turn2Res.status).toBe(200);
+    expect(turn2Res.body.data.responseType).toBe('structured');
+    // Understands "them" refers to faculty attendance and calls getFacultyAttendanceAudit
+    expect(turn2Res.body.data.toolsExecuted).toContain('getFacultyAttendanceAudit');
+    expect(turn2Res.body.data.structuredData.type).toBe('attendance');
+    // Records returned are filtered for ON_APPROVED_LEAVE
+    const records = turn2Res.body.data.structuredData.raw.records || [];
+    records.forEach((r: any) => {
+      expect(r.attendanceStatus).toBe('ON_APPROVED_LEAVE');
+    });
   });
 
-  // ─── 6. Empty Result Handling ──────────────────────────────────────────
-  it('TC-PUI-06: Empty results for leaves, events, and behavior are correctly identified', () => {
-    const emptyLeaves = {
-      totalPending: 0,
-      leaves: [],
-      provenance: { sourceDomains: ['Leave Management'] },
-    };
-    const parsedLeaves = parseAssistantResponse(
-      `Verified DigiSkwela Data Grounding:\n${JSON.stringify(emptyLeaves)}`,
-      ['getPendingLeaves']
-    );
-    expect(parsedLeaves.structuredData?.type).toBe('leaves');
-    expect(parsedLeaves.structuredData?.raw.totalPending).toBe(0);
+  // ─── 7. Conversational Follow-Up: Turn 1 -> Turn 2 (no gate check-in) ───
+  it('TC-PUI-07: Conversational follow-up Turn 2 (which of them have no gate check-in) resolves contextually', async () => {
+    const turn2Res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [
+          { role: 'user', content: "Review today's faculty attendance." },
+          { role: 'assistant', content: "Here is today's faculty attendance audit." },
+          { role: 'user', content: 'Which of them have no gate check-in?' },
+        ],
+        portal: 'Principal',
+      });
 
-    const emptyEvents = {
-      window: { startDate: '2026-10-21', endDate: '2026-10-28' },
-      totalEvents: 0,
-      events: [],
-      provenance: { sourceDomains: ['Events Calendar'] },
-    };
-    const parsedEvents = parseAssistantResponse(
-      `Verified DigiSkwela Data Grounding:\n${JSON.stringify(emptyEvents)}`,
-      ['getUpcomingEvents']
-    );
-    expect(parsedEvents.structuredData?.type).toBe('events');
-    expect(parsedEvents.structuredData?.raw.totalEvents).toBe(0);
+    expect(turn2Res.status).toBe(200);
+    expect(turn2Res.body.data.responseType).toBe('structured');
+    expect(turn2Res.body.data.toolsExecuted).toContain('getFacultyAttendanceAudit');
+    const records = turn2Res.body.data.structuredData.raw.records || [];
+    records.forEach((r: any) => {
+      expect(r.attendanceStatus).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+    });
   });
 
-  // ─── 7. Weekly Operations Report Typing ─────────────────────────────────
-  it('TC-PUI-07: Weekly Operations Report structure is accurately identified', () => {
-    const mockWeeklyReport = {
-      reportPeriod: { startDate: '2026-10-14', endDate: '2026-10-21', label: 'Oct 14 - Oct 21' },
-      executiveSummaryFacts: { enrolledStudents: 1240, studentsOnCampusToday: 1180, totalActiveFaculty: 45, facultyCheckedInToday: 42 },
-      facultyAttendanceFacts: { totalActiveFaculty: 45, checkedInToday: 42, timeOutPendingToday: 5, completedToday: 37, attendanceSemanticsNote: 'Neutral gate scan data' },
-      leaveFacts: { pendingApprovalsCount: 2, approvedLeavesCoveringPeriod: 1 },
-      administrativeBehaviorFacts: { openCasesCount: 1, studentsRequiringAttention: 1, investigationPendingCount: 1, breakdownByGrade: [] },
-      upcomingEventsFacts: { totalUpcomingEvents: 3, nextThreeEvents: [] },
-      academicCompletenessFacts: { completenessStatus: 'partial_term_record', annualPassRate: null, note: 'Partial data' },
-      sourceDomains: ['Faculty Attendance', 'Leave Management', 'Academic Analytics'],
-      generatedAt: '2026-10-21T07:45:00Z',
-    };
+  // ─── 8. Ambiguous Reference Without Antecedent: Honest Clarification ─────
+  it('TC-PUI-08: Ambiguous follow-up without antecedent asks for clarification rather than guessing', async () => {
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [
+          { role: 'user', content: 'Which of them are on approved leave?' },
+        ],
+        portal: 'Principal',
+      });
 
-    const rawMessage = `Verified DigiSkwela Data Grounding:\n${JSON.stringify(mockWeeklyReport, null, 2)}`;
-    const parsed = parseAssistantResponse(rawMessage, ['generateWeeklyOperationsReport']);
-
-    expect(parsed.structuredData?.type).toBe('weekly_report');
-    expect(parsed.structuredData?.raw.executiveSummaryFacts.enrolledStudents).toBe(1240);
-    expect(parsed.structuredData?.provenance?.sourceDomains).toContain('Faculty Attendance');
+    expect(res.status).toBe(200);
+    expect(res.body.data.responseType).toBe('text');
+    // Must NOT execute any tool
+    expect(res.body.data.toolsExecuted).toHaveLength(0);
+    // Must honestly ask for clarification
+    expect(res.body.data.message.content).toMatch(/clarify/i);
   });
 
-  // ─── 8. Session Privacy: Zero localStorage / IndexedDB transcript writes ──
-  it('TC-PUI-08: Principal Assistant codebase contains ZERO transcript writes to localStorage or indexedDB', () => {
+  // ─── 9. Session Privacy: Zero localStorage / IndexedDB transcript writes ──
+  it('TC-PUI-09: Principal Assistant codebase contains ZERO transcript writes to localStorage or indexedDB', () => {
     const assistantDir = path.resolve(__dirname, '../../src/app/principal/ai');
     const files = fs.readdirSync(assistantDir, { recursive: true }) as string[];
 
@@ -185,7 +298,6 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
         const fullPath = path.join(assistantDir, file);
         const content = fs.readFileSync(fullPath, 'utf-8');
 
-        // Verify zero localStorage transcript writes
         expect(content).not.toMatch(/localStorage\.setItem\s*\(\s*['"]chat/i);
         expect(content).not.toMatch(/localStorage\.setItem\s*\(\s*['"]assistant/i);
         expect(content).not.toMatch(/localStorage\.setItem\s*\(\s*['"]messages/i);
@@ -194,21 +306,43 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
     }
   });
 
-  // ─── 9. Legacy Principal Widget Cleanup Verification ────────────────────
-  it('TC-PUI-09: PrincipalApp.tsx mounts only PrincipalAIAssistant and has zero AIAssistantWidget mounts', () => {
+  // ─── 10. AIAuditLog: Excludes Raw Prompts & Narrative Transcripts ────────
+  it('TC-PUI-10: AIAuditLog strictly excludes raw prompts, narrative completions, and full transcripts', async () => {
+    const sensitiveQuery = 'AuditQuery_PrivacyInvariant_Verify789';
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [{ role: 'user', content: sensitiveQuery }],
+        portal: 'Principal',
+      });
+
+    expect(res.status).toBe(200);
+    const traceId = res.body.data.traceId;
+
+    const auditEntry = await prisma.aIAuditLog.findFirst({
+      where: { trace_id: traceId },
+    });
+
+    expect(auditEntry).not.toBeNull();
+    const entryJson = JSON.stringify(auditEntry);
+    expect(entryJson).not.toContain(sensitiveQuery);
+    expect(entryJson).not.toContain(res.body.data.message.content);
+  });
+
+  // ─── 11. Legacy Principal Widget Cleanup Verification ───────────────────
+  it('TC-PUI-11: PrincipalApp.tsx mounts only PrincipalAIAssistant and has zero AIAssistantWidget mounts', () => {
     const principalAppPath = path.resolve(__dirname, '../../src/app/principal/PrincipalApp.tsx');
     const content = fs.readFileSync(principalAppPath, 'utf-8');
 
-    // Must NOT contain AIAssistantWidget
     expect(content).not.toContain('AIAssistantWidget');
-
-    // MUST contain PrincipalAIAssistant
     expect(content).toContain('PrincipalAIAssistant');
     expect(content).toContain('<PrincipalAIAssistant onNavigate={setScreen} />');
   });
 
-  // ─── 10. Shared Widget Preserved for Other Portals ───────────────────────
-  it('TC-PUI-10: AIAssistantWidget.tsx still exists for Teacher, Registrar, and Guidance portals', () => {
+  // ─── 12. Shared Widget Preserved for Other Portals ──────────────────────
+  it('TC-PUI-12: AIAssistantWidget.tsx still exists for Teacher, Registrar, and Guidance portals', () => {
     const sharedWidgetPath = path.resolve(__dirname, '../../src/app/shared/components/AIAssistantWidget.tsx');
     expect(fs.existsSync(sharedWidgetPath)).toBe(true);
 
@@ -217,20 +351,19 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
     expect(teacherContent).toContain('AIAssistantWidget');
   });
 
-  // ─── 11. Backend API Endpoint Invariant ─────────────────────────────────
-  it('TC-PUI-11: aiApi.chat connects to /ai/chat using POST with credentials included', () => {
+  // ─── 13. Backend API Endpoint Invariant ─────────────────────────────────
+  it('TC-PUI-13: aiApi.chat connects to /ai/chat using POST with credentials included', () => {
     const aiApiPath = path.resolve(__dirname, '../../src/api/ai.api.ts');
     const content = fs.readFileSync(aiApiPath, 'utf-8');
 
     expect(content).toContain("apiClient.post<AIChatResponse>('/ai/chat', request)");
   });
 
-  // ─── 12. Safe Navigation Integrity: Zero Mutation Actions ───────────────
-  it('TC-PUI-12: Principal Assistant UI provides safe navigation only and contains zero mutation triggers', () => {
+  // ─── 14. Safe Navigation Integrity: Zero Mutation Actions ───────────────
+  it('TC-PUI-14: Principal Assistant UI provides safe navigation only and contains zero mutation triggers', () => {
     const structuredRendererPath = path.resolve(__dirname, '../../src/app/principal/ai/components/StructuredDataRenderer.tsx');
     const content = fs.readFileSync(structuredRendererPath, 'utf-8');
 
-    // Allowed read-only screens
     expect(content).toContain("'p-monitoring'");
     expect(content).toContain("'p-leaves'");
     expect(content).toContain("'p-events'");
@@ -238,7 +371,6 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
     expect(content).toContain("'p-analytics'");
     expect(content).toContain("'p-dashboard'");
 
-    // Prohibit mutation calls
     expect(content).not.toContain('.delete(');
     expect(content).not.toContain('.post(');
     expect(content).not.toContain('.patch(');
@@ -247,8 +379,8 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS &
     expect(content).not.toContain('deleteRecord');
   });
 
-  // ─── 13. Mock Provider State Identifier ─────────────────────────────────
-  it('TC-PUI-13: PrincipalAssistantDrawer visibly displays subtle development mode badge', () => {
+  // ─── 15. Mock Provider State Identifier ─────────────────────────────────
+  it('TC-PUI-15: PrincipalAssistantDrawer visibly displays subtle development mode badge', () => {
     const drawerPath = path.resolve(__dirname, '../../src/app/principal/ai/PrincipalAssistantDrawer.tsx');
     const content = fs.readFileSync(drawerPath, 'utf-8');
 

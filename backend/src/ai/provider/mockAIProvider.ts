@@ -43,30 +43,96 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
     // 2. Check if a tool output was just returned
     const lastToolMessage = [...request.messages].reverse().find(m => m.role === 'tool');
     if (lastToolMessage) {
-      try {
-        const parsed = JSON.parse(lastToolMessage.content);
-        return {
-          message: {
-            role: 'assistant',
-            content: `Verified DigiSkwela Data Grounding:\n${JSON.stringify(parsed, null, 2)}`
-          },
-          finishReason: 'stop',
-          usage: { promptTokens: 45, completionTokens: 30, totalTokens: 75 }
-        };
-      } catch {
-        return {
-          message: {
-            role: 'assistant',
-            content: `Verified DigiSkwela Data Grounding:\n${lastToolMessage.content}`
-          },
-          finishReason: 'stop',
-          usage: { promptTokens: 30, completionTokens: 20, totalTokens: 50 }
-        };
+      let narrative = 'Here is the verified operational data retrieved from authoritative school records.';
+      switch (lastToolMessage.name) {
+        case 'getFacultyAttendanceAudit':
+          narrative = "Here is today's faculty attendance audit based on verified gate records and leave logs.";
+          break;
+        case 'getSchoolOperationalFactSheet':
+          narrative = 'Here is the authoritative daily executive operational fact sheet for Calulut Integrated School.';
+          break;
+        case 'getPendingLeaves':
+          narrative = 'Here are the active pending leave applications requiring administrative review.';
+          break;
+        case 'getUpcomingEvents':
+          narrative = 'Here are the upcoming school calendar events and schedules for the active period.';
+          break;
+        case 'getAdministrativeBehaviorSummary':
+          narrative = 'Here is the administrative summary of student behavior incidents and disciplinary cases.';
+          break;
+        case 'getAcademicAnalytics':
+          narrative = 'Here are the authorized academic performance analytics for Calulut Integrated School.';
+          break;
+        case 'generatePrincipalMeetingBrief':
+          narrative = 'Here is your executive meeting brief compiled from authoritative school records.';
+          break;
+        case 'generateWeeklyOperationsReport':
+          narrative = 'Here is the weekly operations summary report for Calulut Integrated School.';
+          break;
       }
+
+      return {
+        message: {
+          role: 'assistant',
+          content: narrative
+        },
+        finishReason: 'stop',
+        usage: { promptTokens: 45, completionTokens: 25, totalTokens: 70 }
+      };
     }
 
-    // 3. Tool Intent Matching (Deterministic evaluation testing)
+    // 3. Tool Intent Matching & Conversational Context Resolution
     const availableTools = request.tools || [];
+    const previousMessages = request.messages.slice(0, -1);
+
+    // Check for conversational pronouns / follow-up references
+    const isFollowUpQuery = /\b(them|which of them|who among them|who of them|any of them|those|what about them)\b/i.test(content);
+
+    if (isFollowUpQuery) {
+      // Inspect recent conversation turns for antecedent
+      const hadFacultyAttendanceContext = previousMessages.some(m => {
+        const c = (m.content || '').toLowerCase();
+        return c.includes('faculty') || c.includes('attendance') || c.includes('check-in') || m.name === 'getFacultyAttendanceAudit';
+      });
+
+      if (hadFacultyAttendanceContext) {
+        const attendanceTool = availableTools.find(t => t.name === 'getFacultyAttendanceAudit');
+        if (attendanceTool) {
+          let statusFilter: 'ALL' | 'COMPLETED' | 'TIME_OUT_PENDING' | 'ON_APPROVED_LEAVE' | 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' = 'ALL';
+
+          if (content.includes('leave') || content.includes('approved')) {
+            statusFilter = 'ON_APPROVED_LEAVE';
+          } else if (content.includes('no check-in') || content.includes('no gate') || content.includes('missing')) {
+            statusFilter = 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND';
+          } else if (content.includes('time-out') || content.includes('time out') || content.includes('pending')) {
+            statusFilter = 'TIME_OUT_PENDING';
+          } else if (content.includes('completed')) {
+            statusFilter = 'COMPLETED';
+          }
+
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{
+              id: 'call_mock_att_followup',
+              name: attendanceTool.name,
+              arguments: { statusFilter }
+            }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 45, completionTokens: 15, totalTokens: 60 }
+          };
+        }
+      }
+
+      // Ambiguous reference without clear antecedent: Ask for clarification honestly rather than guessing
+      return {
+        message: {
+          role: 'assistant',
+          content: 'Could you please clarify who you are referring to? For example, are you asking about faculty attendance or staff leave applications?'
+        },
+        finishReason: 'stop',
+        usage: { promptTokens: 25, completionTokens: 25, totalTokens: 50 }
+      };
+    }
 
     if (availableTools.length > 0) {
       // Check for attendance intent
@@ -109,7 +175,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       }
 
       // Check for academic analytics intent
-      if (content.includes('academic') || content.includes('grades') || content.includes('performance') || content.includes('pass rate')) {
+      if (content.includes('academic') || content.includes('grades') || content.includes('performance') || content.includes('pass rate') || content.includes('completeness')) {
         const academicTool = availableTools.find(t => t.name === 'getAcademicAnalytics');
         if (academicTool) {
           return {

@@ -124,6 +124,7 @@ export function PortalSidebar<T extends string>({
       <div style={{ padding: 16, borderTop: `1px solid ${C.borderHeavy}`, position: "relative", zIndex: 1 }}>
         {!collapsed && (
           <div 
+            data-testid="sidebar-user-menu-trigger"
             onClick={() => setShowMenu(!showMenu)}
             style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px", borderBottom: showMenu ? `1px solid ${C.borderHeavy}` : "none", cursor: "pointer", borderRadius: 4, transition: "background 0.15s" }}
             onMouseEnter={e => { e.currentTarget.style.background = hoverBg; }}
@@ -142,6 +143,7 @@ export function PortalSidebar<T extends string>({
 
         {collapsed && (
           <div 
+            data-testid="sidebar-user-menu-trigger"
             onClick={() => setShowMenu(!showMenu)}
             style={{ width: 36, height: 36, borderRadius: 18, background: initialsBg, display: "flex", alignItems: "center", justifyContent: "center", color: initialsColor, fontSize: 11, fontWeight: 800, cursor: "pointer", margin: "0 auto 12px", transition: "background 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.background = isGold ? "rgba(255,255,255,0.8)" : C.m600}
@@ -162,7 +164,9 @@ export function PortalSidebar<T extends string>({
                 {!collapsed && <span style={{ fontSize: 11 }}>My Profile</span>}
               </button>
             )}
-            <button onClick={onLogout}
+            <button 
+              data-testid="sidebar-logout-button"
+              onClick={onLogout}
               style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, padding: "8px 10px", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", borderRadius: 4 }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>

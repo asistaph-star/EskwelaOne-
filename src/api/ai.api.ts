@@ -17,6 +17,24 @@ export interface AIChatResponse {
     role: 'assistant';
     content: string;
   };
+  responseType?: 'text' | 'structured';
+  structuredData?: {
+    type: 'fact_sheet' | 'attendance' | 'leaves' | 'events' | 'behavior' | 'academics' | 'meeting_brief' | 'weekly_report' | 'generic';
+    raw: any;
+    provenance?: {
+      sourceDomains: string[];
+      asOf?: string;
+    };
+  };
+  provenance?: {
+    sourceDomains: string[];
+    asOf?: string;
+  };
+  navigationActions?: Array<{
+    label: string;
+    screen: string;
+    description?: string;
+  }>;
   traceId: string;
   scopeDecision: string;
   toolsExecuted: string[];

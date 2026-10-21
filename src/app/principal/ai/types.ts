@@ -6,6 +6,7 @@ export interface PrincipalAIMessage {
   content: string;
   timestamp: string; // ISO date-time string
   traceId?: string;
+  responseType?: 'text' | 'structured';
   toolsExecuted?: string[];
   structuredData?: {
     type: 'fact_sheet' | 'attendance' | 'leaves' | 'events' | 'behavior' | 'academics' | 'meeting_brief' | 'weekly_report' | 'generic';
@@ -15,6 +16,11 @@ export interface PrincipalAIMessage {
       asOf?: string;
     };
   };
+  provenance?: {
+    sourceDomains: string[];
+    asOf?: string;
+  };
+  navigationActions?: SafeNavAction[];
   errorState?: {
     code?: string;
     message: string;
