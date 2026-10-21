@@ -16,38 +16,40 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
   const handleSelectPrompt = (qp: QuickPrompt) => {
     if (disabled) return;
     setSelectedId(qp.id);
-    // Visual confirmation delay so the solid brand selection fill is perceived
+    // Smooth visual feedback before triggering prompt
     setTimeout(() => {
       onSelectPrompt(qp.prompt);
-    }, 350);
+    }, 200);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
-          fontSize: 10,
+          justifyContent: 'flex-end',
+          gap: 4,
+          fontSize: 9.5,
           fontWeight: 700,
-          color: C.t3,
+          color: '#64748B',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
-          paddingLeft: 4,
+          paddingRight: 2,
         }}
       >
-        <Sparkles size={11} color={C.m700} />
+        <Sparkles size={10} color={C.m700} />
         <span>Suggested Prompts</span>
       </div>
 
-      {/* Modern Capsule Pill Chips — Flex-wrap staggered layout, no emojis */}
+      {/* Modern Capsule Pill Actions — Grouped toward right/center-right with flex-wrap */}
       <div 
         data-testid="quick-prompts-container"
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          gap: 7,
+          gap: 6,
+          justifyContent: 'flex-end',
           alignItems: 'center',
         }}
       >
@@ -68,18 +70,18 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '7px 15px',
+                padding: '6px 13px',
                 borderRadius: 9999, // Pill capsule shape
                 background: isSelected
                   ? C.m700
                   : isHovered
-                    ? C.m50
+                    ? '#EFF6FF'
                     : '#FFFFFF',
                 border: isSelected
-                  ? `1.5px solid ${C.m700}`
+                  ? `1px solid ${C.m700}`
                   : isHovered
-                    ? '1.5px solid rgba(29,78,216,0.38)'
-                    : '1.5px solid rgba(29,78,216,0.18)',
+                    ? '1px solid rgba(29, 78, 216, 0.45)'
+                    : '1px solid rgba(29, 78, 216, 0.22)',
                 color: isSelected ? '#FFFFFF' : C.m700,
                 fontSize: 11.5,
                 fontWeight: isSelected ? 700 : 600,
@@ -87,12 +89,12 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
                 textAlign: 'center',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.6 : 1,
-                transition: 'all 0.16s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'all 0.16s ease',
                 boxShadow: isSelected
-                  ? '0 4px 14px rgba(29,78,216,0.38)'
+                  ? '0 2px 8px rgba(29, 78, 216, 0.35)'
                   : isHovered
-                    ? '0 3px 8px rgba(29,78,216,0.12)'
-                    : '0 2px 6px rgba(0,0,0,0.04)',
+                    ? '0 2px 6px rgba(29, 78, 216, 0.12)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 letterSpacing: '0.01em',
                 transform: isSelected
@@ -110,4 +112,3 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
     </div>
   );
 }
-

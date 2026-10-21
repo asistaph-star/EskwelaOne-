@@ -37,7 +37,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           flexDirection: 'column',
           alignItems: 'flex-end',
           gap: 3,
-          maxWidth: '82%',
+          maxWidth: '80%',
           alignSelf: 'flex-end',
         }}
       >
@@ -46,10 +46,10 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
             background: C.m700,
             color: '#FFFFFF',
             padding: '10px 14px',
-            borderRadius: '16px 16px 4px 16px',
+            borderRadius: '14px 14px 4px 14px',
             fontSize: 12.5,
             lineHeight: 1.55,
-            boxShadow: '0 1px 3px rgba(29,78,216,0.18)',
+            boxShadow: '0 1px 3px rgba(29, 78, 216, 0.18)',
             wordBreak: 'break-word',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           }}
@@ -60,7 +60,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           <span
             style={{
               fontSize: 9.5,
-              color: C.t3,
+              color: '#94A3B8',
               marginRight: 4,
               fontFamily: "'Inter', sans-serif",
             }}
@@ -79,7 +79,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
       style={{
         display: 'flex',
         gap: 8,
-        maxWidth: '92%',
+        maxWidth: '85%',
         alignSelf: 'flex-start',
       }}
     >
@@ -94,10 +94,10 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           justifyContent: 'center',
           flexShrink: 0,
           marginTop: 2,
-          background: isError ? '#FEE2E2' : C.m100,
+          background: isError ? '#FEE2E2' : '#EFF6FF',
           border: isError
-            ? '1px solid rgba(239,68,68,0.25)'
-            : '1px solid rgba(29,78,216,0.18)',
+            ? '1px solid rgba(239, 68, 68, 0.25)'
+            : '1px solid rgba(29, 78, 216, 0.18)',
         }}
       >
         {isError ? (
@@ -108,7 +108,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
-        {/* Message bubble card - Soft neutral / blue-gray surface, NOT bright white */}
+        {/* Message bubble card - Distinct soft light gray surface on white canvas */}
         <div
           style={{
             borderRadius: '14px 14px 14px 4px',
@@ -116,11 +116,11 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
             fontSize: 13,
             lineHeight: 1.55,
             border: isError
-              ? '1px solid rgba(239,68,68,0.25)'
-              : '1px solid rgba(203,213,225,0.85)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-            background: isError ? '#FEF2F2' : '#E8EEF5',
-            color: isError ? '#991B1B' : C.t1,
+              ? '1px solid rgba(239, 68, 68, 0.25)'
+              : '1px solid #E2E8F0',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+            background: isError ? '#FEF2F2' : '#F1F5F9',
+            color: isError ? '#991B1B' : '#1E293B',
             fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
           }}
         >
