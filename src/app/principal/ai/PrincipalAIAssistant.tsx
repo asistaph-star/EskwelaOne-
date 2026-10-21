@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare } from 'lucide-react';
+import { AssistantMessageSquareIcon } from './components/AssistantMessageSquareIcon.js';
 import { C } from '../../shared/constants/tokens.js';
 import { PScreen } from '../../shared/types';
 import { PrincipalAIMessage } from './types.js';
@@ -202,7 +202,7 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
                 boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.18)',
               }}
             >
-              <MessageSquare size={20} color="#FFFFFF" />
+              <AssistantMessageSquareIcon size={20} color="#FFFFFF" />
             </div>
           </button>
         )}

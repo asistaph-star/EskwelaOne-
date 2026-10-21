@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { AssistantMessageSquareIcon } from './AssistantMessageSquareIcon.js';
 import { C } from '../../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from '../types.js';
 import { PScreen } from '../../../shared/types';
@@ -147,7 +148,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           {isError ? (
             <AlertCircle size={13} color="#FFFFFF" />
           ) : (
-            <MessageSquare size={13} color="#FFFFFF" />
+            <AssistantMessageSquareIcon size={13} color="#FFFFFF" />
           )}
         </div>
       </div>

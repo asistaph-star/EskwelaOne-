@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  MessageSquare, X, Send, Trash2, ArrowLeft, ArrowRight, ShieldCheck, Loader2 
+  X, Send, Trash2, ArrowLeft, ArrowRight, ShieldCheck, Loader2 
 } from 'lucide-react';
 import { C } from '../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from './types.js';
 import { PScreen } from '../../shared/types';
 import { AssistantMessageItem } from './components/AssistantMessageItem.js';
 import { QuickPromptsGrid } from './components/QuickPromptsGrid.js';
+import { AssistantMessageSquareIcon } from './components/AssistantMessageSquareIcon.js';
 
 interface PrincipalAssistantDrawerProps {
   isOpen: boolean;
@@ -229,7 +230,7 @@ export function PrincipalAssistantDrawer({
                   boxShadow: '0 2px 5px rgba(0, 0, 0, 0.25)',
                 }}
               >
-                <MessageSquare size={14} color="#FFFFFF" />
+                <AssistantMessageSquareIcon size={15} color="#FFFFFF" />
               </div>
 
               <span
@@ -386,7 +387,7 @@ export function PrincipalAssistantDrawer({
                       boxShadow: '0 1px 3px rgba(29, 78, 216, 0.25)',
                     }}
                   >
-                    <MessageSquare size={13} color="#FFFFFF" />
+                    <AssistantMessageSquareIcon size={13} color="#FFFFFF" />
                   </div>
                 </div>
 
@@ -522,7 +523,7 @@ export function PrincipalAssistantDrawer({
                         boxShadow: '0 1px 3px rgba(29, 78, 216, 0.25)',
                       }}
                     >
-                      <MessageSquare size={13} color="#FFFFFF" />
+                      <AssistantMessageSquareIcon size={13} color="#FFFFFF" />
                     </div>
                   </div>
 
