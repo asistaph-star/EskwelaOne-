@@ -78,118 +78,66 @@ export function PrincipalAssistantDrawer({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Mobile-only backdrop (hidden on sm/desktop to ensure zero darkening, zero blur, zero blocking modal feel) */}
       <div
         data-testid="assistant-drawer-backdrop"
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(10, 25, 47, 0.45)',
-          backdropFilter: 'blur(2px)',
-          zIndex: 450,
-          animation: 'fadeIn 0.2s ease-out',
-        }}
+        className="fixed inset-0 bg-slate-900/35 z-[490] sm:hidden"
       />
 
-      {/* Drawer Panel */}
+      {/* Compact Floating Chat Window */}
       <aside
         data-testid="principal-assistant-drawer"
         role="dialog"
         aria-label="DigiSkwela Principal Operations Assistant"
+        className="fixed z-[500] flex flex-col bg-white overflow-hidden border border-slate-200/90 shadow-[0_16px_50px_-10px_rgba(15,23,42,0.28)]
+          inset-x-0 bottom-0 top-12 rounded-t-2xl
+          sm:inset-auto sm:bottom-5 sm:right-5 sm:w-[416px] sm:h-[600px] sm:max-h-[75vh] sm:rounded-2xl"
         style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          maxWidth: 520,
-          background: '#FFFFFF',
-          zIndex: 451,
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '-10px 0 40px rgba(10, 25, 47, 0.25)',
-          overflow: 'hidden',
-          animation: 'slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: 'chatPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Header Band */}
-        <header
-          style={{
-            background: C.m900,
-            color: '#FFFFFF',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: `2px solid ${C.m700}`,
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                background: C.m700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              }}
-            >
-              <Sparkles size={18} color="#FFFFFF" />
+        <style>{`
+          @keyframes chatPopIn {
+            0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+          }
+        `}</style>
+
+        {/* Compact Header */}
+        <header className="bg-[#0A192F] text-white px-3.5 py-2.5 flex items-center justify-between border-b border-[#1D4ED8] shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[#1D4ED8] flex items-center justify-center shrink-0 shadow-xs">
+              <Sparkles size={14} className="text-white" />
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Fraunces', serif", margin: 0, color: '#fff' }}>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-[13.5px] font-bold font-serif text-white tracking-tight leading-none m-0">
                   DigiSkwela Assistant
                 </h2>
-                {/* Subtle Mock Provider Indicator */}
                 <span
                   data-testid="mock-provider-badge"
-                  style={{
-                    fontSize: 9.5,
-                    padding: '2px 7px',
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.14)',
-                    color: '#E2E8F0',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    fontWeight: 500,
-                    letterSpacing: '0.02em',
-                  }}
+                  className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-950/60 text-blue-200 border border-blue-400/20 font-medium tracking-tight whitespace-nowrap"
                 >
                   Development mode · Grounded DigiSkwela data
                 </span>
               </div>
-              <div style={{ fontSize: 10.5, color: '#94A3B8', marginTop: 2 }}>
-                Principal Operations Assistant · Role-Authorized Facts
+              <div className="text-[10px] text-slate-400 leading-tight mt-0.5">
+                Principal Assistant
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex items-center gap-1 shrink-0 ml-2">
             {messages.length > 0 && (
               <button
                 type="button"
                 data-testid="clear-session-button"
                 onClick={onClearSession}
                 title="Clear Session Conversation"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#94A3B8',
-                  cursor: 'pointer',
-                  padding: 6,
-                  borderRadius: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = '#FFFFFF'}
-                onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors"
               >
-                <Trash2 size={15} />
+                <Trash2 size={14} />
               </button>
             )}
             <button
@@ -197,56 +145,27 @@ export function PrincipalAssistantDrawer({
               data-testid="close-drawer-button"
               onClick={onClose}
               aria-label="Close Assistant"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: 'none',
-                color: '#FFFFFF',
-                cursor: 'pointer',
-                width: 30,
-                height: 30,
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              className="text-slate-300 hover:text-white p-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
         </header>
 
-        {/* Message Container / Body */}
+        {/* Scrollable Message Container */}
         <main
           data-testid="assistant-messages-container"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '16px 18px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 16,
-            background: C.paper,
-          }}
+          className="flex-1 overflow-y-auto px-3.5 py-3 space-y-3 bg-[#F8FAFC] overscroll-contain"
         >
           {messages.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 10 }}>
-              {/* Greeting Card */}
-              <div
-                style={{
-                  padding: '16px 18px',
-                  background: '#FFFFFF',
-                  borderRadius: 10,
-                  border: `1px solid ${C.borderMed}`,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                }}
-              >
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif" }}>
+            <div className="flex flex-col gap-3 pt-1">
+              {/* Compact Greeting Card */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-xs">
+                <div className="text-[13px] font-bold text-slate-800 font-serif">
                   Good day, Principal.
                 </div>
-                <div style={{ fontSize: 12, color: C.t2, marginTop: 4, lineHeight: 1.5 }}>
-                  I can investigate school operations, audit today's faculty presence, review pending leave requests, check behavioral cases, and synthesize executive meeting briefs.
+                <div className="text-[11.5px] text-slate-600 mt-1 leading-relaxed">
+                  I can audit faculty gate attendance, review pending leaves, summarize school operations, and analyze academic records using live PostgreSQL data.
                 </div>
               </div>
 
@@ -271,21 +190,10 @@ export function PrincipalAssistantDrawer({
               {isLoading && (
                 <div
                   data-testid="assistant-loading-indicator"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '10px 14px',
-                    background: '#FFFFFF',
-                    border: `1px solid ${C.borderLight}`,
-                    borderRadius: '12px 12px 12px 2px',
-                    maxWidth: '80%',
-                    alignSelf: 'flex-start',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200/80 rounded-xl rounded-tl-xs max-w-[85%] self-start shadow-xs"
                 >
-                  <Loader2 size={16} color={C.m700} className="animate-spin" />
-                  <span style={{ fontSize: 11.5, color: C.t2, fontWeight: 500 }}>
+                  <Loader2 size={14} className="text-blue-700 animate-spin shrink-0" />
+                  <span className="text-[11.5px] text-slate-600 font-medium">
                     Querying verified DigiSkwela domain services...
                   </span>
                 </div>
@@ -296,19 +204,9 @@ export function PrincipalAssistantDrawer({
           )}
         </main>
 
-        {/* Input Footer */}
-        <footer
-          style={{
-            padding: '12px 18px 14px',
-            background: '#FFFFFF',
-            borderTop: `1px solid ${C.borderMed}`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-            flexShrink: 0,
-          }}
-        >
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        {/* Compact Input Footer */}
+        <footer className="p-2.5 bg-white border-t border-slate-200/80 flex flex-col gap-1.5 shrink-0">
+          <form onSubmit={handleSubmit} className="flex gap-2 items-center">
             <textarea
               ref={inputRef}
               data-testid="assistant-input-textarea"
@@ -316,78 +214,33 @@ export function PrincipalAssistantDrawer({
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              rows={2}
+              rows={1}
               maxLength={2000}
-              placeholder="Ask about DigiSkwela operations, faculty attendance, leaves, events..."
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: `1.5px solid ${C.borderMed}`,
-                fontSize: 12,
-                color: C.t1,
-                background: isLoading ? C.paper : '#FFFFFF',
-                resize: 'none',
-                outline: 'none',
-                fontFamily: "'Inter', sans-serif",
-                lineHeight: 1.4,
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = C.m700}
-              onBlur={e => e.currentTarget.style.borderColor = C.borderMed}
+              placeholder="Ask about school operations, attendance, leaves..."
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 resize-none font-sans leading-snug max-h-24 min-h-[38px] bg-white disabled:bg-slate-50"
             />
 
             <button
               type="submit"
               data-testid="assistant-send-button"
               disabled={isLoading || !inputText.trim()}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                background: isLoading || !inputText.trim() ? C.ledger : C.m700,
-                color: isLoading || !inputText.trim() ? C.t3 : '#FFFFFF',
-                border: 'none',
-                cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => {
-                if (!isLoading && inputText.trim()) {
-                  e.currentTarget.style.background = C.m800;
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isLoading && inputText.trim()) {
-                  e.currentTarget.style.background = C.m700;
-                }
-              }}
+              className="w-9 h-9 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:bg-slate-100 disabled:text-slate-400 text-white flex items-center justify-center shrink-0 transition-colors disabled:cursor-not-allowed shadow-xs"
             >
               {isLoading ? (
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={15} className="animate-spin" />
               ) : (
-                <Send size={16} />
+                <Send size={15} />
               )}
             </button>
           </form>
 
-          {/* Privacy & Scope Disclaimer */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 9.5,
-              color: C.t3,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <ShieldCheck size={11} color={C.green} />
+          {/* Footnote */}
+          <div className="flex items-center justify-between text-[9px] text-slate-400 px-1">
+            <div className="flex items-center gap-1">
+              <ShieldCheck size={10} className="text-emerald-600" />
               <span>Session-scoped · Grounded in live PostgreSQL database</span>
             </div>
-            <span>Enter to send · Shift+Enter for newline</span>
+            <span className="hidden sm:inline">Enter to send · Shift+Enter newline</span>
           </div>
         </footer>
       </aside>

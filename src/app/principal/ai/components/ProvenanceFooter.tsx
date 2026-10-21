@@ -32,47 +32,26 @@ export function ProvenanceFooter({ provenance }: ProvenanceFooterProps) {
   return (
     <div 
       data-testid="provenance-footer"
-      style={{
-        marginTop: 12,
-        paddingTop: 10,
-        borderTop: `1px solid ${C.borderLight}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-      }}
+      className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500"
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10, color: C.t3, fontWeight: 600 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Database size={11} color={C.m700} />
-          <span>Verified Sources</span>
-        </div>
-        {formattedTime && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Clock size={10} color={C.t3} />
-            <span>Updated {formattedTime}</span>
-          </div>
-        )}
+      <div className="flex items-center gap-1 font-semibold text-slate-600 shrink-0">
+        <Database size={10} className="text-blue-700" />
+        <span>Sources:</span>
       </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-        {provenance.sourceDomains.map((src, i) => (
-          <span
-            key={i}
-            data-testid={`source-domain-${i}`}
-            style={{
-              fontSize: 10,
-              padding: '2px 8px',
-              borderRadius: 12,
-              background: C.m50,
-              color: C.m700,
-              border: `1px solid ${C.border}`,
-              fontWeight: 600,
-            }}
-          >
-            • {src}
-          </span>
-        ))}
-      </div>
+      {provenance.sourceDomains.map((src, i) => (
+        <span
+          key={i}
+          data-testid={`source-domain-${i}`}
+          className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium text-[9.5px] border border-blue-200/60"
+        >
+          {src}
+        </span>
+      ))}
+      {formattedTime && (
+        <span className="text-slate-400 text-[9px] ml-auto shrink-0">
+          • {formattedTime}
+        </span>
+      )}
     </div>
   );
 }

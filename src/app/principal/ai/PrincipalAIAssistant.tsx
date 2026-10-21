@@ -155,7 +155,7 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
           bottom: position.y,
           right: position.x,
           zIndex: 390,
-          display: 'flex',
+          display: isOpen ? 'none' : 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
           gap: 12,

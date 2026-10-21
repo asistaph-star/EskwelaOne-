@@ -31,31 +31,13 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
     return (
       <div 
         data-testid="chat-message-user"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 4,
-          maxWidth: '85%',
-          alignSelf: 'flex-end',
-        }}
+        className="flex flex-col items-end gap-1 max-w-[85%] self-end"
       >
-        <div
-          style={{
-            background: C.m700,
-            color: '#fff',
-            padding: '10px 14px',
-            borderRadius: '12px 12px 2px 12px',
-            fontSize: 12.5,
-            lineHeight: 1.45,
-            boxShadow: '0 2px 6px rgba(29,78,216,0.18)',
-            wordBreak: 'break-word',
-          }}
-        >
+        <div className="bg-[#1D4ED8] text-white px-3.5 py-2 rounded-2xl rounded-tr-xs text-[13px] leading-relaxed shadow-xs break-words font-sans">
           {message.content}
         </div>
         {formattedTime && (
-          <span style={{ fontSize: 9.5, color: C.t3, marginRight: 4 }}>{formattedTime}</span>
+          <span className="text-[9.5px] text-slate-400 mr-1 font-sans">{formattedTime}</span>
         )}
       </div>
     );
@@ -65,53 +47,34 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
   return (
     <div
       data-testid="chat-message-assistant"
-      style={{
-        display: 'flex',
-        gap: 10,
-        maxWidth: '92%',
-        alignSelf: 'flex-start',
-      }}
+      className="flex gap-2 max-w-[94%] self-start"
     >
       {/* Avatar */}
       <div
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 14,
-          background: isError ? C.redBg : C.m50,
-          border: `1.5px solid ${isError ? C.red : C.m700}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          marginTop: 2,
-        }}
+        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 border ${
+          isError ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-600'
+        }`}
       >
         {isError ? (
-          <AlertCircle size={14} color={C.red} />
+          <AlertCircle size={12} className="text-red-600" />
         ) : (
-          <Sparkles size={14} color={C.m700} />
+          <Sparkles size={12} className="text-blue-700" />
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 0 }}>
+      <div className="flex flex-col gap-1 min-w-0 flex-1">
         {/* Message bubble card */}
         <div
-          style={{
-            background: isError ? '#FFF5F5' : '#FFFFFF',
-            border: `1px solid ${isError ? 'rgba(145,24,24,0.2)' : C.borderMed}`,
-            borderRadius: '12px 12px 12px 2px',
-            padding: '12px 14px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            fontSize: 12,
-            lineHeight: 1.5,
-            color: C.t1,
-          }}
+          className={`rounded-2xl rounded-tl-xs px-3.5 py-2.5 text-[13px] leading-relaxed border shadow-xs ${
+            isError
+              ? 'bg-red-50/70 border-red-200 text-red-900'
+              : 'bg-white border-slate-200/90 text-slate-800'
+          }`}
         >
           {/* Error Notice */}
           {isError && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ color: C.red, fontSize: 12, fontWeight: 600 }}>
+            <div className="flex flex-col gap-2">
+              <div className="text-red-700 text-[12.5px] font-semibold">
                 {message.errorState?.message || message.content}
               </div>
               {message.errorState?.canRetry && onRetry && (
@@ -119,20 +82,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                   type="button"
                   data-testid="retry-button"
                   onClick={onRetry}
-                  style={{
-                    alignSelf: 'flex-start',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '4px 10px',
-                    borderRadius: 4,
-                    background: '#fff',
-                    border: `1px solid ${C.red}`,
-                    color: C.red,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="self-start inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-red-300 text-red-700 text-[11px] font-semibold hover:bg-red-50 cursor-pointer transition-colors"
                 >
                   <RefreshCw size={11} />
                   <span>Retry Request</span>
@@ -148,11 +98,9 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
               {message.content && (
                 <div 
                   data-testid="assistant-narrative-text"
-                  style={{ 
-                    whiteSpace: 'pre-wrap', 
-                    wordBreak: 'break-word', 
-                    marginBottom: message.structuredData ? 12 : 0 
-                  }}
+                  className={`whitespace-pre-wrap break-words font-sans text-slate-800 ${
+                    message.structuredData ? 'mb-2.5' : ''
+                  }`}
                 >
                   {message.content}
                 </div>
@@ -168,32 +116,17 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
 
               {/* Navigation Actions (if present) */}
               {message.navigationActions && message.navigationActions.length > 0 && onNavigate && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
                   {message.navigationActions.map((action, idx) => (
                     <button
                       key={idx}
                       type="button"
                       data-testid={`safe-nav-${action.screen}`}
                       onClick={() => onNavigate(action.screen)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '6px 12px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: '#fff',
-                        background: C.m700,
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = C.m800}
-                      onMouseLeave={e => e.currentTarget.style.background = C.m700}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold text-white bg-blue-700 hover:bg-blue-800 cursor-pointer transition-colors"
                     >
                       <span>{action.label}</span>
-                      <ArrowRight size={12} />
+                      <ArrowRight size={11} />
                     </button>
                   ))}
                 </div>
@@ -206,7 +139,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
         </div>
 
         {formattedTime && (
-          <span style={{ fontSize: 9.5, color: C.t3, marginLeft: 4 }}>
+          <span className="text-[9.5px] text-slate-400 ml-1 font-sans">
             {formattedTime} · DigiSkwela Assistant
           </span>
         )}

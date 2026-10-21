@@ -28,19 +28,15 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: C.t2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        <Sparkles size={12} color={C.m700} />
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-slate-500 uppercase tracking-wider px-0.5">
+        <Sparkles size={11} className="text-blue-700" />
         <span>Grounded Operational Prompts</span>
       </div>
 
       <div 
         data-testid="quick-prompts-container"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
-          gap: 6,
-        }}
+        className="grid grid-cols-2 gap-1.5"
       >
         {PRINCIPAL_QUICK_PROMPTS.map(qp => (
           <button
@@ -49,43 +45,17 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
             data-testid={`quick-prompt-${qp.id}`}
             disabled={disabled}
             onClick={() => onSelectPrompt(qp.prompt)}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 3,
-              padding: '8px 10px',
-              background: '#FFFFFF',
-              border: `1px solid ${C.borderLight}`,
-              borderRadius: 8,
-              textAlign: 'left',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              opacity: disabled ? 0.6 : 1,
-              transition: 'all 0.15s ease',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-            }}
-            onMouseEnter={e => {
-              if (!disabled) {
-                e.currentTarget.style.borderColor = C.m700;
-                e.currentTarget.style.background = C.m50;
-              }
-            }}
-            onMouseLeave={e => {
-              if (!disabled) {
-                e.currentTarget.style.borderColor = C.borderLight;
-                e.currentTarget.style.background = '#FFFFFF';
-              }
-            }}
+            className="flex flex-col items-start gap-1 p-2 bg-white border border-slate-200/80 rounded-xl text-left hover:border-blue-500 hover:bg-blue-50/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer group"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              <div style={{ width: 22, height: 22, borderRadius: 11, background: C.m50, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div className="flex items-center gap-1.5 w-full min-w-0">
+              <div className="w-5 h-5 rounded-md bg-blue-50 group-hover:bg-blue-100/70 flex items-center justify-center shrink-0 transition-colors">
                 {getIcon(qp.iconName)}
               </div>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: C.t1, lineHeight: 1.3 }}>
+              <span className="text-[11px] font-bold text-slate-800 leading-tight truncate group-hover:text-blue-700 transition-colors">
                 {qp.label}
               </span>
             </div>
-            <span style={{ fontSize: 9.5, color: C.t3, lineHeight: 1.3, paddingLeft: 28 }}>
+            <span className="text-[9px] text-slate-500 leading-tight line-clamp-1 pl-6">
               {qp.description}
             </span>
           </button>
