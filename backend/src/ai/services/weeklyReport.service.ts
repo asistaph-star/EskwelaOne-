@@ -5,6 +5,7 @@ import { eventService } from '../../modules/events/event.service.js';
 import { BehaviorService } from '../../modules/behavior/behavior.service.js';
 import { getAcademicAnalytics } from '../../admin/academicAnalytics.service.js';
 import { getPhilippineCalendarDate, parseCalendarDate } from '../../common/utils/dateTime.js';
+import { canAccessSource } from '../security/sourcePolicy.js';
 
 export interface WeeklyReportInput {
   weekStartDate?: string;
@@ -56,13 +57,13 @@ export interface WeeklyReportDTO {
 export class WeeklyReportService {
   /**
    * Generates a deterministic cross-module Weekly Operations Report for the Principal.
-   * Enforces strict dynamic authorization for every source domain:
+   * Enforces strict dynamic authorization for every source domain via centralized sourcePolicy:
    * NO AUTHORIZED DOMAIN PERMISSION -> NO DOMAIN QUERY -> NO FACT IN AI OUTPUT.
+   * Prohibits looser boolean expressions (e.g. academic:read cannot substitute for grade:read_all).
    * Adheres strictly to locked attendance and academic completeness semantics.
    */
   async generateReport(input: WeeklyReportInput = {}, userPermissions: string[] = []): Promise<WeeklyReportDTO> {
     const sourceDomains: string[] = [];
-    const hasPerm = (p: string) => userPermissions.includes(p);
 
     // 1. Resolve Deterministic Date Window (Monday to Friday of the target week)
     let startDateObj: Date;
@@ -83,9 +84,9 @@ export class WeeklyReportService {
     const endDateStr = endOfDay.toISOString().split('T')[0];
     const periodLabel = `School Week: ${startDateStr} to ${endDateStr}`;
 
-    // 2. Executive Fact Sheet Aggregate Facts (Requires attendance:read or academic:read)
+    // 2. Executive Fact Sheet Aggregate Facts (Requires academic:read AND attendance:read)
     let factSheet: any = null;
-    if (hasPerm('attendance:read') || hasPerm('academic:read')) {
+    if (canAccessSource('FACT_SHEET', userPermissions)) {
       try {
         factSheet = await buildSchoolFactSheet();
         sourceDomains.push('Executive Summary');
@@ -103,7 +104,7 @@ export class WeeklyReportService {
       attendanceSemanticsNote: 'Gate check-in status represents recorded scan presence. Lateness, undertime, absence, and unexcused status are not inferred without an authoritative DepEd faculty schedule policy.'
     };
 
-    if (hasPerm('faculty_attendance:read')) {
+    if (canAccessSource('FACULTY_ATTENDANCE', userPermissions)) {
       try {
         const fSummary = await facultyAttendanceService.getSummary();
         facultyFacts.totalActiveFaculty = fSummary.totalActiveFaculty;
@@ -123,7 +124,7 @@ export class WeeklyReportService {
     let approvedPeriodLeavesCount = 0;
     let leaveStatusNote: string | undefined = undefined;
 
-    if (hasPerm('leave:approve')) {
+    if (canAccessSource('LEAVE_MANAGEMENT', userPermissions)) {
       try {
         pendingLeavesCount = await leaveService.getPendingCount();
         const approvedPeriodLeaves = await leaveService.getApprovedLeavesForPeriod(startOfDay, endOfDay);
@@ -144,7 +145,7 @@ export class WeeklyReportService {
       statusNote: undefined as string | undefined
     };
 
-    if (hasPerm('behavior:read')) {
+    if (canAccessSource('BEHAVIOR', userPermissions)) {
       try {
         const bSummary = await BehaviorService.getBehaviorSummary();
         behaviorFacts.openCasesCount = bSummary.reported + bSummary.underInvestigation + bSummary.parentNotified;
@@ -160,7 +161,7 @@ export class WeeklyReportService {
 
     // 6. Events Facts (Requires user:read)
     const weekEvents: Array<{ title: string; date: string; audience: string | null }> = [];
-    if (hasPerm('user:read') || userPermissions.length === 0) {
+    if (canAccessSource('EVENTS', userPermissions)) {
       try {
         const events = await eventService.getEventsForPeriod(startOfDay, endOfDay);
         for (const ev of events) {
@@ -176,12 +177,12 @@ export class WeeklyReportService {
       }
     }
 
-    // 7. Academic Completeness Facts (Strict Semantics - requires grade:read_all or academic:read)
+    // 7. Academic Completeness Facts (Strictly requires grade:read_all AND academic:read - NO LOOSER OR)
     let academicCompleteness: 'complete_annual' | 'partial_terms' | 'insufficient_data' = 'insufficient_data';
     let annualPassRate: number | null = null;
     let academicNote = 'No verified academic grading data has been submitted.';
 
-    if (hasPerm('grade:read_all') || hasPerm('academic:read')) {
+    if (canAccessSource('ACADEMIC_ANALYTICS', userPermissions)) {
       try {
         const analytics = await getAcademicAnalytics();
         sourceDomains.push('Academic Analytics');

@@ -612,4 +612,73 @@ describe('DIGISKWELA — MILESTONE 3 PHASE C: PRINCIPAL V1 DOMAIN TOOLS', () => 
     const leaveTool = principalTools.find(t => t.name === 'getPendingLeaves')!;
     expect(leaveTool.requiredPermissions).toEqual(['leave:approve']);
   });
+
+  // ─── 20. Exact Academic Analytics Escalation Defense ─────────────────
+  it('TC-PTOOLS-20: Principal with academic:read but lacking grade:read_all is strictly denied direct & indirect academic analytics', async () => {
+    // Principal context with academic:read, but MISSING grade:read_all
+    const noGradeReadAllContext: AIExecutionContext = {
+      user: {
+        id: generateId(),
+        email: 'no_grades_read_prin@calulut.edu.ph',
+        roles: ['Principal'],
+        permissions: [
+          'user:read',
+          'academic:read', // Has general academic:read
+          'attendance:read',
+          'faculty_attendance:read',
+          'leave:approve',
+          'behavior:read',
+          // Strictly MISSING: 'grade:read_all'
+        ],
+        firstName: 'NoGrades',
+        lastName: 'Principal'
+      },
+      portal: 'Principal'
+    };
+
+    // 1. Direct getAcademicAnalytics MUST be strictly rejected with 403 Forbidden
+    await expect(
+      dispatchTool('getAcademicAnalytics', {}, noGradeReadAllContext)
+    ).rejects.toThrow(/lacks required permissions/i);
+
+    // 2. Meeting Brief: Academic Analytics domain must NOT be queried and must NOT appear in provenance
+    const briefRes = await dispatchTool('generatePrincipalMeetingBrief', {
+      meetingType: 'FACULTY_MEETING'
+    }, noGradeReadAllContext);
+    expect(briefRes.success).toBe(true);
+    expect(briefRes.data.sourceDomains).not.toContain('Academic Analytics');
+    // Operational highlights must not contain academic reporting claims
+    const hasAcademicHighlight = briefRes.data.operationalHighlights.some(
+      (h: any) => h.label === 'Academic Reporting'
+    );
+    expect(hasAcademicHighlight).toBe(false);
+
+    // 3. Weekly Operations Report: Academic Analytics domain must NOT be queried
+    const reportRes = await dispatchTool('generateWeeklyOperationsReport', {}, noGradeReadAllContext);
+    expect(reportRes.success).toBe(true);
+    expect(reportRes.data.sourceDomains).not.toContain('Academic Analytics');
+    expect(reportRes.data.academicCompletenessFacts.completenessStatus).toBe('insufficient_data');
+    expect(reportRes.data.academicCompletenessFacts.note).toContain('not authorized');
+
+    // 4. Verification: When Principal HAS both grade:read_all AND academic:read, access is granted normally
+    const authorizedContext: AIExecutionContext = {
+      user: {
+        ...noGradeReadAllContext.user,
+        permissions: [...noGradeReadAllContext.user.permissions, 'grade:read_all']
+      },
+      portal: 'Principal'
+    };
+
+    const directRes = await dispatchTool('getAcademicAnalytics', {}, authorizedContext);
+    expect(directRes.success).toBe(true);
+    expect(directRes.data.provenance.sourceDomains).toContain('Academic Analytics');
+
+    const authorizedBriefRes = await dispatchTool('generatePrincipalMeetingBrief', {
+      meetingType: 'FACULTY_MEETING'
+    }, authorizedContext);
+    expect(authorizedBriefRes.data.sourceDomains).toContain('Academic Analytics');
+
+    const authorizedReportRes = await dispatchTool('generateWeeklyOperationsReport', {}, authorizedContext);
+    expect(authorizedReportRes.data.sourceDomains).toContain('Academic Analytics');
+  });
 });

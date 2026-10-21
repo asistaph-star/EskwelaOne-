@@ -4,6 +4,7 @@ import { eventService } from '../../modules/events/event.service.js';
 import { BehaviorService } from '../../modules/behavior/behavior.service.js';
 import { getAcademicAnalytics } from '../../admin/academicAnalytics.service.js';
 import { formatPhilippineDateTime } from '../../admin/executive-summary/factSheet.service.js';
+import { canAccessSource } from '../security/sourcePolicy.js';
 
 export interface MeetingBriefInput {
   meetingType: 'FACULTY_MEETING' | 'EXECUTIVE_COMMITTEE' | 'PARENT_TEACHER_CONFERENCE' | 'OPERATIONAL_PULSE' | 'GENERAL';
@@ -26,8 +27,9 @@ export interface MeetingBriefDTO {
 export class MeetingBriefService {
   /**
    * Generates a deterministic, factual meeting brief for the Principal.
-   * Enforces strict dynamic authorization for every source domain:
+   * Enforces strict dynamic authorization for every source domain via centralized sourcePolicy:
    * NO AUTHORIZED DOMAIN PERMISSION -> NO DOMAIN QUERY -> NO FACT IN AI OUTPUT.
+   * Prohibits looser boolean expressions (e.g. academic:read cannot substitute for grade:read_all).
    * Directly invokes authorized domain services (NEVER calls the AI tool dispatcher recursively).
    */
   async generateBrief(input: MeetingBriefInput, userPermissions: string[] = []): Promise<MeetingBriefDTO> {
@@ -41,11 +43,8 @@ export class MeetingBriefService {
     const pendingItems: Array<{ category: string; summary: string }> = [];
     const upcomingDates: Array<{ title: string; date: string; audience: string | null }> = [];
 
-    // Helper to verify domain permission
-    const hasPerm = (p: string) => userPermissions.includes(p);
-
-    // 1. Fetch Executive Fact Sheet (Requires attendance:read or academic:read)
-    if (hasPerm('attendance:read') || hasPerm('academic:read')) {
+    // 1. Fetch Executive Fact Sheet (Requires both academic:read AND attendance:read)
+    if (canAccessSource('FACT_SHEET', userPermissions)) {
       try {
         const factSheet = await buildSchoolFactSheet();
         sourceDomains.push('Executive Summary');
@@ -69,7 +68,7 @@ export class MeetingBriefService {
     }
 
     // 2. Fetch Pending Leaves (Strictly requires leave:approve)
-    if (hasPerm('leave:approve') && ['FACULTY_MEETING', 'OPERATIONAL_PULSE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
+    if (canAccessSource('LEAVE_MANAGEMENT', userPermissions) && ['FACULTY_MEETING', 'OPERATIONAL_PULSE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
       try {
         const pendingLeaves = await leaveService.getPendingLeaves(10);
         sourceDomains.push('Leave Management');
@@ -92,7 +91,7 @@ export class MeetingBriefService {
     }
 
     // 3. Fetch Upcoming Events (Calendar alignment - requires user:read)
-    if (hasPerm('user:read') || userPermissions.length === 0) {
+    if (canAccessSource('EVENTS', userPermissions)) {
       try {
         const events = await eventService.getUpcomingEvents({ limit: 5 });
         sourceDomains.push('School Events Calendar');
@@ -114,7 +113,7 @@ export class MeetingBriefService {
     }
 
     // 4. Administrative Behavior Summary (Strictly requires behavior:read)
-    if (hasPerm('behavior:read') && ['EXECUTIVE_COMMITTEE', 'PARENT_TEACHER_CONFERENCE', 'GENERAL'].includes(input.meetingType)) {
+    if (canAccessSource('BEHAVIOR', userPermissions) && ['EXECUTIVE_COMMITTEE', 'PARENT_TEACHER_CONFERENCE', 'GENERAL'].includes(input.meetingType)) {
       try {
         const behaviorSummary = await BehaviorService.getBehaviorSummary();
         sourceDomains.push('Behavior Management (Administrative)');
@@ -135,8 +134,8 @@ export class MeetingBriefService {
       }
     }
 
-    // 5. Academic Analytics Completeness Check (Strictly requires grade:read_all or academic:read)
-    if ((hasPerm('grade:read_all') || hasPerm('academic:read')) && ['FACULTY_MEETING', 'PARENT_TEACHER_CONFERENCE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
+    // 5. Academic Analytics Completeness Check (Strictly requires grade:read_all AND academic:read - NO LOOSER OR)
+    if (canAccessSource('ACADEMIC_ANALYTICS', userPermissions) && ['FACULTY_MEETING', 'PARENT_TEACHER_CONFERENCE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
       try {
         const analytics = await getAcademicAnalytics();
         sourceDomains.push('Academic Analytics');
