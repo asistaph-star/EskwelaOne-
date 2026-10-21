@@ -362,7 +362,7 @@ export function PrincipalAssistantDrawer({
         >
           {/* STATE A: ASSISTANT HOME (Greeting & Suggested Prompts) */}
           {viewState === 'home' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 12, minHeight: '100%' }}>
               {/* Clean Welcome Bubble */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <div
