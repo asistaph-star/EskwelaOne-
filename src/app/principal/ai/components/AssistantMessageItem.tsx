@@ -83,35 +83,27 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
         alignSelf: 'flex-start',
       }}
     >
-      {/* Calulut School Seal Avatar */}
+      {/* DigiSkwela AI Assistant Avatar */}
       <div
         style={{
           width: 26,
           height: 26,
-          borderRadius: 8,
+          borderRadius: 7,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
           marginTop: 2,
-          background: isError ? '#FEE2E2' : '#FFFFFF',
+          background: isError ? '#FEE2E2' : C.m100,
           border: isError
             ? '1px solid rgba(239,68,68,0.25)'
-            : '1px solid rgba(203,213,225,0.85)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-          padding: isError ? 0 : 2,
+            : '1px solid rgba(29,78,216,0.18)',
         }}
       >
         {isError ? (
           <AlertCircle size={12} color="#DC2626" />
         ) : (
-          <img
-            src="/school_seal.png"
-            alt="CIS Seal"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            onError={e => (e.currentTarget.style.display = 'none')}
-          />
+          <Sparkles size={13} color={C.m700} />
         )}
       </div>
 
@@ -120,8 +112,8 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
         <div
           style={{
             borderRadius: '14px 14px 14px 4px',
-            padding: '10px 14px',
-            fontSize: 12.5,
+            padding: '11px 14px',
+            fontSize: 13,
             lineHeight: 1.55,
             border: isError
               ? '1px solid rgba(239,68,68,0.25)'
@@ -200,57 +192,42 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                 />
               )}
 
-              {/* Navigation Actions (if present) */}
+              {/* Single Authoritative Primary Navigation Action (No CTA stacking) */}
               {message.navigationActions && message.navigationActions.length > 0 && onNavigate && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 }}>
-                  {message.navigationActions.map((action, idx) => {
-                    const isSecondary = Boolean(message.structuredData) || idx > 0;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        data-testid={`safe-nav-${action.screen}`}
-                        onClick={() => onNavigate(action.screen)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          padding: '5px 10px',
-                          borderRadius: 8,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: isSecondary ? C.m700 : '#FFFFFF',
-                          background: isSecondary ? C.m50 : C.m700,
-                          border: isSecondary ? '1px solid rgba(29,78,216,0.22)' : 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          boxShadow: isSecondary ? 'none' : '0 1px 3px rgba(29,78,216,0.25)',
-                          fontFamily: "'Inter', sans-serif",
-                        }}
-                        onMouseEnter={e => {
-                          if (isSecondary) {
-                            e.currentTarget.style.background = C.m100;
-                            e.currentTarget.style.borderColor = C.m500;
-                          } else {
-                            e.currentTarget.style.background = C.m800;
-                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(10,25,47,0.3)';
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (isSecondary) {
-                            e.currentTarget.style.background = C.m50;
-                            e.currentTarget.style.borderColor = 'rgba(29,78,216,0.22)';
-                          } else {
-                            e.currentTarget.style.background = C.m700;
-                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(29,78,216,0.25)';
-                          }
-                        }}
-                      >
-                        <span>{action.label}</span>
-                        <ArrowRight size={11} />
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {message.navigationActions.slice(0, 1).map((action, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      data-testid={`safe-nav-${action.screen}`}
+                      onClick={() => onNavigate(action.screen)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        padding: '6px 12px',
+                        borderRadius: 7,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        color: '#FFFFFF',
+                        background: C.m700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: '0 1px 3px rgba(29,78,216,0.25)',
+                        fontFamily: "'Inter', sans-serif",
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = C.m800;
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = C.m700;
+                      }}
+                    >
+                      <span>{action.label}</span>
+                      <ArrowRight size={11} />
+                    </button>
+                  ))}
                 </div>
               )}
 
@@ -263,13 +240,13 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
         {formattedTime && (
           <span
             style={{
-              fontSize: 9.5,
+              fontSize: 10,
               color: C.t3,
               marginLeft: 4,
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            {formattedTime} · DigiSkwela Assistant
+            {formattedTime}
           </span>
         )}
       </div>

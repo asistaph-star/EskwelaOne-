@@ -36,7 +36,7 @@ export function PrincipalAssistantDrawer({
   // Auto-scroll on new messages or loading state change
   useEffect(() => {
     if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages, isLoading, isOpen]);
 
@@ -135,104 +135,57 @@ export function PrincipalAssistantDrawer({
           }
         `}</style>
 
-        {/* Minimalist Frosted Glass Header */}
+        {/* DigiSkwela Dark Navy Branded Header */}
         <div style={{ flexShrink: 0 }}>
-          {/* Subtle top brand accent strip */}
+          {/* Top brand accent line */}
           <div
             style={{
-              height: 2,
-              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 40%, #F59E0B 100%)',
+              height: 2.5,
+              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 50%, #F59E0B 100%)',
               borderRadius: '14px 14px 0 0',
             }}
           />
           <div
             style={{
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              borderBottom: '1px solid rgba(203, 213, 225, 0.75)',
+              background: C.m900,
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               padding: '10px 14px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              boxShadow: '0 2px 8px rgba(10, 25, 47, 0.03)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Calulut School Seal Avatar with micro AI badge overlay */}
-              <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
-                <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    background: '#FFFFFF',
-                    border: '1.5px solid rgba(203, 213, 225, 0.85)',
-                    boxShadow: '0 2px 6px rgba(10, 25, 47, 0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    padding: 3,
-                  }}
-                >
-                  <img
-                    src="/school_seal.png"
-                    alt="Calulut Integrated School Seal"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    onError={e => (e.currentTarget.style.display = 'none')}
-                  />
-                </div>
-                {/* Micro AI badge overlay at the bottom-right corner */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: -2,
-                    right: -2,
-                    width: 14,
-                    height: 14,
-                    borderRadius: '50%',
-                    background: C.m700,
-                    border: '1.5px solid #FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  <Sparkles size={7.5} color="#FFFFFF" />
-                </div>
+              {/* DigiSkwela AI Icon */}
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
+                }}
+              >
+                <Sparkles size={16} color="#93C5FD" />
               </div>
 
-              <div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span
                     style={{
-                      fontSize: 13,
+                      fontSize: 13.5,
                       fontWeight: 700,
-                      color: C.t1,
+                      color: '#FFFFFF',
                       letterSpacing: '-0.01em',
                       lineHeight: 1.2,
                     }}
                   >
                     DigiSkwela Assistant
-                  </span>
-                  <span
-                    data-testid="mock-provider-badge"
-                    style={{
-                      fontSize: 9,
-                      padding: '2px 7px',
-                      borderRadius: 20,
-                      background: 'rgba(29, 78, 216, 0.08)',
-                      color: C.m700,
-                      border: '1px solid rgba(29, 78, 216, 0.18)',
-                      fontWeight: 600,
-                      letterSpacing: '0.02em',
-                      whiteSpace: 'nowrap',
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    Dev · Live data
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
@@ -241,60 +194,77 @@ export function PrincipalAssistantDrawer({
                       width: 6,
                       height: 6,
                       borderRadius: '50%',
-                      background: '#16A34A',
+                      background: '#4ADE80',
                       animation: 'pulseGlow 2.5s ease-in-out infinite',
                       flexShrink: 0,
                     }}
                   />
                   <span
                     style={{
-                      fontSize: 11,
-                      color: '#16A34A',
+                      fontSize: 10.5,
+                      color: '#4ADE80',
                       fontWeight: 600,
                       letterSpacing: '0.01em',
                     }}
                   >
                     Online
                   </span>
-                  <span style={{ fontSize: 10, color: '#94A3B8' }}>·</span>
-                  <span style={{ fontSize: 10.5, color: '#64748B', fontWeight: 500 }}>
+                  <span style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.35)' }}>·</span>
+                  <span style={{ fontSize: 10.5, color: 'rgba(255, 255, 255, 0.75)', fontWeight: 500 }}>
                     Principal Operations
+                  </span>
+                  <span
+                    data-testid="mock-provider-badge"
+                    style={{
+                      fontSize: 8.5,
+                      padding: '1px 5px',
+                      borderRadius: 6,
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.65)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      fontWeight: 500,
+                      letterSpacing: '0.02em',
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.3,
+                      marginLeft: 3,
+                    }}
+                  >
+                    Dev · Live data
                   </span>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               {messages.length > 0 && (
                 <button
                   type="button"
                   data-testid="clear-session-button"
                   onClick={onClearSession}
-                  title="Clear Session Conversation"
+                  title="Clear Conversation"
+                  aria-label="Clear Conversation"
                   style={{
-                    background: 'rgba(241, 245, 249, 0.8)',
-                    border: '1px solid rgba(203, 213, 225, 0.65)',
-                    color: '#64748B',
+                    background: 'none',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.65)',
                     cursor: 'pointer',
                     padding: 6,
-                    borderRadius: 8,
+                    borderRadius: 7,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = '#DC2626';
-                    e.currentTarget.style.background = '#FEE2E2';
-                    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
+                    e.currentTarget.style.color = '#FCA5A5';
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.color = '#64748B';
-                    e.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
-                    e.currentTarget.style.borderColor = 'rgba(203, 213, 225, 0.65)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.65)';
+                    e.currentTarget.style.background = 'none';
                   }}
                 >
-                  <Trash2 size={13.5} />
+                  <Trash2 size={14} />
                 </button>
               )}
               <button
@@ -303,26 +273,24 @@ export function PrincipalAssistantDrawer({
                 onClick={onClose}
                 aria-label="Close Assistant"
                 style={{
-                  background: 'rgba(241, 245, 249, 0.8)',
-                  border: '1px solid rgba(203, 213, 225, 0.65)',
-                  color: '#64748B',
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255, 255, 255, 0.8)',
                   cursor: 'pointer',
                   padding: 6,
-                  borderRadius: 8,
+                  borderRadius: 7,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = '#0F172A';
-                  e.currentTarget.style.background = '#E2E8F0';
-                  e.currentTarget.style.borderColor = '#94A3B8';
+                  e.currentTarget.style.color = '#FFFFFF';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.color = '#64748B';
-                  e.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
-                  e.currentTarget.style.borderColor = 'rgba(203, 213, 225, 0.65)';
+                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.background = 'none';
                 }}
               >
                 <X size={15} />
@@ -375,45 +343,38 @@ export function PrincipalAssistantDrawer({
 
           {messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Welcome Card with soft neutral styling and Calulut Seal avatar */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              {/* Clean Welcome Bubble */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <div
                   style={{
                     width: 26,
                     height: 26,
-                    borderRadius: 8,
-                    background: '#FFFFFF',
-                    border: '1px solid rgba(203, 213, 225, 0.85)',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                    borderRadius: 7,
+                    background: C.m100,
+                    border: '1px solid rgba(29, 78, 216, 0.18)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: 2,
-                    padding: 2,
-                    overflow: 'hidden',
                   }}
                 >
-                  <img
-                    src="/school_seal.png"
-                    alt="CIS Seal"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    onError={e => (e.currentTarget.style.display = 'none')}
-                  />
+                  <Sparkles size={13} color={C.m700} />
                 </div>
                 <div
                   style={{
-                    background: '#E2E8F0',
-                    padding: '10px 12px',
-                    borderRadius: '12px 12px 12px 4px',
-                    fontSize: 12,
-                    color: C.t2,
+                    background: '#E8EEF5',
+                    padding: '10px 14px',
+                    borderRadius: '14px 14px 14px 4px',
+                    fontSize: 13,
+                    color: C.t1,
                     lineHeight: 1.5,
-                    border: '1px solid rgba(203,213,225,0.85)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    border: '1px solid rgba(203, 213, 225, 0.85)',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+                    maxWidth: '85%',
                   }}
                 >
-                  Good day, Principal! I can help audit faculty attendance, review leave requests, check behavioral cases, and generate operational briefs from live DigiSkwela data.
+                  Good day, Principal! How can I help with school operations today?
                 </div>
               </div>
 
@@ -443,11 +404,11 @@ export function PrincipalAssistantDrawer({
                     gap: 10,
                     padding: '10px 14px',
                     background: '#E8EEF5',
-                    border: '1px solid rgba(203,213,225,0.85)',
+                    border: '1px solid rgba(203, 213, 225, 0.85)',
                     borderRadius: '14px 14px 14px 4px',
                     maxWidth: '85%',
                     alignSelf: 'flex-start',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                   }}
                 >
                   <div
@@ -466,7 +427,7 @@ export function PrincipalAssistantDrawer({
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 11.5, color: C.t2, fontWeight: 500 }}>
-                      Querying verified services…
+                      Checking DigiSkwela data…
                     </span>
                     <div
                       style={{
@@ -487,15 +448,15 @@ export function PrincipalAssistantDrawer({
           )}
         </div>
 
-        {/* Integrated DigiSkwela Input Composer */}
+        {/* Conventional Chat Composer (Sendbird-inspired) */}
         <div
           style={{
             padding: '8px 12px',
             borderTop: '1px solid #CBD5E1',
             background: C.ledger,
             display: 'flex',
-            gap: 6,
-            alignItems: 'flex-end',
+            gap: 8,
+            alignItems: 'center',
             flexShrink: 0,
           }}
         >
@@ -511,17 +472,17 @@ export function PrincipalAssistantDrawer({
             placeholder="Ask about DigiSkwela operations…"
             style={{
               flex: 1,
-              padding: '8px 12px',
-              borderRadius: 10,
+              padding: '9px 14px',
+              borderRadius: 20,
               border: '1.5px solid #CBD5E1',
               background: isLoading ? '#F8FAFC' : '#FFFFFF',
-              fontSize: 12,
+              fontSize: 12.5,
               outline: 'none',
               resize: 'none',
               fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
               lineHeight: 1.4,
               maxHeight: 68,
-              minHeight: 34,
+              minHeight: 38,
               color: C.t1,
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
@@ -539,15 +500,16 @@ export function PrincipalAssistantDrawer({
             data-testid="assistant-send-button"
             disabled={isLoading || !inputText.trim()}
             onClick={handleSubmit}
+            aria-label="Send Message"
             style={{
               background: isLoading || !inputText.trim()
                 ? '#E2E8F0'
                 : C.m700,
               color: isLoading || !inputText.trim() ? '#94A3B8' : '#FFFFFF',
               border: 'none',
-              width: 34,
-              height: 34,
-              borderRadius: 9,
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -556,7 +518,7 @@ export function PrincipalAssistantDrawer({
               transition: 'all 0.15s ease',
               boxShadow: isLoading || !inputText.trim()
                 ? 'none'
-                : '0 1px 3px rgba(29,78,216,0.25)',
+                : '0 2px 6px rgba(29, 78, 216, 0.3)',
             }}
             onMouseEnter={e => {
               if (!isLoading && inputText.trim()) {
@@ -572,30 +534,30 @@ export function PrincipalAssistantDrawer({
             {isLoading ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
-              <Send size={14} />
+              <Send size={15} />
             )}
           </button>
         </div>
 
-        {/* Subtle Security Footnote */}
+        {/* Subtle Session Status Footer */}
         <div
           style={{
-            padding: '4px 12px',
+            padding: '5px 12px',
             background: '#E8EDF2',
             borderTop: '1px solid #CBD5E1',
             textAlign: 'center',
-            fontSize: 9,
+            fontSize: 9.5,
             color: C.t3,
             flexShrink: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 3,
+            gap: 4,
             letterSpacing: '0.01em',
           }}
         >
-          <ShieldCheck size={9} color="#16A34A" />
-          <span>Session-scoped · Grounded in live DigiSkwela data</span>
+          <ShieldCheck size={10} color="#16A34A" />
+          <span>Session only · Grounded in live DigiSkwela data</span>
         </div>
       </aside>
     </>

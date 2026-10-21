@@ -15,36 +15,8 @@ interface StructuredDataRendererProps {
 export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRendererProps) {
   const { type, raw } = data;
 
-  const renderNavButton = (action: SafeNavAction) => {
-    if (!onNavigate) return null;
-    return (
-      <button
-        type="button"
-        data-testid={`safe-nav-${action.screen}`}
-        onClick={() => onNavigate(action.screen)}
-        style={{
-          marginTop: 10,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 12px',
-          borderRadius: 6,
-          fontSize: 11,
-          fontWeight: 700,
-          color: '#fff',
-          background: C.m700,
-          border: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = C.m800}
-        onMouseLeave={e => e.currentTarget.style.background = C.m700}
-      >
-        <span>{action.label}</span>
-        <ArrowRight size={12} />
-      </button>
-    );
-  };
+  // Single source of truth: Navigation action is rendered authoritatively by AssistantMessageItem
+  const renderNavButton = (_action: SafeNavAction) => null;
 
   // 1. Faculty Attendance Audit
   if (type === 'attendance') {
