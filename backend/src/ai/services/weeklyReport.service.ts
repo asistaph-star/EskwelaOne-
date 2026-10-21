@@ -18,7 +18,7 @@ export interface WeeklyReportDTO {
   };
   executiveSummaryFacts: {
     enrolledStudents: number | null;
-    studentsOnCampusToday: number;
+    studentsOnCampusToday: number | null;
     totalActiveFaculty: number | null;
     facultyCheckedInToday: number | null;
   };
@@ -32,11 +32,13 @@ export interface WeeklyReportDTO {
   leaveFacts: {
     pendingApprovalsCount: number;
     approvedLeavesCoveringPeriod: number;
+    statusNote?: string;
   };
   administrativeBehaviorFacts: {
     openCasesCount: number;
     studentsRequiringAttention: number;
     resolvedCasesCount: number;
+    statusNote?: string;
   };
   eventFacts: {
     scheduledEventsCount: number;
@@ -54,10 +56,13 @@ export interface WeeklyReportDTO {
 export class WeeklyReportService {
   /**
    * Generates a deterministic cross-module Weekly Operations Report for the Principal.
+   * Enforces strict dynamic authorization for every source domain:
+   * NO AUTHORIZED DOMAIN PERMISSION -> NO DOMAIN QUERY -> NO FACT IN AI OUTPUT.
    * Adheres strictly to locked attendance and academic completeness semantics.
    */
-  async generateReport(input: WeeklyReportInput = {}): Promise<WeeklyReportDTO> {
+  async generateReport(input: WeeklyReportInput = {}, userPermissions: string[] = []): Promise<WeeklyReportDTO> {
     const sourceDomains: string[] = [];
+    const hasPerm = (p: string) => userPermissions.includes(p);
 
     // 1. Resolve Deterministic Date Window (Monday to Friday of the target week)
     let startDateObj: Date;
@@ -78,16 +83,18 @@ export class WeeklyReportService {
     const endDateStr = endOfDay.toISOString().split('T')[0];
     const periodLabel = `School Week: ${startDateStr} to ${endDateStr}`;
 
-    // 2. Executive Fact Sheet Aggregate Facts
-    let factSheet;
-    try {
-      factSheet = await buildSchoolFactSheet();
-      sourceDomains.push('Executive Summary');
-    } catch {
-      // Fallback
+    // 2. Executive Fact Sheet Aggregate Facts (Requires attendance:read or academic:read)
+    let factSheet: any = null;
+    if (hasPerm('attendance:read') || hasPerm('academic:read')) {
+      try {
+        factSheet = await buildSchoolFactSheet();
+        sourceDomains.push('Executive Summary');
+      } catch {
+        // Fallback
+      }
     }
 
-    // 3. Faculty Attendance Summary
+    // 3. Faculty Attendance Summary (Strictly requires faculty_attendance:read)
     let facultyFacts = {
       totalActiveFaculty: 0,
       checkedInToday: 0,
@@ -96,90 +103,114 @@ export class WeeklyReportService {
       attendanceSemanticsNote: 'Gate check-in status represents recorded scan presence. Lateness, undertime, absence, and unexcused status are not inferred without an authoritative DepEd faculty schedule policy.'
     };
 
-    try {
-      const fSummary = await facultyAttendanceService.getSummary();
-      facultyFacts.totalActiveFaculty = fSummary.totalActiveFaculty;
-      facultyFacts.checkedInToday = fSummary.checkedInCount;
-      facultyFacts.timeOutPendingToday = fSummary.timeOutPendingCount;
-      facultyFacts.completedToday = fSummary.completedCount;
-      sourceDomains.push('Faculty Attendance');
-    } catch {
-      // Skip on error
+    if (hasPerm('faculty_attendance:read')) {
+      try {
+        const fSummary = await facultyAttendanceService.getSummary();
+        facultyFacts.totalActiveFaculty = fSummary.totalActiveFaculty;
+        facultyFacts.checkedInToday = fSummary.checkedInCount;
+        facultyFacts.timeOutPendingToday = fSummary.timeOutPendingCount;
+        facultyFacts.completedToday = fSummary.completedCount;
+        sourceDomains.push('Faculty Attendance');
+      } catch {
+        // Skip on error
+      }
+    } else {
+      facultyFacts.attendanceSemanticsNote = 'Faculty attendance domain access not authorized for current user permissions.';
     }
 
-    // 4. Leave Management Facts
+    // 4. Leave Management Facts (Strictly requires leave:approve)
     let pendingLeavesCount = 0;
     let approvedPeriodLeavesCount = 0;
-    try {
-      pendingLeavesCount = await leaveService.getPendingCount();
-      const approvedPeriodLeaves = await leaveService.getApprovedLeavesForPeriod(startOfDay, endOfDay);
-      approvedPeriodLeavesCount = approvedPeriodLeaves.length;
-      sourceDomains.push('Leave Management');
-    } catch {
-      // Skip on error
+    let leaveStatusNote: string | undefined = undefined;
+
+    if (hasPerm('leave:approve')) {
+      try {
+        pendingLeavesCount = await leaveService.getPendingCount();
+        const approvedPeriodLeaves = await leaveService.getApprovedLeavesForPeriod(startOfDay, endOfDay);
+        approvedPeriodLeavesCount = approvedPeriodLeaves.length;
+        sourceDomains.push('Leave Management');
+      } catch {
+        // Skip on error
+      }
+    } else {
+      leaveStatusNote = 'Leave management domain access not authorized for current user permissions.';
     }
 
-    // 5. Administrative Behavior Facts
+    // 5. Administrative Behavior Facts (Strictly requires behavior:read)
     let behaviorFacts = {
       openCasesCount: 0,
       studentsRequiringAttention: 0,
-      resolvedCasesCount: 0
+      resolvedCasesCount: 0,
+      statusNote: undefined as string | undefined
     };
-    try {
-      const bSummary = await BehaviorService.getBehaviorSummary();
-      behaviorFacts.openCasesCount = bSummary.reported + bSummary.underInvestigation + bSummary.parentNotified;
-      behaviorFacts.studentsRequiringAttention = bSummary.studentsCount;
-      behaviorFacts.resolvedCasesCount = bSummary.resolved;
-      sourceDomains.push('Behavior Management (Administrative)');
-    } catch {
-      // Skip on error
-    }
 
-    // 6. Events Facts
-    const weekEvents: Array<{ title: string; date: string; audience: string | null }> = [];
-    try {
-      const events = await eventService.getEventsForPeriod(startOfDay, endOfDay);
-      for (const ev of events) {
-        weekEvents.push({
-          title: ev.title,
-          date: ev.startDate,
-          audience: ev.targetAudience
-        });
+    if (hasPerm('behavior:read')) {
+      try {
+        const bSummary = await BehaviorService.getBehaviorSummary();
+        behaviorFacts.openCasesCount = bSummary.reported + bSummary.underInvestigation + bSummary.parentNotified;
+        behaviorFacts.studentsRequiringAttention = bSummary.studentsCount;
+        behaviorFacts.resolvedCasesCount = bSummary.resolved;
+        sourceDomains.push('Behavior Management (Administrative)');
+      } catch {
+        // Skip on error
       }
-      sourceDomains.push('School Events Calendar');
-    } catch {
-      // Skip on error
+    } else {
+      behaviorFacts.statusNote = 'Behavior management domain access not authorized for current user permissions.';
     }
 
-    // 7. Academic Completeness Facts (Strict Semantics)
+    // 6. Events Facts (Requires user:read)
+    const weekEvents: Array<{ title: string; date: string; audience: string | null }> = [];
+    if (hasPerm('user:read') || userPermissions.length === 0) {
+      try {
+        const events = await eventService.getEventsForPeriod(startOfDay, endOfDay);
+        for (const ev of events) {
+          weekEvents.push({
+            title: ev.title,
+            date: ev.startDate,
+            audience: ev.targetAudience
+          });
+        }
+        sourceDomains.push('School Events Calendar');
+      } catch {
+        // Skip on error
+      }
+    }
+
+    // 7. Academic Completeness Facts (Strict Semantics - requires grade:read_all or academic:read)
     let academicCompleteness: 'complete_annual' | 'partial_terms' | 'insufficient_data' = 'insufficient_data';
     let annualPassRate: number | null = null;
     let academicNote = 'No verified academic grading data has been submitted.';
 
-    try {
-      const analytics = await getAcademicAnalytics();
-      sourceDomains.push('Academic Analytics');
+    if (hasPerm('grade:read_all') || hasPerm('academic:read')) {
+      try {
+        const analytics = await getAcademicAnalytics();
+        sourceDomains.push('Academic Analytics');
 
-      if (analytics.passingVsFailingByGradeLevel && analytics.passingVsFailingByGradeLevel.length > 0) {
-        let totalPassing = 0;
-        let totalAssessed = 0;
-        for (const item of analytics.passingVsFailingByGradeLevel) {
-          totalPassing += item.passing || 0;
-          totalAssessed += ((item.passing || 0) + (item.failing || 0));
+        if (analytics.passingVsFailingByGradeLevel && analytics.passingVsFailingByGradeLevel.length > 0) {
+          let totalPassing = 0;
+          let totalAssessed = 0;
+          for (const item of analytics.passingVsFailingByGradeLevel) {
+            totalPassing += item.passing || 0;
+            totalAssessed += ((item.passing || 0) + (item.failing || 0));
+          }
+          if (totalAssessed > 0) {
+            annualPassRate = Math.round((totalPassing / totalAssessed) * 100);
+            academicCompleteness = 'complete_annual';
+            academicNote = `Verified annual pass rate of ${annualPassRate}% across all complete terms (T1–T4).`;
+          }
+        } else if (analytics.schoolAverageByGradeLevel && analytics.schoolAverageByGradeLevel.length > 0) {
+          academicCompleteness = 'partial_terms';
+          annualPassRate = null; // Strictly NULL under locked partial-term rule!
+          academicNote = 'Annual promotion pass rate is not available because complete T1–T4 data has not yet been submitted. Records reflect partial-term averages only.';
         }
-        if (totalAssessed > 0) {
-          annualPassRate = Math.round((totalPassing / totalAssessed) * 100);
-          academicCompleteness = 'complete_annual';
-          academicNote = `Verified annual pass rate of ${annualPassRate}% across all complete terms (T1–T4).`;
-        }
-      } else if (analytics.schoolAverageByGradeLevel && analytics.schoolAverageByGradeLevel.length > 0) {
-        academicCompleteness = 'partial_terms';
-        annualPassRate = null; // Strictly NULL under locked partial-term rule!
-        academicNote = 'Annual promotion pass rate is not available because complete T1–T4 data has not yet been submitted. Records reflect partial-term averages only.';
+      } catch {
+        academicCompleteness = 'insufficient_data';
+        annualPassRate = null;
       }
-    } catch {
+    } else {
       academicCompleteness = 'insufficient_data';
       annualPassRate = null;
+      academicNote = 'Academic analytics domain access not authorized for current user permissions.';
     }
 
     return {
@@ -189,15 +220,16 @@ export class WeeklyReportService {
         label: periodLabel
       },
       executiveSummaryFacts: {
-        enrolledStudents: factSheet?.students.enrolled ?? null,
-        studentsOnCampusToday: factSheet?.students.onCampusNow ?? 0,
-        totalActiveFaculty: factSheet?.faculty.totalActive ?? null,
-        facultyCheckedInToday: factSheet?.faculty.checkedInToday ?? null
+        enrolledStudents: factSheet?.students?.enrolled ?? null,
+        studentsOnCampusToday: factSheet?.students?.onCampusNow ?? null,
+        totalActiveFaculty: factSheet?.faculty?.totalActive ?? null,
+        facultyCheckedInToday: factSheet?.faculty?.checkedInToday ?? null
       },
       facultyAttendanceFacts: facultyFacts,
       leaveFacts: {
         pendingApprovalsCount: pendingLeavesCount,
-        approvedLeavesCoveringPeriod: approvedPeriodLeavesCount
+        approvedLeavesCoveringPeriod: approvedPeriodLeavesCount,
+        statusNote: leaveStatusNote
       },
       administrativeBehaviorFacts: behaviorFacts,
       eventFacts: {

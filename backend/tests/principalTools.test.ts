@@ -523,4 +523,93 @@ describe('DIGISKWELA — MILESTONE 3 PHASE C: PRINCIPAL V1 DOMAIN TOOLS', () => 
     expect(gradeCountAfter).toBe(gradeCountBefore);
     expect(userCountAfter).toBe(userCountBefore);
   });
+
+  // ─── 16. Composite Tools Dynamic Source Domain Authorization ────────
+  it('TC-PTOOLS-16: Principal lacking a specific source domain permission cannot obtain that domain through composite tools', async () => {
+    // Principal context missing leave:approve and behavior:read
+    const restrictedPrincipalContext: AIExecutionContext = {
+      user: {
+        id: generateId(),
+        email: 'restricted_prin@calulut.edu.ph',
+        roles: ['Principal'],
+        permissions: [
+          'user:read',
+          'academic:read',
+          'attendance:read',
+          'faculty_attendance:read',
+          'grade:read_all',
+          // Deliberately omit 'leave:approve' and 'behavior:read'
+        ],
+        firstName: 'Restricted',
+        lastName: 'Principal'
+      },
+      portal: 'Principal'
+    };
+
+    // 1. Meeting Brief test without leave:approve and behavior:read
+    const briefRes = await dispatchTool('generatePrincipalMeetingBrief', {
+      meetingType: 'GENERAL'
+    }, restrictedPrincipalContext);
+
+    expect(briefRes.success).toBe(true);
+    // Verified: Leave Management and Behavior domains are NOT in sourceDomains
+    expect(briefRes.data.sourceDomains).not.toContain('Leave Management');
+    expect(briefRes.data.sourceDomains).not.toContain('Behavior Management (Administrative)');
+    // But authorized domains are present
+    expect(briefRes.data.sourceDomains).toContain('Executive Summary');
+    expect(briefRes.data.sourceDomains).toContain('School Events Calendar');
+    expect(briefRes.data.sourceDomains).toContain('Academic Analytics');
+
+    // 2. Weekly Report test without leave:approve and behavior:read
+    const reportRes = await dispatchTool('generateWeeklyOperationsReport', {}, restrictedPrincipalContext);
+    expect(reportRes.success).toBe(true);
+    expect(reportRes.data.sourceDomains).not.toContain('Leave Management');
+    expect(reportRes.data.sourceDomains).not.toContain('Behavior Management (Administrative)');
+    expect(reportRes.data.leaveFacts.statusNote).toContain('not authorized');
+    expect(reportRes.data.administrativeBehaviorFacts.statusNote).toContain('not authorized');
+    // Authorized domains are present
+    expect(reportRes.data.sourceDomains).toContain('Executive Summary');
+    expect(reportRes.data.sourceDomains).toContain('Faculty Attendance');
+    expect(reportRes.data.sourceDomains).toContain('School Events Calendar');
+  });
+
+  // ─── 17. Academic DTO Metrics Origin Verification ──────────────────
+  it('TC-PTOOLS-17: Academic AI DTO contains only existing verified service metrics (no new AI calculations)', async () => {
+    const acadRes = await dispatchTool('getAcademicAnalytics', {}, principalContext);
+    expect(acadRes.success).toBe(true);
+
+    // gradeLevelTrends and gradeDistribution are directly mapped from academicAnalytics.service.ts
+    expect(Array.isArray(acadRes.data.gradeLevelTrends)).toBe(true);
+    expect(Array.isArray(acadRes.data.gradeDistribution)).toBe(true);
+    expect(Array.isArray(acadRes.data.submittedTermAverages)).toBe(true);
+
+    // Verify buckets in gradeDistribution match existing service standard
+    if (acadRes.data.gradeDistribution.length > 0) {
+      const buckets = acadRes.data.gradeDistribution.map((b: any) => b.bucket);
+      expect(buckets).toContain('90-100');
+      expect(buckets).toContain('85-89');
+      expect(buckets).toContain('80-84');
+      expect(buckets).toContain('75-79');
+      expect(buckets).toContain('<75');
+    }
+  });
+
+  // ─── 18. Upcoming Events Permission Alignment ──────────────────────
+  it('TC-PTOOLS-18: Upcoming events tool requires user:read aligning with general authenticated portal access', async () => {
+    const eventTool = principalTools.find(t => t.name === 'getUpcomingEvents')!;
+    expect(eventTool.requiredPermissions).toEqual(['user:read']);
+
+    // An account with Principal role and user:read can access events
+    const canAccess = toolRegistry.getDeclarationsForUser(['Principal'], ['user:read']);
+    expect(canAccess.some(d => d.name === 'getUpcomingEvents')).toBe(true);
+  });
+
+  // ─── 19. Faculty Attendance & Leave Permission Alignment ───────────
+  it('TC-PTOOLS-19: Faculty attendance tool requires faculty_attendance:read matching the route permission', async () => {
+    const attTool = principalTools.find(t => t.name === 'getFacultyAttendanceAudit')!;
+    expect(attTool.requiredPermissions).toEqual(['faculty_attendance:read']);
+
+    const leaveTool = principalTools.find(t => t.name === 'getPendingLeaves')!;
+    expect(leaveTool.requiredPermissions).toEqual(['leave:approve']);
+  });
 });

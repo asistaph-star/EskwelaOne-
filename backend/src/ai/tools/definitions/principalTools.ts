@@ -90,7 +90,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
   name: 'getFacultyAttendanceAudit',
   description: 'Audits today or a specific date faculty gate check-ins correlated with approved leaves. Returns neutral, factual presence status: COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, or NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND. This tool does not infer lateness, tardiness, undertime, absence, or unexcused absence, as no authoritative schedule policy exists.',
   allowedRoles: ['Principal'],
-  requiredPermissions: ['faculty_attendance:read', 'leave:approve'],
+  requiredPermissions: ['faculty_attendance:read'],
   inputSchema: z.object({
     queryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
     statusFilter: z.enum([
@@ -356,7 +356,7 @@ export const getUpcomingEventsTool: DigiSkwelaTool = {
 export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
   id: 'PRIN-AI-05',
   name: 'getAdministrativeBehaviorSummary',
-  description: 'Retrieves an administrative summary of logged behavioral incident reports for the Principal. Does NOT access Guidance counseling records, disclosures, or Clinic data. Welfare alerts (student attention) and behavioral reports (administrative incidents) remain distinct.',
+  description: 'Retrieves an administrative summary of logged student behavior records for the Principal. Does NOT access Guidance counseling records, disclosures, or Clinic data. Welfare alerts (student attention) and behavior reports (administrative records) remain distinct.',
   allowedRoles: ['Principal'],
   requiredPermissions: ['behavior:read'],
   inputSchema: z.object({
@@ -366,7 +366,7 @@ export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
   declaration: {
     id: 'PRIN-AI-05',
     name: 'getAdministrativeBehaviorSummary',
-    description: 'Retrieves an administrative overview of student behavioral incident logs and status counts.',
+    description: 'Retrieves an administrative overview of student behavior log counts and case status.',
     parameters: {
       type: 'object',
       properties: {
@@ -376,7 +376,7 @@ export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
         },
         limit: {
           type: 'number',
-          description: 'Optional maximum incident cases to return (1-50, default 20)'
+          description: 'Optional maximum behavior cases to return (1-50, default 20)'
         }
       },
       required: [],
@@ -420,7 +420,7 @@ export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
       },
       totalMatched: filteredLogs.length,
       cases: safeCases,
-      statusNote: safeCases.length === 0 ? 'No behavioral incident records found matching criteria.' : undefined,
+      statusNote: safeCases.length === 0 ? 'No behavior records found matching criteria.' : undefined,
       provenance: {
         sourceDomains: ['Behavior Management (Administrative)'],
         asOf: new Date().toISOString()
@@ -549,12 +549,15 @@ export const generatePrincipalMeetingBriefTool: DigiSkwelaTool = {
       additionalProperties: false
     }
   },
-  async execute(args, _context) {
-    // Calls MeetingBriefService directly (never calls the AI dispatcher recursively)
-    return await meetingBriefService.generateBrief({
-      meetingType: args.meetingType || 'GENERAL',
-      focusArea: args.focusArea
-    });
+  async execute(args, context) {
+    // Calls MeetingBriefService with authenticated user's verified permissions for dynamic domain authorization
+    return await meetingBriefService.generateBrief(
+      {
+        meetingType: args.meetingType || 'GENERAL',
+        focusArea: args.focusArea
+      },
+      context.user.permissions || []
+    );
   }
 };
 
@@ -584,11 +587,14 @@ export const generateWeeklyOperationsReportTool: DigiSkwelaTool = {
       additionalProperties: false
     }
   },
-  async execute(args, _context) {
-    // Calls WeeklyReportService directly
-    return await weeklyReportService.generateReport({
-      weekStartDate: args.weekStartDate
-    });
+  async execute(args, context) {
+    // Calls WeeklyReportService with authenticated user's verified permissions for dynamic domain authorization
+    return await weeklyReportService.generateReport(
+      {
+        weekStartDate: args.weekStartDate
+      },
+      context.user.permissions || []
+    );
   }
 };
 

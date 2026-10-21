@@ -26,9 +26,11 @@ export interface MeetingBriefDTO {
 export class MeetingBriefService {
   /**
    * Generates a deterministic, factual meeting brief for the Principal.
+   * Enforces strict dynamic authorization for every source domain:
+   * NO AUTHORIZED DOMAIN PERMISSION -> NO DOMAIN QUERY -> NO FACT IN AI OUTPUT.
    * Directly invokes authorized domain services (NEVER calls the AI tool dispatcher recursively).
    */
-  async generateBrief(input: MeetingBriefInput): Promise<MeetingBriefDTO> {
+  async generateBrief(input: MeetingBriefInput, userPermissions: string[] = []): Promise<MeetingBriefDTO> {
     const now = new Date();
     const asOf = now.toISOString();
     const asOfFormatted = formatPhilippineDateTime(now);
@@ -39,31 +41,35 @@ export class MeetingBriefService {
     const pendingItems: Array<{ category: string; summary: string }> = [];
     const upcomingDates: Array<{ title: string; date: string; audience: string | null }> = [];
 
-    // 1. Fetch Executive Fact Sheet (Foundation for all briefs)
-    let factSheet;
-    try {
-      factSheet = await buildSchoolFactSheet();
-      sourceDomains.push('Executive Summary');
+    // Helper to verify domain permission
+    const hasPerm = (p: string) => userPermissions.includes(p);
 
-      if (factSheet.students.enrolled !== null) {
-        highlights.push({ label: 'Enrolled Students', value: factSheet.students.enrolled });
-      }
-      if (factSheet.students.onCampusNow !== null) {
-        highlights.push({ label: 'Students on Campus Today', value: factSheet.students.onCampusNow });
-      }
+    // 1. Fetch Executive Fact Sheet (Requires attendance:read or academic:read)
+    if (hasPerm('attendance:read') || hasPerm('academic:read')) {
+      try {
+        const factSheet = await buildSchoolFactSheet();
+        sourceDomains.push('Executive Summary');
 
-      if (factSheet.faculty.totalActive !== null) {
-        highlights.push({ label: 'Total Active Faculty', value: factSheet.faculty.totalActive });
+        if (factSheet.students.enrolled !== null) {
+          highlights.push({ label: 'Enrolled Students', value: factSheet.students.enrolled });
+        }
+        if (factSheet.students.onCampusNow !== null) {
+          highlights.push({ label: 'Students on Campus Today', value: factSheet.students.onCampusNow });
+        }
+
+        if (factSheet.faculty.totalActive !== null) {
+          highlights.push({ label: 'Total Active Faculty', value: factSheet.faculty.totalActive });
+        }
+        if (factSheet.faculty.checkedInToday !== null) {
+          highlights.push({ label: 'Faculty Checked In Today', value: factSheet.faculty.checkedInToday });
+        }
+      } catch {
+        // Gracefully handle partial data
       }
-      if (factSheet.faculty.checkedInToday !== null) {
-        highlights.push({ label: 'Faculty Checked In Today', value: factSheet.faculty.checkedInToday });
-      }
-    } catch {
-      // Gracefully handle partial data
     }
 
-    // 2. Fetch Pending Leaves (Crucial for administrative & faculty meetings)
-    if (['FACULTY_MEETING', 'OPERATIONAL_PULSE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
+    // 2. Fetch Pending Leaves (Strictly requires leave:approve)
+    if (hasPerm('leave:approve') && ['FACULTY_MEETING', 'OPERATIONAL_PULSE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
       try {
         const pendingLeaves = await leaveService.getPendingLeaves(10);
         sourceDomains.push('Leave Management');
@@ -85,38 +91,43 @@ export class MeetingBriefService {
       }
     }
 
-    // 3. Fetch Upcoming Events (Calendar alignment)
-    try {
-      const events = await eventService.getUpcomingEvents({ limit: 5 });
-      sourceDomains.push('School Events Calendar');
+    // 3. Fetch Upcoming Events (Calendar alignment - requires user:read)
+    if (hasPerm('user:read') || userPermissions.length === 0) {
+      try {
+        const events = await eventService.getUpcomingEvents({ limit: 5 });
+        sourceDomains.push('School Events Calendar');
 
-      for (const ev of events) {
-        upcomingDates.push({
-          title: ev.title,
-          date: ev.startDate,
-          audience: ev.targetAudience
-        });
-      }
+        for (const ev of events) {
+          upcomingDates.push({
+            title: ev.title,
+            date: ev.startDate,
+            audience: ev.targetAudience
+          });
+        }
 
-      if (events.length > 0) {
-        discussionItems.push(`Upcoming scheduled events: ${events.map(e => e.title).join(', ')}.`);
+        if (events.length > 0) {
+          discussionItems.push(`Upcoming scheduled events: ${events.map(e => e.title).join(', ')}.`);
+        }
+      } catch {
+        // Skip domain on failure
       }
-    } catch {
-      // Skip domain on failure
     }
 
-    // 4. Administrative Behavior Summary (Relevant to disciplinary / executive / general)
-    if (['EXECUTIVE_COMMITTEE', 'PARENT_TEACHER_CONFERENCE', 'GENERAL'].includes(input.meetingType)) {
+    // 4. Administrative Behavior Summary (Strictly requires behavior:read)
+    if (hasPerm('behavior:read') && ['EXECUTIVE_COMMITTEE', 'PARENT_TEACHER_CONFERENCE', 'GENERAL'].includes(input.meetingType)) {
       try {
         const behaviorSummary = await BehaviorService.getBehaviorSummary();
         sourceDomains.push('Behavior Management (Administrative)');
 
-        highlights.push({ label: 'Active Incident Cases', value: (behaviorSummary.reported + behaviorSummary.underInvestigation + behaviorSummary.parentNotified) });
+        highlights.push({
+          label: 'Active Behavior Cases',
+          value: (behaviorSummary.reported + behaviorSummary.underInvestigation + behaviorSummary.parentNotified)
+        });
 
         if (behaviorSummary.reported > 0) {
           pendingItems.push({
-            category: 'Student Discipline',
-            summary: `${behaviorSummary.reported} recently reported behavioral case(s) requiring follow-up.`
+            category: 'Behavior Management',
+            summary: `${behaviorSummary.reported} recently reported behavior case(s) requiring follow-up.`
           });
         }
       } catch {
@@ -124,8 +135,8 @@ export class MeetingBriefService {
       }
     }
 
-    // 5. Academic Analytics Completeness Check
-    if (['FACULTY_MEETING', 'PARENT_TEACHER_CONFERENCE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
+    // 5. Academic Analytics Completeness Check (Strictly requires grade:read_all or academic:read)
+    if ((hasPerm('grade:read_all') || hasPerm('academic:read')) && ['FACULTY_MEETING', 'PARENT_TEACHER_CONFERENCE', 'GENERAL', 'EXECUTIVE_COMMITTEE'].includes(input.meetingType)) {
       try {
         const analytics = await getAcademicAnalytics();
         sourceDomains.push('Academic Analytics');
