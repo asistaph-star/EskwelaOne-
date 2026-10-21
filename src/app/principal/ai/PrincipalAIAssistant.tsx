@@ -147,7 +147,7 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
 
   return (
     <>
-      {/* Floating Trigger Affordance */}
+      {/* Floating Trigger Affordance & Restored Popup Container */}
       <div
         data-testid="principal-ai-trigger-container"
         style={{
@@ -155,12 +155,29 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
           bottom: position.y,
           right: position.x,
           zIndex: 390,
-          display: isOpen ? 'none' : 'flex',
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
-          gap: 12,
+          gap: 10,
         }}
       >
+        {/* Floating Assistant Card */}
+        <PrincipalAssistantDrawer
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          onClearSession={handleClearSession}
+          onNavigate={screen => {
+            if (onNavigate) {
+              onNavigate(screen);
+            }
+          }}
+          onRetryLastMessage={handleRetryLastMessage}
+        />
+
+        {/* Draggable Launcher Button */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div
             title="Drag to reposition AI Assistant button"
@@ -215,22 +232,6 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
           </button>
         </div>
       </div>
-
-      {/* Slide-in Assistant Drawer */}
-      <PrincipalAssistantDrawer
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        onClearSession={handleClearSession}
-        onNavigate={screen => {
-          if (onNavigate) {
-            onNavigate(screen);
-          }
-        }}
-        onRetryLastMessage={handleRetryLastMessage}
-      />
     </>
   );
 }
