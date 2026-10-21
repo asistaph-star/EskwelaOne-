@@ -334,4 +334,20 @@ describe('DIGISKWELA — MILESTONE 3: AI FOUNDATION & SECURITY TESTS (PHASE A/B)
     expect(log).not.toBeNull();
     expect(log?.status).toBe('ERROR');
   });
+
+  // 17. Upstream Provider Timeout / Unavailable Graceful Message
+  it('TC-AI-17: Upstream provider timeout returns generic unavailable response without paid fallback', async () => {
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${principalToken}`)
+      .send({
+        messages: [{ role: 'user', content: 'Check attendance [simulate_timeout]' }],
+        portal: 'Principal'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.message.content).toBe('DigiSkwela AI is temporarily unavailable. Please try again later.');
+    expect(res.body.data.scopeDecision).toBe('PROVIDER_UNAVAILABLE');
+  });
 });
+

@@ -211,16 +211,30 @@ export const AIService = {
       });
 
       // FREE-TIER POLICY ENFORCEMENT: Never trigger automatic paid fallback!
-      if (isProviderErr && ['RATE_LIMITED', 'FREE_QUOTA_EXHAUSTED', 'PROVIDER_UNAVAILABLE', 'PROVIDER_TIMEOUT'].includes(err.code)) {
-        return {
-          message: {
-            role: 'assistant',
-            content: 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.'
-          },
-          traceId,
-          scopeDecision: 'RATE_LIMITED',
-          toolsExecuted
-        };
+      if (isProviderErr) {
+        if (err.code === 'RATE_LIMITED' || err.code === 'FREE_QUOTA_EXHAUSTED') {
+          return {
+            message: {
+              role: 'assistant',
+              content: 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.'
+            },
+            traceId,
+            scopeDecision: 'RATE_LIMITED',
+            toolsExecuted
+          };
+        }
+
+        if (err.code === 'PROVIDER_TIMEOUT' || err.code === 'PROVIDER_UNAVAILABLE') {
+          return {
+            message: {
+              role: 'assistant',
+              content: 'DigiSkwela AI is temporarily unavailable. Please try again later.'
+            },
+            traceId,
+            scopeDecision: 'PROVIDER_UNAVAILABLE',
+            toolsExecuted
+          };
+        }
       }
 
       throw err;
