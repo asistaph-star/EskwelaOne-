@@ -22,6 +22,7 @@ model User {
   must_change_password           Boolean               @default(true)
   announcements                  Announcement[]
   audit_logs                     AuditLog[]
+  ai_audit_logs                  AIAuditLog[]
   behaviorLogs                   BehaviorLog[]
   clinic_referrals_recorded      ClinicReferral[]
   document_requests_approved     DocumentRequest[]     @relation("PrincipalApprover")
@@ -794,4 +795,27 @@ model GateTerminal {
 
   @@index([active], map: "gate_terminals_active_idx")
   @@map("gate_terminals")
+}
+
+model AIAuditLog {
+  id              String   @id @db.VarChar(36)
+  trace_id        String   @db.VarChar(36)
+  user_id         String   @db.VarChar(36)
+  role            String   @db.VarChar(50)
+  portal          String   @db.VarChar(50)
+  scope_decision  String   @db.VarChar(50)
+  tools_requested Json     @default("[]")
+  tools_executed  Json     @default("[]")
+  status          String   @db.VarChar(50)
+  provider_mode   String   @db.VarChar(50)
+  latency_ms      Int
+  token_usage     Json?
+  created_at      DateTime @default(now())
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([trace_id], map: "ai_audit_logs_trace_id_idx")
+  @@index([user_id], map: "ai_audit_logs_user_id_idx")
+  @@index([created_at], map: "ai_audit_logs_created_at_idx")
+  @@index([portal], map: "ai_audit_logs_portal_idx")
+  @@map("ai_audit_logs")
 }

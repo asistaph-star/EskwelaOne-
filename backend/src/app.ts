@@ -15,6 +15,7 @@ import studentServicesRoutes from './student-services/studentServices.routes.js'
 import adminRoutes from './admin/admin.routes.js';
 import mediaRoutes from './admin/media.routes.js';
 import principalRoutes from './principal/principal.routes.js';
+import aiRoutes from './ai/ai.routes.js';
 
 import { initMediaStorage } from './config/storage.config.js';
 
@@ -59,6 +60,7 @@ app.use('/api/student-services', studentServicesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/principal', principalRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────
 app.use((_req, res) => {
