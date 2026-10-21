@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { C } from '../../../shared/constants/tokens.js';
 import { PRINCIPAL_QUICK_PROMPTS } from '../constants/quickPrompts.js';
 import { QuickPrompt } from '../types.js';
@@ -38,7 +38,7 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
           paddingRight: 2,
         }}
       >
-        <Sparkles size={10} color={C.m700} />
+        <MessageSquare size={10} color={C.m700} />
         <span>Suggested Prompts</span>
       </div>
 

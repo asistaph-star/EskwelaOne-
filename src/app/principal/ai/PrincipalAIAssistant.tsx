@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Sparkles, GripHorizontal } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageSquare } from 'lucide-react';
 import { C } from '../../shared/constants/tokens.js';
 import { PScreen } from '../../shared/types';
 import { PrincipalAIMessage } from './types.js';
@@ -16,31 +16,6 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<PrincipalAIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [position, setPosition] = useState({ x: 24, y: 24 });
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0, startPos: { x: 24, y: 24 } });
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    isDragging.current = true;
-    dragStart.current = { x: e.clientX, y: e.clientY, startPos: { ...position } };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging.current) return;
-    e.preventDefault();
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    setPosition({
-      x: Math.max(10, Math.min(window.innerWidth - 180, dragStart.current.startPos.x - dx)),
-      y: Math.max(10, Math.min(window.innerHeight - 80, dragStart.current.startPos.y - dy)),
-    });
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    isDragging.current = false;
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -147,13 +122,13 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
 
   return (
     <>
-      {/* Floating Trigger Affordance & Restored Popup Container */}
+      {/* Fixed Trigger Affordance & Restored Popup Container */}
       <div
         data-testid="principal-ai-trigger-container"
         style={{
           position: 'fixed',
-          bottom: position.y,
-          right: position.x,
+          bottom: 24,
+          right: 24,
           zIndex: 390,
           display: 'flex',
           flexDirection: 'column',
@@ -177,61 +152,59 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
           onRetryLastMessage={handleRetryLastMessage}
         />
 
-        {/* Draggable Launcher Button — hidden when chat card is open */}
+        {/* Circular Fixed Launcher Button — circle-inside-circle, Message SVG, hidden when drawer is open */}
         {!isOpen && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <button
+            type="button"
+            data-testid="principal-ai-assistant-trigger"
+            aria-label="Open DigiSkwela Assistant"
+            onClick={() => setIsOpen(true)}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #1D4ED8, #2563EB)',
+              border: 'none',
+              boxShadow: '0 6px 20px rgba(29, 78, 216, 0.38), 0 2px 6px rgba(0, 0, 0, 0.08)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0,
+              transition: 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'scale(1.06)';
+              e.currentTarget.style.boxShadow = '0 8px 26px rgba(29, 78, 216, 0.48), 0 3px 8px rgba(0, 0, 0, 0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(29, 78, 216, 0.38), 0 2px 6px rgba(0, 0, 0, 0.08)';
+            }}
+            onFocus={e => {
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(147, 197, 253, 0.5), 0 6px 20px rgba(29, 78, 216, 0.38)';
+            }}
+            onBlur={e => {
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(29, 78, 216, 0.38), 0 2px 6px rgba(0, 0, 0, 0.08)';
+            }}
+          >
+            {/* Circle-inside-circle style with DigiSkwela primary blue & centered Message SVG */}
             <div
-              title="Drag to reposition AI Assistant button"
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
               style={{
-                cursor: 'grab',
-                padding: '4px 8px',
-                background: 'rgba(0,0,0,0.06)',
-                borderRadius: '12px 12px 0 0',
-                marginBottom: -4,
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
-              <GripHorizontal size={14} color={C.t3} />
-            </div>
-
-            <button
-              type="button"
-              data-testid="principal-ai-assistant-trigger"
-              aria-label="Open DigiSkwela Principal Operations Assistant"
-              onClick={() => setIsOpen(true)}
-              style={{
-                padding: '0 20px',
-                height: 48,
-                borderRadius: 24,
-                background: 'linear-gradient(135deg, #1D4ED8, #2563EB)',
-                border: 'none',
-                color: '#FFFFFF',
+                width: 38,
+                height: 38,
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                boxShadow: '0 6px 20px rgba(29,78,216,0.35), 0 2px 6px rgba(0,0,0,0.08)',
-                cursor: 'pointer',
-                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'scale(1.04)';
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(29,78,216,0.45), 0 2px 8px rgba(0,0,0,0.1)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(29,78,216,0.35), 0 2px 6px rgba(0,0,0,0.08)';
+                justifyContent: 'center',
+                boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.18)',
               }}
             >
-              <Sparkles size={18} color="#FFFFFF" />
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.02em' }}>
-                AI Assistant
-              </span>
-            </button>
-          </div>
+              <MessageSquare size={20} color="#FFFFFF" />
+            </div>
+          </button>
         )}
       </div>
     </>

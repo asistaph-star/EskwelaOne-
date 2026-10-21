@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Sparkles, X, Send, Trash2, ArrowLeft, ArrowRight, ShieldCheck, Loader2 
+  MessageSquare, X, Send, Trash2, ArrowLeft, ArrowRight, ShieldCheck, Loader2 
 } from 'lucide-react';
 import { C } from '../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from './types.js';
@@ -138,10 +138,6 @@ export function PrincipalAssistantDrawer({
             0% { opacity: 0; transform: translateY(10px) scale(0.97); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
           }
-          @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
-            50% { box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.1); }
-          }
           @keyframes typingBounce {
             0%, 60%, 100% {
               transform: translateY(0);
@@ -219,7 +215,7 @@ export function PrincipalAssistantDrawer({
                 </button>
               )}
 
-              {/* DigiSkwela AI Icon */}
+              {/* DigiSkwela Assistant Icon */}
               <div
                 style={{
                   width: 28,
@@ -234,7 +230,7 @@ export function PrincipalAssistantDrawer({
                   boxShadow: '0 1px 4px rgba(0, 0, 0, 0.2)',
                 }}
               >
-                <Sparkles size={15} color="#93C5FD" />
+                <MessageSquare size={15} color="#93C5FD" />
               </div>
 
               <span
@@ -256,43 +252,8 @@ export function PrincipalAssistantDrawer({
               </span>
             </div>
 
-            {/* Right Header Controls: Online Indicator + Clear + Close */}
+            {/* Right Header Controls: Clear + Close */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {/* Online status indicator */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '2px 7px',
-                  borderRadius: 10,
-                  background: 'rgba(74, 222, 128, 0.12)',
-                  border: '1px solid rgba(74, 222, 128, 0.25)',
-                }}
-              >
-                <div
-                  style={{
-                    width: 5.5,
-                    height: 5.5,
-                    borderRadius: '50%',
-                    background: '#4ADE80',
-                    animation: 'pulseGlow 2.5s ease-in-out infinite',
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: '#4ADE80',
-                    fontWeight: 600,
-                    letterSpacing: '0.02em',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Online
-                </span>
-              </div>
-
               {messages.length > 0 && (
                 <button
                   type="button"
@@ -398,24 +359,8 @@ export function PrincipalAssistantDrawer({
                 </span>
               </div>
 
-              {/* Clean Welcome Bubble */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                <div
-                  style={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: 7,
-                    background: '#EFF6FF',
-                    border: '1px solid rgba(29, 78, 216, 0.18)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    marginTop: 2,
-                  }}
-                >
-                  <Sparkles size={13} color={C.m700} />
-                </div>
+              {/* Clean Welcome Bubble — Profile below the bubble */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                 <div
                   style={{
                     background: '#F1F5F9',
@@ -430,6 +375,27 @@ export function PrincipalAssistantDrawer({
                   }}
                 >
                   Good day, Principal. How can I help with school operations today?
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    marginLeft: 4,
+                  }}
+                >
+                  <MessageSquare size={11} color="#64748B" />
+                  <span
+                    style={{
+                      fontSize: 9.5,
+                      color: '#94A3B8',
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 500,
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    DigiSkwela AI Agent
+                  </span>
                 </div>
               </div>
 
@@ -515,29 +481,11 @@ export function PrincipalAssistantDrawer({
                   data-testid="assistant-loading-indicator"
                   style={{
                     display: 'flex',
-                    gap: 8,
+                    flexDirection: 'column',
+                    gap: 4,
                     alignSelf: 'flex-start',
-                    alignItems: 'flex-end',
                   }}
                 >
-                  {/* DigiSkwela AI avatar/icon beside typing bubble */}
-                  <div
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: 7,
-                      background: '#EFF6FF',
-                      border: '1px solid rgba(29, 78, 216, 0.18)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      marginBottom: 1,
-                    }}
-                  >
-                    <Sparkles size={13} color={C.m700} />
-                  </div>
-
                   {/* Messenger-style light gray rounded typing bubble with 3 sequential animated dots */}
                   <div
                     style={{
@@ -556,6 +504,29 @@ export function PrincipalAssistantDrawer({
                     <div className="typing-dot" style={{ animationDelay: '0ms' }} />
                     <div className="typing-dot" style={{ animationDelay: '180ms' }} />
                     <div className="typing-dot" style={{ animationDelay: '360ms' }} />
+                  </div>
+
+                  {/* Profile metadata below bubble */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      marginLeft: 4,
+                    }}
+                  >
+                    <MessageSquare size={11} color="#64748B" />
+                    <span
+                      style={{
+                        fontSize: 9.5,
+                        color: '#94A3B8',
+                        fontFamily: "'Inter', sans-serif",
+                        fontWeight: 500,
+                        letterSpacing: '0.01em',
+                      }}
+                    >
+                      DigiSkwela AI Agent
+                    </span>
                   </div>
                 </div>
               )}

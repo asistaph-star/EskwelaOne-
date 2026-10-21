@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { MessageSquare, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { C } from '../../../shared/constants/tokens.js';
 import { PrincipalAIMessage } from '../types.js';
 import { PScreen } from '../../../shared/types';
@@ -111,177 +111,166 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
     );
   }
 
-  // Assistant or Error message
+  // Assistant or Error message: bubble on top, profile metadata row BELOW the bubble
   return (
     <div
       data-testid="chat-message-assistant"
       style={{
         display: 'flex',
-        gap: 8,
+        flexDirection: 'column',
+        gap: 4,
         maxWidth: '85%',
         alignSelf: 'flex-start',
       }}
     >
-      {/* DigiSkwela AI Assistant Avatar */}
+      {/* Assistant message bubble */}
       <div
         style={{
-          width: 26,
-          height: 26,
-          borderRadius: 7,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          marginTop: 2,
-          background: isError ? '#FEE2E2' : '#EFF6FF',
+          borderRadius: '14px 14px 14px 4px',
+          padding: '11px 14px',
+          fontSize: 13,
+          lineHeight: 1.55,
           border: isError
             ? '1px solid rgba(239, 68, 68, 0.25)'
-            : '1px solid rgba(29, 78, 216, 0.18)',
+            : '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+          background: isError ? '#FEF2F2' : '#F1F5F9',
+          color: isError ? '#991B1B' : '#1E293B',
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         }}
       >
-        {isError ? (
-          <AlertCircle size={12} color="#DC2626" />
-        ) : (
-          <Sparkles size={13} color={C.m700} />
+        {/* Error Notice */}
+        {isError && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: '#B91C1C' }}>
+              {message.errorState?.message || message.content}
+            </div>
+            {message.errorState?.canRetry && onRetry && (
+              <button
+                type="button"
+                data-testid="retry-button"
+                onClick={onRetry}
+                style={{
+                  alignSelf: 'flex-start',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '5px 10px',
+                  borderRadius: 8,
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  color: '#B91C1C',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  fontFamily: "'Inter', sans-serif",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#FEF2F2';
+                  e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#FFFFFF';
+                  e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)';
+                }}
+              >
+                <RefreshCw size={11} />
+                <span>Retry Request</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Normal Assistant content */}
+        {!isError && (
+          <>
+            {/* Natural language narrative with safe markdown rendering */}
+            {message.content && (
+              <div 
+                data-testid="assistant-narrative-text"
+                style={{
+                  wordBreak: 'break-word',
+                  color: C.t1,
+                  marginBottom: message.structuredData ? 10 : 0,
+                }}
+              >
+                <SafeMarkdownRenderer content={message.content} />
+              </div>
+            )}
+
+            {/* Structured Tool Data (if present) */}
+            {message.structuredData && (
+              <StructuredDataRenderer 
+                data={message.structuredData} 
+                onNavigate={onNavigate} 
+              />
+            )}
+
+            {/* Single Authoritative Primary Navigation Action (No CTA stacking) */}
+            {message.navigationActions && message.navigationActions.length > 0 && onNavigate && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {message.navigationActions.slice(0, 1).map((action, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    data-testid={`safe-nav-${action.screen}`}
+                    onClick={() => onNavigate(action.screen)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      padding: '6px 12px',
+                      borderRadius: 7,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: '#FFFFFF',
+                      background: C.m700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      boxShadow: '0 1px 3px rgba(29,78,216,0.25)',
+                      fontFamily: "'Inter', sans-serif",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = C.m800;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = C.m700;
+                    }}
+                  >
+                    <span>{action.label}</span>
+                    <ArrowRight size={11} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Provenance Footer */}
+            <ProvenanceFooter provenance={message.provenance || message.structuredData?.provenance} />
+          </>
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
-        {/* Message bubble card - Distinct soft light gray surface on white canvas */}
-        <div
-          style={{
-            borderRadius: '14px 14px 14px 4px',
-            padding: '11px 14px',
-            fontSize: 13,
-            lineHeight: 1.55,
-            border: isError
-              ? '1px solid rgba(239, 68, 68, 0.25)'
-              : '1px solid #E2E8F0',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-            background: isError ? '#FEF2F2' : '#F1F5F9',
-            color: isError ? '#991B1B' : '#1E293B',
-            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-          }}
-        >
-          {/* Error Notice */}
-          {isError && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: '#B91C1C' }}>
-                {message.errorState?.message || message.content}
-              </div>
-              {message.errorState?.canRetry && onRetry && (
-                <button
-                  type="button"
-                  data-testid="retry-button"
-                  onClick={onRetry}
-                  style={{
-                    alignSelf: 'flex-start',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '5px 10px',
-                    borderRadius: 8,
-                    background: '#FFFFFF',
-                    border: '1px solid rgba(239,68,68,0.25)',
-                    color: '#B91C1C',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = '#FEF2F2';
-                    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = '#FFFFFF';
-                    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)';
-                  }}
-                >
-                  <RefreshCw size={11} />
-                  <span>Retry Request</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Normal Assistant content */}
-          {!isError && (
-            <>
-              {/* Natural language narrative with safe markdown rendering */}
-              {message.content && (
-                <div 
-                  data-testid="assistant-narrative-text"
-                  style={{
-                    wordBreak: 'break-word',
-                    color: C.t1,
-                    marginBottom: message.structuredData ? 10 : 0,
-                  }}
-                >
-                  <SafeMarkdownRenderer content={message.content} />
-                </div>
-              )}
-
-              {/* Structured Tool Data (if present) */}
-              {message.structuredData && (
-                <StructuredDataRenderer 
-                  data={message.structuredData} 
-                  onNavigate={onNavigate} 
-                />
-              )}
-
-              {/* Single Authoritative Primary Navigation Action (No CTA stacking) */}
-              {message.navigationActions && message.navigationActions.length > 0 && onNavigate && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  {message.navigationActions.slice(0, 1).map((action, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      data-testid={`safe-nav-${action.screen}`}
-                      onClick={() => onNavigate(action.screen)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        padding: '6px 12px',
-                        borderRadius: 7,
-                        fontSize: 11.5,
-                        fontWeight: 600,
-                        color: '#FFFFFF',
-                        background: C.m700,
-                        border: 'none',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        boxShadow: '0 1px 3px rgba(29,78,216,0.25)',
-                        fontFamily: "'Inter', sans-serif",
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.background = C.m800;
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = C.m700;
-                      }}
-                    >
-                      <span>{action.label}</span>
-                      <ArrowRight size={11} />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Provenance Footer */}
-              <ProvenanceFooter provenance={message.provenance || message.structuredData?.provenance} />
-            </>
-          )}
-        </div>
-
+      {/* Assistant Profile Row BELOW the message bubble */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          marginLeft: 4,
+        }}
+      >
+        {isError ? (
+          <AlertCircle size={11} color="#DC2626" />
+        ) : (
+          <MessageSquare size={11} color="#64748B" />
+        )}
         <span
           data-testid="assistant-message-meta"
           style={{
             fontSize: 9.5,
             color: '#94A3B8',
-            marginLeft: 4,
             fontFamily: "'Inter', sans-serif",
             fontWeight: 500,
             letterSpacing: '0.01em',
