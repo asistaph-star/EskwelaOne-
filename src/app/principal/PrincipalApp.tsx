@@ -15,7 +15,7 @@ import { PLiveFacultyAttendance } from './attendance/PLiveFacultyAttendance';
 
 import { PLeaveManagement } from './leaves/PLeaveManagement';
 import { X } from 'lucide-react';
-import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { PrincipalAIAssistant } from './ai/PrincipalAIAssistant';
 import { PDocRequestsScreen } from './documents/PDocRequestsScreen';
 import { PAnnouncementsScreen } from './announcements/PAnnouncementsScreen';
 import { PBehaviorScreen } from './behavior/PBehaviorScreen';
@@ -97,7 +97,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           )}
         </div>
       </div>
-      <AIAssistantWidget role="Principal" />
+      <PrincipalAIAssistant onNavigate={setScreen} />
       <Toaster position="top-center" richColors />
     </div>
   );

@@ -83,7 +83,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       }
 
       // Check for fact sheet / operations intent
-      if (content.includes('fact sheet') || content.includes('pulse') || content.includes('operations') || content.includes('how many students')) {
+      if (content.includes('fact sheet') || content.includes('pulse') || content.includes('operations') || content.includes('how many students') || content.includes('attention')) {
         const factSheetTool = availableTools.find(t => t.name === 'getSchoolOperationalFactSheet');
         if (factSheetTool) {
           return {
@@ -122,7 +122,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       }
 
       // Check for events intent
-      if (content.includes('event') || content.includes('calendar') || content.includes('schedule')) {
+      if (content.includes('event') || content.includes('calendar') || content.includes('schedule') || content.includes('coming up') || content.includes('this week')) {
         const eventTool = availableTools.find(t => t.name === 'getUpcomingEvents');
         if (eventTool) {
           return {

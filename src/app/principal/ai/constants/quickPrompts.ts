@@ -1,0 +1,68 @@
+import { QuickPrompt } from '../types.js';
+
+export const PRINCIPAL_QUICK_PROMPTS: QuickPrompt[] = [
+  {
+    id: 'qp-factsheet',
+    category: 'Daily Operations',
+    label: 'What needs my attention today?',
+    prompt: 'What needs my attention today?',
+    iconName: 'activity',
+    description: 'School operational pulse, student attendance, faculty presence, and pending administrative items.',
+  },
+  {
+    id: 'qp-attendance',
+    category: 'Faculty Presence',
+    label: 'Review faculty attendance',
+    prompt: "Review today's faculty attendance.",
+    iconName: 'users',
+    description: 'Factual faculty gate check-ins correlated with approved leaves.',
+  },
+  {
+    id: 'qp-leaves',
+    category: 'Administrative Leaves',
+    label: 'Show pending leave requests',
+    prompt: 'Show pending leave requests.',
+    iconName: 'file-text',
+    description: 'Faculty leave applications currently awaiting administrative action.',
+  },
+  {
+    id: 'qp-events',
+    category: 'School Events',
+    label: "What's coming up this week?",
+    prompt: "What's coming up this week?",
+    iconName: 'calendar',
+    description: 'Upcoming scheduled school events and administrative deadlines.',
+  },
+  {
+    id: 'qp-behavior',
+    category: 'Student Behavior',
+    label: 'Review behavior cases',
+    prompt: 'Show active behavior cases requiring review.',
+    iconName: 'shield',
+    description: 'Administrative summary of logged disciplinary reports.',
+  },
+  {
+    id: 'qp-academics',
+    category: 'Academic Analytics',
+    label: 'Explain academic completeness',
+    prompt: 'Explain the current academic completeness.',
+    iconName: 'bar-chart',
+    description: 'School-wide grading completeness status and annual evaluation rules.',
+  },
+  {
+    id: 'qp-brief',
+    category: 'Leadership Preparation',
+    label: 'Prepare a meeting brief',
+    prompt: 'Prepare me for a faculty meeting.',
+    iconName: 'briefcase',
+    description: 'Cross-module executive brief with highlights and discussion items.',
+  },
+  {
+    id: 'qp-weekly',
+    category: 'Weekly Operations',
+    label: 'Prepare weekly operations report',
+    prompt: 'Prepare my weekly operations brief.',
+    iconName: 'clock',
+    description: 'Structured weekly operations summary across all authorized school domains.',
+  },
+];
