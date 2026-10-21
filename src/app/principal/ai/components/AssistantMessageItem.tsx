@@ -17,16 +17,26 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
   const isUser = message.role === 'user';
   const isError = Boolean(message.errorState);
 
-  // Format message timestamp
+  // Format message timestamp and recent indicator
   let formattedTime = '';
+  let isRecent = false;
   if (message.timestamp) {
     try {
       const d = new Date(message.timestamp);
       formattedTime = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const diffMs = Date.now() - d.getTime();
+      isRecent = diffMs >= 0 && diffMs < 60000;
     } catch {
       formattedTime = '';
+      isRecent = false;
     }
   }
+
+  const assistantMeta = isRecent
+    ? 'DigiSkwela AI Agent • Just now'
+    : formattedTime
+      ? `DigiSkwela AI Agent • ${formattedTime}`
+      : 'DigiSkwela AI Agent';
 
   if (isUser) {
     return (
@@ -237,18 +247,19 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           )}
         </div>
 
-        {formattedTime && (
-          <span
-            style={{
-              fontSize: 10,
-              color: C.t3,
-              marginLeft: 4,
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            {formattedTime}
-          </span>
-        )}
+        <span
+          data-testid="assistant-message-meta"
+          style={{
+            fontSize: 9.5,
+            color: '#94A3B8',
+            marginLeft: 4,
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 500,
+            letterSpacing: '0.01em',
+          }}
+        >
+          {assistantMeta}
+        </span>
       </div>
     </div>
   );

@@ -363,6 +363,28 @@ export function PrincipalAssistantDrawer({
           {/* STATE A: ASSISTANT HOME (Greeting & Suggested Prompts) */}
           {viewState === 'home' ? (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 12, minHeight: '100%' }}>
+              {/* Subtle Centered Intro Line at top of home view */}
+              <div 
+                data-testid="assistant-intro-line"
+                style={{ 
+                  textAlign: 'center', 
+                  marginBottom: 'auto', 
+                  paddingTop: 4 
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: '#94A3B8',
+                    letterSpacing: '0.02em',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  Ask us anything
+                </span>
+              </div>
+
               {/* Clean Welcome Bubble */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <div
