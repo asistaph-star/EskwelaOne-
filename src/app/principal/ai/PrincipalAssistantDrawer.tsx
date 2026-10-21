@@ -135,51 +135,82 @@ export function PrincipalAssistantDrawer({
           }
         `}</style>
 
-        {/* Premium DigiSkwela Navy Header */}
+        {/* Minimalist Frosted Glass Header */}
         <div style={{ flexShrink: 0 }}>
-          {/* Top brand accent line */}
+          {/* Subtle top brand accent strip */}
           <div
             style={{
-              height: 2.5,
-              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 50%, #F59E0B 100%)',
+              height: 2,
+              background: 'linear-gradient(90deg, #1D4ED8 0%, #3B82F6 40%, #F59E0B 100%)',
               borderRadius: '14px 14px 0 0',
             }}
           />
           <div
             style={{
-              background: C.m900,
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
-              padding: '10px 12px',
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderBottom: '1px solid rgba(203, 213, 225, 0.75)',
+              padding: '10px 14px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              boxShadow: '0 2px 8px rgba(10, 25, 47, 0.03)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {/* Assistant avatar icon */}
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.12)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                  flexShrink: 0,
-                }}
-              >
-                <Sparkles size={14} color="#93C5FD" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* Calulut School Seal Avatar with micro AI badge overlay */}
+              <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    background: '#FFFFFF',
+                    border: '1.5px solid rgba(203, 213, 225, 0.85)',
+                    boxShadow: '0 2px 6px rgba(10, 25, 47, 0.05)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    padding: 3,
+                  }}
+                >
+                  <img
+                    src="/school_seal.png"
+                    alt="Calulut Integrated School Seal"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={e => (e.currentTarget.style.display = 'none')}
+                  />
+                </div>
+                {/* Micro AI badge overlay at the bottom-right corner */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: C.m700,
+                    border: '1.5px solid #FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  <Sparkles size={7.5} color="#FFFFFF" />
+                </div>
               </div>
+
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span
                     style={{
                       fontSize: 13,
                       fontWeight: 700,
-                      color: '#FFFFFF',
+                      color: C.t1,
                       letterSpacing: '-0.01em',
                       lineHeight: 1.2,
                     }}
@@ -192,13 +223,13 @@ export function PrincipalAssistantDrawer({
                       fontSize: 9,
                       padding: '2px 7px',
                       borderRadius: 20,
-                      background: 'rgba(255,255,255,0.12)',
-                      color: '#BFDBFE',
-                      border: '1px solid rgba(255,255,255,0.18)',
+                      background: 'rgba(29, 78, 216, 0.08)',
+                      color: C.m700,
+                      border: '1px solid rgba(29, 78, 216, 0.18)',
                       fontWeight: 600,
                       letterSpacing: '0.02em',
                       whiteSpace: 'nowrap',
-                      lineHeight: 1.4,
+                      lineHeight: 1.35,
                     }}
                   >
                     Dev · Live data
@@ -210,7 +241,7 @@ export function PrincipalAssistantDrawer({
                       width: 6,
                       height: 6,
                       borderRadius: '50%',
-                      background: '#4ADE80',
+                      background: '#16A34A',
                       animation: 'pulseGlow 2.5s ease-in-out infinite',
                       flexShrink: 0,
                     }}
@@ -218,22 +249,22 @@ export function PrincipalAssistantDrawer({
                   <span
                     style={{
                       fontSize: 11,
-                      color: '#4ADE80',
-                      fontWeight: 500,
+                      color: '#16A34A',
+                      fontWeight: 600,
                       letterSpacing: '0.01em',
                     }}
                   >
                     Online
                   </span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>·</span>
-                  <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>
+                  <span style={{ fontSize: 10, color: '#94A3B8' }}>·</span>
+                  <span style={{ fontSize: 10.5, color: '#64748B', fontWeight: 500 }}>
                     Principal Operations
                   </span>
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               {messages.length > 0 && (
                 <button
                   type="button"
@@ -241,26 +272,29 @@ export function PrincipalAssistantDrawer({
                   onClick={onClearSession}
                   title="Clear Session Conversation"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'rgba(255,255,255,0.6)',
+                    background: 'rgba(241, 245, 249, 0.8)',
+                    border: '1px solid rgba(203, 213, 225, 0.65)',
+                    color: '#64748B',
                     cursor: 'pointer',
                     padding: 6,
                     borderRadius: 8,
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.color = '#FCA5A5';
-                    e.currentTarget.style.background = 'rgba(239,68,68,0.2)';
+                    e.currentTarget.style.color = '#DC2626';
+                    e.currentTarget.style.background = '#FEE2E2';
+                    e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
-                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.style.color = '#64748B';
+                    e.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
+                    e.currentTarget.style.borderColor = 'rgba(203, 213, 225, 0.65)';
                   }}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13.5} />
                 </button>
               )}
               <button
@@ -269,9 +303,9 @@ export function PrincipalAssistantDrawer({
                 onClick={onClose}
                 aria-label="Close Assistant"
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'rgba(255,255,255,0.75)',
+                  background: 'rgba(241, 245, 249, 0.8)',
+                  border: '1px solid rgba(203, 213, 225, 0.65)',
+                  color: '#64748B',
                   cursor: 'pointer',
                   padding: 6,
                   borderRadius: 8,
@@ -281,15 +315,17 @@ export function PrincipalAssistantDrawer({
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.color = '#FFFFFF';
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.color = '#0F172A';
+                  e.currentTarget.style.background = '#E2E8F0';
+                  e.currentTarget.style.borderColor = '#94A3B8';
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.75)';
-                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = '#64748B';
+                  e.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(203, 213, 225, 0.65)';
                 }}
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
           </div>
@@ -339,23 +375,31 @@ export function PrincipalAssistantDrawer({
 
           {messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Welcome Card with soft neutral styling */}
+              {/* Welcome Card with soft neutral styling and Calulut Seal avatar */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <div
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: 7,
-                    background: C.m100,
-                    border: '1px solid rgba(29,78,216,0.18)',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
+                    background: '#FFFFFF',
+                    border: '1px solid rgba(203, 213, 225, 0.85)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: 2,
+                    padding: 2,
+                    overflow: 'hidden',
                   }}
                 >
-                  <Sparkles size={12} color={C.m700} />
+                  <img
+                    src="/school_seal.png"
+                    alt="CIS Seal"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    onError={e => (e.currentTarget.style.display = 'none')}
+                  />
                 </div>
                 <div
                   style={{

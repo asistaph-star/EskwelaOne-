@@ -83,7 +83,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
         alignSelf: 'flex-start',
       }}
     >
-      {/* Avatar */}
+      {/* Calulut School Seal Avatar */}
       <div
         style={{
           width: 26,
@@ -94,16 +94,24 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           justifyContent: 'center',
           flexShrink: 0,
           marginTop: 2,
-          background: isError ? '#FEE2E2' : C.m100,
+          background: isError ? '#FEE2E2' : '#FFFFFF',
           border: isError
             ? '1px solid rgba(239,68,68,0.25)'
-            : '1px solid rgba(29,78,216,0.18)',
+            : '1px solid rgba(203,213,225,0.85)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          overflow: 'hidden',
+          padding: isError ? 0 : 2,
         }}
       >
         {isError ? (
           <AlertCircle size={12} color="#DC2626" />
         ) : (
-          <Sparkles size={12} color={C.m700} />
+          <img
+            src="/school_seal.png"
+            alt="CIS Seal"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onError={e => (e.currentTarget.style.display = 'none')}
+          />
         )}
       </div>
 
