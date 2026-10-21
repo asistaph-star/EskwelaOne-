@@ -10,6 +10,13 @@
 export interface AIConfig {
   providerMode: 'mock' | 'groq' | 'disabled';
   allowPaidProvider: boolean;
+  groq: {
+    apiKey?: string;
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    timeoutMs: number;
+  };
   limits: {
     maxTurns: number;
     rateLimitPerMinute: number;
@@ -24,11 +31,20 @@ export interface AIConfig {
 }
 
 export const aiConfig: AIConfig = {
-  // Provider mode: 'mock' (default for testing), 'groq' (future free-tier candidate), 'disabled'
+  // Provider mode: 'mock' (default for testing), 'groq' (Free Plan integration), 'disabled'
   providerMode: (process.env.AI_PROVIDER_MODE as any) || 'mock',
 
   // HARD BILLING POLICY: Paid AI usage is forbidden.
   allowPaidProvider: process.env.AI_ALLOW_PAID_PROVIDER === 'true',
+
+  // Groq Cloud Free Plan Configuration
+  groq: {
+    apiKey: process.env.GROQ_API_KEY,
+    model: process.env.AI_GROQ_MODEL || 'openai/gpt-oss-120b',
+    temperature: parseFloat(process.env.AI_GROQ_TEMPERATURE || '0.2'),
+    maxTokens: parseInt(process.env.AI_GROQ_MAX_TOKENS || '1500', 10),
+    timeoutMs: parseInt(process.env.AI_GROQ_TIMEOUT_MS || '15000', 10),
+  },
 
   // Configurable runtime boundaries
   limits: {

@@ -25,6 +25,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "file-type": "^22.0.2",
+    "groq-sdk": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.3.0",
     "prisma-field-encryption": "^1.6.0",

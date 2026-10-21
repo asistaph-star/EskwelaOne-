@@ -1,11 +1,15 @@
 import { DigiSkwelaAIProvider, AIProviderError } from './aiProvider.interface.js';
 import { MockAIProvider } from './mockAIProvider.js';
+import { GroqAIProvider } from './groqAIProvider.js';
 import { aiConfig } from '../../config/ai.config.js';
 
 /**
  * Resolves the active AI provider based on configuration.
  * Strictly enforces the FREE-TIER AI POLICY:
- * Paid providers are rejected unless explicitly allowed.
+ * - 'mock': Deterministic local mock provider (Phase A-D default)
+ * - 'groq': GroqCloud Free Plan adapter (Phase E)
+ * - 'disabled': AI assistance disabled by policy
+ * - All unauthorized/paid modes fail closed.
  */
 export function getAIProvider(): DigiSkwelaAIProvider {
   const mode = aiConfig.providerMode;
@@ -15,10 +19,13 @@ export function getAIProvider(): DigiSkwelaAIProvider {
   }
 
   if (mode === 'groq') {
-    // Phase A/B check: Groq adapter is scheduled for Phase G
+    return new GroqAIProvider();
+  }
+
+  if (mode === 'disabled') {
     throw new AIProviderError(
       'PROVIDER_UNAVAILABLE',
-      'Groq free-tier provider is not yet initialized. Use mock mode during Phase A/B.'
+      'DigiSkwela AI is currently disabled by administrative policy.'
     );
   }
 
