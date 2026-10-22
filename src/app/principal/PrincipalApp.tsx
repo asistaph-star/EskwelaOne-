@@ -97,7 +97,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           )}
         </div>
       </div>
-      <PrincipalAIAssistant onNavigate={setScreen} />
+      <PrincipalAIAssistant onNavigate={setScreen} currentScreen={screen} />
       <Toaster position="top-center" richColors />
     </div>
   );

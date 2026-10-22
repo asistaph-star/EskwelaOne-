@@ -344,7 +344,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE D: PRINCIPAL ASSISTANT UI CONTRACTS, 
 
     expect(content).not.toContain('AIAssistantWidget');
     expect(content).toContain('PrincipalAIAssistant');
-    expect(content).toContain('<PrincipalAIAssistant onNavigate={setScreen} />');
+    expect(content).toMatch(/<PrincipalAIAssistant\s+onNavigate={setScreen}/);
   });
 
   // ─── 12. Shared Widget Preserved for Other Portals ──────────────────────

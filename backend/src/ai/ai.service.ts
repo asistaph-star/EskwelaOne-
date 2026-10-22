@@ -40,6 +40,7 @@ export interface ProcessChatResponseOutput {
   traceId: string;
   scopeDecision: string;
   toolsExecuted: string[];
+  sessionId?: string;
 }
 
 function mapToolToNormalizedOutput(toolName: string, data: any): {

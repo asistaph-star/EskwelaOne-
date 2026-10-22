@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { login, loginSchema, getMe } from './auth.service.js';
 import { authMiddleware, AuthenticatedUser } from '../common/middleware/auth.js';
 import { createAuditLog } from '../audit/audit.service.js';
+import { aiConversationSessionService } from '../ai/session/aiConversationSession.service.js';
 
 const router = Router();
 
@@ -40,6 +41,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 router.post('/logout', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as any).user as AuthenticatedUser;
+
+    // Invalidate active ephemeral AI conversation sessions on logout
+    aiConversationSessionService.invalidateUserSessions(user.id);
+
     await createAuditLog({
       actorUserId: user.id,
       action: 'LOGOUT',

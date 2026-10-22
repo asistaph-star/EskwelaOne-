@@ -10,12 +10,63 @@ import { PrincipalAssistantDrawer } from './PrincipalAssistantDrawer.js';
 
 interface PrincipalAIAssistantProps {
   onNavigate?: (screen: PScreen) => void;
+  currentScreen?: PScreen;
 }
 
-export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) {
+export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<PrincipalAIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const prevScreenRef = React.useRef<PScreen | undefined>(currentScreen);
+
+  // 1. Auto-close Assistant on route navigation without deleting conversation or context
+  React.useEffect(() => {
+    if (prevScreenRef.current !== undefined && prevScreenRef.current !== currentScreen) {
+      setIsOpen(false);
+    }
+    prevScreenRef.current = currentScreen;
+  }, [currentScreen]);
+
+  // Secondary router listener: auto-close on hash change (DigiSkwela module navigation)
+  React.useEffect(() => {
+    const handleHash = () => {
+      setIsOpen(false);
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  // 2. Restore active ephemeral conversation session on mount / page refresh
+  React.useEffect(() => {
+    let isMounted = true;
+    const restoreSession = async () => {
+      try {
+        const res = await aiApi.getSession({ portal: 'Principal' });
+        if (isMounted && res?.session?.messages && res.session.messages.length > 0) {
+          const restored: PrincipalAIMessage[] = res.session.messages.map(m => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+            responseType: m.responseType,
+            structuredData: m.structuredData,
+            provenance: m.provenance,
+            navigationActions: m.navigationActions,
+            traceId: m.traceId,
+          }));
+          setMessages(restored);
+        }
+      } catch (err) {
+        // Fallback safely to fresh home state without corrupting authenticated session
+        console.warn('AI conversation session restore fallback:', err);
+      }
+    };
+
+    restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -116,8 +167,13 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
     handleSendMessage(lastUserMsg.content);
   };
 
-  const handleClearSession = () => {
+  const handleClearSession = async () => {
     setMessages([]);
+    try {
+      await aiApi.clearSession({ portal: 'Principal' });
+    } catch (err) {
+      console.warn('Failed to clear server AI session:', err);
+    }
   };
 
   return (
@@ -127,7 +183,7 @@ export function PrincipalAIAssistant({ onNavigate }: PrincipalAIAssistantProps) 
         data-testid="principal-ai-trigger-container"
         style={{
           position: 'fixed',
-          bottom: 24,
+          bottom: isOpen ? 0 : 24,
           right: 24,
           zIndex: 390,
           display: 'flex',
