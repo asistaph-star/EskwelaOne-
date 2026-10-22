@@ -8,6 +8,7 @@ import { AuthenticatedUser } from '../common/middleware/auth.js';
 import { AppError } from '../common/middleware/errorHandler.js';
 import { generateId } from '../common/utils/uuid.js';
 import { aiConfig } from '../config/ai.config.js';
+import { normalizeAssistantText } from './utils/normalizeResponseText.js';
 
 export interface ProcessChatRequestInput {
   messages: AIMessage[];
@@ -55,23 +56,23 @@ function mapToolToNormalizedOutput(toolName: string, data: any): {
     case 'getFacultyAttendanceAudit':
       type = 'attendance';
       navAction = {
-        label: 'View Faculty Attendance',
+        label: 'Open Gate Attendance Monitoring',
         screen: 'p-monitoring',
-        description: 'Open Faculty Attendance monitoring tab',
+        description: 'Open Gate Attendance Monitoring tab',
       };
       break;
     case 'getSchoolOperationalFactSheet':
       type = 'fact_sheet';
       navAction = {
-        label: 'View Executive Dashboard',
+        label: 'Open Dashboard Overview',
         screen: 'p-dashboard',
-        description: 'Open Executive Dashboard',
+        description: 'Open Dashboard Overview',
       };
       break;
     case 'getPendingLeaves':
       type = 'leaves';
       navAction = {
-        label: 'View Leave Approvals',
+        label: 'Open Leave Management',
         screen: 'p-leaves',
         description: 'Open Leave Management tab',
       };
@@ -79,41 +80,41 @@ function mapToolToNormalizedOutput(toolName: string, data: any): {
     case 'getUpcomingEvents':
       type = 'events';
       navAction = {
-        label: 'View School Calendar',
+        label: 'Open School Events',
         screen: 'p-events',
-        description: 'Open Calendar & Events tab',
+        description: 'Open School Events tab',
       };
       break;
     case 'getAdministrativeBehaviorSummary':
       type = 'behavior';
       navAction = {
-        label: 'View Behavior Records',
+        label: 'View Behavioral Reports',
         screen: 'p-behavior',
-        description: 'Open Student Behavior tab',
+        description: 'Open Behavioral Reports tab',
       };
       break;
     case 'getAcademicAnalytics':
       type = 'academics';
       navAction = {
-        label: 'View Academic Analytics',
+        label: 'Open Academic Analytics',
         screen: 'p-analytics',
-        description: 'Open Academic Performance tab',
+        description: 'Open Academic Analytics tab',
       };
       break;
     case 'generatePrincipalMeetingBrief':
       type = 'meeting_brief';
       navAction = {
-        label: 'View Executive Summary',
+        label: 'Open Dashboard Overview',
         screen: 'p-dashboard',
-        description: 'Open Executive Briefing',
+        description: 'Open Dashboard Overview',
       };
       break;
     case 'generateWeeklyOperationsReport':
       type = 'weekly_report';
       navAction = {
-        label: 'View Operations Reports',
+        label: 'Open Dashboard Overview',
         screen: 'p-dashboard',
-        description: 'Open Executive Reports',
+        description: 'Open Dashboard Overview',
       };
       break;
   }
@@ -334,8 +335,16 @@ export const AIService = {
           navigationActions = mapping.navigationActions;
         }
 
+        const normalizedContent = normalizeAssistantText(finalTurn.message.content || '', {
+          hasStructuredData: Boolean(structuredData),
+          toolName: lastToolName || undefined,
+        });
+
         return {
-          message: finalTurn.message,
+          message: {
+            ...finalTurn.message,
+            content: normalizedContent,
+          },
           responseType: 'structured',
           structuredData,
           provenance,
@@ -367,32 +376,37 @@ export const AIService = {
 
       if (lowerQuery.includes('attendance') || lowerReply.includes('gate attendance monitoring')) {
         navigationActions = [{
-          label: 'View Faculty Attendance',
+          label: 'Open Gate Attendance Monitoring',
           screen: 'p-monitoring',
-          description: 'Open Faculty Attendance monitoring tab',
+          description: 'Open Gate Attendance Monitoring tab',
         }];
       } else if (lowerQuery.includes('leave') || lowerReply.includes('leave management')) {
         navigationActions = [{
-          label: 'View Leave Approvals',
+          label: 'Open Leave Management',
           screen: 'p-leaves',
           description: 'Open Leave Management tab',
         }];
       } else if (lowerQuery.includes('behavior') || lowerReply.includes('behavioral reports')) {
         navigationActions = [{
-          label: 'View Behavior Records',
+          label: 'View Behavioral Reports',
           screen: 'p-behavior',
-          description: 'Open Student Behavior tab',
+          description: 'Open Behavioral Reports tab',
         }];
       } else if (lowerQuery.includes('academic') || lowerReply.includes('academic analytics')) {
         navigationActions = [{
-          label: 'View Academic Analytics',
+          label: 'Open Academic Analytics',
           screen: 'p-analytics',
-          description: 'Open Academic Performance tab',
+          description: 'Open Academic Analytics tab',
         }];
       }
 
+      const normalizedDirectContent = normalizeAssistantText(firstTurn.message.content || '');
+
       return {
-        message: firstTurn.message,
+        message: {
+          ...firstTurn.message,
+          content: normalizedDirectContent,
+        },
         responseType: 'text',
         navigationActions,
         traceId,

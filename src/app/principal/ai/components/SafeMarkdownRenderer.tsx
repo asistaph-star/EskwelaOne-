@@ -16,8 +16,23 @@ interface SafeMarkdownRendererProps {
 export function SafeMarkdownRenderer({ content, hasStructuredData = false }: SafeMarkdownRendererProps) {
   if (!content) return null;
 
+  // Global Deduplication: If rich structured cards already represent the detailed report,
+  // render only the executive introduction paragraph to prevent repeating the entire report twice.
+  let effectiveContent = content;
+  if (hasStructuredData) {
+    const paragraphs = content.split(/\n\s*\n/);
+    if (paragraphs.length > 1) {
+      const intro = paragraphs.find(p => !p.trim().startsWith('#') && p.trim().length > 10);
+      if (intro) {
+        effectiveContent = intro.trim();
+      } else {
+        effectiveContent = paragraphs[0].trim().replace(/^#+\s*/, '');
+      }
+    }
+  }
+
   // Split into lines for block-level parsing
-  const lines = content.split('\n');
+  const lines = effectiveContent.split('\n');
   const elements: React.ReactNode[] = [];
   let i = 0;
 
@@ -25,7 +40,7 @@ export function SafeMarkdownRenderer({ content, hasStructuredData = false }: Saf
   const renderInline = (text: string): React.ReactNode => {
     if (!text) return null;
 
-    // 1. Sanitize any raw backend enums or snake_case tokens
+    // 1. Sanitize any raw backend enums, route codes, or HTML entities
     let sanitized = sanitizeNarrativeEnums(text);
 
     // 2. Strip leading backslashes on markdown symbols (e.g. \* -> *, \_ -> _, \# -> #)
@@ -39,8 +54,11 @@ export function SafeMarkdownRenderer({ content, hasStructuredData = false }: Saf
 
     while ((match = inlineRegex.exec(sanitized)) !== null) {
       if (match.index > lastIndex) {
-        // Strip any dangling lone asterisks or backticks in plain text
-        const plain = sanitized.substring(lastIndex, match.index).replace(/\*\*+/g, '').replace(/`+/g, '');
+        // Strip any dangling lone asterisks, hashes, or backticks in plain text
+        const plain = sanitized.substring(lastIndex, match.index)
+          .replace(/\*+/g, '')
+          .replace(/`+/g, '')
+          .replace(/#+/g, '');
         if (plain) parts.push(plain);
       }
       if (match[2] !== undefined) {
@@ -75,11 +93,15 @@ export function SafeMarkdownRenderer({ content, hasStructuredData = false }: Saf
     }
 
     if (lastIndex < sanitized.length) {
-      const remaining = sanitized.substring(lastIndex).replace(/\*\*+/g, '').replace(/`+/g, '');
+      const remaining = sanitized.substring(lastIndex)
+        .replace(/\*+/g, '')
+        .replace(/`+/g, '')
+        .replace(/#+/g, '');
       if (remaining) parts.push(remaining);
     }
 
-    return parts.length > 0 ? parts : sanitized;
+    if (parts.length > 0) return parts;
+    return sanitized.replace(/\*+/g, '').replace(/`+/g, '').replace(/#+/g, '');
   };
 
   while (i < lines.length) {

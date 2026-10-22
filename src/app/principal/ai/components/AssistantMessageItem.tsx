@@ -146,7 +146,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
           }}
         >
           {isError ? (
-            <AlertCircle size={13} color="#FFFFFF" />
+            <AlertCircle size={13} color="#FFFFFF" aria-hidden="true" focusable="false" />
           ) : (
             <AssistantMessageSquareIcon size={13} color="#FFFFFF" />
           )}
@@ -215,7 +215,7 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                     e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)';
                   }}
                 >
-                  <RefreshCw size={11} />
+                  <RefreshCw size={11} aria-hidden="true" focusable="false" />
                   <span>Retry Request</span>
                 </button>
               )}
@@ -283,8 +283,8 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                         e.currentTarget.style.background = C.m700;
                       }}
                     >
-                      <span>{action.label}</span>
-                      <ArrowRight size={11} />
+                      <span>{(action.label || '').replace(/svg$/i, '').trim()}</span>
+                      <ArrowRight size={11} aria-hidden="true" focusable="false" />
                     </button>
                   ))}
                 </div>

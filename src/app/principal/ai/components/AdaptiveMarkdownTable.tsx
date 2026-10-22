@@ -56,7 +56,7 @@ export function AdaptiveMarkdownTable({
                 borderRadius: 4,
               }}
             >
-              <LayoutList size={11} />
+              <LayoutList size={11} aria-hidden="true" focusable="false" />
               <span>Switch to Card View</span>
             </button>
           </div>
@@ -171,7 +171,7 @@ export function AdaptiveMarkdownTable({
             borderRadius: 4,
           }}
         >
-          <Table size={11} />
+          <Table size={11} aria-hidden="true" focusable="false" />
           <span>View as Table</span>
         </button>
       </div>
@@ -293,7 +293,11 @@ export function AdaptiveMarkdownTable({
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
-                  {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {isExpanded ? (
+                    <ChevronUp size={12} aria-hidden="true" focusable="false" />
+                  ) : (
+                    <ChevronDown size={12} aria-hidden="true" focusable="false" />
+                  )}
                   <span>{isExpanded ? 'Hide details' : 'View details'}</span>
                 </button>
 

@@ -127,7 +127,11 @@ function LeaveRecordCard({ leave, index }: { leave: any; index: number }) {
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {isExpanded ? (
+              <ChevronUp size={12} aria-hidden="true" focusable="false" />
+            ) : (
+              <ChevronDown size={12} aria-hidden="true" focusable="false" />
+            )}
             <span>{isExpanded ? 'Hide details' : 'View details'}</span>
           </button>
 
@@ -208,7 +212,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
         {s.noGateCheckInNoApprovedLeaveFoundCount > 0 && (
           <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.t2, fontSize: 11, fontWeight: 600 }}>
-              <Clock size={13} color={C.m700} />
+              <Clock size={13} color={C.m700} aria-hidden="true" focusable="false" />
               <span>{s.noGateCheckInNoApprovedLeaveFoundCount} faculty members:</span>
             </div>
             <div style={{ fontSize: 11, color: C.t2, marginTop: 4 }}>

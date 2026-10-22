@@ -38,7 +38,7 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
           paddingRight: 2,
         }}
       >
-        <MessageSquare size={10} color={C.m700} />
+        <MessageSquare size={10} color={C.m700} aria-hidden="true" focusable="false" />
         <span>Suggested Prompts</span>
       </div>
 

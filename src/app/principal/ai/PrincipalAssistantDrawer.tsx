@@ -213,7 +213,7 @@ export function PrincipalAssistantDrawer({
                     e.currentTarget.style.background = 'none';
                   }}
                 >
-                  <ArrowLeft size={16} />
+                  <ArrowLeft size={16} aria-hidden="true" focusable="false" />
                 </button>
               )}
 
@@ -285,7 +285,7 @@ export function PrincipalAssistantDrawer({
                     e.currentTarget.style.background = 'none';
                   }}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={14} aria-hidden="true" focusable="false" />
                 </button>
               )}
 
@@ -317,7 +317,7 @@ export function PrincipalAssistantDrawer({
                   e.currentTarget.style.background = 'none';
                 }}
               >
-                <X size={15} />
+                <X size={15} aria-hidden="true" focusable="false" />
               </button>
             </div>
           </div>
@@ -449,7 +449,7 @@ export function PrincipalAssistantDrawer({
                     onMouseLeave={e => e.currentTarget.style.background = '#EFF6FF'}
                   >
                     <span>Resume conversation ({messages.length} messages)</span>
-                    <ArrowRight size={11} />
+                    <ArrowRight size={11} aria-hidden="true" focusable="false" />
                   </button>
                 </div>
               )}
@@ -653,9 +653,9 @@ export function PrincipalAssistantDrawer({
             }}
           >
             {isLoading ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={13} className="animate-spin" aria-hidden="true" focusable="false" />
             ) : (
-              <Send size={14} />
+              <Send size={14} aria-hidden="true" focusable="false" />
             )}
           </button>
         </div>
@@ -677,7 +677,7 @@ export function PrincipalAssistantDrawer({
             letterSpacing: '0.01em',
           }}
         >
-          <ShieldCheck size={10} color="#16A34A" />
+          <ShieldCheck size={10} color="#16A34A" aria-hidden="true" focusable="false" />
           <span>Session only · Grounded in live DigiSkwela data</span>
         </div>
       </aside>

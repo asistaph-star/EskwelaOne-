@@ -37,14 +37,50 @@ const KNOWN_PHRASE_MAP: Record<string, string> = {
   'DRAFT': 'Draft',
   'ARCHIVED': 'Archived',
 
-  // Common screen codes
-  'p-dashboard': 'Executive Dashboard',
-  'p-monitoring': 'Gate Monitoring',
+  // Common screen codes (aligned with TITLES in PrincipalApp)
+  'p-dashboard': 'Dashboard Overview',
+  'p-monitoring': 'Gate Attendance Monitoring',
   'p-leaves': 'Leave Management',
-  'p-events': 'Calendar & Events',
-  'p-behavior': 'Behavior Records',
+  'p-events': 'School Events',
+  'p-behavior': 'Behavioral Reports',
   'p-analytics': 'Academic Analytics',
+  'p-teachers': 'Teacher Management',
+  'p-inventory': 'Inventory',
+  'p-doc-requests': 'Document Requests',
+  'p-announcements': 'Announcements',
+  'p-settings': 'Settings',
+  'p-help': 'Help & Feedback',
 };
+
+/**
+ * Decodes all numeric and common named HTML entities.
+ */
+export function decodeHTMLEntities(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      try {
+        return String.fromCharCode(parseInt(hex, 16));
+      } catch {
+        return '';
+      }
+    })
+    .replace(/&#([0-9]+);/g, (_, dec) => {
+      try {
+        return String.fromCharCode(parseInt(dec, 10));
+      } catch {
+        return '';
+      }
+    })
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–');
+}
 
 /**
  * Humanizes a single internal token or enum value.
@@ -83,29 +119,55 @@ export function humanizeValue(val: string): string {
 }
 
 /**
- * Scans narrative text for embedded raw enums or snake_case tokens and replaces them with humanized equivalents.
- * Prevents raw tokens like "TIME_OUT_PENDING" or "partial_terms" from appearing inside assistant narrative paragraphs.
+ * Scans narrative text for embedded raw enums, route codes, or HTML entities and cleans them.
  */
 export function sanitizeNarrativeEnums(text: string): string {
   if (!text || typeof text !== 'string') return text;
 
-  // 1. Replace known multi-word phrases first
-  let result = text;
-  for (const [rawToken, humanized] of Object.entries(KNOWN_PHRASE_MAP)) {
+  // 1. Decode HTML entities
+  let result = decodeHTMLEntities(text);
+
+  // 2. Replace unicode non-breaking hyphens with standard hyphens in route tokens
+  result = result.replace(/p[\u2011\-]([a-z]+)/gi, 'p-$1');
+
+  // 3. Clean up parenthetical routes: (see Module → p-module) -> (see Module)
+  result = result.replace(/\(see\s+([^→\)]*?)\s*→\s*p-[a-z-]+\)/gi, '(see $1)');
+
+  // 4. Replace known route IDs with human-readable titles (longest first to avoid clobbering compound phrases)
+  const sortedEntries = Object.entries(KNOWN_PHRASE_MAP).sort((a, b) => b[0].length - a[0].length);
+  for (const [rawToken, humanized] of sortedEntries) {
     const escaped = rawToken.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const regex = new RegExp(`\\b${escaped}\\b`, 'g');
-    result = result.replace(regex, humanized);
+    result = result.replace(new RegExp(`\\(see\\s+${escaped}\\)`, 'gi'), `(see ${humanized})`);
+    result = result.replace(new RegExp(`(?:navigate to|go to(?: the)?)\\s+${escaped}(?:\\s+dashboard)?`, 'gi'), `open ${humanized}`);
+    if (/^[A-Z0-9]+$/.test(rawToken)) {
+      result = result.replace(new RegExp(`\\b${escaped}\\b`, 'g'), humanized);
+    } else {
+      result = result.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), humanized);
+    }
   }
 
-  // 2. Replace any remaining CONSTANT_CASE tokens (e.g., TIME_OUT_PENDING, SICK_LEAVE)
+  // 5. Replace any remaining CONSTANT_CASE tokens
   result = result.replace(/\b[A-Z0-9]+(?:_[A-Z0-9]+)+\b/g, (match) => {
     return humanizeValue(match);
   });
 
-  // 3. Replace known snake_case tokens (e.g. partial_terms, all_terms_completed)
+  // 6. Replace known snake_case tokens
   result = result.replace(/\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g, (match) => {
     return humanizeValue(match);
   });
+
+  // 7. Remove awkward empty-collection phrases and (none)
+  result = result.replace(/All other faculty\s*\([^\)]*\)\s*have completed check-ins\.?/gi, '');
+  result = result.replace(/All other faculty\s+have completed check-ins\.?/gi, '');
+  result = result.replace(/\s*\([Nn]one\)/g, '');
+
+  // 8. Over-prescriptive actions -> neutral
+  result = result.replace(/\bApprove\s+(?:or provide guidance on\s+)?the pending leave/gi, 'Review the pending leave');
+  result = result.replace(/\bApprove the leave\b/gi, 'Review the leave');
+  result = result.replace(/\bTake disciplinary action\b/gi, 'Review the behavior case');
+  result = result.replace(/\bRefer the student to Guidance\b/gi, 'Review Guidance counseling options');
+  result = result.replace(/\bContact the parent(?:\s+immediately)?\b/gi, 'Review parent communication history');
+  result = result.replace(/\bUnexcused absence\b/gi, 'No gate check-in recorded and no approved leave found');
 
   return result;
 }

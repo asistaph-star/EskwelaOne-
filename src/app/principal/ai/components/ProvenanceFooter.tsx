@@ -54,7 +54,7 @@ export function ProvenanceFooter({ provenance }: ProvenanceFooterProps) {
           flexShrink: 0,
         }}
       >
-        <Database size={10} color={C.m700} />
+        <Database size={10} color={C.m700} aria-hidden="true" focusable="false" />
         <span>Sources:</span>
       </div>
       {provenance.sourceDomains.map((src, i) => (

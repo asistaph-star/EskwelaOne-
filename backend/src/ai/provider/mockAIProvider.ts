@@ -156,10 +156,10 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
 
     // 3. System Help & Contextual Navigation Guidance (Prioritize before tool execution)
     if (/\b(where\s*(can|do)\s*i|how\s*do\s*i|find\s*or\s*understand|system\s*help|how\s*can\s*i)\b/i.test(content)) {
-      let helpText = 'DigiSkwela provides dedicated administrative modules in the sidebar: Dashboard Overview for executive summaries, Gate Attendance Monitoring for live gate scans, Leave Management for staff leave approvals, Behavioral Reports for student incident logs, and Academic Analytics for quarterly gradebook tracking.';
+      let helpText = 'Which DigiSkwela feature do you need help with?';
 
       if (content.includes('attendance') || content.includes('gate') || content.includes('check-in')) {
-        helpText = 'You can monitor live faculty gate attendance and check-in records in the Gate Attendance Monitoring module. You can also view registered profiles and historical schedules in Teacher Management.';
+        helpText = 'You can review faculty attendance in Gate Attendance Monitoring. You can also view registered profiles and schedules in Teacher Management.';
       } else if (content.includes('leave') || content.includes('vacation')) {
         helpText = 'You can review, approve, or deny pending faculty leave applications in the Leave Management module under Administration.';
       } else if (content.includes('behavior') || content.includes('discipline') || content.includes('incident')) {
