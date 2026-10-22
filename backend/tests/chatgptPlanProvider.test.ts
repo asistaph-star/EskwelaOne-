@@ -878,6 +878,44 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
         });
       }).toThrowError(/dynamic_agent_client cannot be persisted/i);
     });
+
+    it('TC-CGP-22: Workspace-denied registration is marked WORKSPACE_ASSOCIATION_NOT_VERIFIED and isolated from subsequent authorization', () => {
+      // Setup: Registration exists
+      storage.saveRegistration({ issuedClientId: 'oaiapp_denied_workspace_1' });
+
+      // Mark workspace unverified with denial metadata
+      const marked = storage.markRegistrationWorkspaceUnverified({
+        errorCode: '3p_login_workspace_scope_denied',
+        requestId: 'req_denied_ws_123',
+        message: 'This app is only available to members of its workspace.',
+      });
+      expect(marked).toBe(true);
+
+      // Invariant: Registration is not deleted
+      const rawReg = storage.loadRegistration({ activeOnly: false });
+      expect(rawReg).not.toBeNull();
+      expect(rawReg?.issuedClientId).toBe('oaiapp_denied_workspace_1');
+      expect(rawReg?.status).toBe('WORKSPACE_ASSOCIATION_NOT_VERIFIED');
+      expect(rawReg?.denialMetadata?.errorCode).toBe('3p_login_workspace_scope_denied');
+
+      // Invariant: Active registration lookup returns null
+      expect(storage.loadRegistration({ activeOnly: true })).toBeNull();
+
+      // Invariant: Status summary reports registered=false and unverified status
+      const summary = storage.getStatusSummary();
+      expect(summary.registered).toBe(false);
+      expect(summary.registrationStatus).toBe('WORKSPACE_ASSOCIATION_NOT_VERIFIED');
+      expect(summary.connected).toBe(false);
+
+      // Invariant: Subsequent authorization URL initiates clean dynamic_agent_client registration
+      const oauthService = new ChatGPTOAuthService({ storage });
+      const auth = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      const parsedUrl = new URL(auth.url);
+      expect(parsedUrl.searchParams.get('client_id')).toBe('dynamic_agent_client');
+      expect(parsedUrl.searchParams.get('agent_name_hint')).toBe('DigiSkwela');
+    });
   });
 });
 

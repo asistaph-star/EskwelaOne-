@@ -1,10 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 
+export type ChatGPTRegistrationStatus = 'ACTIVE' | 'WORKSPACE_ASSOCIATION_NOT_VERIFIED';
+
 export interface ChatGPTRegistration {
   issuedClientId: string;
   createdAt: string;
   updatedAt: string;
+  status?: ChatGPTRegistrationStatus;
+  denialMetadata?: {
+    errorCode?: string;
+    requestId?: string;
+    deniedAt?: string;
+    message?: string;
+  };
 }
 
 export interface ChatGPTPlanCredentials {
@@ -29,6 +38,7 @@ export interface ChatGPTPlanStatusSummary {
   accountId: string | null;
   userEmail: string | null;
   registered: boolean;
+  registrationStatus?: ChatGPTRegistrationStatus;
 }
 
 const DEFAULT_TOKENS_PATH = path.resolve(process.cwd(), 'storage', 'chatgpt', 'tokens.json');
@@ -42,6 +52,7 @@ const DEFAULT_REGISTRATION_PATH = path.resolve(process.cwd(), 'storage', 'chatgp
  * - Credentials remain strictly confined to protected server-side runtime storage.
  * - Zero credentials or sensitive tokens exposed in HTTP responses or audit logs.
  * - dynamic_agent_client can NEVER be persisted as an issued client registration.
+ * - Workspace-denied registrations are marked WORKSPACE_ASSOCIATION_NOT_VERIFIED and never reused blindly.
  */
 export class ChatGPTTokenStorage {
   private readonly tokensFilePath: string;
@@ -60,8 +71,10 @@ export class ChatGPTTokenStorage {
 
   /**
    * Loads the persisted OpenAI-issued client registration independently of OAuth tokens.
+   * If activeOnly is true (default), returns null if the registration was marked WORKSPACE_ASSOCIATION_NOT_VERIFIED.
    */
-  public loadRegistration(): ChatGPTRegistration | null {
+  public loadRegistration(options?: { activeOnly?: boolean }): ChatGPTRegistration | null {
+    const activeOnly = options?.activeOnly ?? true;
     try {
       if (!fs.existsSync(this.registrationFilePath)) {
         return null;
@@ -74,6 +87,9 @@ export class ChatGPTTokenStorage {
         parsed.issuedClientId.trim().length > 0 &&
         parsed.issuedClientId !== 'dynamic_agent_client'
       ) {
+        if (activeOnly && parsed.status === 'WORKSPACE_ASSOCIATION_NOT_VERIFIED') {
+          return null;
+        }
         return parsed;
       }
       return null;
@@ -86,7 +102,7 @@ export class ChatGPTTokenStorage {
    * Persists the OpenAI-issued client registration immediately upon receipt.
    * Rejects dynamic_agent_client permanently.
    */
-  public saveRegistration(reg: { issuedClientId: string }): void {
+  public saveRegistration(reg: { issuedClientId: string; status?: ChatGPTRegistrationStatus }): void {
     const issuedClientId = reg.issuedClientId?.trim();
     if (!issuedClientId || issuedClientId === 'dynamic_agent_client') {
       throw new Error('REGRESSION_GUARD: dynamic_agent_client cannot be persisted as issued client registration.');
@@ -97,15 +113,44 @@ export class ChatGPTTokenStorage {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    const existing = this.loadRegistration();
+    const existing = this.loadRegistration({ activeOnly: false });
     const nowIso = new Date().toISOString();
     const payload: ChatGPTRegistration = {
       issuedClientId,
       createdAt: existing?.createdAt || nowIso,
       updatedAt: nowIso,
+      status: reg.status || 'ACTIVE',
     };
 
     fs.writeFileSync(this.registrationFilePath, JSON.stringify(payload, null, 2), 'utf-8');
+  }
+
+  /**
+   * Marks the current registration as WORKSPACE_ASSOCIATION_NOT_VERIFIED
+   * without deleting it, preserving denial diagnostics.
+   */
+  public markRegistrationWorkspaceUnverified(denial: {
+    errorCode?: string;
+    requestId?: string;
+    message?: string;
+  }): boolean {
+    const existing = this.loadRegistration({ activeOnly: false });
+    if (!existing) return false;
+
+    const updated: ChatGPTRegistration = {
+      ...existing,
+      status: 'WORKSPACE_ASSOCIATION_NOT_VERIFIED',
+      updatedAt: new Date().toISOString(),
+      denialMetadata: {
+        errorCode: denial.errorCode || '3p_login_workspace_scope_denied',
+        requestId: denial.requestId,
+        deniedAt: new Date().toISOString(),
+        message: denial.message || 'This app is only available to members of its workspace.',
+      },
+    };
+
+    fs.writeFileSync(this.registrationFilePath, JSON.stringify(updated, null, 2), 'utf-8');
+    return true;
   }
 
   /**
@@ -192,10 +237,14 @@ export class ChatGPTTokenStorage {
    * Distinguishes registered client from authenticated account and authorized plan.
    */
   public getStatusSummary(): ChatGPTPlanStatusSummary {
-    const registration = this.loadRegistration();
+    const registration = this.loadRegistration({ activeOnly: false });
     const creds = this.loadCredentials();
     const issuedClientId = creds?.issuedClientId || registration?.issuedClientId || null;
-    const isRegistered = Boolean(issuedClientId && issuedClientId !== 'dynamic_agent_client');
+    const isRegistered = Boolean(
+      issuedClientId &&
+      issuedClientId !== 'dynamic_agent_client' &&
+      registration?.status !== 'WORKSPACE_ASSOCIATION_NOT_VERIFIED'
+    );
 
     if (!creds) {
       return {
@@ -207,6 +256,7 @@ export class ChatGPTTokenStorage {
         accountId: null,
         userEmail: null,
         registered: isRegistered,
+        registrationStatus: registration?.status || (issuedClientId ? 'ACTIVE' : undefined),
       };
     }
 
@@ -226,6 +276,7 @@ export class ChatGPTTokenStorage {
       accountId: creds.accountId || null,
       userEmail: creds.userEmail || null,
       registered: isRegistered,
+      registrationStatus: registration?.status || (issuedClientId ? 'ACTIVE' : undefined),
     };
   }
 

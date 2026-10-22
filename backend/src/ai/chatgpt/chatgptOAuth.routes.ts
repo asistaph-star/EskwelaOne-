@@ -14,9 +14,11 @@ const router = Router();
 router.get('/auth-url', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   try {
     const redirectUri = (req.query.redirectUri as string) || aiConfig.chatgptPlan?.callbackUrl || 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback';
+    const forceNew = req.query.forceNew === 'true';
     const authData = chatGPTOAuthService.generateAuthorizationUrl({
       redirectUri,
       agentNameHint: 'DigiSkwela',
+      forceNewRegistration: forceNew,
     });
 
     res.json({

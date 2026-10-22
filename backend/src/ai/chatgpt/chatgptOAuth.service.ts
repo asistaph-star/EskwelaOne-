@@ -115,6 +115,7 @@ export class ChatGPTOAuthService {
   public generateAuthorizationUrl(options: {
     redirectUri: string;
     agentNameHint?: string;
+    forceNewRegistration?: boolean;
   }): ChatGPTAuthUrlResult {
     // 1. Clean expired pending sessions
     const now = Date.now();
@@ -124,11 +125,11 @@ export class ChatGPTOAuthService {
       }
     }
 
-    // 2. Resolve client ID: reuse valid issued client ID if present in registration or credentials, else dynamic_agent_client
-    const registration = this.storage.loadRegistration();
-    const creds = this.storage.loadCredentials();
+    // 2. Resolve client ID: reuse valid active issued client ID if present in registration or credentials, else dynamic_agent_client
+    const registration = options.forceNewRegistration ? null : this.storage.loadRegistration();
+    const creds = options.forceNewRegistration ? null : this.storage.loadCredentials();
     const existingIssuedClientId = registration?.issuedClientId || creds?.issuedClientId;
-    const isReturning = !!(existingIssuedClientId && existingIssuedClientId !== 'dynamic_agent_client');
+    const isReturning = !options.forceNewRegistration && !!(existingIssuedClientId && existingIssuedClientId !== 'dynamic_agent_client');
     const clientId = isReturning ? existingIssuedClientId! : 'dynamic_agent_client';
     const hostId = getOrCreateHostId();
 
