@@ -658,5 +658,226 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
       ).rejects.toThrowError(/Role 'Student' is not authorized/i);
     });
   });
+
+  describe('7. Official OpenAI invalid_grant Recovery & Registration Lifecycle', () => {
+    it('TC-CGP-16 (A): Issued client survives invalid_grant token exchange failure', async () => {
+      let exchangeAttempts = 0;
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/oauth/token')) {
+          exchangeAttempts++;
+          return {
+            ok: false,
+            status: 400,
+            text: async () => JSON.stringify({ error: 'invalid_grant' }),
+            headers: {
+              get: (header: string) => header.toLowerCase() === 'openai-request-id' ? 'req_test_invalid_grant_123' : null,
+            },
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      });
+
+      const oauthService = new ChatGPTOAuthService({ storage, fetchFn: mockFetch as any });
+
+      // Step 1: Initial authorization uses dynamic_agent_client
+      const initialAuth = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      const parsedInitialUrl = new URL(initialAuth.url);
+      expect(parsedInitialUrl.searchParams.get('client_id')).toBe('dynamic_agent_client');
+
+      // Step 2: Callback returns issued client_id=oaiapp_test123
+      const callbackResult = await oauthService.handleCallback({
+        code: 'auth_code_attempt_1',
+        state: initialAuth.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_test123',
+      });
+
+      // Token exchange failed with invalid_grant
+      expect(callbackResult.success).toBe(false);
+      expect(callbackResult.error).toContain('TOKEN_EXCHANGE_FAILED: 400');
+      expect(callbackResult.error).toContain('invalid_grant');
+      expect(callbackResult.issuedClientId).toBe('oaiapp_test123');
+
+      // Invariant: Tokens were NOT persisted
+      const creds = storage.loadCredentials();
+      expect(creds).toBeNull();
+
+      // Invariant: Issued registration remains persisted
+      const registration = storage.loadRegistration();
+      expect(registration).not.toBeNull();
+      expect(registration?.issuedClientId).toBe('oaiapp_test123');
+    });
+
+    it('TC-CGP-17 (B & C): Next authorization uses retained client ID with fresh PKCE transaction', async () => {
+      // Setup: Registration exists from previous failed grant
+      storage.saveRegistration({ issuedClientId: 'oaiapp_test123' });
+
+      const oauthService = new ChatGPTOAuthService({ storage });
+
+      // Generate first attempt
+      const attempt1 = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      const parsedUrl1 = new URL(attempt1.url);
+
+      // Invariant B: Uses retained client ID and NOT dynamic_agent_client
+      expect(parsedUrl1.searchParams.get('client_id')).toBe('oaiapp_test123');
+      expect(parsedUrl1.searchParams.get('agent_name_hint')).toBeNull();
+
+      // Generate second recovery attempt
+      const attempt2 = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      const parsedUrl2 = new URL(attempt2.url);
+
+      // Invariant C: Fresh PKCE recovery (different state, nonce, challenge, and client is retained)
+      expect(parsedUrl2.searchParams.get('client_id')).toBe('oaiapp_test123');
+      expect(attempt2.state).not.toBe(attempt1.state);
+      expect(parsedUrl2.searchParams.get('state')).not.toBe(parsedUrl1.searchParams.get('state'));
+      expect(parsedUrl2.searchParams.get('nonce')).not.toBe(parsedUrl1.searchParams.get('nonce'));
+      expect(parsedUrl2.searchParams.get('code_challenge')).not.toBe(parsedUrl1.searchParams.get('code_challenge'));
+    });
+
+    it('TC-CGP-18 (D): Same authorization code is never retried; replay fails locally without token exchange request', async () => {
+      let exchangeAttempts = 0;
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/oauth/token')) {
+          exchangeAttempts++;
+          return {
+            ok: false,
+            status: 400,
+            text: async () => JSON.stringify({ error: 'invalid_grant' }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      });
+
+      const oauthService = new ChatGPTOAuthService({ storage, fetchFn: mockFetch as any });
+      const auth = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+
+      // First attempt with auth code
+      const res1 = await oauthService.handleCallback({
+        code: 'single_use_auth_code_99',
+        state: auth.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_single_use_test',
+      });
+      expect(res1.success).toBe(false);
+      expect(exchangeAttempts).toBe(1);
+
+      // Replay attempt with same state / code
+      const res2 = await oauthService.handleCallback({
+        code: 'single_use_auth_code_99',
+        state: auth.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_single_use_test',
+      });
+      expect(res2.success).toBe(false);
+      expect(res2.error).toContain('INVALID_STATE');
+      // Token endpoint was NOT called a second time
+      expect(exchangeAttempts).toBe(1);
+    });
+
+    it('TC-CGP-19 (E): Registration alone does not imply connected status', () => {
+      // Only registration is persisted; tokens are absent
+      storage.saveRegistration({ issuedClientId: 'oaiapp_test_not_connected' });
+
+      expect(storage.loadCredentials()).toBeNull();
+
+      const summary = storage.getStatusSummary();
+      expect(summary.registered).toBe(true);
+      expect(summary.connected).toBe(false);
+      expect(summary.hasDirectTokenScope).toBe(false);
+      expect(summary.isExpired).toBe(true);
+      expect(summary.issuedClientId).toBe('oaiapp_test_not_connected');
+      expect(storage.hasValidPlanAccess()).toBe(false);
+    });
+
+    it('TC-CGP-20 (F): Successful recovery promotes credentials and grants connected plan access', async () => {
+      // Setup: Retained registration from earlier recovery
+      storage.saveRegistration({ issuedClientId: 'oaiapp_recovery_success' });
+
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/oauth/token')) {
+          // Construct valid synthetic ID token
+          const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+          const payload = Buffer.from(JSON.stringify({
+            iss: 'https://auth.openai.com',
+            email: 'user@chatgpt.test',
+            'https://api.openai.com/auth': { account_id: 'acc_recovery_123', plan: 'plus' },
+          })).toString('base64url');
+          const idToken = `${header}.${payload}.mock_sig`;
+
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              access_token: 'fresh_recovery_access_token',
+              refresh_token: 'fresh_recovery_refresh_token',
+              id_token: idToken,
+              token_type: 'Bearer',
+              expires_in: 3600,
+              scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+              client_id: 'oaiapp_recovery_success',
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      });
+
+      const oauthService = new ChatGPTOAuthService({ storage, fetchFn: mockFetch as any });
+
+      // Start fresh recovery authorization
+      const recoveryAuth = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      expect(new URL(recoveryAuth.url).searchParams.get('client_id')).toBe('oaiapp_recovery_success');
+
+      // Callback succeeds
+      const result = await oauthService.handleCallback({
+        code: 'recovery_success_code',
+        state: recoveryAuth.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_recovery_success',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.identityConnected).toBe(true);
+      expect(result.planInferenceAuthorized).toBe(true);
+      expect(result.issuedClientId).toBe('oaiapp_recovery_success');
+
+      // Credentials are now validly saved
+      const creds = storage.loadCredentials();
+      expect(creds?.accessToken).toBe('fresh_recovery_access_token');
+      expect(creds?.issuedClientId).toBe('oaiapp_recovery_success');
+
+      const summary = storage.getStatusSummary();
+      expect(summary.registered).toBe(true);
+      expect(summary.connected).toBe(true);
+      expect(summary.hasDirectTokenScope).toBe(true);
+      expect(summary.isExpired).toBe(false);
+      expect(storage.hasValidPlanAccess()).toBe(true);
+    });
+
+    it('TC-CGP-21 (G): Attempting to persist dynamic_agent_client fails closed', () => {
+      expect(() => {
+        storage.saveRegistration({ issuedClientId: 'dynamic_agent_client' });
+      }).toThrowError(/dynamic_agent_client cannot be persisted/i);
+
+      expect(() => {
+        storage.saveCredentials({
+          accessToken: 'token_bad',
+          tokenType: 'Bearer',
+          expiresAt: Date.now() + 3600000,
+          scope: 'openid',
+          issuedClientId: 'dynamic_agent_client',
+        });
+      }).toThrowError(/dynamic_agent_client cannot be persisted/i);
+    });
+  });
 });
 

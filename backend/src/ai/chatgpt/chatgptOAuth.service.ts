@@ -124,10 +124,12 @@ export class ChatGPTOAuthService {
       }
     }
 
-    // 2. Resolve client ID: reuse valid issued client ID if present, else dynamic_agent_client
+    // 2. Resolve client ID: reuse valid issued client ID if present in registration or credentials, else dynamic_agent_client
+    const registration = this.storage.loadRegistration();
     const creds = this.storage.loadCredentials();
-    const isReturning = !!(creds?.issuedClientId && creds.issuedClientId !== 'dynamic_agent_client');
-    const clientId = isReturning ? creds.issuedClientId! : 'dynamic_agent_client';
+    const existingIssuedClientId = registration?.issuedClientId || creds?.issuedClientId;
+    const isReturning = !!(existingIssuedClientId && existingIssuedClientId !== 'dynamic_agent_client');
+    const clientId = isReturning ? existingIssuedClientId! : 'dynamic_agent_client';
     const hostId = getOrCreateHostId();
 
     // 3. Generate PKCE, state, and nonce
@@ -142,7 +144,7 @@ export class ChatGPTOAuthService {
       codeVerifier,
       redirectUri: options.redirectUri,
       registrationMode: isReturning ? 'returning' : 'new',
-      expectedClientId: isReturning ? creds!.issuedClientId : undefined,
+      expectedClientId: isReturning ? clientId : undefined,
       createdAt: now,
     });
 
@@ -157,9 +159,12 @@ export class ChatGPTOAuthService {
       code_challenge_method: 'S256',
       state,
       nonce,
-      agent_name_hint: options.agentNameHint || 'DigiSkwela',
       ext_agent_host_id: hostId,
     });
+
+    if (!isReturning) {
+      params.set('agent_name_hint', options.agentNameHint || 'DigiSkwela');
+    }
 
     return {
       url: `${this.authorizeUrl}?${params.toString()}`,
@@ -230,6 +235,12 @@ export class ChatGPTOAuthService {
       }
 
       exchangeClientId = callbackIssuedClientId;
+
+      // CRITICAL: Persist issued client registration IMMEDIATELY upon receiving validated callback,
+      // BEFORE attempting token exchange so that it survives any exchange errors (e.g., invalid_grant).
+      this.storage.saveRegistration({
+        issuedClientId: exchangeClientId,
+      });
     } else {
       // Returning account re-authorization
       exchangeClientId = session.expectedClientId!;
@@ -243,6 +254,11 @@ export class ChatGPTOAuthService {
           error: 'CLIENT_ID_MISMATCH: Callback client ID does not match registered returning client ID.',
         };
       }
+
+      // Ensure registration remains saved/up to date
+      this.storage.saveRegistration({
+        issuedClientId: exchangeClientId,
+      });
     }
 
     // Explicit Section 6 regression guard
@@ -298,6 +314,7 @@ export class ChatGPTOAuthService {
           planInferenceAuthorized: false,
           scope: '',
           error: `TOKEN_EXCHANGE_FAILED: ${res.status} ${errorText}${reqId ? ` (request-id: ${reqId})` : ''}`,
+          issuedClientId: exchangeClientId,
         };
       }
 
@@ -309,6 +326,7 @@ export class ChatGPTOAuthService {
         planInferenceAuthorized: false,
         scope: '',
         error: `TOKEN_NETWORK_ERROR: ${err.message}`,
+        issuedClientId: exchangeClientId,
       };
     }
 
@@ -379,6 +397,11 @@ export class ChatGPTOAuthService {
       userEmail,
     });
 
+    // Ensure registration also matches the issued client ID
+    this.storage.saveRegistration({
+      issuedClientId,
+    });
+
     return {
       success: true,
       identityConnected: true,
@@ -394,11 +417,12 @@ export class ChatGPTOAuthService {
    */
   public async refreshAccessToken(): Promise<{ success: boolean; error?: string }> {
     const creds = this.storage.loadCredentials();
+    const registration = this.storage.loadRegistration();
     if (!creds || !creds.refreshToken) {
       return { success: false, error: 'NO_REFRESH_TOKEN: Re-authorization required.' };
     }
 
-    const clientId = creds.issuedClientId;
+    const clientId = creds.issuedClientId || registration?.issuedClientId;
     if (!clientId || clientId === 'dynamic_agent_client') {
       return { success: false, error: 'INVALID_CLIENT_ID: No valid issued client ID available for refresh.' };
     }
@@ -426,7 +450,7 @@ export class ChatGPTOAuthService {
 
       const data = (await res.json()) as ChatGPTTokenExchangeResponse;
       const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
-      const newIssuedClientId = data.client_id || creds.issuedClientId;
+      const newIssuedClientId = data.client_id || creds.issuedClientId || clientId;
 
       this.storage.saveCredentials({
         ...creds,
@@ -436,6 +460,10 @@ export class ChatGPTOAuthService {
         tokenType: data.token_type || creds.tokenType,
         expiresAt,
         scope: data.scope || creds.scope,
+        issuedClientId: newIssuedClientId,
+      });
+
+      this.storage.saveRegistration({
         issuedClientId: newIssuedClientId,
       });
 
