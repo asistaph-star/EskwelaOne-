@@ -55,7 +55,7 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
       screen: 'p-monitoring',
       description: 'Open Gate Attendance Monitoring tab',
     },
-    keywords: /\b(faculty([- ]related)?\s*(attendance|presence|records?|concerns?|issues?|matters?|check-?ins?|members?)|gate\s+(attendance|records?|check-?ins?|scan)|check-?ins?|attendance\s+audit)\b/i,
+    keywords: /\b(faculty([- ]related)?\s*(attendance|presence|records?|concerns?|issues?|matters?|check-?ins?|members?|ones?)|gate\s+(attendance|records?|check-?ins?|scan)|check-?ins?|attendance(\s+audit|\s+records?|\s+exceptions?)?)\b/i,
     coverageRegex: /\b(attendance|check-?in|gate records?|faculty)\b/i,
     defaultArgs: {},
     summarizeResult: (result: any) => {
@@ -100,7 +100,7 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
       screen: 'p-analytics',
       description: 'Open Academic Analytics tab',
     },
-    keywords: /\b(academic|grades?|grading|pass rates?|quarterly|t1|t2|t3|t4|completeness|performance|promotion rate)\b/i,
+    keywords: /\b(academics?|grades?|grading|pass rates?|quarterly|t1|t2|t3|t4|completeness|performance|promotion rate)\b/i,
     coverageRegex: /\b(academic|grades?|pass rate|partial terms)\b/i,
     defaultArgs: {},
     summarizeResult: (result: any) => {

@@ -452,7 +452,8 @@ export const AIService = {
             executionOutput.executedResults,
             aggregateData,
             plan.primaryToolName,
-            Boolean(structuredData)
+            Boolean(structuredData),
+            navigationActions
           );
 
           const activeFailover = finalTurn.failoverMetadata;
@@ -478,9 +479,14 @@ export const AIService = {
               orchestration: {
                 intent: plan.intent,
                 obligationsTotal: validated.auditMetrics.obligationsTotal,
+                domainObligationsTotal: validated.auditMetrics.domainObligationsTotal,
+                operationObligationsTotal: validated.auditMetrics.operationObligationsTotal,
                 satisfiedCount: validated.auditMetrics.satisfiedCount,
+                satisfiedDomainCount: validated.auditMetrics.satisfiedDomainCount,
+                satisfiedOperationCount: validated.auditMetrics.satisfiedOperationCount,
                 remediedCount: validated.auditMetrics.remediedCount,
                 unmetCount: validated.auditMetrics.unmetCount,
+                completionState: validated.auditMetrics.completionState,
               }
             }
           });

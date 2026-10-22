@@ -2,14 +2,37 @@ import { AIMessage } from '../provider/aiProvider.interface.js';
 import { DOMAIN_CATALOG, OperationalDomainName } from './domainCatalog.js';
 import { NormalizedNavigationAction } from '../ai.service.js';
 
+export type SupportedOperation =
+  | 'retrieve'
+  | 'count'
+  | 'compare'
+  | 'correlate'
+  | 'explain'
+  | 'summarize'
+  | 'prioritize'
+  | 'navigate'
+  | 'draft'
+  | 'generate_report';
+
 export interface PlannedToolDispatch {
   name: string;
   args: Record<string, any>;
 }
 
+export interface DomainObligation {
+  domain: OperationalDomainName;
+  description: string;
+}
+
+export interface OperationObligation {
+  operation: SupportedOperation;
+  targetDomain?: OperationalDomainName;
+  description: string;
+}
+
 export interface PlanObligation {
   domain: OperationalDomainName;
-  operation: 'retrieve' | 'count' | 'compare' | 'correlate' | 'explain' | 'summarize' | 'prioritize' | 'draft';
+  operation: SupportedOperation;
   description: string;
 }
 
@@ -32,6 +55,8 @@ export interface PrincipalRequestPlan {
   toolsToExecute: PlannedToolDispatch[];
   primaryToolName: string;
   obligations: PlanObligation[];
+  domainObligations: DomainObligation[];
+  operationObligations: OperationObligation[];
   navigationOnly?: boolean;
   navigationAction?: NormalizedNavigationAction;
   directResponseContent?: string;
@@ -41,6 +66,159 @@ export interface PrincipalRequestPlan {
   isPrioritize?: boolean;
   isOutOfScope?: boolean;
   skipFeatureMenuRule?: boolean;
+}
+
+/**
+ * Extracts prior operational context from previous conversation turns.
+ */
+export function extractPriorOperationalContext(messages: AIMessage[]): {
+  domains: Set<OperationalDomainName>;
+  tools: Set<string>;
+  lastAssistantContent: string;
+} {
+  const domains = new Set<OperationalDomainName>();
+  const tools = new Set<string>();
+  let lastAssistantContent = '';
+
+  const prev = messages.slice(0, -1);
+  for (const m of prev) {
+    if (m.role === 'tool' && m.name) {
+      tools.add(m.name);
+      for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
+        if (meta.toolName === m.name) {
+          domains.add(dom as OperationalDomainName);
+        }
+      }
+    }
+    if (m.role === 'assistant') {
+      lastAssistantContent = m.content || '';
+      if (m.toolCalls) {
+        for (const tc of m.toolCalls) {
+          const fnName = tc.name || (tc as any).function?.name;
+          if (fnName) {
+            tools.add(fnName);
+            for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
+              if (meta.toolName === fnName) {
+                domains.add(dom as OperationalDomainName);
+              }
+            }
+          }
+        }
+      }
+    }
+    if (m.role === 'user') {
+      const lowerText = (m.content || '').toLowerCase();
+      for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
+        if (meta.keywords.test(lowerText)) {
+          domains.add(dom as OperationalDomainName);
+        }
+      }
+    }
+  }
+
+  return { domains, tools, lastAssistantContent };
+}
+
+/**
+ * Detects distinct operational tasks requested in the user prompt.
+ */
+export function detectOperations(lower: string): Set<SupportedOperation> {
+  const ops = new Set<SupportedOperation>();
+
+  // navigate
+  if (/\b(where\s+do\s+i|where\s+can\s+i|how\s+do\s+i\s+(find|navigate|access|open|go)|navigate\s+to|where\s+to\s+review)\b/i.test(lower)) {
+    ops.add('navigate');
+  }
+
+  // draft
+  if (/\b(draft|prepare\s+memo|write\s+memo|draft\s+communication|draft\s+reminder|compose)\b/i.test(lower)) {
+    ops.add('draft');
+  }
+
+  // explain
+  if (/\b(why|reason|explain|preventing|what\s+causes|cause\s+of|understand)\b/i.test(lower)) {
+    ops.add('explain');
+  }
+
+  // correlate
+  if (/\b(correlate|cross-?check|link|relationship|overlap|related|relate(\s+to\s+one\s+another)?|explained\s+by|separate\s+anything\s+unrelated|same\s+faculty|involve\s+the\s+same)\b/i.test(lower)) {
+    ops.add('correlate');
+  }
+
+  // prioritize
+  if (/\b(prioritize|priority|order\s+for\s+what\s+i\s+should\s+review|what\s+should\s+i\s+(look\s+at|review|check)\s+first|which.*first|review\s+order|order\s+of\s+review|short\s+order)\b/i.test(lower)) {
+    ops.add('prioritize');
+  }
+
+  // count
+  if (/\b(how many|count of|number of|total)\b/i.test(lower)) {
+    ops.add('count');
+  }
+
+  // compare
+  if (/\b(compare|versus|vs\.?|difference between)\b/i.test(lower)) {
+    ops.add('compare');
+  }
+
+  // summarize
+  if (/\b(summarize|summary|overview|round-?up)\b/i.test(lower)) {
+    ops.add('summarize');
+  }
+
+  // generate_report
+  if (/\b(executive\s+brief|meeting\s+brief|weekly\s+(operations?\s+)?report|prepare.*(brief|report)|generate\s+(report|brief))\b/i.test(lower)) {
+    ops.add('generate_report');
+  }
+
+  // retrieve (default fallback if no specific modifier, or if explicitly requested)
+  if (
+    /\b(check|review|show|get|list|find|inspect|look at|tell me|what (are|is)|view|audit|examine|cases?|records?)\b/i.test(lower) ||
+    ops.size === 0
+  ) {
+    ops.add('retrieve');
+  }
+
+  return ops;
+}
+
+/**
+ * Builds a structured plan with synchronized domainObligations, operationObligations, and obligations.
+ */
+function createPlan(
+  intent: PlannedIntentType,
+  tools: PlannedToolDispatch[],
+  domainObs: DomainObligation[],
+  opObs: OperationObligation[],
+  extras: Partial<PrincipalRequestPlan> = {}
+): PrincipalRequestPlan {
+  const obligations: PlanObligation[] = [];
+  for (const d of domainObs) {
+    obligations.push({
+      domain: d.domain,
+      operation: opObs.length > 0 ? opObs[0].operation : 'retrieve',
+      description: d.description,
+    });
+  }
+  for (const op of opObs) {
+    const targetDomain = op.targetDomain || (domainObs.length > 0 ? domainObs[0].domain : 'overview');
+    if (!obligations.some(o => o.domain === targetDomain && o.operation === op.operation)) {
+      obligations.push({
+        domain: targetDomain,
+        operation: op.operation,
+        description: op.description,
+      });
+    }
+  }
+
+  return {
+    intent,
+    toolsToExecute: tools,
+    primaryToolName: tools[0]?.name || '',
+    obligations,
+    domainObligations: domainObs,
+    operationObligations: opObs,
+    ...extras,
+  };
 }
 
 /**
@@ -76,35 +254,25 @@ export function buildRequestPlan(
   const matchesAnySchoolDomain = Object.values(DOMAIN_CATALOG).some(d => d.keywords.test(lower));
 
   if (matchesNonSchoolPattern && !matchesAnySchoolDomain) {
-    return {
-      intent: 'OUT_OF_SCOPE',
-      toolsToExecute: [],
-      primaryToolName: '',
-      obligations: [],
-      isOutOfScope: true,
-      directResponseContent: 'I am the DigiSkwela school operations assistant. I can only assist with authorized school management, attendance, leave records, academic analytics, and calendar operations.',
-    };
+    return createPlan(
+      'OUT_OF_SCOPE',
+      [],
+      [],
+      [],
+      {
+        isOutOfScope: true,
+        directResponseContent: 'I am the DigiSkwela school operations assistant. I can only assist with authorized school management, attendance, leave records, academic analytics, and calendar operations.',
+      }
+    );
   }
 
   // ─── 2. Social / Courtesy Invariants ──────────────────────────────────
   if (/\b(thank\s*you|thanks|many\s*thanks|thank\s*u|salamat)\b/i.test(lower)) {
-    return {
-      intent: 'SOCIAL',
-      toolsToExecute: [],
-      primaryToolName: '',
-      obligations: [],
-      directResponseContent: 'You’re welcome.',
-    };
+    return createPlan('SOCIAL', [], [], [], { directResponseContent: 'You’re welcome.' });
   }
 
   if (/^(hello|hi|hey|good\s*(morning|afternoon|evening))\b/i.test(lower) && lower.split(/\s+/).length <= 4) {
-    return {
-      intent: 'SOCIAL',
-      toolsToExecute: [],
-      primaryToolName: '',
-      obligations: [],
-      directResponseContent: 'Good day. How may I assist you with school operations?',
-    };
+    return createPlan('SOCIAL', [], [], [], { directResponseContent: 'Good day. How may I assist you with school operations?' });
   }
 
   // ─── 3. Navigation & Contextual Guidance ──────────────────────────────
@@ -120,215 +288,352 @@ export function buildRequestPlan(
 
   if (isNavQuery) {
     const hasDataQuestion = (
-      /\b(and|also|\?.*\w)\b.*\b(are there|how many|is there|any|show me|check|what are|cases?|unresolved|pending|exceptions?)\b/i.test(lower) ||
-      (/\b(where do i|where can i|how do i)\b/i.test(lower) && /\b(and\s+(are|is|do|how|what)|unresolved|pending|active)\b/i.test(lower))
+      /\b(and|also|\?.*\w)\b.*\b(are there|how many|is there|any|show me|check|what are|cases?|unresolved|pending|exceptions?|exist)\b/i.test(lower) ||
+      (/\b(where do i|where can i|how do i)\b/i.test(lower) && /\b(and\s+(are|is|do|how|what|tell me)|unresolved|pending|active|exist)\b/i.test(lower))
     );
 
     // Composite Navigation + Data Question (e.g. "Where do I review behavioral reports, and are there any unresolved cases?")
     if (hasDataQuestion) {
       if ((lower.includes('behavior') || lower.includes('incident')) && allowedToolNames.has('getAdministrativeBehaviorSummary')) {
-        return {
-          intent: 'MULTI_DOMAIN',
-          toolsToExecute: [{ name: 'getAdministrativeBehaviorSummary', args: { limit: 10 } }],
-          primaryToolName: 'getAdministrativeBehaviorSummary',
-          navigationAction: DOMAIN_CATALOG.behavior.navAction,
-          obligations: [
-            { domain: 'behavior', operation: 'retrieve', description: 'Navigate to Behavioral Reports and retrieve active cases' }
+        return createPlan(
+          'MULTI_DOMAIN',
+          [{ name: 'getAdministrativeBehaviorSummary', args: { limit: 10 } }],
+          [{ domain: 'behavior', description: 'Behavioral Reports records' }],
+          [
+            { operation: 'navigate', targetDomain: 'behavior', description: 'Navigate to Behavioral Reports module' },
+            { operation: 'retrieve', targetDomain: 'behavior', description: 'Retrieve active unresolved behavioral cases' }
           ],
-          skipFeatureMenuRule: true,
-        };
+          {
+            navigationAction: DOMAIN_CATALOG.behavior.navAction,
+            skipFeatureMenuRule: true,
+          }
+        );
       }
       if ((lower.includes('attendance') || lower.includes('gate')) && allowedToolNames.has('getFacultyAttendanceAudit')) {
-        return {
-          intent: 'MULTI_DOMAIN',
-          toolsToExecute: [{ name: 'getFacultyAttendanceAudit', args: {} }],
-          primaryToolName: 'getFacultyAttendanceAudit',
-          navigationAction: DOMAIN_CATALOG.faculty_attendance.navAction,
-          obligations: [
-            { domain: 'faculty_attendance', operation: 'retrieve', description: 'Navigate to Gate Attendance Monitoring and audit presence' }
+        return createPlan(
+          'MULTI_DOMAIN',
+          [{ name: 'getFacultyAttendanceAudit', args: {} }],
+          [{ domain: 'faculty_attendance', description: 'Gate Attendance Monitoring records' }],
+          [
+            { operation: 'navigate', targetDomain: 'faculty_attendance', description: 'Navigate to Gate Attendance Monitoring' },
+            { operation: 'retrieve', targetDomain: 'faculty_attendance', description: 'Audit faculty check-in exceptions' }
           ],
-          skipFeatureMenuRule: true,
-        };
+          {
+            navigationAction: DOMAIN_CATALOG.faculty_attendance.navAction,
+            skipFeatureMenuRule: true,
+          }
+        );
       }
       if ((lower.includes('leave') || lower.includes('vacation')) && allowedToolNames.has('getPendingLeaves')) {
-        return {
-          intent: 'MULTI_DOMAIN',
-          toolsToExecute: [{ name: 'getPendingLeaves', args: { limit: 10 } }],
-          primaryToolName: 'getPendingLeaves',
-          navigationAction: DOMAIN_CATALOG.leaves.navAction,
-          obligations: [
-            { domain: 'leaves', operation: 'retrieve', description: 'Navigate to Leave Management and check pending requests' }
+        return createPlan(
+          'MULTI_DOMAIN',
+          [{ name: 'getPendingLeaves', args: { limit: 10 } }],
+          [{ domain: 'leaves', description: 'Leave Management records' }],
+          [
+            { operation: 'navigate', targetDomain: 'leaves', description: 'Navigate to Leave Management' },
+            { operation: 'retrieve', targetDomain: 'leaves', description: 'Check pending leave requests' }
           ],
-          skipFeatureMenuRule: true,
-        };
+          {
+            navigationAction: DOMAIN_CATALOG.leaves.navAction,
+            skipFeatureMenuRule: true,
+          }
+        );
       }
     }
 
     // Pure Navigation guidance
     if (lower.includes('attendance') || lower.includes('gate') || lower.includes('check-in')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: DOMAIN_CATALOG.faculty_attendance.navAction,
-        directResponseContent: 'You can review faculty attendance in Gate Attendance Monitoring. You can also view registered profiles and schedules in Teacher Management.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [{ domain: 'faculty_attendance', description: 'Gate Attendance Monitoring' }],
+        [{ operation: 'navigate', targetDomain: 'faculty_attendance', description: 'Open Gate Attendance Monitoring tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: DOMAIN_CATALOG.faculty_attendance.navAction,
+          directResponseContent: 'You can review faculty attendance in Gate Attendance Monitoring. You can also view registered profiles and schedules in Teacher Management.',
+        }
+      );
     }
     if (lower.includes('leave') || lower.includes('vacation')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: DOMAIN_CATALOG.leaves.navAction,
-        directResponseContent: 'You can review, approve, or deny pending faculty leave applications in the Leave Management module under Administration.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [{ domain: 'leaves', description: 'Leave Management' }],
+        [{ operation: 'navigate', targetDomain: 'leaves', description: 'Open Leave Management tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: DOMAIN_CATALOG.leaves.navAction,
+          directResponseContent: 'You can review, approve, or deny pending faculty leave applications in the Leave Management module under Administration.',
+        }
+      );
     }
     if (lower.includes('behavior') || lower.includes('discipline') || lower.includes('incident')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: DOMAIN_CATALOG.behavior.navAction,
-        directResponseContent: 'You can view logged student disciplinary incidents and behavioral cases in the Behavioral Reports module under Operations.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [{ domain: 'behavior', description: 'Behavioral Reports' }],
+        [{ operation: 'navigate', targetDomain: 'behavior', description: 'Open Behavioral Reports tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: DOMAIN_CATALOG.behavior.navAction,
+          directResponseContent: 'You can view logged student disciplinary incidents and behavioral cases in the Behavioral Reports module under Operations.',
+        }
+      );
     }
     if (lower.includes('academic') || lower.includes('grade') || lower.includes('completeness')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: DOMAIN_CATALOG.academics.navAction,
-        directResponseContent: 'You can inspect grading progress and quarterly performance summaries in the Academic Analytics module under Administration.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [{ domain: 'academics', description: 'Academic Analytics' }],
+        [{ operation: 'navigate', targetDomain: 'academics', description: 'Open Academic Analytics tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: DOMAIN_CATALOG.academics.navAction,
+          directResponseContent: 'You can inspect grading progress and quarterly performance summaries in the Academic Analytics module under Administration.',
+        }
+      );
     }
     if (lower.includes('teacher') || lower.includes('faculty profile')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: {
-          label: 'Open Teacher Management',
-          screen: 'p-teachers',
-          description: 'Open Teacher Management tab',
-        },
-        directResponseContent: 'You can manage teacher assignments and profile records in Teacher Management under Administration.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [],
+        [{ operation: 'navigate', description: 'Open Teacher Management tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: {
+            label: 'Open Teacher Management',
+            screen: 'p-teachers',
+            description: 'Open Teacher Management tab',
+          },
+          directResponseContent: 'You can manage teacher assignments and profile records in Teacher Management under Administration.',
+        }
+      );
     }
     if (lower.includes('event') || lower.includes('calendar')) {
-      return {
-        intent: 'NAVIGATION',
-        toolsToExecute: [],
-        primaryToolName: '',
-        obligations: [],
-        navigationOnly: true,
-        navigationAction: DOMAIN_CATALOG.events.navAction,
-        directResponseContent: 'You can view and schedule school events on the School Events calendar under Operations.',
-      };
+      return createPlan(
+        'NAVIGATION',
+        [],
+        [{ domain: 'events', description: 'School Events' }],
+        [{ operation: 'navigate', targetDomain: 'events', description: 'Open School Events tab' }],
+        {
+          navigationOnly: true,
+          navigationAction: DOMAIN_CATALOG.events.navAction,
+          directResponseContent: 'You can view and schedule school events on the School Events calendar under Operations.',
+        }
+      );
     }
 
-    return {
-      intent: 'NAVIGATION',
-      toolsToExecute: [],
-      primaryToolName: '',
-      obligations: [],
-      navigationOnly: true,
-      directResponseContent: 'Which DigiSkwela feature do you need help with?',
-    };
+    return createPlan(
+      'NAVIGATION',
+      [],
+      [],
+      [{ operation: 'navigate', description: 'Open feature menu' }],
+      {
+        navigationOnly: true,
+        directResponseContent: 'Which DigiSkwela feature do you need help with?',
+      }
+    );
   }
 
-  // ─── 4. Conversational Pronouns & Follow-up Anaphora ───────────────────
-  const isFollowUpQuery = (
-    /\b(them|which of (them|those)|who among them|who of them|any of them|what about them)\b/i.test(lower) ||
-    (/\b(which of (those|them)|what.*(check|review) first|which.*first)\b/i.test(lower) && /\b(those|them|these)\b/i.test(lower))
-  );
-  if (isFollowUpQuery) {
-    const previousMessages = messages.slice(0, -1);
+  // ─── 4. Conversational Pronouns, Narrowing, Expansion & Follow-ups ────
+  const isDirectAnaphora = /\b(which of (them|those)|who among them|who of them|any of them|what about them)\b/i.test(lower);
+  const hasReferent = isDirectAnaphora || /\b(them|those|these|they|that|this one|the second one|the first one|most important (one|problem|issue))\b/i.test(lower);
+  const isNarrowing = /\b(only|just|specifically|filter by|narrow to|show me only)\b/i.test(lower);
+  const isExplicitExpansion = /\b(also|in addition|as well as|and check|what about|include|check also|additionally)\b/i.test(lower);
+  const isPrioritizeFollowUp = /\b(which of (those|them).*(first|priority)|what.*(those|them).*(check|review) first|which.*(those|them).*(check|review) first)\b/i.test(lower) ||
+    (/\b(what|which).*(check|review|look at)\s+first\b/i.test(lower) && /\b(those|them|these)\b/i.test(lower));
 
-    // Follow-up prioritization ("Which of those should I check first?")
-    if (/\b(which of (those|them).*(first|priority)|what.*(check|review) first|which.*(check|review) first|which.*first)\b/i.test(lower)) {
-      const hadOperationalContext = previousMessages.some(m => {
-        const c = (m.content || '').toLowerCase();
-        return c.includes('faculty') || c.includes('attendance') || c.includes('leave') || c.includes('behavior') || c.includes('academic') || m.role === 'tool';
-      });
+  const isFollowUpCandidate = hasReferent || isNarrowing || isExplicitExpansion || isPrioritizeFollowUp;
 
-      if (hadOperationalContext) {
-        const tools: PlannedToolDispatch[] = [];
-        if (allowedToolNames.has('getFacultyAttendanceAudit')) tools.push({ name: 'getFacultyAttendanceAudit', args: {} });
-        if (allowedToolNames.has('getPendingLeaves')) tools.push({ name: 'getPendingLeaves', args: { limit: 10 } });
-        if (allowedToolNames.has('getAdministrativeBehaviorSummary')) tools.push({ name: 'getAdministrativeBehaviorSummary', args: { limit: 10 } });
+  if (isFollowUpCandidate) {
+    const priorContext = extractPriorOperationalContext(messages);
 
-        if (tools.length > 0) {
-          const obligations: PlanObligation[] = [];
-          if (allowedToolNames.has('getFacultyAttendanceAudit')) {
-            obligations.push({ domain: 'faculty_attendance', operation: 'prioritize', description: 'Faculty attendance exceptions review order' });
+    const currentDomains = (Object.keys(DOMAIN_CATALOG) as OperationalDomainName[]).filter(d => 
+      DOMAIN_CATALOG[d].keywords.test(lower)
+    );
+
+    // If an explicit anaphoric pronoun (e.g. "which of them", "who among them") has no prior context, ask for clarification
+    if (priorContext.domains.size === 0 && (isDirectAnaphora || (currentDomains.length === 0 && (hasReferent || isPrioritizeFollowUp || isNarrowing)))) {
+      return createPlan(
+        'CLARIFICATION',
+        [],
+        [],
+        [],
+        {
+          clarificationMessage: 'Could you please clarify who or what you are referring to? For example, are you asking about faculty attendance or staff leave applications?',
+        }
+      );
+    }
+
+    // Only resolve contextual follow-up if prior conversation domains actually exist
+    if (priorContext.domains.size > 0) {
+      // 4.1 NARROWING (Section 9.D): "Only show me the faculty-related ones"
+      if (isNarrowing) {
+        const targetDomain = (Object.keys(DOMAIN_CATALOG) as OperationalDomainName[]).find(d => 
+          DOMAIN_CATALOG[d].keywords.test(lower)
+        );
+        if (targetDomain && priorContext.domains.has(targetDomain)) {
+          const entry = DOMAIN_CATALOG[targetDomain];
+          if (allowedToolNames.has(entry.toolName)) {
+            return createPlan(
+              'SINGLE_DOMAIN',
+              [{ name: entry.toolName, args: entry.defaultArgs || {} }],
+              [{ domain: targetDomain, description: `${entry.displayName} records` }],
+              [{ operation: 'retrieve', targetDomain, description: `Filtered to ${entry.displayName}` }],
+              { skipFeatureMenuRule: true }
+            );
           }
-          if (allowedToolNames.has('getPendingLeaves')) {
-            obligations.push({ domain: 'leaves', operation: 'prioritize', description: 'Pending leaves review order' });
-          }
-          if (allowedToolNames.has('getAdministrativeBehaviorSummary')) {
-            obligations.push({ domain: 'behavior', operation: 'prioritize', description: 'Behavior incidents review order' });
-          }
-          return {
-            intent: 'MULTI_DOMAIN',
-            toolsToExecute: tools,
-            primaryToolName: tools[0].name,
-            obligations,
-            isPrioritize: true,
-            skipFeatureMenuRule: true,
-          };
         }
       }
-    }
 
-    // Follow-up attendance status filtering ("Which of them are on approved leave?")
-    const hadFacultyAttendanceContext = previousMessages.some(m => {
-      const c = (m.content || '').toLowerCase();
-      return c.includes('faculty') || c.includes('attendance') || c.includes('check-in') || m.name === 'getFacultyAttendanceAudit';
-    });
+      // 4.2 EXPLICIT EXPANSION (Section 10): "Also check behavior cases and academics"
+      if (isExplicitExpansion) {
+        const newDomains: OperationalDomainName[] = [];
+        for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
+          if (meta.keywords.test(lower) && !priorContext.domains.has(dom as OperationalDomainName)) {
+            newDomains.push(dom as OperationalDomainName);
+          }
+        }
+        if (newDomains.length > 0) {
+          const combined = Array.from(new Set([...priorContext.domains, ...newDomains]));
+          const tools: PlannedToolDispatch[] = [];
+          const domainObs: DomainObligation[] = [];
+          const opObs: OperationObligation[] = [];
 
-    if (hadFacultyAttendanceContext && allowedToolNames.has('getFacultyAttendanceAudit')) {
-      let statusFilter: 'ALL' | 'COMPLETED' | 'TIME_OUT_PENDING' | 'ON_APPROVED_LEAVE' | 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' = 'ALL';
+          for (const d of combined) {
+            const entry = DOMAIN_CATALOG[d];
+            if (allowedToolNames.has(entry.toolName) && !tools.some(t => t.name === entry.toolName)) {
+              tools.push({ name: entry.toolName, args: entry.defaultArgs || {} });
+              domainObs.push({ domain: d, description: `${entry.displayName} records` });
+              opObs.push({ operation: 'retrieve', targetDomain: d, description: `Retrieve ${entry.displayName}` });
+            }
+          }
 
-      if (lower.includes('leave') || lower.includes('approved')) {
-        statusFilter = 'ON_APPROVED_LEAVE';
-      } else if (lower.includes('no check-in') || lower.includes('no gate') || lower.includes('missing')) {
-        statusFilter = 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND';
-      } else if (lower.includes('time-out') || lower.includes('time out') || lower.includes('pending')) {
-        statusFilter = 'TIME_OUT_PENDING';
-      } else if (lower.includes('completed')) {
-        statusFilter = 'COMPLETED';
+          if (tools.length > 0) {
+            return createPlan(
+              'MULTI_DOMAIN',
+              tools,
+              domainObs,
+              opObs,
+              { skipFeatureMenuRule: true }
+            );
+          }
+        }
       }
 
-      return {
-        intent: 'SINGLE_DOMAIN',
-        toolsToExecute: [
-          { name: 'getFacultyAttendanceAudit', args: { statusFilter } }
-        ],
-        primaryToolName: 'getFacultyAttendanceAudit',
-        obligations: [
-          { domain: 'faculty_attendance', operation: 'retrieve', description: `Faculty attendance with statusFilter=${statusFilter}` }
-        ]
-      };
-    }
+      // 4.3 CONTEXTUAL PRIORITIZATION (Section 9.A): "Which of those should I check first?"
+      if (isPrioritizeFollowUp) {
+        const tools: PlannedToolDispatch[] = [];
+        const domainObs: DomainObligation[] = [];
+        const opObs: OperationObligation[] = [];
 
-    // Ambiguous follow-up without antecedent: honest clarification
-    return {
-      intent: 'CLARIFICATION',
-      toolsToExecute: [],
-      primaryToolName: '',
-      obligations: [],
-      clarificationMessage: 'Could you please clarify who you are referring to? For example, are you asking about faculty attendance or staff leave applications?',
-    };
+        // Faithful scope: Execute tools ONLY for domains that actually existed in the prior result set!
+        for (const dom of priorContext.domains) {
+          const entry = DOMAIN_CATALOG[dom];
+          if (entry && allowedToolNames.has(entry.toolName) && !tools.some(t => t.name === entry.toolName)) {
+            tools.push({ name: entry.toolName, args: entry.defaultArgs || {} });
+            domainObs.push({ domain: dom, description: `${entry.displayName} records` });
+            opObs.push({ operation: 'prioritize', targetDomain: dom, description: `Review order for ${entry.displayName}` });
+          }
+        }
+
+        if (tools.length > 0) {
+          return createPlan(
+            tools.length > 1 ? 'MULTI_DOMAIN' : 'SINGLE_DOMAIN',
+            tools,
+            domainObs,
+            opObs,
+            {
+              isPrioritize: true,
+              skipFeatureMenuRule: true,
+            }
+          );
+        }
+      }
+
+      // 4.4 CONTEXTUAL CORRELATION (Section 9.B): "Which of them involve the same faculty member?"
+      if (/\b(same faculty|involve the same|correlate|overlap|related)\b/i.test(lower)) {
+        if (priorContext.domains.has('faculty_attendance') || priorContext.domains.has('leaves')) {
+          const tools: PlannedToolDispatch[] = [];
+          const domainObs: DomainObligation[] = [];
+          if (allowedToolNames.has('getFacultyAttendanceAudit')) {
+            tools.push({ name: 'getFacultyAttendanceAudit', args: {} });
+            domainObs.push({ domain: 'faculty_attendance', description: 'Faculty attendance records' });
+          }
+          if (allowedToolNames.has('getPendingLeaves')) {
+            tools.push({ name: 'getPendingLeaves', args: { limit: 10 } });
+            domainObs.push({ domain: 'leaves', description: 'Leave Management records' });
+          }
+          return createPlan(
+            'ATTENDANCE_CROSSCHECK',
+            tools,
+            domainObs,
+            [{ operation: 'correlate', description: 'Cross-check faculty attendance exceptions with pending leave requests' }],
+            {
+              isCorrelate: true,
+              skipFeatureMenuRule: true,
+            }
+          );
+        }
+      }
+
+      // 4.5 CONTEXTUAL EXPLANATION (Section 9.C): "Explain the most important one"
+      if (/\b(explain|why|reason|cause)\b/i.test(lower)) {
+        if (priorContext.domains.has('academics') && allowedToolNames.has('getAcademicAnalytics')) {
+          return createPlan(
+            'SINGLE_DOMAIN',
+            [{ name: 'getAcademicAnalytics', args: {} }],
+            [{ domain: 'academics', description: 'Academic Analytics records' }],
+            [{ operation: 'explain', targetDomain: 'academics', description: 'Explain academic reporting issues' }],
+            { skipFeatureMenuRule: true }
+          );
+        }
+        if (priorContext.domains.has('faculty_attendance') && allowedToolNames.has('getFacultyAttendanceAudit')) {
+          return createPlan(
+            'SINGLE_DOMAIN',
+            [{ name: 'getFacultyAttendanceAudit', args: {} }],
+            [{ domain: 'faculty_attendance', description: 'Faculty attendance records' }],
+            [{ operation: 'explain', targetDomain: 'faculty_attendance', description: 'Explain faculty attendance exceptions' }],
+            { skipFeatureMenuRule: true }
+          );
+        }
+      }
+
+      // 4.6 Follow-up attendance status filtering ("Which of them are on approved leave?")
+      if (priorContext.domains.has('faculty_attendance') && allowedToolNames.has('getFacultyAttendanceAudit')) {
+        let statusFilter: 'ALL' | 'COMPLETED' | 'TIME_OUT_PENDING' | 'ON_APPROVED_LEAVE' | 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' = 'ALL';
+
+        if (lower.includes('leave') || lower.includes('approved')) {
+          statusFilter = 'ON_APPROVED_LEAVE';
+        } else if (lower.includes('no check-in') || lower.includes('no gate') || lower.includes('missing')) {
+          statusFilter = 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND';
+        } else if (lower.includes('time-out') || lower.includes('time out') || lower.includes('pending')) {
+          statusFilter = 'TIME_OUT_PENDING';
+        } else if (lower.includes('completed')) {
+          statusFilter = 'COMPLETED';
+        }
+
+        return createPlan(
+          'SINGLE_DOMAIN',
+          [{ name: 'getFacultyAttendanceAudit', args: { statusFilter } }],
+          [{ domain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }],
+          [{ operation: 'retrieve', targetDomain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }]
+        );
+      }
+
+      // 4.7 Ambiguous follow-up without antecedent: honest clarification
+      return createPlan(
+        'CLARIFICATION',
+        [],
+        [],
+        [],
+        {
+          clarificationMessage: 'Could you please clarify who or what you are referring to? For example, are you asking about faculty attendance or staff leave applications?',
+        }
+      );
+    }
   }
 
   // ─── 5. Meeting Brief Intent ──────────────────────────────────────────
@@ -342,16 +647,15 @@ export function buildRequestPlan(
     else if (lower.includes('parent') || lower.includes('ptc')) meetingType = 'PARENT_TEACHER_CONFERENCE';
     else if (lower.includes('pulse')) meetingType = 'OPERATIONAL_PULSE';
 
-    return {
-      intent: 'MEETING_BRIEF',
-      toolsToExecute: [
-        { name: 'generatePrincipalMeetingBrief', args: { meetingType } }
-      ],
-      primaryToolName: 'generatePrincipalMeetingBrief',
-      obligations: [
-        { domain: 'meeting_brief', operation: 'summarize', description: `Meeting brief for ${meetingType}` }
+    return createPlan(
+      'MEETING_BRIEF',
+      [{ name: 'generatePrincipalMeetingBrief', args: { meetingType } }],
+      [{ domain: 'meeting_brief', description: `Meeting brief for ${meetingType}` }],
+      [
+        { operation: 'generate_report', targetDomain: 'meeting_brief', description: `Generate meeting brief for ${meetingType}` },
+        { operation: 'summarize', targetDomain: 'meeting_brief', description: `Executive summary for ${meetingType}` }
       ]
-    };
+    );
   }
 
   // ─── 6. Weekly Operations Report Intent ────────────────────────────────
@@ -361,16 +665,15 @@ export function buildRequestPlan(
   );
 
   if (isWeeklyBrief && allowedToolNames.has('generateWeeklyOperationsReport')) {
-    return {
-      intent: 'WEEKLY_BRIEF',
-      toolsToExecute: [
-        { name: 'generateWeeklyOperationsReport', args: {} }
-      ],
-      primaryToolName: 'generateWeeklyOperationsReport',
-      obligations: [
-        { domain: 'weekly_report', operation: 'summarize', description: 'Weekly school operations report' }
+    return createPlan(
+      'WEEKLY_BRIEF',
+      [{ name: 'generateWeeklyOperationsReport', args: {} }],
+      [{ domain: 'weekly_report', description: 'Weekly school operations report' }],
+      [
+        { operation: 'generate_report', targetDomain: 'weekly_report', description: 'Generate weekly operations report' },
+        { operation: 'summarize', targetDomain: 'weekly_report', description: 'Summarize weekly operational metrics' }
       ]
-    };
+    );
   }
 
   // ─── 7. Attendance Cross-Check Intent ──────────────────────────────────
@@ -382,25 +685,26 @@ export function buildRequestPlan(
   );
 
   if (isAttendanceCrossCheck && allowedToolNames.has('getFacultyAttendanceAudit')) {
-    const tools: PlannedToolDispatch[] = [
-      { name: 'getFacultyAttendanceAudit', args: {} }
-    ];
-    const obligations: PlanObligation[] = [
-      { domain: 'faculty_attendance', operation: 'correlate', description: 'Audit faculty gate check-ins correlated with approved leaves' }
-    ];
+    const tools: PlannedToolDispatch[] = [{ name: 'getFacultyAttendanceAudit', args: {} }];
+    const domainObs: DomainObligation[] = [{ domain: 'faculty_attendance', description: 'Faculty attendance records' }];
     if (allowedToolNames.has('getPendingLeaves')) {
       tools.push({ name: 'getPendingLeaves', args: { limit: 10 } });
-      obligations.push({ domain: 'leaves', operation: 'correlate', description: 'Pending leave applications cross-check' });
+      domainObs.push({ domain: 'leaves', description: 'Leave Management records' });
     }
 
-    return {
-      intent: 'ATTENDANCE_CROSSCHECK',
-      toolsToExecute: tools,
-      primaryToolName: 'getFacultyAttendanceAudit',
-      obligations,
-      isCorrelate: true,
-      skipFeatureMenuRule: true,
-    };
+    return createPlan(
+      'ATTENDANCE_CROSSCHECK',
+      tools,
+      domainObs,
+      [
+        { operation: 'retrieve', targetDomain: 'faculty_attendance', description: 'Retrieve faculty attendance audit' },
+        { operation: 'correlate', description: 'Audit faculty gate check-ins correlated with approved leaves' }
+      ],
+      {
+        isCorrelate: true,
+        skipFeatureMenuRule: true,
+      }
+    );
   }
 
   // ─── 8. Attention Sweep Intent ("What needs my review/attention today?") ─
@@ -411,82 +715,50 @@ export function buildRequestPlan(
 
   if (isAttentionSweep) {
     const tools: PlannedToolDispatch[] = [];
-    const obligations: PlanObligation[] = [];
+    const domainObs: DomainObligation[] = [];
+    const opObs: OperationObligation[] = [];
 
-    // Exact required order for parity:
-    // 1. Attendance audit
     if (allowedToolNames.has('getFacultyAttendanceAudit')) {
       tools.push({ name: 'getFacultyAttendanceAudit', args: {} });
-      obligations.push({ domain: 'faculty_attendance', operation: 'retrieve', description: 'Faculty attendance exceptions' });
+      domainObs.push({ domain: 'faculty_attendance', description: 'Faculty attendance exceptions' });
+      opObs.push({ operation: 'retrieve', targetDomain: 'faculty_attendance', description: 'Audit faculty attendance exceptions' });
     }
-    // 2. Pending leaves
     if (allowedToolNames.has('getPendingLeaves')) {
       tools.push({ name: 'getPendingLeaves', args: { limit: 10 } });
-      obligations.push({ domain: 'leaves', operation: 'retrieve', description: 'Pending leave requests' });
+      domainObs.push({ domain: 'leaves', description: 'Pending leave requests' });
+      opObs.push({ operation: 'retrieve', targetDomain: 'leaves', description: 'Audit pending leave requests' });
     }
-    // 3. Behavior summary
     if (allowedToolNames.has('getAdministrativeBehaviorSummary')) {
       tools.push({ name: 'getAdministrativeBehaviorSummary', args: { limit: 10 } });
-      obligations.push({ domain: 'behavior', operation: 'retrieve', description: 'Administrative behavior summary' });
+      domainObs.push({ domain: 'behavior', description: 'Administrative behavior summary' });
+      opObs.push({ operation: 'retrieve', targetDomain: 'behavior', description: 'Audit active behavioral cases' });
     }
-    // 4. Fact sheet (last so MockAIProvider outputs fact sheet review narrative)
     if (allowedToolNames.has('getSchoolOperationalFactSheet')) {
       tools.push({ name: 'getSchoolOperationalFactSheet', args: {} });
-      obligations.push({ domain: 'overview', operation: 'summarize', description: 'Operational fact sheet pulse' });
+      domainObs.push({ domain: 'overview', description: 'Operational fact sheet pulse' });
+      opObs.push({ operation: 'summarize', targetDomain: 'overview', description: 'Operational fact sheet pulse' });
     }
+
+    opObs.push({ operation: 'prioritize', description: 'Suggested review order based on operational urgency' });
 
     if (tools.length > 0) {
-      return {
-        intent: 'SWEEP',
-        toolsToExecute: tools,
-        primaryToolName: 'getSchoolOperationalFactSheet',
-        obligations,
-        skipFeatureMenuRule: true,
-      };
+      return createPlan(
+        'SWEEP',
+        tools,
+        domainObs,
+        opObs,
+        {
+          primaryToolName: 'getSchoolOperationalFactSheet',
+          isPrioritize: true,
+          skipFeatureMenuRule: true,
+        }
+      );
     }
   }
 
-  // ─── 9. Administrative Drafting Intent (Read-Only) ─────────────────────
-  const isDraftRequest = /\b(draft|prepare memo|write memo|draft communication|draft reminder)\b/i.test(lower);
-  if (isDraftRequest) {
-    if ((lower.includes('grade') || lower.includes('academic') || lower.includes('term')) && allowedToolNames.has('getAcademicAnalytics')) {
-      return {
-        intent: 'DRAFT',
-        toolsToExecute: [{ name: 'getAcademicAnalytics', args: {} }],
-        primaryToolName: 'getAcademicAnalytics',
-        obligations: [{ domain: 'academics', operation: 'draft', description: 'Draft academic grading reminder memo' }],
-        isDraft: true,
-      };
-    }
-    if ((lower.includes('leave') || lower.includes('coverage')) && allowedToolNames.has('getPendingLeaves')) {
-      return {
-        intent: 'DRAFT',
-        toolsToExecute: [{ name: 'getPendingLeaves', args: { limit: 10 } }],
-        primaryToolName: 'getPendingLeaves',
-        obligations: [{ domain: 'leaves', operation: 'draft', description: 'Draft faculty leave coordination memo' }],
-        isDraft: true,
-      };
-    }
-    if (allowedToolNames.has('getFacultyAttendanceAudit')) {
-      return {
-        intent: 'DRAFT',
-        toolsToExecute: [{ name: 'getFacultyAttendanceAudit', args: {} }],
-        primaryToolName: 'getFacultyAttendanceAudit',
-        obligations: [{ domain: 'faculty_attendance', operation: 'draft', description: 'Draft attendance memo' }],
-        isDraft: true,
-      };
-    }
-  }
+  // ─── 9. Multi-Operation & General Inquiries ────────────────────────────
+  const ops = detectOperations(lower);
 
-  // ─── 10. Multi-Domain & General Inquiries ──────────────────────────────
-  // Detect operations requested
-  const isCount = /\b(how many|count of|number of|total)\b/i.test(lower);
-  const isExplain = /\b(why|reason|explain why|preventing)\b/i.test(lower);
-  const isCompare = /\b(compare|versus|vs\.?|difference between)\b/i.test(lower);
-  const isCorrelate = /\b(correlate|cross-?check|link|relationship|overlap|relate\s+to\s+one\s+another|explained\s+by|separate\s+anything\s+unrelated)\b/i.test(lower);
-  const isPrioritize = /\b(prioritize|priority|order\s+for\s+what\s+i\s+should\s+review|what\s+should\s+i\s+(look\s+at|review|check)\s+first|review\s+order|order\s+of\s+review|short\s+order)\b/i.test(lower);
-
-  // Identify mentioned domains
   const mentionedDomains: OperationalDomainName[] = [];
   if (DOMAIN_CATALOG.leaves.keywords.test(lower)) mentionedDomains.push('leaves');
   if (DOMAIN_CATALOG.faculty_attendance.keywords.test(lower)) mentionedDomains.push('faculty_attendance');
@@ -495,79 +767,73 @@ export function buildRequestPlan(
   if (DOMAIN_CATALOG.events.keywords.test(lower)) mentionedDomains.push('events');
   if (DOMAIN_CATALOG.overview.keywords.test(lower)) mentionedDomains.push('overview');
 
-  // Simple Narrow Query Invariant:
-  // If only 1 domain is mentioned with a simple count or explain:
-  if (mentionedDomains.length === 1 && (isCount || isExplain) && !isCompare && !isCorrelate && !isPrioritize) {
+  // Simple Narrow Query: exactly 1 domain and 1 operation (count or retrieve)
+  if (mentionedDomains.length === 1 && ops.size === 1 && (ops.has('count') || ops.has('retrieve')) && !ops.has('draft') && !ops.has('explain') && !ops.has('prioritize') && !ops.has('correlate')) {
     const domainName = mentionedDomains[0];
     const catalogEntry = DOMAIN_CATALOG[domainName];
     if (allowedToolNames.has(catalogEntry.toolName)) {
-      const op = isCount ? 'count' : 'explain';
-      return {
-        intent: 'SINGLE_DOMAIN',
-        toolsToExecute: [{ name: catalogEntry.toolName, args: catalogEntry.defaultArgs || {} }],
-        primaryToolName: catalogEntry.toolName,
-        obligations: [{ domain: domainName, operation: op, description: `${op} for ${catalogEntry.displayName}` }],
-      };
+      const op = ops.has('count') ? 'count' : 'retrieve';
+      return createPlan(
+        'SINGLE_DOMAIN',
+        [{ name: catalogEntry.toolName, args: catalogEntry.defaultArgs || {} }],
+        [{ domain: domainName, description: `${catalogEntry.displayName} records` }],
+        [{ operation: op, targetDomain: domainName, description: `${op} for ${catalogEntry.displayName}` }]
+      );
     }
   }
 
   // If prioritization is requested without explicit domains, check urgent domains:
-  if (isPrioritize && mentionedDomains.length === 0) {
+  if (ops.has('prioritize') && mentionedDomains.length === 0) {
     mentionedDomains.push('faculty_attendance', 'leaves', 'behavior');
   }
 
   // If correlation is requested between attendance and leaves, make sure both are included:
-  if (isCorrelate && (mentionedDomains.includes('faculty_attendance') || mentionedDomains.includes('leaves'))) {
+  if (ops.has('correlate') && (mentionedDomains.includes('faculty_attendance') || mentionedDomains.includes('leaves'))) {
     if (!mentionedDomains.includes('faculty_attendance')) mentionedDomains.push('faculty_attendance');
     if (!mentionedDomains.includes('leaves')) mentionedDomains.push('leaves');
   }
 
-  // Build tools for mentioned domains
+  // Build tools and obligations for mentioned domains
   if (mentionedDomains.length > 0) {
     const tools: PlannedToolDispatch[] = [];
-    const obligations: PlanObligation[] = [];
+    const domainObs: DomainObligation[] = [];
+    const opObs: OperationObligation[] = [];
 
     for (const domainName of mentionedDomains) {
       const catalogEntry = DOMAIN_CATALOG[domainName];
       if (allowedToolNames.has(catalogEntry.toolName)) {
-        // avoid duplicate tool dispatches
         if (!tools.some(t => t.name === catalogEntry.toolName)) {
           tools.push({ name: catalogEntry.toolName, args: catalogEntry.defaultArgs || {} });
         }
-        let op: PlanObligation['operation'] = 'retrieve';
-        if (isCount) op = 'count';
-        else if (isExplain) op = 'explain';
-        else if (isCompare) op = 'compare';
-        else if (isCorrelate) op = 'correlate';
-        else if (isPrioritize) op = 'prioritize';
-
-        obligations.push({
-          domain: domainName,
-          operation: op,
-          description: `${op} on ${catalogEntry.displayName}`
-        });
+        domainObs.push({ domain: domainName, description: `${catalogEntry.displayName} records` });
       }
     }
 
+    // Build independent operation obligations
+    for (const op of ops) {
+      const targetDomain = mentionedDomains.length === 1 ? mentionedDomains[0] : undefined;
+      const desc = targetDomain 
+        ? `${op} on ${DOMAIN_CATALOG[targetDomain].displayName}`
+        : `${op} across ${mentionedDomains.map(d => DOMAIN_CATALOG[d].displayName).join(', ')}`;
+      opObs.push({ operation: op, targetDomain, description: desc });
+    }
+
     if (tools.length > 0) {
-      const primaryToolName = tools[0].name;
-      return {
-        intent: tools.length > 1 ? 'MULTI_DOMAIN' : 'SINGLE_DOMAIN',
-        toolsToExecute: tools,
-        primaryToolName,
-        obligations,
-        isCorrelate,
-        isPrioritize,
-        skipFeatureMenuRule: tools.length > 1,
-      };
+      return createPlan(
+        tools.length > 1 ? 'MULTI_DOMAIN' : 'SINGLE_DOMAIN',
+        tools,
+        domainObs,
+        opObs,
+        {
+          isDraft: ops.has('draft'),
+          isCorrelate: ops.has('correlate'),
+          isPrioritize: ops.has('prioritize'),
+          skipFeatureMenuRule: tools.length > 1,
+        }
+      );
     }
   }
 
   // Ambiguous or unmapped: Let dynamic model-assisted planning execute
-  return {
-    intent: 'DYNAMIC',
-    toolsToExecute: [],
-    primaryToolName: '',
-    obligations: [],
-  };
+  return createPlan('DYNAMIC', [], [], []);
 }
