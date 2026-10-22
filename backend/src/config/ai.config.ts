@@ -39,6 +39,11 @@ export interface AIConfig {
     maxToolResults: number;
     providerTimeoutMs: number;
   };
+  chatgptPlan?: {
+    model?: string;
+    timeoutMs: number;
+    callbackUrl: string;
+  };
 }
 
 export const aiConfig: AIConfig = {
@@ -78,5 +83,10 @@ export const aiConfig: AIConfig = {
     toolTimeoutMs: parseInt(process.env.AI_TOOL_TIMEOUT_MS || '5000', 10),
     maxToolResults: parseInt(process.env.AI_MAX_TOOL_RESULTS || '50', 10),
     providerTimeoutMs: parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '10000', 10),
+  },
+  chatgptPlan: {
+    model: process.env.CHATGPT_PLAN_MODEL,
+    timeoutMs: parseInt(process.env.CHATGPT_PLAN_TIMEOUT_MS || '30000', 10),
+    callbackUrl: process.env.CHATGPT_PLAN_CALLBACK_URL || 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
   },
 };

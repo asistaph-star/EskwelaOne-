@@ -98,7 +98,7 @@ export class AIProviderError extends Error {
   }
 }
 
-export type AIProviderMode = 'mock' | 'groq' | 'cloudflare' | 'groq_cloudflare' | 'disabled';
+export type AIProviderMode = 'mock' | 'groq' | 'cloudflare' | 'groq_cloudflare' | 'chatgpt_plan' | 'disabled';
 
 /**
  * Common Provider-Independent Interface.

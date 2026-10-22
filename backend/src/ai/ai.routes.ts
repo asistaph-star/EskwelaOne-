@@ -4,7 +4,14 @@ import { authMiddleware, AuthenticatedUser } from '../common/middleware/auth.js'
 import { AIService } from './ai.service.js';
 import { aiConversationSessionService, EphemeralSessionMessage } from './session/aiConversationSession.service.js';
 
+import chatgptOAuthRoutes from './chatgpt/chatgptOAuth.routes.js';
+
 const router = Router();
+
+// Mount public/authenticated ChatGPT OAuth subrouter
+router.use('/chatgpt-plan', chatgptOAuthRoutes);
+
+// Apply authMiddleware to remaining AI assistant routes
 router.use(authMiddleware);
 
 const chatRequestSchema = z.object({

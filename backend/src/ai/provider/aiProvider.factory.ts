@@ -3,6 +3,7 @@ import { MockAIProvider } from './mockAIProvider.js';
 import { GroqAIProvider } from './groqAIProvider.js';
 import { CloudflareAIProvider } from './cloudflareAIProvider.js';
 import { FailoverAIProvider } from './failoverAIProvider.js';
+import { ChatGPTPlanAIProvider } from './chatgptPlanAIProvider.js';
 import { aiConfig } from '../../config/ai.config.js';
 
 /**
@@ -12,6 +13,7 @@ import { aiConfig } from '../../config/ai.config.js';
  * - 'groq': GroqCloud Free Plan adapter (openai/gpt-oss-120b)
  * - 'cloudflare': Cloudflare Workers AI Free Tier (@cf/openai/gpt-oss-120b)
  * - 'groq_cloudflare': Explicit primary Groq -> secondary Cloudflare controlled failover
+ * - 'chatgpt_plan': User-delegated ChatGPT Plus/Plan OAuth provider (isolated manual mode)
  * - 'disabled': AI assistance disabled by policy
  * - All unauthorized/paid modes fail closed.
  */
@@ -32,6 +34,10 @@ export function getAIProvider(): DigiSkwelaAIProvider {
 
   if (mode === 'groq_cloudflare') {
     return new FailoverAIProvider();
+  }
+
+  if (mode === 'chatgpt_plan') {
+    return new ChatGPTPlanAIProvider();
   }
 
   if (mode === 'disabled') {
