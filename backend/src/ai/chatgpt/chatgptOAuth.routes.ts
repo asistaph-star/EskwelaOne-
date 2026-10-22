@@ -42,6 +42,7 @@ router.get('/callback', async (req: Request, res: Response, next: NextFunction) 
   try {
     const code = req.query.code as string;
     const state = req.query.state as string;
+    const callbackClientId = (req.query.client_id as string) || undefined;
     const error = req.query.error as string;
     const errorDescription = req.query.error_description as string;
 
@@ -73,6 +74,7 @@ router.get('/callback', async (req: Request, res: Response, next: NextFunction) 
       code,
       state,
       redirectUri,
+      callbackClientId,
     });
 
     if (!result.success) {

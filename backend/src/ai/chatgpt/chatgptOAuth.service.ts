@@ -6,6 +6,9 @@ export interface PendingOAuthSession {
   state: string;
   nonce: string;
   codeVerifier: string;
+  redirectUri: string;
+  registrationMode: 'new' | 'returning';
+  expectedClientId?: string;
   createdAt: number;
 }
 
@@ -121,9 +124,10 @@ export class ChatGPTOAuthService {
       }
     }
 
-    // 2. Resolve client ID: reuse issued client ID if present, else dynamic_agent_client
+    // 2. Resolve client ID: reuse valid issued client ID if present, else dynamic_agent_client
     const creds = this.storage.loadCredentials();
-    const clientId = creds?.issuedClientId || 'dynamic_agent_client';
+    const isReturning = !!(creds?.issuedClientId && creds.issuedClientId !== 'dynamic_agent_client');
+    const clientId = isReturning ? creds.issuedClientId! : 'dynamic_agent_client';
     const hostId = getOrCreateHostId();
 
     // 3. Generate PKCE, state, and nonce
@@ -131,11 +135,14 @@ export class ChatGPTOAuthService {
     const state = this.base64UrlEncode(crypto.randomBytes(24));
     const nonce = this.base64UrlEncode(crypto.randomBytes(24));
 
-    // 4. Save pending session
+    // 4. Save pending session with registration context
     this.pendingSessions.set(state, {
       state,
       nonce,
       codeVerifier,
+      redirectUri: options.redirectUri,
+      registrationMode: isReturning ? 'returning' : 'new',
+      expectedClientId: isReturning ? creds!.issuedClientId : undefined,
       createdAt: now,
     });
 
@@ -169,6 +176,7 @@ export class ChatGPTOAuthService {
     code: string;
     state: string;
     redirectUri: string;
+    callbackClientId?: string;
   }): Promise<ChatGPTCallbackResult> {
     const session = this.pendingSessions.get(options.state);
     if (!session) {
@@ -181,19 +189,91 @@ export class ChatGPTOAuthService {
       };
     }
 
-    // Consume session
+    // Consume session immediately to prevent replay
     this.pendingSessions.delete(options.state);
 
-    const creds = this.storage.loadCredentials();
-    const clientId = creds?.issuedClientId || 'dynamic_agent_client';
+    // Validate redirect URI matches the attempt
+    if (session.redirectUri && session.redirectUri !== options.redirectUri) {
+      return {
+        success: false,
+        identityConnected: false,
+        planInferenceAuthorized: false,
+        scope: '',
+        error: 'INVALID_REDIRECT_URI: Callback URI does not match initiated authorization attempt.',
+      };
+    }
 
-    // 1. Exchange code for tokens
+    // Resolve token exchange client ID based on registration mode
+    let exchangeClientId: string;
+
+    if (session.registrationMode === 'new') {
+      const callbackIssuedClientId = options.callbackClientId?.trim();
+
+      if (!callbackIssuedClientId) {
+        return {
+          success: false,
+          identityConnected: false,
+          planInferenceAuthorized: false,
+          scope: '',
+          error: 'INCOMPLETE_REGISTRATION: OpenAI callback did not return an issued client_id parameter.',
+        };
+      }
+
+      if (callbackIssuedClientId === 'dynamic_agent_client') {
+        return {
+          success: false,
+          identityConnected: false,
+          planInferenceAuthorized: false,
+          scope: '',
+          error: 'INVALID_CLIENT_ID: dynamic_agent_client cannot be used as token exchange client ID.',
+        };
+      }
+
+      exchangeClientId = callbackIssuedClientId;
+    } else {
+      // Returning account re-authorization
+      exchangeClientId = session.expectedClientId!;
+
+      if (options.callbackClientId && options.callbackClientId !== exchangeClientId) {
+        return {
+          success: false,
+          identityConnected: false,
+          planInferenceAuthorized: false,
+          scope: '',
+          error: 'CLIENT_ID_MISMATCH: Callback client ID does not match registered returning client ID.',
+        };
+      }
+    }
+
+    // Explicit Section 6 regression guard
+    if (exchangeClientId === 'dynamic_agent_client') {
+      return {
+        success: false,
+        identityConnected: false,
+        planInferenceAuthorized: false,
+        scope: '',
+        error: 'REGRESSION_GUARD: Token exchange client ID must not be dynamic_agent_client.',
+      };
+    }
+
+    if (session.registrationMode === 'new' && exchangeClientId !== options.callbackClientId) {
+      return {
+        success: false,
+        identityConnected: false,
+        planInferenceAuthorized: false,
+        scope: '',
+        error: 'REGRESSION_GUARD: Token exchange client ID must match issuedClientIdFromValidatedCallback.',
+      };
+    }
+
+    // 1. Exchange code for tokens using form encoding and issued client ID
     const bodyParams = new URLSearchParams({
       grant_type: 'authorization_code',
+      client_id: exchangeClientId,
       code: options.code,
-      redirect_uri: options.redirectUri,
-      client_id: clientId,
       code_verifier: session.codeVerifier,
+      redirect_uri: options.redirectUri,
+      resource: this.resource,
     });
 
     let tokenResponse: ChatGPTTokenExchangeResponse;
@@ -206,6 +286,10 @@ export class ChatGPTOAuthService {
         body: bodyParams.toString(),
       });
 
+      const reqId = (typeof res.headers?.get === 'function')
+        ? (res.headers.get('openai-request-id') || res.headers.get('x-request-id') || undefined)
+        : undefined;
+
       if (!res.ok) {
         const errorText = await res.text();
         return {
@@ -213,7 +297,7 @@ export class ChatGPTOAuthService {
           identityConnected: false,
           planInferenceAuthorized: false,
           scope: '',
-          error: `TOKEN_EXCHANGE_FAILED: ${res.status} ${errorText}`,
+          error: `TOKEN_EXCHANGE_FAILED: ${res.status} ${errorText}${reqId ? ` (request-id: ${reqId})` : ''}`,
         };
       }
 
@@ -267,7 +351,17 @@ export class ChatGPTOAuthService {
     const grantedScopes = tokenResponse.scope ? tokenResponse.scope.split(' ') : [];
     const hasDirectTokenScope = grantedScopes.includes('chatgpt.tokens.use.direct');
 
-    const issuedClientId = tokenResponse.client_id || creds?.issuedClientId;
+    const issuedClientId = tokenResponse.client_id || exchangeClientId;
+    if (issuedClientId === 'dynamic_agent_client') {
+      return {
+        success: false,
+        identityConnected: false,
+        planInferenceAuthorized: false,
+        scope: '',
+        error: 'REGRESSION_GUARD: dynamic_agent_client cannot be persisted as issuedClientId.',
+      };
+    }
+
     const accountId = idPayload?.['https://api.openai.com/auth']?.account_id;
     const userEmail = idPayload?.email;
 
@@ -275,7 +369,7 @@ export class ChatGPTOAuthService {
     const expiresAt = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
     this.storage.saveCredentials({
       accessToken: tokenResponse.access_token,
-      refreshToken: tokenResponse.refresh_token || creds?.refreshToken,
+      refreshToken: tokenResponse.refresh_token,
       idToken: tokenResponse.id_token,
       tokenType: tokenResponse.token_type || 'Bearer',
       expiresAt,
@@ -304,11 +398,16 @@ export class ChatGPTOAuthService {
       return { success: false, error: 'NO_REFRESH_TOKEN: Re-authorization required.' };
     }
 
-    const clientId = creds.issuedClientId || 'dynamic_agent_client';
+    const clientId = creds.issuedClientId;
+    if (!clientId || clientId === 'dynamic_agent_client') {
+      return { success: false, error: 'INVALID_CLIENT_ID: No valid issued client ID available for refresh.' };
+    }
+
     const bodyParams = new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: creds.refreshToken,
       client_id: clientId,
+      resource: this.resource,
     });
 
     try {
@@ -327,6 +426,7 @@ export class ChatGPTOAuthService {
 
       const data = (await res.json()) as ChatGPTTokenExchangeResponse;
       const expiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+      const newIssuedClientId = data.client_id || creds.issuedClientId;
 
       this.storage.saveCredentials({
         ...creds,
@@ -336,7 +436,7 @@ export class ChatGPTOAuthService {
         tokenType: data.token_type || creds.tokenType,
         expiresAt,
         scope: data.scope || creds.scope,
-        issuedClientId: data.client_id || creds.issuedClientId,
+        issuedClientId: newIssuedClientId,
       });
 
       return { success: true };

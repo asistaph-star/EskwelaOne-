@@ -140,12 +140,21 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
         code: 'auth_code_xyz',
         state: authUrl.state,
         redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_issued_client_999',
       });
 
       expect(callbackResult.success).toBe(true);
       expect(callbackResult.identityConnected).toBe(true);
       expect(callbackResult.planInferenceAuthorized).toBe(true);
       expect(callbackResult.issuedClientId).toBe('oaiapp_issued_client_999');
+
+      // Verify token exchange used the issued client ID and NOT dynamic_agent_client
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const callArgs = mockFetch.mock.calls[0];
+      const requestBody = new URLSearchParams(callArgs[1].body);
+      expect(requestBody.get('client_id')).toBe('oaiapp_issued_client_999');
+      expect(requestBody.get('grant_type')).toBe('authorization_code');
+      expect(requestBody.get('resource')).toBe('https://api.openai.com/v1');
 
       // Verify tokens are persisted
       const creds = storage.loadCredentials();
@@ -158,6 +167,59 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
       });
       const nextUrl = new URL(nextAuth.url);
       expect(nextUrl.searchParams.get('client_id')).toBe('oaiapp_issued_client_999');
+    });
+
+    it('TC-CGP-05B: Rejects new registration if callback client_id is missing or dynamic_agent_client', async () => {
+      const oauthService = new ChatGPTOAuthService({ storage });
+      const authUrl = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+
+      // Missing client_id
+      const resMissing = await oauthService.handleCallback({
+        code: 'code1',
+        state: authUrl.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      expect(resMissing.success).toBe(false);
+      expect(resMissing.error).toContain('INCOMPLETE_REGISTRATION');
+
+      // Attempting to pass dynamic_agent_client
+      const authUrl2 = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+      const resDynamic = await oauthService.handleCallback({
+        code: 'code2',
+        state: authUrl2.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'dynamic_agent_client',
+      });
+      expect(resDynamic.success).toBe(false);
+      expect(resDynamic.error).toContain('INVALID_CLIENT_ID');
+    });
+
+    it('TC-CGP-05C: Rejects returning sign-in if callback client_id mismatches registered client ID', async () => {
+      storage.saveCredentials({
+        accessToken: 'existing_token',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid',
+        issuedClientId: 'oaiapp_registered_existing',
+      });
+
+      const oauthService = new ChatGPTOAuthService({ storage });
+      const authUrl = oauthService.generateAuthorizationUrl({
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+      });
+
+      const resMismatch = await oauthService.handleCallback({
+        code: 'code_mismatch',
+        state: authUrl.state,
+        redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_different_unrecognized',
+      });
+      expect(resMismatch.success).toBe(false);
+      expect(resMismatch.error).toContain('CLIENT_ID_MISMATCH');
     });
 
     it('TC-CGP-06: Explicitly differentiates identity sign-in from plan inference when scope is declined', async () => {
@@ -182,6 +244,7 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
         code: 'auth_code_identity',
         state: authUrl.state,
         redirectUri: 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
+        callbackClientId: 'oaiapp_identity_client',
       });
 
       expect(callbackResult.success).toBe(true);
@@ -441,6 +504,7 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
         tokenType: 'Bearer',
         expiresAt: Date.now() + 30000, // 30s remaining (< 60s threshold)
         scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+        issuedClientId: 'oaiapp_issued_client_999',
       });
 
       const mockFetch = vi.fn().mockImplementation(async (url: string) => {
