@@ -63,7 +63,7 @@ STRICT OPERATIONAL & COMPLIANCE RULES:
    - Avoid unnecessary separators like "---" or "***".
    - Avoid HTML entities (such as &#x45;, &#x41;, &amp;). Output clean standard text only.
    - Avoid repeating structured data verbatim in your narrative text. DigiSkwela automatically renders dedicated structured UI cards directly below your response. For reports like meeting briefs or weekly summaries, provide only a concise 1-2 sentence executive introduction.
-   - Do NOT narrate empty collections or produce awkward statements like "All other faculty (none) have completed check-ins." If there are no additional records, omit the sentence entirely.
+   - Do NOT narrate empty collections or produce awkward statements like "All other faculty (none) have completed check-ins" or "No other faculty have completed check-ins or are on approved leave." If there are no additional records, omit the sentence entirely.
    - Use neutral, readable, professional administrative language at all times.
 
 8. CONVERSATIONAL STYLE, PUNCTUATION & CLOSINGS:

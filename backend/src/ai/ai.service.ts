@@ -9,6 +9,7 @@ import { AppError } from '../common/middleware/errorHandler.js';
 import { generateId } from '../common/utils/uuid.js';
 import { aiConfig } from '../config/ai.config.js';
 import { normalizeAssistantText } from './utils/normalizeResponseText.js';
+import { detectPrincipalCompositeIntent } from './orchestration/principalCompositeOrchestrator.js';
 
 export interface ProcessChatRequestInput {
   messages: AIMessage[];
@@ -210,6 +211,7 @@ export const AIService = {
       authUser.roles, 
       authUser.permissions
     );
+    const allowedToolNamesSet = new Set(authorizedDeclarations.map(t => t.name));
 
     const provider = getAIProvider();
     const toolsRequested: string[] = [];
@@ -217,7 +219,156 @@ export const AIService = {
     let tokenUsage: any = null;
 
     try {
-      // 4. Initial Provider Turn
+      // 3.1 Deterministic Composite Intent Orchestration
+      // For high-value composite Principal questions, ensure all authorized operational domains
+      // are deterministically considered before provider synthesis turn.
+      const compositePlan = detectPrincipalCompositeIntent(
+        promptText,
+        userRole,
+        portal,
+        allowedToolNamesSet
+      );
+
+      if (compositePlan && compositePlan.toolsToExecute.length > 0) {
+        const deterministicToolCalls: any[] = [];
+        const executedResults: Array<{ name: string; result: any; args: any }> = [];
+
+        for (let i = 0; i < compositePlan.toolsToExecute.length; i++) {
+          const item = compositePlan.toolsToExecute[i];
+          if (!allowedToolNamesSet.has(item.name)) continue;
+
+          const callId = `call_det_${i}_${item.name}`;
+          toolsRequested.push(item.name);
+          deterministicToolCalls.push({
+            id: callId,
+            name: item.name,
+            arguments: item.args || {}
+          });
+
+          const result = await dispatchTool(item.name, item.args || {}, {
+            user: authUser,
+            correlationId,
+            portal
+          });
+
+          toolsExecuted.push(item.name);
+          executedResults.push({
+            name: item.name,
+            result: result.data,
+            args: item.args || {}
+          });
+        }
+
+        const conversationWithTools = [...messages];
+        conversationWithTools.push({
+          role: 'assistant',
+          content: '',
+          toolCalls: deterministicToolCalls
+        });
+
+        for (let i = 0; i < executedResults.length; i++) {
+          conversationWithTools.push({
+            role: 'tool',
+            name: executedResults[i].name,
+            toolCallId: deterministicToolCalls[i].id,
+            content: JSON.stringify(executedResults[i].result)
+          });
+        }
+
+        // Provider Synthesis Turn (Groq OR Cloudflare)
+        const finalTurn = await provider.generateResponse({
+          messages: conversationWithTools,
+          tools: authorizedDeclarations,
+          context: {
+            portal,
+            authenticatedRole: userRole,
+            allowedToolNames: authorizedDeclarations.map(t => t.name)
+          }
+        });
+
+        if (finalTurn.usage) {
+          tokenUsage = finalTurn.usage;
+        }
+
+        const primaryResult = executedResults.find(r => r.name === compositePlan.primaryToolName)?.result || executedResults[0]?.result;
+        if ((!finalTurn.message.content || finalTurn.message.content.trim() === '') && primaryResult) {
+          finalTurn.message.content = 'Here is the verified operational data retrieved from authoritative school records.';
+        }
+
+        const activeFailover = finalTurn.failoverMetadata;
+        await recordAIAuditLog({
+          traceId,
+          userId: authUser.id,
+          role: userRole,
+          portal,
+          scopeDecision: 'ALLOWED',
+          toolsRequested,
+          toolsExecuted,
+          status: 'SUCCESS',
+          providerMode: provider.mode,
+          latencyMs: Date.now() - startTime,
+          tokenUsage: {
+            ...(tokenUsage || {}),
+            requestedMode: aiConfig.providerMode,
+            primaryProvider: activeFailover?.primaryProvider || provider.name,
+            finalProvider: activeFailover?.finalProvider || provider.name,
+            failoverOccurred: Boolean(activeFailover?.occurred),
+            failoverReason: activeFailover?.reason || null,
+            model: activeFailover?.model || provider.model || null,
+          }
+        });
+
+        let structuredData: NormalizedStructuredData | undefined = undefined;
+        let provenance: NormalizedProvenance | undefined = undefined;
+        let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
+
+        if (primaryResult) {
+          const mapping = mapToolToNormalizedOutput(compositePlan.primaryToolName, primaryResult);
+          structuredData = mapping.structuredData;
+          provenance = mapping.provenance;
+          navigationActions = mapping.navigationActions;
+
+          if (executedResults.length > 1) {
+            const allSourceDomains = new Set<string>();
+            for (const item of executedResults) {
+              const doms = item.result?.provenance?.sourceDomains || item.result?.sourceDomains;
+              if (Array.isArray(doms)) {
+                doms.forEach((d: string) => allSourceDomains.add(d));
+              }
+            }
+            if (allSourceDomains.size > 0) {
+              provenance = {
+                sourceDomains: Array.from(allSourceDomains),
+                asOf: provenance?.asOf || new Date().toISOString()
+              };
+              if (structuredData) {
+                structuredData.provenance = provenance;
+              }
+            }
+          }
+        }
+
+        const normalizedContent = normalizeAssistantText(finalTurn.message.content || '', {
+          hasStructuredData: Boolean(structuredData),
+          toolName: compositePlan.primaryToolName,
+        });
+
+        return {
+          message: {
+            ...finalTurn.message,
+            content: normalizedContent,
+          },
+          responseType: structuredData ? 'structured' : 'text',
+          structuredData,
+          provenance,
+          navigationActions,
+          traceId,
+          scopeDecision: 'ALLOWED',
+          toolsExecuted
+        };
+      }
+
+      // 4. Initial Provider Turn (Dynamic single-tool dispatch for non-composite queries)
       const firstTurn = await provider.generateResponse({
         messages,
         tools: authorizedDeclarations,

@@ -143,7 +143,8 @@ export function cleanAwkwardLanguage(text: string): string {
   if (!text) return '';
   let result = text;
 
-  // Remove "All other faculty (none) have completed check-ins."
+  // Remove awkward empty-collection phrasing when there are no additional records
+  result = result.replace(/(?:No|There are no)\s+other\s+faculty(?:\s+members)?\s+(?:have\s+completed\s+check-ins\s+or\s+are\s+on\s+approved\s+leave|have\s+completed\s+check-ins|are\s+on\s+approved\s+leave|have\s+check-ins\s+recorded|have\s+recorded\s+attendance)\.?/gi, '');
   result = result.replace(/All other faculty\s*\([^\)]*\)\s*have completed check-ins\.?/gi, '');
   result = result.replace(/All other faculty\s+have completed check-ins\.?/gi, '');
   result = result.replace(/\s*\([Nn]one\)/g, '');
@@ -158,6 +159,9 @@ export function cleanAwkwardLanguage(text: string): string {
 
   // Strip excessive em dashes: replace standalone " — " or " —" with comma or colon where suitable
   result = result.replace(/(\w)\s*—\s*(\w)/g, '$1: $2');
+
+  // Clean up any double spaces left behind by sentence removal
+  result = result.replace(/[ \t]{2,}/g, ' ');
 
   return result.trim();
 }

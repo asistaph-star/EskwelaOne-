@@ -54,7 +54,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           break;
         case 'getSchoolOperationalFactSheet':
           if (content.includes('review') || content.includes('attention') || content.includes('unresolved') || content.includes('incomplete') || content.includes('exception')) {
-            narrative = "Here are the operational items requiring administrative review today: 1 faculty leave application is pending approval, 1 student behavior incident is currently active, and annual academic analytics remain partial pending complete term grade submissions.";
+            narrative = "Here are the operational items requiring administrative review today: 1 faculty leave application is pending approval, faculty attendance records have been cross-checked against approved leaves, 1 student behavior incident is currently active, and annual academic analytics remain partial pending complete term grade submissions.";
           } else {
             narrative = 'Here is the authoritative daily executive operational fact sheet for Calulut Integrated School.';
           }
