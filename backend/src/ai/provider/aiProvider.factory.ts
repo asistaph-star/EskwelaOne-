@@ -1,4 +1,4 @@
-import { DigiSkwelaAIProvider, AIProviderError } from './aiProvider.interface.js';
+import { DigiSkwelaAIProvider, AIProviderError, AIProviderMode } from './aiProvider.interface.js';
 import { MockAIProvider } from './mockAIProvider.js';
 import { GroqAIProvider } from './groqAIProvider.js';
 import { CloudflareAIProvider } from './cloudflareAIProvider.js';
@@ -17,8 +17,8 @@ import { aiConfig } from '../../config/ai.config.js';
  * - 'disabled': AI assistance disabled by policy
  * - All unauthorized/paid modes fail closed.
  */
-export function getAIProvider(): DigiSkwelaAIProvider {
-  const mode = aiConfig.providerMode;
+export function getAIProvider(overrideMode?: AIProviderMode): DigiSkwelaAIProvider {
+  const mode = overrideMode || aiConfig.providerMode;
 
   if (mode === 'mock') {
     return new MockAIProvider();
@@ -47,11 +47,12 @@ export function getAIProvider(): DigiSkwelaAIProvider {
     );
   }
 
+  const modeStr = String(mode);
   // Reject any unauthorized / paid provider modes
-  if (!aiConfig.allowPaidProvider) {
+  if (!aiConfig.allowPaidProvider || modeStr.includes('paid') || modeStr.includes('openai')) {
     throw new AIProviderError(
       'PAID_PROVIDER_REJECTED',
-      `Provider mode '${mode}' is rejected. Paid AI providers and automatic paid upgrades are forbidden.`
+      `Provider mode '${modeStr}' is rejected. Paid AI providers and automatic paid upgrades are forbidden.`
     );
   }
 

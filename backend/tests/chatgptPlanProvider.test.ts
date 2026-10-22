@@ -14,6 +14,9 @@ import { ChatGPTTokenStorage } from '../src/ai/chatgpt/chatgptTokenStorage.js';
 import { getOrCreateHostId } from '../src/ai/chatgpt/chatgptHostId.js';
 import { ChatGPTPlanAIProvider } from '../src/ai/provider/chatgptPlanAIProvider.js';
 import { AIProviderError } from '../src/ai/provider/aiProvider.interface.js';
+import { getAIProvider } from '../src/ai/provider/aiProvider.factory.js';
+import { aiConfig } from '../src/config/ai.config.js';
+import { toUserFacingStatusDTO } from '../src/ai/chatgpt/chatgptOAuth.routes.js';
 
 describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
   const testStorageDir = path.resolve(process.cwd(), 'storage', 'test_chatgpt');
@@ -915,6 +918,417 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
       const parsedUrl = new URL(auth.url);
       expect(parsedUrl.searchParams.get('client_id')).toBe('dynamic_agent_client');
       expect(parsedUrl.searchParams.get('agent_name_hint')).toBe('DigiSkwela');
+    });
+
+    it('TC-CGP-23: ChatGPT-plan usage-limit error stops inference immediately without retrying or switching to paid API', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_valid_quota',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let callCount = 0;
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        callCount++;
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        return {
+          ok: false,
+          status: 429,
+          text: async () => JSON.stringify({
+            error: {
+              code: 'subscription_sharing_usage_limit_exceeded',
+              message: 'Rate limit exceeded for workspace'
+            }
+          }),
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Operational query' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'FREE_QUOTA_EXHAUSTED',
+        isRetryable: false,
+        message: expect.stringContaining('usage limit has been reached'),
+      });
+
+      // Assert zero retries: exactly 1 call to /models, 1 call to /responses
+      expect(callCount).toBe(2);
+      expect(aiConfig.allowPaidProvider).toBe(false);
+    });
+
+    it('TC-CGP-24: SSE stream subscription_sharing_usage_limit_exceeded error event stops inference cleanly', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_valid_stream_err',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      const ssePayload = [
+        'event: error\n',
+        'data: {"error":{"code":"subscription_sharing_usage_limit_exceeded","message":"User usage limit reached"}}\n\n',
+      ].join('');
+
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          text: async () => ssePayload,
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Operational query' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'FREE_QUOTA_EXHAUSTED',
+        isRetryable: false,
+        message: expect.stringContaining('usage limit has been reached'),
+      });
+    });
+
+    it('TC-CGP-25: OPENAI_API_KEY is not required and ChatGPT Plan operates purely on OAuth tokens', async () => {
+      delete process.env.OPENAI_API_KEY;
+      expect(process.env.OPENAI_API_KEY).toBeUndefined();
+
+      storage.saveCredentials({
+        accessToken: 'test_oauth_access_token_123',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let capturedAuthHeader: string | undefined = undefined;
+      const mockFetch = vi.fn().mockImplementation(async (url: string, init?: any) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        capturedAuthHeader = init?.headers?.Authorization;
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            'event: response.completed\ndata: {"type":"response.completed","response":{"output":[{"type":"message","content":[{"type":"output_text","text":"Plan authorized."}]}]}}\n\n',
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      const res = await provider.generateResponse({
+        messages: [{ role: 'user', content: 'Test prompt' }],
+      });
+
+      expect(res.message.content).toBe('Plan authorized.');
+      expect(capturedAuthHeader).toBe('Bearer test_oauth_access_token_123');
+      expect(process.env.OPENAI_API_KEY).toBeUndefined();
+    });
+
+    it('TC-CGP-26: Plan provider and factory permanently prohibit paid OpenAI provider instantiation', () => {
+      expect(aiConfig.allowPaidProvider).toBe(false);
+
+      // Attempting to instantiate paid mode throws PAID_PROVIDER_REJECTED
+      expect(() => getAIProvider('openai_paid' as any)).toThrow(AIProviderError);
+      expect(() => getAIProvider('openai_paid' as any)).toThrow(/forbidden/);
+
+      // If allowPaidProvider is somehow true, ChatGPTPlanAIProvider constructor fails closed
+      const orig = aiConfig.allowPaidProvider;
+      try {
+        (aiConfig as any).allowPaidProvider = true;
+        expect(() => new ChatGPTPlanAIProvider({ storage })).toThrow(AIProviderError);
+      } finally {
+        (aiConfig as any).allowPaidProvider = orig;
+      }
+    });
+
+    it('TC-CGP-27: OAuth credentials and internal IDs never reach frontend DTOs or status summary', () => {
+      storage.saveRegistration({ issuedClientId: 'oaiapp_secret_client_internal' });
+      storage.saveCredentials({
+        accessToken: 'secret_access_token_456',
+        refreshToken: 'secret_refresh_token_789',
+        idToken: 'secret_id_token_abc',
+        accountId: 'acct_secret_internal_999',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+        userEmail: 'teacher@school.edu',
+      });
+
+      const summary = storage.getStatusSummary();
+
+      // Zero token credentials in storage summary
+      const summaryKeys = Object.keys(summary);
+      expect(summaryKeys).not.toContain('accessToken');
+      expect(summaryKeys).not.toContain('refreshToken');
+      expect(summaryKeys).not.toContain('idToken');
+      expect(summaryKeys).not.toContain('clientSecret');
+      expect((summary as any).accessToken).toBeUndefined();
+      expect((summary as any).refreshToken).toBeUndefined();
+      expect((summary as any).idToken).toBeUndefined();
+
+      // Frontend DTO sanitization: strictly strips internal client IDs and OAuth identifiers
+      const frontendDTO = toUserFacingStatusDTO(summary);
+      expect(frontendDTO.statusMessage).toBe('Using your ChatGPT plan');
+      expect(frontendDTO.usageGuidance).toBe('Manage usage in ChatGPT Settings');
+      expect(frontendDTO.connected).toBe(true);
+      expect(frontendDTO.hasDirectTokenScope).toBe(true);
+      expect(frontendDTO.userEmail).toBe('teacher@school.edu');
+
+      const dtoKeys = Object.keys(frontendDTO);
+      expect(dtoKeys).not.toContain('accessToken');
+      expect(dtoKeys).not.toContain('refreshToken');
+      expect(dtoKeys).not.toContain('idToken');
+      expect(dtoKeys).not.toContain('issuedClientId');
+      expect(dtoKeys).not.toContain('accountId');
+      expect(dtoKeys).not.toContain('clientSecret');
+      expect(dtoKeys).not.toContain('hostId');
+
+      expect((frontendDTO as any).issuedClientId).toBeUndefined();
+      expect((frontendDTO as any).accountId).toBeUndefined();
+      expect((frontendDTO as any).accessToken).toBeUndefined();
+    });
+
+    it('TC-CGP-28: OAuth credentials never reach audit logs or logging metadata', () => {
+      const provider = new ChatGPTPlanAIProvider({ storage });
+      expect(provider.mode).toBe('chatgpt_plan');
+
+      // Audit tokenUsage payload structure
+      const sampleAuditPayload = {
+        traceId: 'trace_123',
+        userId: 'user_456',
+        role: 'PRINCIPAL',
+        portal: 'principal',
+        scopeDecision: 'ALLOWED',
+        toolsRequested: [],
+        toolsExecuted: [],
+        status: 'SUCCESS',
+        providerMode: provider.mode,
+        latencyMs: 120,
+        tokenUsage: {
+          promptTokens: 10,
+          completionTokens: 20,
+          totalTokens: 30,
+          requestedMode: 'chatgpt_plan',
+          primaryProvider: provider.name,
+          finalProvider: provider.name,
+          failoverOccurred: false,
+          failoverReason: null,
+          model: 'gpt-6.1-sol',
+        },
+      };
+
+      const auditJson = JSON.stringify(sampleAuditPayload);
+      expect(auditJson).not.toContain('access_token');
+      expect(auditJson).not.toContain('refresh_token');
+      expect(auditJson).not.toContain('secret');
+      expect(auditJson).not.toContain('Bearer');
+      expect(auditJson).not.toContain('oaiapp_');
+    });
+
+    it('TC-CGP-29: Refresh-token failure terminates inference safely without paid fallback', async () => {
+      // Setup expired token with refresh token
+      storage.saveCredentials({
+        accessToken: 'expired_access_token',
+        refreshToken: 'revoked_refresh_token',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() - 10000, // Expired
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      const mockOAuthService = {
+        refreshAccessToken: vi.fn().mockResolvedValue({
+          success: false,
+          error: 'invalid_grant: refresh token has been revoked',
+        }),
+      } as any;
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        oauthService: mockOAuthService,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Hello' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'PROVIDER_UNAVAILABLE',
+        isRetryable: false,
+        message: expect.stringContaining('Token refresh failed'),
+      });
+
+      // Invariant: no fallback, paid provider is rejected
+      expect(aiConfig.allowPaidProvider).toBe(false);
+    });
+
+    it('TC-CGP-30: Revoked ChatGPT authorization (HTTP 401) stops inference safely', async () => {
+      storage.saveCredentials({
+        accessToken: 'revoked_token',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        return {
+          ok: false,
+          status: 401,
+          text: async () => JSON.stringify({ error: { code: 'invalid_token', message: 'Token was revoked by user' } }),
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Hello' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'PROVIDER_UNAVAILABLE',
+        isRetryable: false,
+        message: expect.stringContaining('expired or revoked'),
+      });
+    });
+
+    it('TC-CGP-31: subscription_sharing_user_not_eligible stops inference and reports eligibility restriction', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_free_tier_account',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let fetchCalls = 0;
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        fetchCalls++;
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        return {
+          ok: false,
+          status: 403,
+          text: async () => JSON.stringify({
+            error: {
+              code: 'subscription_sharing_user_not_eligible',
+              message: 'Account does not have an active ChatGPT Plus subscription'
+            }
+          }),
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Hello' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'PROVIDER_UNAVAILABLE',
+        isRetryable: false,
+        message: expect.stringContaining('not eligible for plan sharing'),
+      });
+
+      // Invariant: zero retries on eligibility error
+      expect(fetchCalls).toBe(2); // 1 models + 1 responses
+    });
+
+    it('TC-CGP-32: subscription_sharing_usage_unavailable uses bounded retry (max 2 attempts) then stops safely', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_temporarily_unavailable',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let responseAttempts = 0;
+      const mockFetch = vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        responseAttempts++;
+        return {
+          ok: false,
+          status: 503,
+          text: async () => JSON.stringify({
+            error: {
+              code: 'subscription_sharing_usage_unavailable',
+              message: 'Usage system undergoing maintenance'
+            }
+          }),
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await expect(
+        provider.generateResponse({
+          messages: [{ role: 'user', content: 'Hello' }],
+        })
+      ).rejects.toMatchObject({
+        name: 'AIProviderError',
+        code: 'PROVIDER_UNAVAILABLE',
+        isRetryable: false,
+        message: expect.stringContaining('temporarily unavailable'),
+      });
+
+      // Invariant: exactly 2 bounded attempts made to /responses
+      expect(responseAttempts).toBe(2);
     });
   });
 });

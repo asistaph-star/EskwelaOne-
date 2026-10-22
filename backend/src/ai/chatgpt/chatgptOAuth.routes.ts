@@ -25,9 +25,6 @@ router.get('/auth-url', authMiddleware, (req: Request, res: Response, next: Next
       success: true,
       data: {
         authorizationUrl: authData.url,
-        state: authData.state,
-        hostId: authData.hostId,
-        clientId: authData.clientId,
       },
     });
   } catch (err) {
@@ -116,6 +113,30 @@ router.get('/callback', async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
+export interface UserFacingChatGPTStatusDTO {
+  connected: boolean;
+  hasDirectTokenScope: boolean;
+  statusMessage: string;
+  usageGuidance: string;
+  userEmail: string | null;
+  expiresInSeconds: number;
+  isExpired: boolean;
+  registered: boolean;
+}
+
+export function toUserFacingStatusDTO(summary: ReturnType<typeof chatGPTTokenStorage.getStatusSummary>): UserFacingChatGPTStatusDTO {
+  return {
+    connected: summary.connected,
+    hasDirectTokenScope: summary.hasDirectTokenScope,
+    statusMessage: summary.statusMessage,
+    usageGuidance: summary.usageGuidance,
+    userEmail: summary.userEmail,
+    expiresInSeconds: summary.expiresInSeconds,
+    isExpired: summary.isExpired,
+    registered: summary.registered,
+  };
+}
+
 /**
  * GET /api/ai/chatgpt-plan/status
  * Returns current ChatGPT Plan provider connection & scope status.
@@ -126,7 +147,7 @@ router.get('/status', authMiddleware, (_req: Request, res: Response, next: NextF
     const summary = chatGPTTokenStorage.getStatusSummary();
     res.json({
       success: true,
-      data: summary,
+      data: toUserFacingStatusDTO(summary),
     });
   } catch (err) {
     next(err);

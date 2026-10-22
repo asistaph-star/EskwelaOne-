@@ -750,10 +750,14 @@ export const AIService = {
       // FREE-TIER POLICY ENFORCEMENT: Never trigger automatic paid fallback!
       if (isProviderErr) {
         if (err.code === 'RATE_LIMITED' || err.code === 'FREE_QUOTA_EXHAUSTED') {
+          const content = provider.mode === 'chatgpt_plan' && err.message
+            ? err.message
+            : 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.';
+
           return {
             message: {
               role: 'assistant',
-              content: 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.'
+              content
             },
             responseType: 'text',
             traceId,
@@ -763,10 +767,14 @@ export const AIService = {
         }
 
         if (err.code === 'PROVIDER_TIMEOUT' || err.code === 'PROVIDER_UNAVAILABLE') {
+          const content = provider.mode === 'chatgpt_plan' && err.message
+            ? err.message
+            : 'DigiSkwela AI is temporarily unavailable. Please try again later.';
+
           return {
             message: {
               role: 'assistant',
-              content: 'DigiSkwela AI is temporarily unavailable. Please try again later.'
+              content
             },
             responseType: 'text',
             traceId,

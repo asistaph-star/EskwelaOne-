@@ -34,11 +34,13 @@ export interface ChatGPTPlanStatusSummary {
   hasDirectTokenScope: boolean;
   expiresInSeconds: number;
   isExpired: boolean;
-  issuedClientId: string | null;
-  accountId: string | null;
-  userEmail: string | null;
   registered: boolean;
   registrationStatus?: ChatGPTRegistrationStatus;
+  userEmail: string | null;
+  statusMessage: string;
+  usageGuidance: string;
+  issuedClientId: string | null;
+  accountId: string | null;
 }
 
 const DEFAULT_TOKENS_PATH = path.resolve(process.cwd(), 'storage', 'chatgpt', 'tokens.json');
@@ -252,11 +254,13 @@ export class ChatGPTTokenStorage {
         hasDirectTokenScope: false,
         expiresInSeconds: 0,
         isExpired: true,
-        issuedClientId,
-        accountId: null,
-        userEmail: null,
         registered: isRegistered,
         registrationStatus: registration?.status || (issuedClientId ? 'ACTIVE' : undefined),
+        userEmail: null,
+        statusMessage: 'Not connected',
+        usageGuidance: 'Connect your ChatGPT Plus or Team account to enable plan delegation.',
+        issuedClientId,
+        accountId: null,
       };
     }
 
@@ -267,16 +271,29 @@ export class ChatGPTTokenStorage {
       creds.scope && creds.scope.includes('chatgpt.tokens.use.direct')
     );
 
+    let statusMessage = 'Using your ChatGPT plan';
+    let usageGuidance = 'Manage usage in ChatGPT Settings';
+
+    if (isExpired) {
+      statusMessage = 'Session expired';
+      usageGuidance = 'Please sign in with ChatGPT again to refresh access.';
+    } else if (!hasDirectTokenScope) {
+      statusMessage = 'Identity connected (plan inference not authorized)';
+      usageGuidance = 'Sign in with direct plan tokens authorized.';
+    }
+
     return {
-      connected: !isExpired,
+      connected: !isExpired && hasDirectTokenScope,
       hasDirectTokenScope,
       expiresInSeconds,
       isExpired,
-      issuedClientId,
-      accountId: creds.accountId || null,
-      userEmail: creds.userEmail || null,
       registered: isRegistered,
       registrationStatus: registration?.status || (issuedClientId ? 'ACTIVE' : undefined),
+      userEmail: creds.userEmail || null,
+      statusMessage,
+      usageGuidance,
+      issuedClientId,
+      accountId: creds.accountId || null,
     };
   }
 

@@ -62,11 +62,114 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
     timeoutMs?: number;
     fetchFn?: typeof fetch;
   }) {
+    this.assertBillingSafety();
     this.storage = options?.storage || chatGPTTokenStorage;
     this.oauthService = options?.oauthService || chatGPTOAuthService;
     this.model = options?.model || aiConfig.chatgptPlan?.model || undefined;
     this.timeoutMs = options?.timeoutMs || aiConfig.chatgptPlan?.timeoutMs || 30000;
     this.fetchFn = options?.fetchFn || globalThis.fetch;
+  }
+
+  /**
+   * Hard Billing Safety Invariant:
+   * ChatGPT Plan provider operates strictly on user-delegated OAuth plan credentials.
+   * Paid AI providers, credit billing, and API keys are permanently forbidden.
+   */
+  public assertBillingSafety(): void {
+    if (aiConfig.allowPaidProvider) {
+      throw new AIProviderError(
+        'PAID_PROVIDER_REJECTED',
+        'ChatGPT Plan provider requires allowPaidProvider to be false. Paid AI usage is forbidden.'
+      );
+    }
+  }
+
+  /**
+   * Extracts error details from raw OpenAI responses or SSE stream error payloads.
+   */
+  private parseOpenAIError(raw: any): { code?: string; message?: string } {
+    if (!raw) return {};
+    let parsed = raw;
+    if (typeof raw === 'string') {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return { message: raw };
+      }
+    }
+    if (parsed.error && typeof parsed.error === 'object') {
+      return {
+        code: parsed.error.code || parsed.error.type,
+        message: parsed.error.message,
+      };
+    }
+    if (typeof parsed.error === 'string') {
+      return { code: parsed.error, message: parsed.error };
+    }
+    if (parsed.code) {
+      return { code: parsed.code, message: parsed.message };
+    }
+    return {};
+  }
+
+  /**
+   * Maps official OpenAI ChatGPT plan error codes to normalized DigiSkwela AIProviderError.
+   * Strictly enforces billing safety and stops inference immediately on exhaustion.
+   */
+  private mapOpenAIError(status: number, errorDetails: { code?: string; message?: string }): AIProviderError {
+    const code = errorDetails.code;
+    const msg = errorDetails.message;
+
+    // 1. Quota / Usage Limit Exceeded (NO RETRY, STOP INFERENCE, NEVER SWITCH TO PAID API)
+    if (code === 'subscription_sharing_usage_limit_exceeded' || status === 429) {
+      return new AIProviderError(
+        'FREE_QUOTA_EXHAUSTED',
+        'Your ChatGPT plan usage limit has been reached for this time window. Manage usage in ChatGPT Settings or try again later.',
+        false
+      );
+    }
+
+    // 2. User Not Eligible for Plan Sharing (STOP INFERENCE, REPORT ELIGIBILITY RESTRICTION)
+    if (code === 'subscription_sharing_user_not_eligible') {
+      return new AIProviderError(
+        'PROVIDER_UNAVAILABLE',
+        'The connected ChatGPT account is not eligible for plan sharing. A ChatGPT Plus, Team, or Pro plan is required.',
+        false
+      );
+    }
+
+    // 3. Usage Evaluation Temporarily Unavailable (ELIGIBLE FOR BOUNDED RETRY ONLY)
+    if (code === 'subscription_sharing_usage_unavailable') {
+      return new AIProviderError(
+        'PROVIDER_UNAVAILABLE',
+        'ChatGPT plan usage is temporarily unavailable from OpenAI. Please try again shortly.',
+        true // eligible for internal bounded retry
+      );
+    }
+
+    // 4. Revocation / Expiration
+    if (status === 401 || code === 'invalid_token') {
+      return new AIProviderError(
+        'PROVIDER_UNAVAILABLE',
+        'ChatGPT authorization expired or revoked. Please sign in again.',
+        false
+      );
+    }
+
+    // 5. Upstream Service Unavailable
+    if (status === 503) {
+      return new AIProviderError(
+        'PROVIDER_UNAVAILABLE',
+        'ChatGPT plan usage is temporarily unavailable. Please retry later.',
+        true
+      );
+    }
+
+    return new AIProviderError(
+      'INVALID_PROVIDER_RESPONSE',
+      `ChatGPT Plan API error (${status}): ${msg || code || 'Unknown error'}`,
+      status >= 500
+    );
   }
 
   /**
@@ -139,7 +242,8 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
       if (!refreshResult.success) {
         throw new AIProviderError(
           'PROVIDER_UNAVAILABLE',
-          `Token refresh failed: ${refreshResult.error}. Please re-authenticate.`
+          `Token refresh failed: ${refreshResult.error}. Please re-authenticate.`,
+          false
         );
       }
       const refreshed = this.storage.loadCredentials();
@@ -149,7 +253,8 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
     if (creds.expiresAt <= now) {
       throw new AIProviderError(
         'PROVIDER_UNAVAILABLE',
-        'ChatGPT session has expired. Please sign in again.'
+        'ChatGPT session has expired. Please sign in again.',
+        false
       );
     }
 
@@ -229,6 +334,7 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
    * Main generation entrypoint
    */
   public async generateResponse(request: AICompletionRequest): Promise<AICompletionResponse> {
+    this.assertBillingSafety();
     const accessToken = await this.getValidAccessToken();
 
     // 1. Resolve model: configured slug, or discover
@@ -264,7 +370,49 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
       payload.tools = formattedTools;
     }
 
-    // 3. Execute SSE stream
+    // 3. Execute with bounded retry
+    // OpenAI guidance: brief retry on subscription_sharing_usage_unavailable, max 2 attempts total, then stop.
+    const maxAttempts = 2;
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+      attempt++;
+      try {
+        return await this.executeSingleStreamRequest(accessToken, payload);
+      } catch (err: any) {
+        const isUsageUnavailable =
+          err instanceof AIProviderError &&
+          err.isRetryable &&
+          err.message.includes('temporarily unavailable');
+
+        if (isUsageUnavailable && attempt < maxAttempts) {
+          // Bounded backoff delay before single retry
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+
+        // Once exhausted or for any non-retryable error, stop inference permanently
+        if (err instanceof AIProviderError) {
+          throw new AIProviderError(err.code, err.message, false);
+        }
+        throw err;
+      }
+    }
+
+    throw new AIProviderError(
+      'PROVIDER_UNAVAILABLE',
+      'ChatGPT plan usage is temporarily unavailable. Bounded retry exhausted.',
+      false
+    );
+  }
+
+  /**
+   * Executes a single SSE streaming request to the Responses API.
+   */
+  private async executeSingleStreamRequest(
+    accessToken: string,
+    payload: ChatGPTResponsesRequestPayload
+  ): Promise<AICompletionResponse> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -301,39 +449,11 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
         // ignore
       }
 
-      // Map official error classes
-      if (res.status === 429) {
-        throw new AIProviderError(
-          'FREE_QUOTA_EXHAUSTED',
-          'ChatGPT plan usage limit exceeded for the current window.',
-          false
-        );
-      }
-
-      if (res.status === 401) {
-        throw new AIProviderError(
-          'PROVIDER_UNAVAILABLE',
-          'ChatGPT authorization expired or revoked. Please sign in again.',
-          false
-        );
-      }
-
-      if (res.status === 503) {
-        throw new AIProviderError(
-          'PROVIDER_UNAVAILABLE',
-          'ChatGPT plan usage is temporarily unavailable. Please retry later.',
-          true
-        );
-      }
-
-      throw new AIProviderError(
-        'INVALID_PROVIDER_RESPONSE',
-        `ChatGPT Plan API error (${res.status}): ${errText}`,
-        res.status >= 500
-      );
+      const parsed = this.parseOpenAIError(errText);
+      throw this.mapOpenAIError(res.status, parsed);
     }
 
-    // 4. Consume SSE stream
+    // Consume SSE stream
     return await this.consumeResponsesStream(res);
   }
 
@@ -366,6 +486,13 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
           data = JSON.parse(dataStr);
         } catch {
           continue;
+        }
+
+        // Check for error events in SSE stream
+        if (currentEvent === 'error' || currentEvent === 'response.failed' || data?.error || data?.response?.error) {
+          const rawErr = data?.error || data?.response?.error || data;
+          const details = this.parseOpenAIError(rawErr);
+          throw this.mapOpenAIError(400, details);
         }
 
         // Handle incremental text deltas
