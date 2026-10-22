@@ -240,7 +240,30 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       }
     }
 
-    // 4. Default Informational Response
+    // 4. Social / Courtesy Messages (Brief, natural responses without generic feature menus)
+    if (/\b(thank\s*you|thanks|many\s*thanks|thank\s*u|salamat)\b/i.test(content)) {
+      return {
+        message: {
+          role: 'assistant',
+          content: 'You’re welcome.'
+        },
+        finishReason: 'stop',
+        usage: { promptTokens: 10, completionTokens: 4, totalTokens: 14 }
+      };
+    }
+
+    if (/^(hello|hi|hey|good\s*(morning|afternoon|evening))\b/i.test(content)) {
+      return {
+        message: {
+          role: 'assistant',
+          content: 'Good day. How may I assist you with school operations?'
+        },
+        finishReason: 'stop',
+        usage: { promptTokens: 10, completionTokens: 12, totalTokens: 22 }
+      };
+    }
+
+    // 5. Default Informational Response
     return {
       message: {
         role: 'assistant',

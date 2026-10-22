@@ -133,6 +133,17 @@ describe('DIGISKWELA — PRINCIPAL AI GLOBAL FORMATTING, VALUE HUMANIZATION & SA
       expect(groqProviderSource).toContain('Avoid repeating structured data verbatim in your narrative text');
       expect(groqProviderSource).toContain('AVOID generating wide Markdown tables with multiple columns');
     });
+
+    it('TC-SAFE-05: Enforces brief natural social replies and eliminates canned closings and excessive em dashes', () => {
+      expect(groqProviderSource).toContain('CONVERSATIONAL STYLE, PUNCTUATION & CLOSINGS:');
+      expect(groqProviderSource).toContain('Respond naturally and briefly (e.g., "You’re welcome." or "Glad I could help.")');
+      expect(groqProviderSource).toContain('Do NOT automatically append:');
+      expect(groqProviderSource).toContain('"If you need anything else..."');
+      expect(groqProviderSource).toContain('"Just let me know."');
+      expect(groqProviderSource).toContain('Lists of DigiSkwela features or modules');
+      expect(groqProviderSource).toContain('Avoid canned chatbot closings');
+      expect(groqProviderSource).toContain('Em dash rule: Avoid excessive use of em dashes (—)');
+    });
   });
 
   // ─── 6. STRUCTURED DATA RENDERER CENTRALIZED HUMANIZATION ──────────────────
