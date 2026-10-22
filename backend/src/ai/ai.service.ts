@@ -9,7 +9,11 @@ import { AppError } from '../common/middleware/errorHandler.js';
 import { generateId } from '../common/utils/uuid.js';
 import { aiConfig } from '../config/ai.config.js';
 import { normalizeAssistantText } from './utils/normalizeResponseText.js';
-import { detectPrincipalCompositeIntent } from './orchestration/principalCompositeOrchestrator.js';
+import { buildRequestPlan } from './orchestration/requestPlanner.js';
+import { executePlan } from './orchestration/planExecutor.js';
+import { aggregateFacts } from './orchestration/aggregator.js';
+import { buildSynthesisDirective } from './orchestration/synthesisDirective.js';
+import { validateAndRemedyCompleteness } from './orchestration/completenessValidator.js';
 
 export interface ProcessChatRequestInput {
   messages: AIMessage[];
@@ -219,126 +223,215 @@ export const AIService = {
     let tokenUsage: any = null;
 
     try {
-      // 3.1 Deterministic Composite Intent Orchestration
-      // For high-value composite Principal questions, ensure all authorized operational domains
-      // are deterministically considered before provider synthesis turn.
-      const compositePlan = detectPrincipalCompositeIntent(
-        promptText,
-        userRole,
-        portal,
-        allowedToolNamesSet
-      );
+      // 3.1 Principal Intelligent Orchestration Pipeline
+      const plan = buildRequestPlan(messages, userRole, portal, allowedToolNamesSet);
 
-      if (compositePlan && compositePlan.toolsToExecute.length > 0) {
-        const deterministicToolCalls: any[] = [];
-        const executedResults: Array<{ name: string; result: any; args: any }> = [];
-
-        for (let i = 0; i < compositePlan.toolsToExecute.length; i++) {
-          const item = compositePlan.toolsToExecute[i];
-          if (!allowedToolNamesSet.has(item.name)) continue;
-
-          const callId = `call_det_${i}_${item.name}`;
-          toolsRequested.push(item.name);
-          deterministicToolCalls.push({
-            id: callId,
-            name: item.name,
-            arguments: item.args || {}
-          });
-
-          const result = await dispatchTool(item.name, item.args || {}, {
-            user: authUser,
-            correlationId,
-            portal
-          });
-
-          toolsExecuted.push(item.name);
-          executedResults.push({
-            name: item.name,
-            result: result.data,
-            args: item.args || {}
-          });
-        }
-
-        const conversationWithTools = [...messages];
-        conversationWithTools.push({
-          role: 'assistant',
-          content: '',
-          toolCalls: deterministicToolCalls
-        });
-
-        for (let i = 0; i < executedResults.length; i++) {
-          conversationWithTools.push({
-            role: 'tool',
-            name: executedResults[i].name,
-            toolCallId: deterministicToolCalls[i].id,
-            content: JSON.stringify(executedResults[i].result)
-          });
-        }
-
-        // Provider Synthesis Turn (Groq OR Cloudflare)
-        const finalTurn = await provider.generateResponse({
-          messages: conversationWithTools,
-          tools: authorizedDeclarations,
-          context: {
+      if (plan) {
+        if (plan.intent === 'OUT_OF_SCOPE') {
+          await recordAIAuditLog({
+            traceId,
+            userId: authUser.id,
+            role: userRole,
             portal,
-            authenticatedRole: userRole,
-            allowedToolNames: authorizedDeclarations.map(t => t.name)
-          }
-        });
-
-        if (finalTurn.usage) {
-          tokenUsage = finalTurn.usage;
-        }
-
-        const primaryResult = executedResults.find(r => r.name === compositePlan.primaryToolName)?.result || executedResults[0]?.result;
-        if ((!finalTurn.message.content || finalTurn.message.content.trim() === '') && primaryResult) {
-          finalTurn.message.content = 'Here is the verified operational data retrieved from authoritative school records.';
-        }
-
-        const activeFailover = finalTurn.failoverMetadata;
-        await recordAIAuditLog({
-          traceId,
-          userId: authUser.id,
-          role: userRole,
-          portal,
-          scopeDecision: 'ALLOWED',
-          toolsRequested,
-          toolsExecuted,
-          status: 'SUCCESS',
-          providerMode: provider.mode,
-          latencyMs: Date.now() - startTime,
-          tokenUsage: {
-            ...(tokenUsage || {}),
-            requestedMode: aiConfig.providerMode,
-            primaryProvider: activeFailover?.primaryProvider || provider.name,
-            finalProvider: activeFailover?.finalProvider || provider.name,
-            failoverOccurred: Boolean(activeFailover?.occurred),
-            failoverReason: activeFailover?.reason || null,
-            model: activeFailover?.model || provider.model || null,
-          }
-        });
-
-        let structuredData: NormalizedStructuredData | undefined = undefined;
-        let provenance: NormalizedProvenance | undefined = undefined;
-        let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
-
-        if (primaryResult) {
-          const mapping = mapToolToNormalizedOutput(compositePlan.primaryToolName, primaryResult);
-          structuredData = mapping.structuredData;
-          provenance = mapping.provenance;
-          navigationActions = mapping.navigationActions;
-
-          if (executedResults.length > 1) {
-            const allSourceDomains = new Set<string>();
-            for (const item of executedResults) {
-              const doms = item.result?.provenance?.sourceDomains || item.result?.sourceDomains;
-              if (Array.isArray(doms)) {
-                doms.forEach((d: string) => allSourceDomains.add(d));
-              }
+            scopeDecision: 'OUT_OF_SCOPE',
+            toolsRequested: [],
+            toolsExecuted: [],
+            status: 'SUCCESS',
+            providerMode: provider.mode,
+            latencyMs: Date.now() - startTime,
+            tokenUsage: {
+              requestedMode: aiConfig.providerMode,
+              primaryProvider: provider.name,
+              finalProvider: provider.name,
+              failoverOccurred: false,
+              failoverReason: null,
+              model: provider.model || null,
             }
-            if (allSourceDomains.size > 0) {
+          });
+
+          return {
+            message: {
+              role: 'assistant',
+              content: plan.directResponseContent || 'Request is out of scope for DigiSkwela operations.'
+            },
+            responseType: 'text',
+            traceId,
+            scopeDecision: 'OUT_OF_SCOPE',
+            toolsExecuted: []
+          };
+        }
+
+        if (plan.intent === 'SOCIAL') {
+          await recordAIAuditLog({
+            traceId,
+            userId: authUser.id,
+            role: userRole,
+            portal,
+            scopeDecision: 'ALLOWED',
+            toolsRequested: [],
+            toolsExecuted: [],
+            status: 'SUCCESS',
+            providerMode: provider.mode,
+            latencyMs: Date.now() - startTime,
+            tokenUsage: {
+              requestedMode: aiConfig.providerMode,
+              primaryProvider: provider.name,
+              finalProvider: provider.name,
+              failoverOccurred: false,
+              failoverReason: null,
+              model: provider.model || null,
+            }
+          });
+
+          return {
+            message: {
+              role: 'assistant',
+              content: plan.directResponseContent || 'You’re welcome.'
+            },
+            responseType: 'text',
+            traceId,
+            scopeDecision: 'ALLOWED',
+            toolsExecuted: []
+          };
+        }
+
+        if (plan.intent === 'NAVIGATION') {
+          await recordAIAuditLog({
+            traceId,
+            userId: authUser.id,
+            role: userRole,
+            portal,
+            scopeDecision: 'ALLOWED',
+            toolsRequested: [],
+            toolsExecuted: [],
+            status: 'SUCCESS',
+            providerMode: provider.mode,
+            latencyMs: Date.now() - startTime,
+            tokenUsage: {
+              requestedMode: aiConfig.providerMode,
+              primaryProvider: provider.name,
+              finalProvider: provider.name,
+              failoverOccurred: false,
+              failoverReason: null,
+              model: provider.model || null,
+            }
+          });
+
+          return {
+            message: {
+              role: 'assistant',
+              content: plan.directResponseContent || 'Which DigiSkwela feature do you need help with?'
+            },
+            responseType: 'text',
+            navigationActions: plan.navigationAction ? [plan.navigationAction] : undefined,
+            traceId,
+            scopeDecision: 'ALLOWED',
+            toolsExecuted: []
+          };
+        }
+
+        if (plan.intent === 'CLARIFICATION') {
+          await recordAIAuditLog({
+            traceId,
+            userId: authUser.id,
+            role: userRole,
+            portal,
+            scopeDecision: 'ALLOWED',
+            toolsRequested: [],
+            toolsExecuted: [],
+            status: 'SUCCESS',
+            providerMode: provider.mode,
+            latencyMs: Date.now() - startTime,
+            tokenUsage: {
+              requestedMode: aiConfig.providerMode,
+              primaryProvider: provider.name,
+              finalProvider: provider.name,
+              failoverOccurred: false,
+              failoverReason: null,
+              model: provider.model || null,
+            }
+          });
+
+          return {
+            message: {
+              role: 'assistant',
+              content: plan.clarificationMessage || 'Could you please clarify who you are referring to?'
+            },
+            responseType: 'text',
+            traceId,
+            scopeDecision: 'ALLOWED',
+            toolsExecuted: []
+          };
+        }
+
+        if (plan.toolsToExecute.length > 0) {
+          const executionOutput = await executePlan(
+            plan.toolsToExecute,
+            authUser,
+            correlationId,
+            portal,
+            allowedToolNamesSet
+          );
+
+          toolsRequested.push(...executionOutput.toolsRequested);
+          toolsExecuted.push(...executionOutput.toolsExecuted);
+
+          const aggregateData = aggregateFacts(plan, executionOutput.executedResults);
+
+          const conversationWithTools = [...messages];
+          const directive = buildSynthesisDirective(plan, aggregateData);
+          conversationWithTools.unshift(directive);
+
+          conversationWithTools.push({
+            role: 'assistant',
+            content: '',
+            toolCalls: executionOutput.deterministicToolCalls
+          });
+
+          for (const item of executionOutput.executedResults) {
+            conversationWithTools.push({
+              role: 'tool',
+              name: item.name,
+              toolCallId: item.toolCallId,
+              content: item.success ? JSON.stringify(item.result) : JSON.stringify({ error: item.error || 'Execution failed' })
+            });
+          }
+
+          // Provider Synthesis Turn (Groq, Cloudflare, or Mock)
+          const finalTurn = await provider.generateResponse({
+            messages: conversationWithTools,
+            tools: authorizedDeclarations,
+            context: {
+              portal,
+              authenticatedRole: userRole,
+              allowedToolNames: authorizedDeclarations.map(t => t.name)
+            }
+          });
+
+          if (finalTurn.usage) {
+            tokenUsage = finalTurn.usage;
+          }
+
+          const primaryResult = executionOutput.executedResults.find(r => r.name === plan.primaryToolName && r.success)?.result 
+            || executionOutput.executedResults.find(r => r.success)?.result;
+
+          if ((!finalTurn.message.content || finalTurn.message.content.trim() === '') && primaryResult) {
+            finalTurn.message.content = 'Here is the verified operational data retrieved from authoritative school records.';
+          }
+
+          let structuredData: NormalizedStructuredData | undefined = undefined;
+          let provenance: NormalizedProvenance | undefined = undefined;
+          let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
+
+          if (primaryResult) {
+            const mapping = mapToolToNormalizedOutput(plan.primaryToolName, primaryResult);
+            structuredData = mapping.structuredData;
+            provenance = mapping.provenance;
+            navigationActions = mapping.navigationActions;
+
+            if (aggregateData.mergedSourceDomains.length > 0) {
               provenance = {
-                sourceDomains: Array.from(allSourceDomains),
+                sourceDomains: aggregateData.mergedSourceDomains,
                 asOf: provenance?.asOf || new Date().toISOString()
               };
               if (structuredData) {
@@ -346,26 +439,66 @@ export const AIService = {
               }
             }
           }
+
+          const normalizedContent = normalizeAssistantText(finalTurn.message.content || '', {
+            hasStructuredData: Boolean(structuredData),
+            toolName: plan.primaryToolName,
+            skipFeatureMenuRule: plan.skipFeatureMenuRule,
+          });
+
+          const validated = validateAndRemedyCompleteness(
+            normalizedContent,
+            plan,
+            executionOutput.executedResults,
+            aggregateData,
+            plan.primaryToolName,
+            Boolean(structuredData)
+          );
+
+          const activeFailover = finalTurn.failoverMetadata;
+          await recordAIAuditLog({
+            traceId,
+            userId: authUser.id,
+            role: userRole,
+            portal,
+            scopeDecision: 'ALLOWED',
+            toolsRequested,
+            toolsExecuted,
+            status: 'SUCCESS',
+            providerMode: provider.mode,
+            latencyMs: Date.now() - startTime,
+            tokenUsage: {
+              ...(tokenUsage || {}),
+              requestedMode: aiConfig.providerMode,
+              primaryProvider: activeFailover?.primaryProvider || provider.name,
+              finalProvider: activeFailover?.finalProvider || provider.name,
+              failoverOccurred: Boolean(activeFailover?.occurred),
+              failoverReason: activeFailover?.reason || null,
+              model: activeFailover?.model || provider.model || null,
+              orchestration: {
+                intent: plan.intent,
+                obligationsTotal: validated.auditMetrics.obligationsTotal,
+                satisfiedCount: validated.auditMetrics.satisfiedCount,
+                remediedCount: validated.auditMetrics.remediedCount,
+                unmetCount: validated.auditMetrics.unmetCount,
+              }
+            }
+          });
+
+          return {
+            message: {
+              ...finalTurn.message,
+              content: validated.finalizedContent,
+            },
+            responseType: structuredData ? 'structured' : 'text',
+            structuredData,
+            provenance,
+            navigationActions,
+            traceId,
+            scopeDecision: 'ALLOWED',
+            toolsExecuted
+          };
         }
-
-        const normalizedContent = normalizeAssistantText(finalTurn.message.content || '', {
-          hasStructuredData: Boolean(structuredData),
-          toolName: compositePlan.primaryToolName,
-        });
-
-        return {
-          message: {
-            ...finalTurn.message,
-            content: normalizedContent,
-          },
-          responseType: structuredData ? 'structured' : 'text',
-          structuredData,
-          provenance,
-          navigationActions,
-          traceId,
-          scopeDecision: 'ALLOWED',
-          toolsExecuted
-        };
       }
 
       // 4. Initial Provider Turn (Dynamic single-tool dispatch for non-composite queries)

@@ -187,6 +187,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
 
       return {
         teacherId: t.id,
+        userId: t.user_id,
         teacherDisplayName: `${t.user.first_name} ${t.user.last_name}`,
         department: t.department || 'General Academics',
         timeIn: record?.time_in ? record.time_in.toISOString() : null,
@@ -260,6 +261,7 @@ export const getPendingLeavesTool: DigiSkwelaTool = {
     // Purpose-specific DTO: Exclude private medical explanation, reason, notes, attachments, and phone numbers
     const safeRequests = pending.map(item => ({
       requestId: item.requestId,
+      userId: item.userId,
       applicantDisplayName: item.applicantDisplayName,
       department: item.department,
       leaveType: item.leaveType,

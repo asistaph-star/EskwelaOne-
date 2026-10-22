@@ -454,7 +454,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE E: GROQ FREE-TIER PROVIDER ADAPTER', 
 
     const result = await AIService.processChat(
       {
-        messages: [{ role: 'user', content: 'What needs my attention today?' }],
+        messages: [{ role: 'user', content: 'Is there anything I should know about the school today?' }],
         portal: 'Principal',
       },
       testUser

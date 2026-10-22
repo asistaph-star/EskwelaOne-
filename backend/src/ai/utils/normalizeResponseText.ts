@@ -174,6 +174,7 @@ export function normalizeAssistantText(
   options?: { 
     hasStructuredData?: boolean;
     toolName?: string;
+    skipFeatureMenuRule?: boolean;
   }
 ): string {
   if (!text) return '';
@@ -196,10 +197,12 @@ export function normalizeAssistantText(
   // 6. Handle System Help feature menu dump rule
   const lower = cleaned.toLowerCase();
   if (
-    /^(?:which digiskwela feature|which feature would you like)/i.test(cleaned) ||
-    lower.includes('help me find or understand a digiskwela feature') ||
-    (lower.includes('which digiskwela feature') && (lower.includes('gate attendance') || lower.includes('leave management'))) ||
-    (cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
+    !options?.skipFeatureMenuRule && (
+      /^(?:which digiskwela feature|which feature would you like)/i.test(cleaned) ||
+      lower.includes('help me find or understand a digiskwela feature') ||
+      (lower.includes('which digiskwela feature') && (lower.includes('gate attendance') || lower.includes('leave management'))) ||
+      (cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
+    )
   ) {
     return 'Which DigiSkwela feature do you need help with?';
   }
