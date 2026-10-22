@@ -1,5 +1,6 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens.js';
+import { humanizeValue } from '../utils/humanizeValue.js';
 
 interface StatusBadgeProps {
   status: string;
@@ -8,13 +9,14 @@ interface StatusBadgeProps {
 
 export function getStatusStyle(status: string): { bg: string; color: string; border: string; label: string } {
   const norm = status.trim().toUpperCase().replace(/[\s_-]+/g, '_');
+  const humanLabel = humanizeValue(status);
 
   if (norm.includes('PENDING') || norm === 'INVESTIGATING' || norm === 'UNDER_INVESTIGATION') {
     return {
       bg: C.amberBg,
       color: C.amber,
       border: 'rgba(146,64,14,0.2)',
-      label: status.replace(/_/g, ' '),
+      label: humanLabel,
     };
   }
 
@@ -23,7 +25,7 @@ export function getStatusStyle(status: string): { bg: string; color: string; bor
       bg: C.greenBg,
       color: C.green,
       border: 'rgba(21,94,54,0.2)',
-      label: status.replace(/_/g, ' '),
+      label: humanLabel,
     };
   }
 
@@ -32,7 +34,7 @@ export function getStatusStyle(status: string): { bg: string; color: string; bor
       bg: C.blueBg,
       color: C.blue,
       border: 'rgba(30,58,138,0.2)',
-      label: norm === 'ON_APPROVED_LEAVE' ? 'On Approved Leave' : status.replace(/_/g, ' '),
+      label: humanLabel,
     };
   }
 
@@ -41,7 +43,7 @@ export function getStatusStyle(status: string): { bg: string; color: string; bor
       bg: '#F1F5F9',
       color: C.t2,
       border: '#CBD5E1',
-      label: 'No gate check-in / No leave',
+      label: humanLabel,
     };
   }
 
@@ -50,7 +52,7 @@ export function getStatusStyle(status: string): { bg: string; color: string; bor
       bg: C.redBg,
       color: C.red,
       border: 'rgba(145,24,24,0.2)',
-      label: status.replace(/_/g, ' '),
+      label: humanLabel,
     };
   }
 
@@ -58,7 +60,7 @@ export function getStatusStyle(status: string): { bg: string; color: string; bor
     bg: '#F1F5F9',
     color: C.t2,
     border: '#E2E8F0',
-    label: status.replace(/_/g, ' '),
+    label: humanLabel,
   };
 }
 

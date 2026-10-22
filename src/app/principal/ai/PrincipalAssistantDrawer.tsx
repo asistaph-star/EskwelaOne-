@@ -116,6 +116,7 @@ export function PrincipalAssistantDrawer({
       {/* Clean Solid White Floating Chat Widget */}
       <aside
         data-testid="principal-assistant-drawer"
+        id="principal-ai-assistant-drawer"
         role="dialog"
         aria-label="DigiSkwela Principal Operations Assistant"
         style={{

@@ -236,7 +236,10 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                     marginBottom: message.structuredData ? 10 : 0,
                   }}
                 >
-                  <SafeMarkdownRenderer content={message.content} />
+                  <SafeMarkdownRenderer 
+                    content={message.content} 
+                    hasStructuredData={Boolean(message.structuredData)} 
+                  />
                 </div>
               )}
 

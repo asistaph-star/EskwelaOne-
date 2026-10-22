@@ -1,17 +1,19 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens.js';
-
 import { AdaptiveMarkdownTable } from './AdaptiveMarkdownTable.js';
+import { sanitizeNarrativeEnums } from '../utils/humanizeValue.js';
 
 interface SafeMarkdownRendererProps {
   content: string;
+  hasStructuredData?: boolean;
 }
 
 /**
  * Parses and renders safe markdown formatted text without external dependencies.
- * Prevents raw markdown artifacts (##, ###, **text**, raw table pipes) from reaching users.
+ * Prevents raw markdown artifacts (##, ###, **, raw table pipes, ---, \---) from reaching users.
+ * Strips raw HTML and ensures model output is completely safe.
  */
-export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
+export function SafeMarkdownRenderer({ content, hasStructuredData = false }: SafeMarkdownRendererProps) {
   if (!content) return null;
 
   // Split into lines for block-level parsing
@@ -19,17 +21,27 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
   const elements: React.ReactNode[] = [];
   let i = 0;
 
-  // Helper for inline markdown: **bold**, `code`, *italic*
+  // Helper for inline markdown: **bold**, `code`, *italic*, enums, escaped artifacts
   const renderInline = (text: string): React.ReactNode => {
-    // Regex matches **bold**, `code`, or *italic*
+    if (!text) return null;
+
+    // 1. Sanitize any raw backend enums or snake_case tokens
+    let sanitized = sanitizeNarrativeEnums(text);
+
+    // 2. Strip leading backslashes on markdown symbols (e.g. \* -> *, \_ -> _, \# -> #)
+    sanitized = sanitized.replace(/\\([*#_`[\]()\-+!|])/g, '$1');
+
+    // 3. Match **bold**, `code`, or *italic*
     const parts: React.ReactNode[] = [];
     const inlineRegex = /(\*\*([^*]+)\*\*|`([^`]+)`|\*([^*]+)\*)/g;
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
-    while ((match = inlineRegex.exec(text)) !== null) {
+    while ((match = inlineRegex.exec(sanitized)) !== null) {
       if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index));
+        // Strip any dangling lone asterisks or backticks in plain text
+        const plain = sanitized.substring(lastIndex, match.index).replace(/\*\*+/g, '').replace(/`+/g, '');
+        if (plain) parts.push(plain);
       }
       if (match[2] !== undefined) {
         // **bold**
@@ -62,11 +74,12 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
       lastIndex = inlineRegex.lastIndex;
     }
 
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
+    if (lastIndex < sanitized.length) {
+      const remaining = sanitized.substring(lastIndex).replace(/\*\*+/g, '').replace(/`+/g, '');
+      if (remaining) parts.push(remaining);
     }
 
-    return parts.length > 0 ? parts : text;
+    return parts.length > 0 ? parts : sanitized;
   };
 
   while (i < lines.length) {
@@ -79,12 +92,34 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
       continue;
     }
 
-    // 2. Markdown Table Detection (starts and ends with |)
+    // 2. Horizontal Rules / Separator lines (---, \---, ***, \***, ___)
+    if (/^\\?[-*_]{3,}$/.test(trimmed)) {
+      elements.push(
+        <div
+          key={`hr-${elements.length}`}
+          style={{
+            height: 1,
+            backgroundColor: '#E2E8F0',
+            margin: '8px 0',
+            border: 'none',
+          }}
+        />
+      );
+      i++;
+      continue;
+    }
+
+    // 3. Markdown Table Detection (starts and ends with |)
     if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.includes('|')) {
       const tableLines: string[] = [];
       while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
         tableLines.push(lines[i].trim());
         i++;
+      }
+
+      // If structured data cards are already rendered for this message, suppress redundant markdown table
+      if (hasStructuredData) {
+        continue;
       }
 
       if (tableLines.length >= 2) {
@@ -115,37 +150,35 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
       }
     }
 
-    // 3. Headings (## or ### or #)
-    if (trimmed.startsWith('#')) {
-      const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)$/);
-      if (headingMatch) {
-        const level = headingMatch[1].length;
-        const headingText = headingMatch[2];
-        const isMajor = level <= 2;
+    // 4. Headings (##, ###, # or escaped \##)
+    const headingMatch = trimmed.match(/^\\?(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const headingText = headingMatch[2];
+      const isMajor = level <= 2;
 
-        elements.push(
-          <div
-            key={`h-${elements.length}`}
-            style={{
-              fontSize: isMajor ? 13 : 12,
-              fontWeight: 700,
-              color: isMajor ? C.m900 : C.m800,
-              marginTop: elements.length > 0 ? 8 : 2,
-              marginBottom: 4,
-              fontFamily: "'Inter', sans-serif",
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {renderInline(headingText)}
-          </div>
-        );
-        i++;
-        continue;
-      }
+      elements.push(
+        <div
+          key={`h-${elements.length}`}
+          style={{
+            fontSize: isMajor ? 13 : 12,
+            fontWeight: 700,
+            color: isMajor ? C.m900 : C.m800,
+            marginTop: elements.length > 0 ? 8 : 2,
+            marginBottom: 4,
+            fontFamily: "'Inter', sans-serif",
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {renderInline(headingText)}
+        </div>
+      );
+      i++;
+      continue;
     }
 
-    // 4. Bullet lists (* or -)
-    const bulletMatch = trimmed.match(/^[\*\-]\s+(.*)$/);
+    // 5. Bullet lists (*, -, +, •, ·, or escaped \*, \-)
+    const bulletMatch = trimmed.match(/^(?:[\*\-+]|\\?[\*\-]|•|·)\s+(.*)$/);
     if (bulletMatch) {
       elements.push(
         <div
@@ -179,7 +212,7 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
       continue;
     }
 
-    // 5. Numbered lists (1. , 2. )
+    // 6. Numbered lists (1. , 2. )
     const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
     if (numMatch) {
       elements.push(
@@ -215,7 +248,7 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
       continue;
     }
 
-    // 6. Regular Paragraph Line
+    // 7. Regular Paragraph Line
     elements.push(
       <p
         key={`p-${elements.length}`}

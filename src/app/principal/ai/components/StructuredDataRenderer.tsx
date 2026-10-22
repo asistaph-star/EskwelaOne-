@@ -9,6 +9,7 @@ import { PrincipalAIMessage, SafeNavAction } from '../types.js';
 import { PScreen } from '../../../shared/types';
 import { StatusBadge } from './StatusBadge.js';
 import { formatAiDate, formatDateRange } from '../utils/formatAiDate.js';
+import { humanizeValue } from '../utils/humanizeValue.js';
 
 interface StructuredDataRendererProps {
   data: NonNullable<PrincipalAIMessage['structuredData']>;
@@ -283,7 +284,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
           <div style={{ padding: '8px 10px', background: C.m50, borderRadius: 6, border: '1px solid rgba(29,78,216,0.18)' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.m700 }}>Academic Grading Completeness</div>
             <div style={{ fontSize: 11, color: C.t2, marginTop: 2 }}>
-              Status: <span style={{ fontWeight: 600 }}>{raw.academics.completenessStatus}</span>
+              Status: <span style={{ fontWeight: 600 }}>{humanizeValue(raw.academics.completenessStatus)}</span>
             </div>
             {raw.academics.annualPassRate === null && (
               <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
@@ -447,7 +448,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
         <div style={{ padding: 10, background: isComplete ? C.greenBg : C.m50, borderRadius: 6, border: `1px solid ${isComplete ? 'rgba(21,94,54,0.2)' : C.borderMed}` }}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', fontWeight: 700, color: isComplete ? C.green : C.m700 }}>
-            Completeness Status: {raw.completenessStatus}
+            Completeness Status: {humanizeValue(raw.completenessStatus)}
           </div>
           <div style={{ fontSize: 11, color: C.t1, marginTop: 4, lineHeight: 1.4 }}>
             {raw.annualPassRate !== null && raw.annualPassRate !== undefined ? (
@@ -527,7 +528,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {pending.map((p: any, i: number) => (
                 <div key={i} style={{ fontSize: 11, color: C.t2, padding: '4px 6px', background: C.paper, borderRadius: 4, border: '1px solid #CBD5E1' }}>
-                  <span style={{ fontWeight: 600, color: C.t1 }}>[{p.category}]</span> {p.summary}
+                  <span style={{ fontWeight: 600, color: C.t1 }}>[{humanizeValue(p.category)}]</span> {p.summary}
                 </div>
               ))}
             </div>
@@ -603,7 +604,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
         {/* Academic Completeness */}
         {acad.completenessStatus && (
           <div style={{ padding: '6px 8px', background: C.m50, borderRadius: 6, border: '1px solid rgba(29,78,216,0.18)', fontSize: 11 }}>
-            <div style={{ fontWeight: 700, color: C.m700 }}>Academic Completeness: {acad.completenessStatus}</div>
+            <div style={{ fontWeight: 700, color: C.m700 }}>Academic Completeness: {humanizeValue(acad.completenessStatus)}</div>
             <div style={{ fontSize: 10, color: C.t2, marginTop: 2 }}>{acad.note}</div>
           </div>
         )}
