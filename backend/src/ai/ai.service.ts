@@ -310,6 +310,7 @@ export const AIService = {
           };
         }
 
+        const activeFailover = finalTurn.failoverMetadata || firstTurn.failoverMetadata;
         await recordAIAuditLog({
           traceId,
           userId: authUser.id,
@@ -321,7 +322,15 @@ export const AIService = {
           status: 'SUCCESS',
           providerMode: provider.mode,
           latencyMs: Date.now() - startTime,
-          tokenUsage
+          tokenUsage: {
+            ...(tokenUsage || {}),
+            requestedMode: aiConfig.providerMode,
+            primaryProvider: activeFailover?.primaryProvider || provider.name,
+            finalProvider: activeFailover?.finalProvider || provider.name,
+            failoverOccurred: Boolean(activeFailover?.occurred),
+            failoverReason: activeFailover?.reason || null,
+            model: activeFailover?.model || provider.model || null,
+          }
         });
 
         let structuredData: NormalizedStructuredData | undefined = undefined;
@@ -356,6 +365,7 @@ export const AIService = {
       }
 
       // No tool calls needed; return direct response
+      const activeFailover = firstTurn.failoverMetadata;
       await recordAIAuditLog({
         traceId,
         userId: authUser.id,
@@ -367,7 +377,15 @@ export const AIService = {
         status: 'SUCCESS',
         providerMode: provider.mode,
         latencyMs: Date.now() - startTime,
-        tokenUsage
+        tokenUsage: {
+          ...(tokenUsage || {}),
+          requestedMode: aiConfig.providerMode,
+          primaryProvider: activeFailover?.primaryProvider || provider.name,
+          finalProvider: activeFailover?.finalProvider || provider.name,
+          failoverOccurred: Boolean(activeFailover?.occurred),
+          failoverReason: activeFailover?.reason || null,
+          model: activeFailover?.model || provider.model || null,
+        }
       });
 
       let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
@@ -423,12 +441,20 @@ export const AIService = {
         userId: authUser.id,
         role: userRole,
         portal,
-        scopeDecision: 'ALLOWED',
+        scopeDecision: isProviderErr ? (err.code as any) : 'ALLOWED',
         toolsRequested,
         toolsExecuted,
         status: 'ERROR',
         providerMode: provider.mode,
         latencyMs: Date.now() - startTime,
+        tokenUsage: {
+          requestedMode: aiConfig.providerMode,
+          primaryProvider: provider.name,
+          finalProvider: provider.name,
+          failoverOccurred: false,
+          failoverReason: isProviderErr ? err.code : 'UNKNOWN_ERROR',
+          model: provider.model || null,
+        }
       });
 
       // FREE-TIER POLICY ENFORCEMENT: Never trigger automatic paid fallback!

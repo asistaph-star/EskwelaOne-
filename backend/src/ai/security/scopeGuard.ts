@@ -13,7 +13,7 @@ export interface ScopeEvaluationResult {
 
 // Patterns that must be rejected deterministically
 const FORBIDDEN_CODING_PATTERNS = [
-  /\bwrite\s+(python|javascript|typescript|java|c\+\+|c#|php|ruby|rust|go|sql|bash|powershell|code|script)\b/i,
+  /\bwrite\s+(a\s+)?(python|javascript|typescript|java|c\+\+|c#|php|ruby|rust|go|sql|bash|powershell|code|script)\b/i,
   /\b(create|build|generate)\s+a\s+(script|function|program|class|algorithm|database|website|app|application|payroll)\b/i,
   /\b(write|generate)\s+(a\s+)?(website|web\s*page|html|css|react\s+component)\b/i,
   /\b(coding|programming|software\s+development)\b/i,

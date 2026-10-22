@@ -60,11 +60,20 @@ export interface AITokenUsage {
   totalTokens: number;
 }
 
+export interface AIFailoverMetadata {
+  occurred: boolean;
+  primaryProvider: string;
+  finalProvider: string;
+  reason?: string;
+  model?: string;
+}
+
 export interface AICompletionResponse {
   message: AIMessage;
   toolCalls?: AIToolCall[];
   usage?: AITokenUsage;
   finishReason: 'stop' | 'tool_calls' | 'length' | 'error';
+  failoverMetadata?: AIFailoverMetadata;
 }
 
 export type AIProviderErrorCode = 
@@ -88,16 +97,20 @@ export class AIProviderError extends Error {
   }
 }
 
+export type AIProviderMode = 'mock' | 'groq' | 'cloudflare' | 'groq_cloudflare' | 'disabled';
+
 /**
  * Common Provider-Independent Interface.
- * Concrete implementations: MockAIProvider, future GroqProvider.
+ * Concrete implementations: MockAIProvider, GroqAIProvider, CloudflareAIProvider, FailoverAIProvider.
  */
 export interface DigiSkwelaAIProvider {
   readonly name: string;
-  readonly mode: 'mock' | 'groq' | 'disabled';
+  readonly mode: AIProviderMode;
+  readonly model?: string;
   
   /**
    * Generates conversational completion or tool selections.
    */
   generateResponse(request: AICompletionRequest): Promise<AICompletionResponse>;
 }
+

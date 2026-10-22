@@ -8,12 +8,21 @@
  */
 
 import './env.js';
+import { AIProviderMode } from '../ai/provider/aiProvider.interface.js';
 
 export interface AIConfig {
-  providerMode: 'mock' | 'groq' | 'disabled';
+  providerMode: AIProviderMode;
   allowPaidProvider: boolean;
   groq: {
     apiKey?: string;
+    model: string;
+    temperature: number;
+    maxTokens: number;
+    timeoutMs: number;
+  };
+  cloudflare: {
+    accountId?: string;
+    apiToken?: string;
     model: string;
     temperature: number;
     maxTokens: number;
@@ -33,8 +42,8 @@ export interface AIConfig {
 }
 
 export const aiConfig: AIConfig = {
-  // Provider mode: 'mock' (default for testing), 'groq' (Free Plan integration), 'disabled'
-  providerMode: (process.env.AI_PROVIDER_MODE as any) || 'mock',
+  // Provider mode: 'mock' (default for testing), 'groq', 'cloudflare', 'groq_cloudflare', 'disabled'
+  providerMode: (process.env.AI_PROVIDER_MODE as AIProviderMode) || 'mock',
 
   // HARD BILLING POLICY: Paid AI usage is forbidden.
   allowPaidProvider: process.env.AI_ALLOW_PAID_PROVIDER === 'true',
@@ -46,6 +55,16 @@ export const aiConfig: AIConfig = {
     temperature: parseFloat(process.env.AI_GROQ_TEMPERATURE || '0.2'),
     maxTokens: parseInt(process.env.AI_GROQ_MAX_TOKENS || '1500', 10),
     timeoutMs: parseInt(process.env.AI_GROQ_TIMEOUT_MS || '15000', 10),
+  },
+
+  // Cloudflare Workers AI Free Plan Configuration
+  cloudflare: {
+    accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+    apiToken: process.env.CLOUDFLARE_API_TOKEN,
+    model: process.env.CLOUDFLARE_AI_MODEL || '@cf/openai/gpt-oss-120b',
+    temperature: parseFloat(process.env.CLOUDFLARE_AI_TEMPERATURE || '0.2'),
+    maxTokens: parseInt(process.env.CLOUDFLARE_AI_MAX_TOKENS || '1500', 10),
+    timeoutMs: parseInt(process.env.CLOUDFLARE_AI_TIMEOUT_MS || '15000', 10),
   },
 
   // Configurable runtime boundaries

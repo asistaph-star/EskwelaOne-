@@ -16,8 +16,7 @@ export interface GroqProviderOptions {
   maxTokens?: number;
   timeoutMs?: number;
 }
-
-const DIGISKWELA_SYSTEM_PROMPT = `You are the authoritative administrative assistant for DigiSkwela at Calulut Integrated School.
+export const DIGISKWELA_SYSTEM_PROMPT = `You are the authoritative administrative assistant for DigiSkwela at Calulut Integrated School.
 Your duty is to assist school administrators (Principal, administrative staff) with factual school operations, attendance, academic analytics, leaves, and calendar schedules.
 
 STRICT OPERATIONAL & COMPLIANCE RULES:
@@ -122,6 +121,7 @@ STRICT OPERATIONAL & COMPLIANCE RULES:
    - Synthesize relevant verified facts into a professional, ready-to-review draft.
    - Use "Review the pending leave request", NOT "Approve the pending leave request".
    - Clearly note that the Assistant is read-only and does not send or publish messages directly; the Principal must review and distribute it.`;
+
 
 /**
  * GroqAIProvider — Backend-only Provider Adapter for GroqCloud Free Plan

@@ -6,16 +6,23 @@ export interface RecordAIAuditEntry {
   userId: string;
   role: string;
   portal: string;
-  scopeDecision: 'ALLOWED' | 'OUT_OF_SCOPE' | 'RATE_LIMITED' | 'UNAUTHORIZED';
+  scopeDecision: 'ALLOWED' | 'OUT_OF_SCOPE' | 'RATE_LIMITED' | 'UNAUTHORIZED' | string;
   toolsRequested: string[];
   toolsExecuted: string[];
   status: 'SUCCESS' | 'ERROR' | 'SECURITY_BLOCKED';
   providerMode: string;
   latencyMs: number;
   tokenUsage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+    requestedMode?: string;
+    primaryProvider?: string;
+    finalProvider?: string;
+    failoverOccurred?: boolean;
+    failoverReason?: string | null;
+    model?: string | null;
+    [key: string]: any;
   } | null;
 }
 

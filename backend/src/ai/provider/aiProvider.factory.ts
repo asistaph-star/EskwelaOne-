@@ -1,13 +1,17 @@
 import { DigiSkwelaAIProvider, AIProviderError } from './aiProvider.interface.js';
 import { MockAIProvider } from './mockAIProvider.js';
 import { GroqAIProvider } from './groqAIProvider.js';
+import { CloudflareAIProvider } from './cloudflareAIProvider.js';
+import { FailoverAIProvider } from './failoverAIProvider.js';
 import { aiConfig } from '../../config/ai.config.js';
 
 /**
  * Resolves the active AI provider based on configuration.
  * Strictly enforces the FREE-TIER AI POLICY:
- * - 'mock': Deterministic local mock provider (Phase A-D default)
- * - 'groq': GroqCloud Free Plan adapter (Phase E)
+ * - 'mock': Deterministic local mock provider (tests/local dev)
+ * - 'groq': GroqCloud Free Plan adapter (openai/gpt-oss-120b)
+ * - 'cloudflare': Cloudflare Workers AI Free Tier (@cf/openai/gpt-oss-120b)
+ * - 'groq_cloudflare': Explicit primary Groq -> secondary Cloudflare controlled failover
  * - 'disabled': AI assistance disabled by policy
  * - All unauthorized/paid modes fail closed.
  */
@@ -20,6 +24,14 @@ export function getAIProvider(): DigiSkwelaAIProvider {
 
   if (mode === 'groq') {
     return new GroqAIProvider();
+  }
+
+  if (mode === 'cloudflare') {
+    return new CloudflareAIProvider();
+  }
+
+  if (mode === 'groq_cloudflare') {
+    return new FailoverAIProvider();
   }
 
   if (mode === 'disabled') {
@@ -39,3 +51,4 @@ export function getAIProvider(): DigiSkwelaAIProvider {
 
   throw new AIProviderError('PROVIDER_UNAVAILABLE', `Unsupported provider mode: ${mode}`);
 }
+
