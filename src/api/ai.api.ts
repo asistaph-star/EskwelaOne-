@@ -10,9 +10,14 @@ export interface AIMessagePayload {
 export interface AIChatRequest {
   messages: AIMessagePayload[];
   portal?: string;
+  turnId?: string;
+  sessionId?: string;
+  conversationId?: string;
 }
 
 export interface AIChatResponse {
+  turnId?: string;
+  sessionId?: string;
   message: {
     role: 'assistant';
     content: string;

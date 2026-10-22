@@ -384,8 +384,9 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
 
   // 5. Behavior Summary
   if (type === 'behavior') {
-    const sb = raw.statusBreakdown || {};
-    const count = raw.totalCases ?? 0;
+    const summary = raw.summary || {};
+    const sb = raw.statusBreakdown || summary;
+    const count = raw.totalCases ?? summary.totalCases ?? raw.totalMatched ?? raw.cases?.length ?? 0;
     const cases = raw.cases || [];
 
     return (

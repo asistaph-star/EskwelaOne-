@@ -23,6 +23,8 @@ const chatRequestSchema = z.object({
   })),
   portal: z.string().optional().default('General'),
   conversationId: z.string().optional(),
+  turnId: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 /**

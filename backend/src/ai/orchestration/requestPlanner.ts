@@ -73,12 +73,23 @@ export interface PrincipalRequestPlan {
  */
 export function extractPriorOperationalContext(messages: AIMessage[]): {
   domains: Set<OperationalDomainName>;
+  recentDomains: OperationalDomainName[];
   tools: Set<string>;
   lastAssistantContent: string;
 } {
   const domains = new Set<OperationalDomainName>();
+  const recentDomains: OperationalDomainName[] = [];
   const tools = new Set<string>();
   let lastAssistantContent = '';
+
+  const recordDomain = (dom: OperationalDomainName) => {
+    domains.add(dom);
+    const existingIdx = recentDomains.indexOf(dom);
+    if (existingIdx !== -1) {
+      recentDomains.splice(existingIdx, 1);
+    }
+    recentDomains.unshift(dom);
+  };
 
   const prev = messages.slice(0, -1);
   for (const m of prev) {
@@ -86,7 +97,7 @@ export function extractPriorOperationalContext(messages: AIMessage[]): {
       tools.add(m.name);
       for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
         if (meta.toolName === m.name) {
-          domains.add(dom as OperationalDomainName);
+          recordDomain(dom as OperationalDomainName);
         }
       }
     }
@@ -99,7 +110,7 @@ export function extractPriorOperationalContext(messages: AIMessage[]): {
             tools.add(fnName);
             for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
               if (meta.toolName === fnName) {
-                domains.add(dom as OperationalDomainName);
+                recordDomain(dom as OperationalDomainName);
               }
             }
           }
@@ -110,13 +121,13 @@ export function extractPriorOperationalContext(messages: AIMessage[]): {
       const lowerText = (m.content || '').toLowerCase();
       for (const [dom, meta] of Object.entries(DOMAIN_CATALOG)) {
         if (meta.keywords.test(lowerText)) {
-          domains.add(dom as OperationalDomainName);
+          recordDomain(dom as OperationalDomainName);
         }
       }
     }
   }
 
-  return { domains, tools, lastAssistantContent };
+  return { domains, recentDomains, tools, lastAssistantContent };
 }
 
 /**
@@ -581,28 +592,51 @@ export function buildRequestPlan(
 
       // 4.5 CONTEXTUAL EXPLANATION (Section 9.C): "Explain the most important one"
       if (/\b(explain|why|reason|cause)\b/i.test(lower)) {
-        if (priorContext.domains.has('academics') && allowedToolNames.has('getAcademicAnalytics')) {
-          return createPlan(
-            'SINGLE_DOMAIN',
-            [{ name: 'getAcademicAnalytics', args: {} }],
-            [{ domain: 'academics', description: 'Academic Analytics records' }],
-            [{ operation: 'explain', targetDomain: 'academics', description: 'Explain academic reporting issues' }],
-            { skipFeatureMenuRule: true }
-          );
-        }
-        if (priorContext.domains.has('faculty_attendance') && allowedToolNames.has('getFacultyAttendanceAudit')) {
-          return createPlan(
-            'SINGLE_DOMAIN',
-            [{ name: 'getFacultyAttendanceAudit', args: {} }],
-            [{ domain: 'faculty_attendance', description: 'Faculty attendance records' }],
-            [{ operation: 'explain', targetDomain: 'faculty_attendance', description: 'Explain faculty attendance exceptions' }],
-            { skipFeatureMenuRule: true }
-          );
+        // If the user explicitly specified an operational domain in the current prompt, do NOT hijack it with prior context!
+        if (currentDomains.length === 0) {
+          const targetDomain = priorContext.recentDomains[0] || Array.from(priorContext.domains)[0];
+          if (targetDomain === 'faculty_attendance' && allowedToolNames.has('getFacultyAttendanceAudit')) {
+            return createPlan(
+              'SINGLE_DOMAIN',
+              [{ name: 'getFacultyAttendanceAudit', args: {} }],
+              [{ domain: 'faculty_attendance', description: 'Faculty attendance records' }],
+              [{ operation: 'explain', targetDomain: 'faculty_attendance', description: 'Explain faculty attendance exceptions' }],
+              { skipFeatureMenuRule: true }
+            );
+          }
+          if (targetDomain === 'academics' && allowedToolNames.has('getAcademicAnalytics')) {
+            return createPlan(
+              'SINGLE_DOMAIN',
+              [{ name: 'getAcademicAnalytics', args: {} }],
+              [{ domain: 'academics', description: 'Academic Analytics records' }],
+              [{ operation: 'explain', targetDomain: 'academics', description: 'Explain academic reporting issues' }],
+              { skipFeatureMenuRule: true }
+            );
+          }
+          if (targetDomain === 'leaves' && allowedToolNames.has('getPendingLeaves')) {
+            return createPlan(
+              'SINGLE_DOMAIN',
+              [{ name: 'getPendingLeaves', args: { limit: 10 } }],
+              [{ domain: 'leaves', description: 'Leave Management records' }],
+              [{ operation: 'explain', targetDomain: 'leaves', description: 'Explain pending leave requests' }],
+              { skipFeatureMenuRule: true }
+            );
+          }
+          if (targetDomain === 'behavior' && allowedToolNames.has('getAdministrativeBehaviorSummary')) {
+            return createPlan(
+              'SINGLE_DOMAIN',
+              [{ name: 'getAdministrativeBehaviorSummary', args: {} }],
+              [{ domain: 'behavior', description: 'Behavior Incident records' }],
+              [{ operation: 'explain', targetDomain: 'behavior', description: 'Explain behavior incidents' }],
+              { skipFeatureMenuRule: true }
+            );
+          }
         }
       }
 
       // 4.6 Follow-up attendance status filtering ("Which of them are on approved leave?")
-      if (priorContext.domains.has('faculty_attendance') && allowedToolNames.has('getFacultyAttendanceAudit')) {
+      const isAttendanceScope = currentDomains.includes('faculty_attendance') || (currentDomains.length === 0 && priorContext.domains.has('faculty_attendance'));
+      if (isAttendanceScope && allowedToolNames.has('getFacultyAttendanceAudit')) {
         let statusFilter: 'ALL' | 'COMPLETED' | 'TIME_OUT_PENDING' | 'ON_APPROVED_LEAVE' | 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' = 'ALL';
 
         if (lower.includes('leave') || lower.includes('approved')) {
@@ -615,24 +649,29 @@ export function buildRequestPlan(
           statusFilter = 'COMPLETED';
         }
 
-        return createPlan(
-          'SINGLE_DOMAIN',
-          [{ name: 'getFacultyAttendanceAudit', args: { statusFilter } }],
-          [{ domain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }],
-          [{ operation: 'retrieve', targetDomain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }]
-        );
+        if (statusFilter !== 'ALL') {
+          return createPlan(
+            'SINGLE_DOMAIN',
+            [{ name: 'getFacultyAttendanceAudit', args: { statusFilter } }],
+            [{ domain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }],
+            [{ operation: 'retrieve', targetDomain: 'faculty_attendance', description: `Faculty attendance with statusFilter=${statusFilter}` }]
+          );
+        }
       }
 
       // 4.7 Ambiguous follow-up without antecedent: honest clarification
-      return createPlan(
-        'CLARIFICATION',
-        [],
-        [],
-        [],
-        {
-          clarificationMessage: 'Could you please clarify who or what you are referring to? For example, are you asking about faculty attendance or staff leave applications?',
-        }
-      );
+      // Only return clarification if current prompt does NOT explicitly specify an operational domain!
+      if (currentDomains.length === 0) {
+        return createPlan(
+          'CLARIFICATION',
+          [],
+          [],
+          [],
+          {
+            clarificationMessage: 'Could you please clarify who or what you are referring to? For example, are you asking about faculty attendance or staff leave applications?',
+          }
+        );
+      }
     }
   }
 

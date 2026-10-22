@@ -18,6 +18,7 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
   const [messages, setMessages] = useState<PrincipalAIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const prevScreenRef = React.useRef<PScreen | undefined>(currentScreen);
+  const activeTurnRef = React.useRef<string | null>(null);
 
   // 1. Auto-close Assistant on route navigation without deleting conversation or context
   React.useEffect(() => {
@@ -71,6 +72,9 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
+    const currentTurnId = `turn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    activeTurnRef.current = currentTurnId;
+
     const userMsgId = `user_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const userMessage: PrincipalAIMessage = {
       id: userMsgId,
@@ -95,7 +99,13 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
       const res = await aiApi.chat({
         messages: payloadMessages,
         portal: 'Principal',
+        turnId: currentTurnId,
       });
+
+      // Reject stale out-of-order network responses
+      if (activeTurnRef.current !== currentTurnId) {
+        return;
+      }
 
       const parsed = normalizeAssistantResponse(res);
 
@@ -115,6 +125,10 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err: any) {
+      if (activeTurnRef.current !== currentTurnId) {
+        return;
+      }
+
       let errorMessage = 'DigiSkwela AI encountered an error processing your request. Please try again.';
       let errorCode = 'UNKNOWN_ERROR';
       let canRetry = true;
@@ -153,7 +167,9 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
 
       setMessages(prev => [...prev, errorMsg]);
     } finally {
-      setIsLoading(false);
+      if (activeTurnRef.current === currentTurnId) {
+        setIsLoading(false);
+      }
     }
   };
 

@@ -43,6 +43,40 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
     // 2. Check if a tool output was just returned
     const lastToolMessage = [...request.messages].reverse().find(m => m.role === 'tool');
     if (lastToolMessage) {
+      // Duplicate Loop simulation trigger: model stubbornly keeps requesting the same tool
+      if (content.includes('[simulate_duplicate_tool]')) {
+        return {
+          message: { role: 'assistant', content: '' },
+          toolCalls: [{ id: 'call_mock_dup_1', name: 'getFacultyAttendanceAudit', arguments: {} }],
+          finishReason: 'tool_calls',
+          usage: { promptTokens: 30, completionTokens: 10, totalTokens: 40 }
+        };
+      }
+
+      // Sequential reasoning trigger: if attendance tool just ran and query requests leave correlation
+      if (
+        (content.includes('[simulate_sequential_tool]') || content.includes('investigate leave status') || content.includes('check if on approved leave')) &&
+        lastToolMessage.name === 'getFacultyAttendanceAudit'
+      ) {
+        const hasLeavesRun = request.messages.some(m => m.role === 'tool' && m.name === 'getPendingLeaves');
+        const leaveTool = (request.tools || []).find(t => t.name === 'getPendingLeaves');
+        if (!hasLeavesRun && leaveTool) {
+          return {
+            message: {
+              role: 'assistant',
+              content: 'Observed faculty check-in exception. Requesting pending leave records to correlate.'
+            },
+            toolCalls: [{
+              id: 'call_mock_seq_leaves',
+              name: leaveTool.name,
+              arguments: { limit: 10 }
+            }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 55, completionTokens: 20, totalTokens: 75 }
+          };
+        }
+      }
+
       let narrative = 'Here is the verified operational data retrieved from authoritative school records.';
       switch (lastToolMessage.name) {
         case 'getFacultyAttendanceAudit':
@@ -60,7 +94,9 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           }
           break;
         case 'getPendingLeaves':
-          if (content.includes('how many') || content.includes('count')) {
+          if (request.messages.some(m => m.role === 'tool' && m.name === 'getFacultyAttendanceAudit')) {
+            narrative = "Here is today's faculty attendance audit correlated with approved leave logs. Gate check-ins have been cross-checked against authorized leave records to identify operational coverage status.";
+          } else if (content.includes('how many') || content.includes('count')) {
             narrative = 'There is currently 1 faculty leave application pending administrative review in Leave Management.';
           } else if (content.includes('draft') || content.includes('communication') || content.includes('memo')) {
             narrative = 'Here is a draft communication regarding faculty leave coverage for your review:\n\nSubject: Administrative Notice: Faculty Leave Coordination and Class Coverage\n\nDear Faculty and Department Heads,\n\nPlease ensure all upcoming leave requests are submitted with advance notice to allow adequate classroom substitution and schedule adjustments.\n\nThank you for your cooperation in maintaining instructional continuity.\n\n(Draft for Principal review · Read-only AI assistance)';
@@ -179,6 +215,23 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
     }
 
     if (availableTools.length > 0) {
+      // 0. Parallel multi-tool dispatch trigger
+      if (content.includes('[simulate_parallel_tools]') || (content.includes('cross-check') && content.includes('leaves') && content.includes('attendance'))) {
+        const attendanceTool = availableTools.find(t => t.name === 'getFacultyAttendanceAudit');
+        const leaveTool = availableTools.find(t => t.name === 'getPendingLeaves');
+        if (attendanceTool && leaveTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [
+              { id: 'call_mock_att_par_1', name: attendanceTool.name, arguments: {} },
+              { id: 'call_mock_leave_par_2', name: leaveTool.name, arguments: { limit: 10 } }
+            ],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 50, completionTokens: 25, totalTokens: 75 }
+          };
+        }
+      }
+
       // 1. Meeting brief intent (check before general 'faculty' keyword)
       if (content.includes('meeting') || content.includes('brief')) {
         const briefTool = availableTools.find(t => t.name === 'generatePrincipalMeetingBrief');

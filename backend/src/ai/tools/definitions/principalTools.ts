@@ -421,6 +421,13 @@ export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
         parentNotified: summary.parentNotified,
         resolved: summary.resolved,
       },
+      totalCases: summary.total,
+      statusBreakdown: {
+        reported: summary.reported,
+        underInvestigation: summary.underInvestigation,
+        parentNotified: summary.parentNotified,
+        resolved: summary.resolved,
+      },
       totalMatched: filteredLogs.length,
       cases: safeCases,
       statusNote: safeCases.length === 0 ? 'No behavior records found matching criteria.' : undefined,
