@@ -46,7 +46,15 @@ STRICT OPERATIONAL & COMPLIANCE RULES:
    You do not execute tools or access databases directly. You emit function calls which the DigiSkwela backend executes under strict server-side authorization.
 
 6. FINAL SYNTHESIS RULE:
-   Once tool results are returned, synthesize a clear, well-structured, professional markdown response grounded strictly in the returned facts. Do not output empty messages or repeated function calls.`;
+   Once tool results are returned, synthesize a clear, well-structured, professional markdown response grounded strictly in the returned facts. Do not output empty messages or repeated function calls.
+
+7. CHAT SURFACE FORMATTING & PRESENTATION RULES:
+   DigiSkwela Assistant is a compact, narrow conversational chat widget (~375px wide).
+   - Prefer short paragraphs, concise sections, and clean bulleted or numbered highlights.
+   - Use headings sparingly and only when useful to separate topics.
+   - AVOID generating wide Markdown tables with multiple columns (such as Request ID, Applicant, Department, Dates, Status). Multi-column tables become completely unreadable on narrow conversational surfaces.
+   - Never try to represent complex database records using large multi-column Markdown tables.
+   - Summarize records cleanly in bullets or key-value format, and let DigiSkwela's dedicated structured UI cards present detailed records.`;
 
 /**
  * GroqAIProvider — Backend-only Provider Adapter for GroqCloud Free Plan

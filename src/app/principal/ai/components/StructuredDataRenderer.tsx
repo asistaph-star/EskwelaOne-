@@ -1,15 +1,167 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Users, Calendar, FileText, ShieldAlert, BarChart2, 
-  CheckCircle2, Clock, AlertTriangle, ArrowRight, Activity, Briefcase
+  CheckCircle2, Clock, AlertTriangle, ArrowRight, Activity, Briefcase,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { C } from '../../../shared/constants/tokens.js';
 import { PrincipalAIMessage, SafeNavAction } from '../types.js';
 import { PScreen } from '../../../shared/types';
+import { StatusBadge } from './StatusBadge.js';
+import { formatAiDate, formatDateRange } from '../utils/formatAiDate.js';
 
 interface StructuredDataRendererProps {
   data: NonNullable<PrincipalAIMessage['structuredData']>;
   onNavigate?: (screen: PScreen) => void;
+}
+
+/**
+ * Single Stacked Leave Record Card with Progressive Disclosure
+ */
+function LeaveRecordCard({ leave, index }: { leave: any; index: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const applicant = leave.applicantDisplayName || leave.teacherName || leave.applicant || 'Faculty Member';
+  const dates = formatDateRange(leave.startDate, leave.endDate, leave.daysCount);
+  const status = leave.status || 'Pending';
+  const submittedOn = leave.submittedOn ? formatAiDate(leave.submittedOn) : null;
+  const requestId = leave.requestId;
+  const department = leave.department;
+
+  return (
+    <div
+      data-testid={`leave-card-${index}`}
+      style={{
+        padding: '10px 12px',
+        background: '#FFFFFF',
+        border: '1px solid #CBD5E1',
+        borderRadius: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+      }}
+    >
+      {/* Header: Title + Status Pill */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+        <div>
+          <div style={{ fontSize: 9.5, fontWeight: 700, color: C.m700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Leave Request
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, marginTop: 1 }}>
+            {applicant}
+          </div>
+        </div>
+        <StatusBadge status={status} />
+      </div>
+
+      {/* Primary Key-Values */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px 10px', marginTop: 2 }}>
+        {department && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Department
+            </span>
+            <span style={{ fontSize: 11.5, fontWeight: 500, color: C.t1 }}>
+              {department}
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            Leave Type
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 500, color: C.t1 }}>
+            {leave.leaveType || 'General Leave'}
+          </span>
+        </div>
+
+        <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            Dates
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 500, color: C.t1 }}>
+            {dates}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            Days
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 500, color: C.t1 }}>
+            {leave.daysCount ?? 1} day{leave.daysCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+            Status
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 500, color: C.t1 }}>
+            {status}
+          </span>
+        </div>
+      </div>
+
+      {/* Progressive Disclosure (View details / Hide details) */}
+      {(requestId || submittedOn) && (
+        <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 6, marginTop: 2 }}>
+          <button
+            type="button"
+            data-testid={`toggle-leave-details-${index}`}
+            onClick={() => setIsExpanded(prev => !prev)}
+            aria-expanded={isExpanded}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: C.m700,
+              fontSize: 10.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: 0,
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            <span>{isExpanded ? 'Hide details' : 'View details'}</span>
+          </button>
+
+          {isExpanded && (
+            <div
+              data-testid={`leave-details-expanded-${index}`}
+              style={{
+                marginTop: 6,
+                padding: '8px 10px',
+                background: '#F8FAFC',
+                borderRadius: 6,
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 5,
+              }}
+            >
+              {requestId && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase' }}>Request ID</span>
+                  <span style={{ fontSize: 10.5, color: C.t2, fontFamily: 'monospace' }}>{requestId}</span>
+                </div>
+              )}
+              {submittedOn && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: C.t3, textTransform: 'uppercase' }}>Submitted</span>
+                  <span style={{ fontSize: 11, color: C.t2 }}>{submittedOn}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRendererProps) {
@@ -28,7 +180,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
           <div style={{ fontSize: 13, fontWeight: 700, color: C.m900, fontFamily: "'Fraunces', serif" }}>
             Faculty Gate Attendance Audit
           </div>
-          <span style={{ fontSize: 10, color: C.t3 }}>Date: {raw.asOfDate}</span>
+          <span style={{ fontSize: 10, color: C.t3 }}>Date: {raw.asOfDate ? formatAiDate(raw.asOfDate) : 'Today'}</span>
         </div>
 
         {/* Attendance Summary Grid */}
@@ -64,48 +216,30 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
           </div>
         )}
 
-        {/* Detailed Records Preview if present */}
+        {/* Detailed Records Preview as stacked cards */}
         {records.length > 0 && (
-          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid #CBD5E1', borderRadius: 6, background: C.paper }}>
-            {records.map((r: any, idx: number) => {
-              const statusDisplay = r.attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
-                ? 'No gate check-in was recorded today and no approved leave record was found'
-                : r.attendanceStatus;
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    padding: '8px 10px',
-                    borderBottom: idx < records.length - 1 ? '1px solid #E2E8F0' : 'none',
-                    fontSize: 11,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: C.t1 }}>{r.teacherName}</span>
-                    <span style={{ fontSize: 10, color: C.t3 }}>{r.department || 'General'}</span>
-                  </div>
-                  <span
-                    style={{ 
-                      alignSelf: 'flex-start',
-                      fontSize: 9.5, 
-                      fontWeight: 600,
-                      padding: '2px 7px',
-                      borderRadius: 4,
-                      background: r.attendanceStatus === 'COMPLETED' ? C.greenBg : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blueBg : '#E2E8F0'),
-                      color: r.attendanceStatus === 'COMPLETED' ? C.green : (r.attendanceStatus === 'ON_APPROVED_LEAVE' ? C.blue : C.t2),
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {r.attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
-                      ? 'No gate check-in / No approved leave'
-                      : statusDisplay}
-                  </span>
+          <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid #CBD5E1', borderRadius: 6, background: C.paper, display: 'flex', flexDirection: 'column' }}>
+            {records.map((r: any, idx: number) => (
+              <div
+                key={idx}
+                style={{
+                  padding: '8px 10px',
+                  borderBottom: idx < records.length - 1 ? '1px solid #E2E8F0' : 'none',
+                  fontSize: 11,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, color: C.t1 }}>{r.teacherName}</span>
+                  <span style={{ fontSize: 10, color: C.t3 }}>{r.department || 'General'}</span>
                 </div>
-              );
-            })}
+                <div style={{ alignSelf: 'flex-start' }}>
+                  <StatusBadge status={r.attendanceStatus} />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -164,9 +298,9 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     );
   }
 
-  // 3. Pending Leaves
+  // 3. Pending Leaves (Rule A: Stacked Record Cards)
   if (type === 'leaves') {
-    const leaves = raw.leaves || [];
+    const leaves = raw.leaves || raw.requests || [];
     const count = raw.totalPending ?? leaves.length;
 
     return (
@@ -183,19 +317,9 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             No pending leave requests found. All faculty leave applications have been reviewed.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto' }}>
             {leaves.map((l: any, i: number) => (
-              <div key={i} style={{ padding: '8px 10px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: 11, color: C.t1 }}>{l.teacherName}</span>
-                  <span style={{ fontSize: 10, color: C.m700, background: C.m50, padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>
-                    {l.leaveType}
-                  </span>
-                </div>
-                <div style={{ fontSize: 10, color: C.t3, marginTop: 3 }}>
-                  {l.department ? `${l.department} · ` : ''}{l.startDate} to {l.endDate} ({l.daysCount} day{l.daysCount !== 1 ? 's' : ''})
-                </div>
-              </div>
+              <LeaveRecordCard key={l.requestId || i} leave={l} index={i} />
             ))}
           </div>
         )}
@@ -228,18 +352,23 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             No upcoming events were found for the selected period.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-            {events.map((e: any, i: number) => (
-              <div key={i} style={{ padding: '8px 10px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: 11, color: C.t1 }}>{e.title}</span>
-                  <span style={{ fontSize: 10, color: C.t3 }}>{e.startDate}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+            {events.map((e: any, i: number) => {
+              const dateDisplay = formatDateRange(e.startDate, e.endDate);
+              return (
+                <div key={i} style={{ padding: '9px 11px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 12, color: C.t1 }}>{e.title}</span>
+                    <span style={{ fontSize: 10, color: C.m700, background: C.m50, padding: '2px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>
+                      {dateDisplay}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.t2, marginTop: 4 }}>
+                    Audience: {e.audience || 'All'} {e.location ? `· Location: ${e.location}` : ''}
+                  </div>
                 </div>
-                <div style={{ fontSize: 10, color: C.t2, marginTop: 2 }}>
-                  Audience: {e.audience || 'All'} {e.location ? `· Location: ${e.location}` : ''}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -283,14 +412,16 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
         </div>
 
         {cases.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
             {cases.map((c: any, i: number) => (
-              <div key={i} style={{ padding: '6px 8px', background: C.paper, border: '1px solid #CBD5E1', borderRadius: 4, fontSize: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div key={i} style={{ padding: '8px 10px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 6, fontSize: 11 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontWeight: 600, color: C.t1 }}>{c.studentName} (Gr. {c.gradeLevel})</span>
-                  <span style={{ fontWeight: 600, color: C.m700 }}>{c.category}</span>
+                  <StatusBadge status={c.status} />
                 </div>
-                <div style={{ color: C.t3, marginTop: 1 }}>Status: {c.status} · Date: {c.incidentDate}</div>
+                <div style={{ color: C.t3, fontSize: 10, marginTop: 3 }}>
+                  Category: <span style={{ color: C.t2, fontWeight: 500 }}>{c.category}</span> {c.incidentDate ? `· Date: ${formatAiDate(c.incidentDate)}` : ''}
+                </div>
               </div>
             ))}
           </div>
@@ -319,7 +450,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             Completeness Status: {raw.completenessStatus}
           </div>
           <div style={{ fontSize: 11, color: C.t1, marginTop: 4, lineHeight: 1.4 }}>
-            {raw.annualPassRate !== null ? (
+            {raw.annualPassRate !== null && raw.annualPassRate !== undefined ? (
               <span style={{ fontWeight: 700 }}>Annual Promotion Pass Rate: {raw.annualPassRate}%</span>
             ) : (
               <span>Annual promotion pass rate is not available because complete T1–T4 data has not yet been submitted. Current records reflect partial-term averages only.</span>
@@ -412,7 +543,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {dates.map((dt: any, i: number) => (
                 <div key={i} style={{ fontSize: 10, color: C.t2 }}>
-                  • <span style={{ fontWeight: 600 }}>{dt.date}:</span> {dt.title} {dt.audience ? `(${dt.audience})` : ''}
+                  • <span style={{ fontWeight: 600 }}>{dt.date ? formatAiDate(dt.date) : ''}:</span> {dt.title} {dt.audience ? `(${dt.audience})` : ''}
                 </div>
               ))}
             </div>
@@ -438,7 +569,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             Weekly Operations Review
           </div>
           <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
-            Reporting Period: {period.label || `${period.startDate} to ${period.endDate}`}
+            Reporting Period: {period.label || `${formatAiDate(period.startDate)} to ${formatAiDate(period.endDate)}`}
           </div>
         </div>
 

@@ -230,7 +230,8 @@ export function AssistantMessageItem({ message, onNavigate, onRetry }: Assistant
                 <div 
                   data-testid="assistant-narrative-text"
                   style={{
-                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    wordBreak: 'normal',
                     color: C.t1,
                     marginBottom: message.structuredData ? 10 : 0,
                   }}

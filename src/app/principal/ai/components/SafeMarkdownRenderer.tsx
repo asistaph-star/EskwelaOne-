@@ -1,6 +1,8 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens.js';
 
+import { AdaptiveMarkdownTable } from './AdaptiveMarkdownTable.js';
+
 interface SafeMarkdownRendererProps {
   content: string;
 }
@@ -93,79 +95,21 @@ export function SafeMarkdownRenderer({ content }: SafeMarkdownRendererProps) {
         
         // Find separator line (e.g. |---|---|)
         const hasSeparator = tableLines[1].replace(/[\s\-|:]/g, '') === '';
-        const bodyRows = hasSeparator ? tableLines.slice(2) : tableLines.slice(1);
+        const bodyLines = hasSeparator ? tableLines.slice(2) : tableLines.slice(1);
+        const bodyRows = bodyLines.map(rowStr =>
+          rowStr
+            .slice(1, -1)
+            .split('|')
+            .map(c => c.trim())
+        );
 
         elements.push(
-          <div
+          <AdaptiveMarkdownTable
             key={`tbl-${elements.length}`}
-            style={{
-              overflowX: 'auto',
-              margin: '8px 0',
-              borderRadius: 6,
-              border: '1px solid #CBD5E1',
-              background: '#FFFFFF',
-            }}
-          >
-            <table
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: 11,
-                textAlign: 'left',
-                fontFamily: "'Inter', sans-serif",
-              }}
-            >
-              <thead>
-                <tr style={{ background: C.m900, color: '#FFFFFF' }}>
-                  {headerRow.map((cell, cIdx) => (
-                    <th
-                      key={cIdx}
-                      style={{
-                        padding: '6px 8px',
-                        fontWeight: 700,
-                        fontSize: 10.5,
-                        letterSpacing: '0.02em',
-                        borderRight: cIdx < headerRow.length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                      }}
-                    >
-                      {renderInline(cell)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {bodyRows.map((rowStr, rIdx) => {
-                  const cells = rowStr
-                    .slice(1, -1)
-                    .split('|')
-                    .map(c => c.trim());
-                  return (
-                    <tr
-                      key={rIdx}
-                      style={{
-                        background: rIdx % 2 === 1 ? '#F1F5F9' : '#FFFFFF',
-                        borderTop: '1px solid #E2E8F0',
-                      }}
-                    >
-                      {cells.map((cell, cIdx) => (
-                        <td
-                          key={cIdx}
-                          style={{
-                            padding: '5px 8px',
-                            color: C.t1,
-                            fontSize: 11,
-                            borderRight: cIdx < cells.length - 1 ? '1px solid #E2E8F0' : 'none',
-                          }}
-                        >
-                          {renderInline(cell)}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            headerRow={headerRow}
+            bodyRows={bodyRows}
+            renderInline={renderInline}
+          />
         );
         continue;
       }
