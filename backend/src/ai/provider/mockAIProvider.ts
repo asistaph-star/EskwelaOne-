@@ -46,13 +46,27 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       let narrative = 'Here is the verified operational data retrieved from authoritative school records.';
       switch (lastToolMessage.name) {
         case 'getFacultyAttendanceAudit':
-          narrative = "Here is today's faculty attendance audit based on verified gate records and leave logs.";
+          if (content.includes('cross-check') || content.includes('leaves') || content.includes('against')) {
+            narrative = "Here is today's faculty attendance audit correlated with approved leave logs. Gate check-ins have been cross-checked against authorized leave records to identify operational coverage status.";
+          } else {
+            narrative = "Here is today's faculty attendance audit based on verified gate records and leave logs.";
+          }
           break;
         case 'getSchoolOperationalFactSheet':
-          narrative = 'Here is the authoritative daily executive operational fact sheet for Calulut Integrated School.';
+          if (content.includes('review') || content.includes('attention') || content.includes('unresolved') || content.includes('incomplete') || content.includes('exception')) {
+            narrative = "Here are the operational items requiring administrative review today: 1 faculty leave application is pending approval, 1 student behavior incident is currently active, and annual academic analytics remain partial pending complete term grade submissions.";
+          } else {
+            narrative = 'Here is the authoritative daily executive operational fact sheet for Calulut Integrated School.';
+          }
           break;
         case 'getPendingLeaves':
-          narrative = 'Here are the active pending leave applications requiring administrative review.';
+          if (content.includes('how many') || content.includes('count')) {
+            narrative = 'There is currently 1 faculty leave application pending administrative review in Leave Management.';
+          } else if (content.includes('draft') || content.includes('communication') || content.includes('memo')) {
+            narrative = 'Here is a draft communication regarding faculty leave coverage for your review:\n\nSubject: Administrative Notice: Faculty Leave Coordination and Class Coverage\n\nDear Faculty and Department Heads,\n\nPlease ensure all upcoming leave requests are submitted with advance notice to allow adequate classroom substitution and schedule adjustments.\n\nThank you for your cooperation in maintaining instructional continuity.\n\n(Draft for Principal review · Read-only AI assistance)';
+          } else {
+            narrative = 'Here are the active pending leave applications requiring administrative review.';
+          }
           break;
         case 'getUpcomingEvents':
           narrative = 'Here are the upcoming school calendar events and schedules for the active period.';
@@ -61,7 +75,13 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           narrative = 'Here is the administrative summary of student behavior incidents and disciplinary cases.';
           break;
         case 'getAcademicAnalytics':
-          narrative = 'Here are the authorized academic performance analytics for Calulut Integrated School.';
+          if (content.includes('why') || content.includes('prevent') || content.includes('incomplete') || content.includes('completeness')) {
+            narrative = 'Annual academic analytics and school-wide pass rates require complete verified grade submissions across all four quarters (T1, T2, T3, T4). Because grade submissions are currently recorded for partial terms only, annual promotion metrics remain pending until all four quarters are completed and finalized.';
+          } else if (content.includes('draft') || content.includes('reminder') || content.includes('communication') || content.includes('memo')) {
+            narrative = 'Here is a draft reminder for faculty regarding grade submissions for your review:\n\nSubject: Reminder: Submission and Finalization of Term Grades\n\nDear Faculty Members,\n\nPlease be reminded to review and finalize all pending student grade submissions for the current term in your Gradebook. Complete grade entries across all subjects are required to enable school-wide academic evaluation and student records processing.\n\nPlease ensure all submissions are completed before the scheduled administrative deadline. Thank you for your continued dedication to academic excellence.\n\n(Draft for Principal review · Read-only AI assistance)';
+          } else {
+            narrative = 'Here are the authorized academic performance analytics for Calulut Integrated School.';
+          }
           break;
         case 'generatePrincipalMeetingBrief':
           narrative = 'Here is your executive meeting brief compiled from authoritative school records.';
@@ -134,9 +154,91 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       };
     }
 
+    // 3. System Help & Contextual Navigation Guidance (Prioritize before tool execution)
+    if (/\b(where\s*(can|do)\s*i|how\s*do\s*i|find\s*or\s*understand|system\s*help|how\s*can\s*i)\b/i.test(content)) {
+      let helpText = 'DigiSkwela provides dedicated administrative modules in the sidebar: Dashboard Overview for executive summaries, Gate Attendance Monitoring for live gate scans, Leave Management for staff leave approvals, Behavioral Reports for student incident logs, and Academic Analytics for quarterly gradebook tracking.';
+
+      if (content.includes('attendance') || content.includes('gate') || content.includes('check-in')) {
+        helpText = 'You can monitor live faculty gate attendance and check-in records in the Gate Attendance Monitoring module. You can also view registered profiles and historical schedules in Teacher Management.';
+      } else if (content.includes('leave') || content.includes('vacation')) {
+        helpText = 'You can review, approve, or deny pending faculty leave applications in the Leave Management module under Administration.';
+      } else if (content.includes('behavior') || content.includes('discipline') || content.includes('incident')) {
+        helpText = 'You can view logged student disciplinary incidents and behavioral cases in the Behavioral Reports module under Operations.';
+      } else if (content.includes('academic') || content.includes('grade') || content.includes('completeness')) {
+        helpText = 'You can inspect grading progress and quarterly performance summaries in the Academic Analytics module under Administration.';
+      }
+
+      return {
+        message: {
+          role: 'assistant',
+          content: helpText
+        },
+        finishReason: 'stop',
+        usage: { promptTokens: 25, completionTokens: 35, totalTokens: 60 }
+      };
+    }
+
     if (availableTools.length > 0) {
-      // Check for attendance intent
-      if (content.includes('attendance') || content.includes('check-in') || content.includes('faculty')) {
+      // 1. Meeting brief intent (check before general 'faculty' keyword)
+      if (content.includes('meeting') || content.includes('brief')) {
+        const briefTool = availableTools.find(t => t.name === 'generatePrincipalMeetingBrief');
+        if (briefTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_brief_1', name: briefTool.name, arguments: { meetingType: 'GENERAL' } }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
+
+      // 2. Draft communication / memo intent
+      if (content.includes('draft') || content.includes('communication') || content.includes('memo') || content.includes('reminder')) {
+        const academicTool = availableTools.find(t => t.name === 'getAcademicAnalytics');
+        if (academicTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_draft_1', name: academicTool.name, arguments: {} }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
+
+      // 3. Weekly operations report intent
+      if (
+        content.includes('weekly') || 
+        content.includes('operations report') || 
+        content.includes('weekly report') || 
+        (content.includes('this week') && content.includes('operation')) ||
+        content.includes('school operations')
+      ) {
+        const reportTool = availableTools.find(t => t.name === 'generateWeeklyOperationsReport');
+        if (reportTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_wrep_1', name: reportTool.name, arguments: {} }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
+
+      // 4. Academic analytics intent (including explain-why completeness)
+      if (content.includes('academic') || content.includes('grade') || content.includes('performance') || content.includes('pass rate') || content.includes('completeness') || content.includes('preventing') || content.includes('promotion rate') || content.includes('why')) {
+        const academicTool = availableTools.find(t => t.name === 'getAcademicAnalytics');
+        if (academicTool) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: [{ id: 'call_mock_acad_1', name: academicTool.name, arguments: {} }],
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
+          };
+        }
+      }
+
+      // 5. Attendance intent (including cross-checking against approved leaves)
+      if (content.includes('attendance') || content.includes('check-in') || content.includes('gate records') || content.includes('cross-check') || content.includes('faculty')) {
         const attendanceTool = availableTools.find(t => t.name === 'getFacultyAttendanceAudit');
         if (attendanceTool) {
           return {
@@ -148,20 +250,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
         }
       }
 
-      // Check for fact sheet / operations intent
-      if (content.includes('fact sheet') || content.includes('pulse') || content.includes('operations') || content.includes('how many students') || content.includes('attention')) {
-        const factSheetTool = availableTools.find(t => t.name === 'getSchoolOperationalFactSheet');
-        if (factSheetTool) {
-          return {
-            message: { role: 'assistant', content: '' },
-            toolCalls: [{ id: 'call_mock_facts_1', name: factSheetTool.name, arguments: {} }],
-            finishReason: 'tool_calls',
-            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
-          };
-        }
-      }
-
-      // Check for leaves intent
+      // 6. Leaves intent
       if (content.includes('leave') || content.includes('vacation') || content.includes('pending')) {
         const leaveTool = availableTools.find(t => t.name === 'getPendingLeaves');
         if (leaveTool) {
@@ -174,21 +263,8 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
         }
       }
 
-      // Check for academic analytics intent
-      if (content.includes('academic') || content.includes('grades') || content.includes('performance') || content.includes('pass rate') || content.includes('completeness')) {
-        const academicTool = availableTools.find(t => t.name === 'getAcademicAnalytics');
-        if (academicTool) {
-          return {
-            message: { role: 'assistant', content: '' },
-            toolCalls: [{ id: 'call_mock_acad_1', name: academicTool.name, arguments: {} }],
-            finishReason: 'tool_calls',
-            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
-          };
-        }
-      }
-
-      // Check for events intent
-      if (content.includes('event') || content.includes('calendar') || content.includes('schedule') || content.includes('coming up') || content.includes('this week')) {
+      // 7. Events intent
+      if (content.includes('event') || content.includes('calendar') || content.includes('schedule') || content.includes('coming up') || (content.includes('this week') && !content.includes('operation'))) {
         const eventTool = availableTools.find(t => t.name === 'getUpcomingEvents');
         if (eventTool) {
           return {
@@ -200,8 +276,8 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
         }
       }
 
-      // Check for behavior intent
-      if (content.includes('behavior') || content.includes('discipline') || content.includes('incidents')) {
+      // 8. Behavior intent
+      if (content.includes('behavior') || content.includes('discipline') || content.includes('incident')) {
         const behaviorTool = availableTools.find(t => t.name === 'getAdministrativeBehaviorSummary');
         if (behaviorTool) {
           return {
@@ -213,26 +289,13 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
         }
       }
 
-      // Check for meeting brief intent
-      if (content.includes('brief') || content.includes('meeting') || content.includes('prepare')) {
-        const briefTool = availableTools.find(t => t.name === 'generatePrincipalMeetingBrief');
-        if (briefTool) {
+      // 9. Fact sheet / operations / needs review / exceptions intent
+      if (content.includes('fact sheet') || content.includes('pulse') || content.includes('operations') || content.includes('how many students') || content.includes('attention') || content.includes('review') || content.includes('unresolved') || content.includes('incomplete') || content.includes('exception')) {
+        const factSheetTool = availableTools.find(t => t.name === 'getSchoolOperationalFactSheet');
+        if (factSheetTool) {
           return {
             message: { role: 'assistant', content: '' },
-            toolCalls: [{ id: 'call_mock_brief_1', name: briefTool.name, arguments: { meetingType: 'GENERAL' } }],
-            finishReason: 'tool_calls',
-            usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
-          };
-        }
-      }
-
-      // Check for weekly operations report intent
-      if (content.includes('weekly') || content.includes('operations report') || content.includes('weekly report')) {
-        const reportTool = availableTools.find(t => t.name === 'generateWeeklyOperationsReport');
-        if (reportTool) {
-          return {
-            message: { role: 'assistant', content: '' },
-            toolCalls: [{ id: 'call_mock_wrep_1', name: reportTool.name, arguments: {} }],
+            toolCalls: [{ id: 'call_mock_facts_1', name: factSheetTool.name, arguments: {} }],
             finishReason: 'tool_calls',
             usage: { promptTokens: 40, completionTokens: 15, totalTokens: 55 }
           };

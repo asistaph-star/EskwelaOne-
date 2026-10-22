@@ -361,9 +361,40 @@ export const AIService = {
         tokenUsage
       });
 
+      let navigationActions: NormalizedNavigationAction[] | undefined = undefined;
+      const lowerReply = (firstTurn.message.content || '').toLowerCase();
+      const lowerQuery = (lastUserMsg?.content || '').toLowerCase();
+
+      if (lowerQuery.includes('attendance') || lowerReply.includes('gate attendance monitoring')) {
+        navigationActions = [{
+          label: 'View Faculty Attendance',
+          screen: 'p-monitoring',
+          description: 'Open Faculty Attendance monitoring tab',
+        }];
+      } else if (lowerQuery.includes('leave') || lowerReply.includes('leave management')) {
+        navigationActions = [{
+          label: 'View Leave Approvals',
+          screen: 'p-leaves',
+          description: 'Open Leave Management tab',
+        }];
+      } else if (lowerQuery.includes('behavior') || lowerReply.includes('behavioral reports')) {
+        navigationActions = [{
+          label: 'View Behavior Records',
+          screen: 'p-behavior',
+          description: 'Open Student Behavior tab',
+        }];
+      } else if (lowerQuery.includes('academic') || lowerReply.includes('academic analytics')) {
+        navigationActions = [{
+          label: 'View Academic Analytics',
+          screen: 'p-analytics',
+          description: 'Open Academic Performance tab',
+        }];
+      }
+
       return {
         message: firstTurn.message,
         responseType: 'text',
+        navigationActions,
         traceId,
         scopeDecision: 'ALLOWED',
         toolsExecuted: []
