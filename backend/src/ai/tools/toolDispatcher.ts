@@ -51,7 +51,10 @@ export async function dispatchTool(
   }
 
   // 4. Strict Zod Schema Validation
-  const parseResult = tool.inputSchema.safeParse(rawArgs);
+  const cleanedArgs = rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)
+    ? Object.fromEntries(Object.entries(rawArgs).filter(([_, v]) => v !== null))
+    : rawArgs;
+  const parseResult = tool.inputSchema.safeParse(cleanedArgs);
   if (!parseResult.success) {
     throw new AppError(
       400,

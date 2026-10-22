@@ -26,7 +26,7 @@ class ToolRegistry {
 
     for (const tool of this.tools.values()) {
       const hasRole = tool.allowedRoles.some(r => userRoles.includes(r));
-      const hasPermissions = tool.requiredPermissions.every(p => userPermissions.includes(p));
+      const hasPermissions = userPermissions.includes('*') || tool.requiredPermissions.every(p => userPermissions.includes(p));
 
       if (hasRole && hasPermissions) {
         authorizedDeclarations.push(tool.declaration);

@@ -58,6 +58,7 @@ export interface AITokenUsage {
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
+  neurons?: number;
 }
 
 export interface AIFailoverMetadata {

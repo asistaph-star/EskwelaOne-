@@ -101,7 +101,7 @@ export class CloudflareAIProvider implements DigiSkwelaAIProvider {
 
         cfMessages.push({
           role: 'assistant',
-          content: msg.content || (toolCallsFormatted ? null : ''),
+          content: msg.content || '',
           tool_calls: toolCallsFormatted,
         });
       } else if (msg.role === 'user') {
@@ -279,6 +279,7 @@ export class CloudflareAIProvider implements DigiSkwelaAIProvider {
           promptTokens: data.usage.prompt_tokens || 0,
           completionTokens: data.usage.completion_tokens || 0,
           totalTokens: data.usage.total_tokens || 0,
+          neurons: typeof data.usage.neurons === 'number' ? data.usage.neurons : undefined,
         } : undefined,
       };
 
