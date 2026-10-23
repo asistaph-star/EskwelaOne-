@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import {
   DigiSkwelaAIProvider,
   AICompletionRequest,
@@ -275,6 +276,17 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
   }
 
   /**
+   * Sanitizes internal call IDs to strictly adhere to OpenAI Responses API's <= 64 char string constraint.
+   */
+  private toSafeWireCallId(rawId: string): string {
+    if (!rawId) return 'call_default';
+    if (rawId.length <= 48) return rawId;
+    const hash = crypto.createHash('sha256').update(rawId).digest('hex').slice(0, 16);
+    const suffix = rawId.split('_').pop() || '0';
+    return `call_${hash}_${suffix}`.slice(0, 48);
+  }
+
+  /**
    * Maps DigiSkwela conversation messages into the Responses API `input` item structure.
    */
   private formatInputItems(messages: AIMessage[]): { instructions?: string; input: any[] } {
@@ -300,10 +312,11 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
         if (msg.toolCalls && msg.toolCalls.length > 0) {
           // Model function_call items
           for (const tc of msg.toolCalls) {
+            const wireCallId = this.toSafeWireCallId(tc.id);
             inputItems.push({
               type: 'function_call',
-              id: `fc_${tc.id}`,
-              call_id: tc.id,
+              id: `fc_${wireCallId}`.slice(0, 64),
+              call_id: wireCallId,
               name: tc.name,
               arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments),
             });
@@ -318,17 +331,18 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
       }
 
       if (msg.role === 'tool') {
-        const callId = msg.toolCallId || 'call_0';
+        const rawCallId = msg.toolCallId || 'call_0';
+        const wireCallId = this.toSafeWireCallId(rawCallId);
         const toolName = msg.name || 'unspecified_tool';
-        const hasMatchingCall = inputItems.some(item => item.type === 'function_call' && item.call_id === callId);
+        const hasMatchingCall = inputItems.some(item => item.type === 'function_call' && item.call_id === wireCallId);
 
         if (!hasMatchingCall) {
           // Wire protocol normalization: OpenAI Responses API requires every function_call_output
           // to be preceded by a corresponding function_call item in input.
           inputItems.push({
             type: 'function_call',
-            id: `fc_${callId}`,
-            call_id: callId,
+            id: `fc_${wireCallId}`.slice(0, 64),
+            call_id: wireCallId,
             name: toolName,
             arguments: '{}',
           });
@@ -337,7 +351,7 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
         // Function output item matching call_id
         inputItems.push({
           type: 'function_call_output',
-          call_id: callId,
+          call_id: wireCallId,
           output: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
         });
       }
