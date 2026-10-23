@@ -152,12 +152,12 @@ export function detectOperations(lower: string): Set<SupportedOperation> {
   }
 
   // correlate
-  if (/\b(correlate|cross-?check|link|relationship|overlap|related|relate(\s+to\s+one\s+another)?|explained\s+by|separate\s+anything\s+unrelated|same\s+faculty|involve\s+the\s+same)\b/i.test(lower)) {
+  if (/\b(correlate|cross-?check|link|relationship|overlap|related|relate(\s+to\s+one\s+another)?|connected|connection|explained\s+by|separate\s+anything\s+unrelated|separate\s+the\s+unrelated|same\s+faculty|involve\s+the\s+same)\b/i.test(lower)) {
     ops.add('correlate');
   }
 
   // prioritize
-  if (/\b(prioritize|priority|order\s+for\s+what\s+i\s+should\s+review|what\s+should\s+i\s+(look\s+at|review|check)\s+first|which.*first|review\s+order|order\s+of\s+review|short\s+order)\b/i.test(lower)) {
+  if (/\b(prioritize|priority|order\s+for\s+what\s+i\s+should\s+review|what\s+should\s+i\s+(look\s+at|review|check)\s+first|suggest\s+what\s+i\s+should\s+review\s+first|which.*first|review\s+order|order\s+of\s+review|short\s+order)\b/i.test(lower)) {
     ops.add('prioritize');
   }
 
@@ -206,7 +206,7 @@ function createPlan(
   for (const d of domainObs) {
     obligations.push({
       domain: d.domain,
-      operation: opObs.length > 0 ? opObs[0].operation : 'retrieve',
+      operation: 'retrieve',
       description: d.description,
     });
   }
@@ -746,13 +746,24 @@ export function buildRequestPlan(
     );
   }
 
-  // ─── 8. Attention Sweep Intent ("What needs my review/attention today?") ─
+  // ─── 8. Multi-Domain & Attention Sweep Evaluation ────────────────────────
+  const ops = detectOperations(lower);
+
+  const mentionedDomains: OperationalDomainName[] = [];
+  if (DOMAIN_CATALOG.leaves.keywords.test(lower)) mentionedDomains.push('leaves');
+  if (DOMAIN_CATALOG.faculty_attendance.keywords.test(lower)) mentionedDomains.push('faculty_attendance');
+  if (DOMAIN_CATALOG.behavior.keywords.test(lower)) mentionedDomains.push('behavior');
+  if (DOMAIN_CATALOG.academics.keywords.test(lower)) mentionedDomains.push('academics');
+  if (DOMAIN_CATALOG.events.keywords.test(lower)) mentionedDomains.push('events');
+  if (DOMAIN_CATALOG.overview.keywords.test(lower)) mentionedDomains.push('overview');
+
   const isAttentionSweep = (
-    /\b(what\s+needs\s+(my\s+)?(review|attention)|what\s+should\s+i\s+(review|attend\s+to)|items?\s+needing\s+(review|attention)|operational\s+exceptions?)\b/i.test(lower) ||
-    (/\b(review|attention)\s+today\b/i.test(lower) && /\b(what|need|item|exception|pulse)\b/i.test(lower))
+    /\b(what\s+needs\s+(my\s+)?(review|attention)|what\s+should\s+i\s+(review|attend\s+to|pay\s+attention\s+to|be\s+paying\s+attention\s+to)|items?\s+needing\s+(review|attention)|operational\s+exceptions?)\b/i.test(lower) ||
+    (/\b(review|attention)\s+today\b/i.test(lower) && /\b(what|need|item|exception|pulse|paying)\b/i.test(lower))
   );
 
-  if (isAttentionSweep) {
+  // Pure generic sweep (e.g. "What needs my review today?") without explicit domains or correlation
+  if (isAttentionSweep && mentionedDomains.length === 0 && !ops.has('correlate')) {
     const tools: PlannedToolDispatch[] = [];
     const domainObs: DomainObligation[] = [];
     const opObs: OperationObligation[] = [];
@@ -795,16 +806,12 @@ export function buildRequestPlan(
     }
   }
 
-  // ─── 9. Multi-Operation & General Inquiries ────────────────────────────
-  const ops = detectOperations(lower);
+  // If attention sweep or correlation was requested without explicit domains, populate core operational exception domains:
+  if ((isAttentionSweep || ops.has('correlate')) && mentionedDomains.length === 0) {
+    mentionedDomains.push('faculty_attendance', 'leaves', 'behavior');
+  }
 
-  const mentionedDomains: OperationalDomainName[] = [];
-  if (DOMAIN_CATALOG.leaves.keywords.test(lower)) mentionedDomains.push('leaves');
-  if (DOMAIN_CATALOG.faculty_attendance.keywords.test(lower)) mentionedDomains.push('faculty_attendance');
-  if (DOMAIN_CATALOG.behavior.keywords.test(lower)) mentionedDomains.push('behavior');
-  if (DOMAIN_CATALOG.academics.keywords.test(lower)) mentionedDomains.push('academics');
-  if (DOMAIN_CATALOG.events.keywords.test(lower)) mentionedDomains.push('events');
-  if (DOMAIN_CATALOG.overview.keywords.test(lower)) mentionedDomains.push('overview');
+  // ─── 9. Multi-Operation & General Inquiries ────────────────────────────
 
   // Simple Narrow Query: exactly 1 domain and 1 operation (count or retrieve)
   if (mentionedDomains.length === 1 && ops.size === 1 && (ops.has('count') || ops.has('retrieve')) && !ops.has('draft') && !ops.has('explain') && !ops.has('prioritize') && !ops.has('correlate')) {

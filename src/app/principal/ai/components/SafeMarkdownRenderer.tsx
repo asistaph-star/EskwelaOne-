@@ -16,23 +16,8 @@ interface SafeMarkdownRendererProps {
 export function SafeMarkdownRenderer({ content, hasStructuredData = false }: SafeMarkdownRendererProps) {
   if (!content) return null;
 
-  // Global Deduplication: If rich structured cards already represent the detailed report,
-  // render only the executive introduction paragraph to prevent repeating the entire report twice.
-  let effectiveContent = content;
-  if (hasStructuredData) {
-    const paragraphs = content.split(/\n\s*\n/);
-    if (paragraphs.length > 1) {
-      const intro = paragraphs.find(p => !p.trim().startsWith('#') && p.trim().length > 10);
-      if (intro) {
-        effectiveContent = intro.trim();
-      } else {
-        effectiveContent = paragraphs[0].trim().replace(/^#+\s*/, '');
-      }
-    }
-  }
-
   // Split into lines for block-level parsing
-  const lines = effectiveContent.split('\n');
+  const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let i = 0;
 

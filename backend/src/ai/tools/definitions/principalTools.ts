@@ -71,13 +71,7 @@ export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
       },
       provenance: {
         sourceDomains: [
-          'Executive Summary',
-          'Gate Attendance',
-          'Faculty Attendance',
-          'Academic Analytics',
-          'Behavior Management',
-          'Leave Management',
-          'Inventory Management'
+          'Executive Summary'
         ],
         asOf: rawFactSheet.asOf
       }
