@@ -8,6 +8,7 @@ import { PScreen } from '../../shared/types';
 import { AssistantMessageItem } from './components/AssistantMessageItem.js';
 import { QuickPromptsGrid } from './components/QuickPromptsGrid.js';
 import { AssistantMessageSquareIcon } from './components/AssistantMessageSquareIcon.js';
+import { TEACHER_QUICK_PROMPTS } from './constants/quickPrompts.js';
 
 interface PrincipalAssistantDrawerProps {
   isOpen: boolean;
@@ -16,8 +17,10 @@ interface PrincipalAssistantDrawerProps {
   onSendMessage: (text: string) => void;
   isLoading: boolean;
   onClearSession: () => void;
-  onNavigate?: (screen: PScreen) => void;
+  onNavigate?: (screen: PScreen | any) => void;
   onRetryLastMessage?: () => void;
+  portal?: 'Principal' | 'Teacher';
+  role?: 'Principal' | 'Teacher';
 }
 
 export function PrincipalAssistantDrawer({
@@ -29,7 +32,15 @@ export function PrincipalAssistantDrawer({
   onClearSession,
   onNavigate,
   onRetryLastMessage,
+  portal = 'Principal',
+  role = portal,
 }: PrincipalAssistantDrawerProps) {
+  const isTeacher = portal === 'Teacher' || role === 'Teacher';
+  const greetingText = isTeacher
+    ? 'Good day, Teacher. How can I help with your classes today?'
+    : 'Good day, Principal. How can I help with school operations today?';
+  const quickPrompts = isTeacher ? TEACHER_QUICK_PROMPTS : undefined;
+
   const [inputText, setInputText] = useState('');
   // Two clean visual states: 'home' (greeting & suggested prompts) vs 'conversation' (message history)
   const [viewState, setViewState] = useState<'home' | 'conversation'>('home');
@@ -118,7 +129,7 @@ export function PrincipalAssistantDrawer({
         data-testid="principal-assistant-drawer"
         id="principal-ai-assistant-drawer"
         role="dialog"
-        aria-label="DigiSkwela Principal Operations Assistant"
+        aria-label={isTeacher ? "DigiSkwela Teacher Assistant" : "DigiSkwela Principal Operations Assistant"}
         style={{
           width: 370,
           maxWidth: 'calc(100vw - 32px)',
@@ -406,7 +417,7 @@ export function PrincipalAssistantDrawer({
                       boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
                     }}
                   >
-                    Good day, Principal. How can I help with school operations today?
+                    {greetingText}
                   </div>
                   <span
                     style={{
@@ -459,6 +470,7 @@ export function PrincipalAssistantDrawer({
                 <QuickPromptsGrid 
                   onSelectPrompt={handlePromptSelect} 
                   disabled={isLoading} 
+                  prompts={quickPrompts}
                 />
               </div>
             </div>

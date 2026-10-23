@@ -2,6 +2,7 @@ import { AIToolDeclaration } from '../provider/aiProvider.interface.js';
 import { toolRegistry } from '../tools/toolRegistry.js';
 import { OperationalDomainName } from '../orchestration/domainCatalog.js';
 import { SOURCE_PERMISSIONS } from '../security/sourcePolicy.js';
+import { SCHOOL_NAME } from '../../config/ai.config.js';
 
 export interface RoleCapability {
   id: string;
@@ -82,7 +83,7 @@ export class RoleCapabilityRegistry {
       toolName: 'getSchoolOperationalFactSheet',
       allowedRoles: ['Principal', 'Admin', 'SuperAdmin'],
       requiredPermissions: [...SOURCE_PERMISSIONS.FACT_SHEET],
-      description: 'Executive operational fact sheet of Calulut Integrated School.',
+      description: `Executive operational fact sheet of ${SCHOOL_NAME}.`,
     });
 
     this.register({
@@ -101,6 +102,34 @@ export class RoleCapabilityRegistry {
       allowedRoles: ['Principal', 'Admin', 'SuperAdmin'],
       requiredPermissions: [...SOURCE_PERMISSIONS.FACT_SHEET],
       description: 'Weekly operations report for school leadership.',
+    });
+
+    // ─── Teacher Operational Capabilities (Phase B) ────────────────────
+    this.register({
+      id: 'cap_teacher_incomplete_grades',
+      domain: 'teacher_grades',
+      toolName: 'getMyIncompleteGrades',
+      allowedRoles: ['Teacher'],
+      requiredPermissions: ['assignment:read_own', 'grade:read'],
+      description: 'Audit incomplete grading, unrecorded scores, and missing submissions across assigned sections and subjects.',
+    });
+
+    this.register({
+      id: 'cap_teacher_operations',
+      domain: 'teacher_operations',
+      toolName: 'getMyTeachingOperations',
+      allowedRoles: ['Teacher'],
+      requiredPermissions: ['assignment:read_own'],
+      description: 'Operational teaching assignments, today\'s confirmed parent appointments, and unreviewed excuse letters owned by the authenticated teacher.',
+    });
+
+    this.register({
+      id: 'cap_teacher_class_performance',
+      domain: 'teacher_performance',
+      toolName: 'getMyClassPerformance',
+      allowedRoles: ['Teacher'],
+      requiredPermissions: ['assignment:read_own', 'grade:read', 'attendance:read'],
+      description: 'Submitted grade averages and classroom attendance metrics (P/A/L/E) for an assigned section and subject.',
     });
   }
 

@@ -66,3 +66,46 @@ export const PRINCIPAL_QUICK_PROMPTS: QuickPrompt[] = [
     description: 'Prepares professional administrative reminder memos and announcement drafts for Principal review.',
   },
 ];
+
+export const TEACHER_QUICK_PROMPTS: QuickPrompt[] = [
+  {
+    id: 'tqp-attention',
+    category: 'Daily Operations',
+    label: 'Needs Attention',
+    prompt: 'What do I need to take care of today?',
+    iconName: 'activity',
+    description: 'Summarizes today\'s confirmed appointments, unreviewed excuse letters, incomplete grades, and upcoming events.',
+  },
+  {
+    id: 'tqp-grades',
+    category: 'Grading',
+    label: 'Incomplete Grading',
+    prompt: 'Which of my classes still have incomplete grading?',
+    iconName: 'bar-chart',
+    description: 'Checks assigned classes for missing scores and unrecorded gradebook cells.',
+  },
+  {
+    id: 'tqp-appointments',
+    category: 'Parent Consultations',
+    label: 'Parent Appointments',
+    prompt: 'Do I have parent appointments today?',
+    iconName: 'calendar',
+    description: 'Surfaces today\'s confirmed parent-teacher consultation appointments.',
+  },
+  {
+    id: 'tqp-excuses',
+    category: 'Attendance & Excuses',
+    label: 'Excuse Letters',
+    prompt: 'Are there unreviewed excuse letters for my sections?',
+    iconName: 'file-text',
+    description: 'Reviews pending excuse letter submissions submitted by assigned students.',
+  },
+  {
+    id: 'tqp-performance',
+    category: 'Classroom Analytics',
+    label: 'Class Performance',
+    prompt: 'Summarize class performance and attendance for my assigned section.',
+    iconName: 'users',
+    description: 'Audits submitted grade averages and classroom attendance records without subjective risk labels.',
+  },
+];

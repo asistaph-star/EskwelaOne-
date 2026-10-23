@@ -1,12 +1,13 @@
 import Groq from 'groq-sdk';
-import { 
-  DigiSkwelaAIProvider, 
-  AICompletionRequest, 
-  AICompletionResponse, 
+import {
+  DigiSkwelaAIProvider,
+  AICompletionRequest,
+  AICompletionResponse,
   AIToolCall,
-  AIProviderError 
+  AIProviderError
 } from './aiProvider.interface.js';
-import { aiConfig } from '../../config/ai.config.js';
+import { aiConfig, SCHOOL_NAME } from '../../config/ai.config.js';
+import { TEACHER_SYSTEM_PROMPT } from '../prompts/teacherSystemPrompt.js';
 
 export interface GroqProviderOptions {
   client?: Groq;
@@ -16,7 +17,7 @@ export interface GroqProviderOptions {
   maxTokens?: number;
   timeoutMs?: number;
 }
-export const DIGISKWELA_SYSTEM_PROMPT = `You are the authoritative administrative assistant for DigiSkwela at Calulut Integrated School.
+export const DIGISKWELA_SYSTEM_PROMPT = `You are the authoritative administrative assistant for DigiSkwela at ${SCHOOL_NAME}.
 Your duty is to assist school administrators (Principal, administrative staff) with factual school operations, attendance, academic analytics, leaves, and calendar schedules.
 
 STRICT OPERATIONAL & COMPLIANCE RULES:
@@ -32,8 +33,8 @@ STRICT OPERATIONAL & COMPLIANCE RULES:
    - On approved leave: No gate Time In is recorded and an approved leave record covers the date.
    - No gate check-in: No gate Time In is recorded for the date (raw observation).
    - No gate check-in / no approved leave found: No gate Time In is recorded for the date and no approved leave record covering that date was found.
-   Never convert gate scan data into: "Late", "Tardy", "Undertime", "Absent", "Unexcused Absence", "AWOL", or claims of physical presence ("currently on campus", "still on campus"), as gate scans record physical badge scan events only and no authoritative work schedule policy exists.
-   If no gate check-in is found, state strictly: "No gate check-in recorded today." Never say "absent" or infer truancy.
+   Never convert gate presence data into: "Late", "Tardy", "Undertime", "Absent", "Unexcused Absence", or "AWOL", or claims of physical presence ("currently on campus", "still on campus"), as gate scans record physical badge scan events only and no authoritative work schedule policy exists.
+   If no gate check-in is found, state strictly: "No gate check-in recorded today and no approved leave record was found" (or "No gate check-in recorded today"). Never say "absent" or infer truancy.
 
 3. ADMINISTRATIVE & DISCIPLINARY SAFETY:
    Never infer, recommend, mandate, or declare:
@@ -173,6 +174,10 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
     }
 
     // 2. Format Messages with System Prompt
+    const explicitSystem = request.messages.find(m => m.role === 'system');
+    const isTeacher = request.context?.authenticatedRole === 'Teacher' || request.context?.portal === 'Teacher';
+    const effectiveSystemPrompt = explicitSystem?.content || (isTeacher ? TEACHER_SYSTEM_PROMPT : DIGISKWELA_SYSTEM_PROMPT);
+
     const groqMessages: Array<{
       role: 'system' | 'user' | 'assistant' | 'tool';
       content: string | null;
@@ -180,11 +185,14 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
       name?: string;
       tool_calls?: any[];
     }> = [
-      { role: 'system', content: DIGISKWELA_SYSTEM_PROMPT }
-    ];
+        { role: 'system', content: effectiveSystemPrompt }
+      ];
 
     for (const msg of request.messages) {
-      if (msg.role === 'tool') {
+      if (msg.role === 'system') {
+        // System message already mounted at head of groqMessages
+        continue;
+      } else if (msg.role === 'tool') {
         groqMessages.push({
           role: 'tool',
           tool_call_id: msg.toolCallId || 'call_0',
@@ -194,13 +202,13 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
       } else if (msg.role === 'assistant') {
         const toolCallsFormatted = msg.toolCalls && msg.toolCalls.length > 0
           ? msg.toolCalls.map(tc => ({
-              id: tc.id,
-              type: 'function',
-              function: {
-                name: tc.name,
-                arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {})
-              }
-            }))
+            id: tc.id,
+            type: 'function',
+            function: {
+              name: tc.name,
+              arguments: typeof tc.arguments === 'string' ? tc.arguments : JSON.stringify(tc.arguments || {})
+            }
+          }))
           : undefined;
 
         groqMessages.push({
@@ -211,11 +219,6 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
       } else if (msg.role === 'user') {
         groqMessages.push({
           role: 'user',
-          content: msg.content,
-        });
-      } else if (msg.role === 'system') {
-        groqMessages.push({
-          role: 'system',
           content: msg.content,
         });
       }

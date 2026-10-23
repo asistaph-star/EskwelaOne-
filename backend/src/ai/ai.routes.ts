@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authMiddleware, AuthenticatedUser } from '../common/middleware/auth.js';
 import { AIService } from './ai.service.js';
 import { aiConversationSessionService, EphemeralSessionMessage } from './session/aiConversationSession.service.js';
+import { aiRateLimiter } from './middleware/aiRateLimiter.js';
 
 import chatgptOAuthRoutes from './chatgpt/chatgptOAuth.routes.js';
 
@@ -43,13 +44,13 @@ router.get('/session', async (req: Request, res: Response, next: NextFunction) =
       data: {
         session: session
           ? {
-              id: session.id,
-              portal: session.portal,
-              createdAt: session.createdAt,
-              updatedAt: session.updatedAt,
-              expiresAt: session.expiresAt,
-              messages: session.messages,
-            }
+            id: session.id,
+            portal: session.portal,
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+            expiresAt: session.expiresAt,
+            messages: session.messages,
+          }
           : null,
       },
     });
@@ -81,7 +82,7 @@ router.delete('/session', async (req: Request, res: Response, next: NextFunction
  * POST /api/ai/chat
  * Primary entrypoint for the DigiSkwela Conversational Assistant.
  */
-router.post('/chat', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/chat', aiRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = chatRequestSchema.parse(req.body);
     const authUser = (req as any).user as AuthenticatedUser;

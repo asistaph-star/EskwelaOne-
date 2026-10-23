@@ -7,9 +7,10 @@ import { QuickPrompt } from '../types.js';
 interface QuickPromptsGridProps {
   onSelectPrompt: (promptText: string) => void;
   disabled?: boolean;
+  prompts?: QuickPrompt[];
 }
 
-export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridProps) {
+export function QuickPromptsGrid({ onSelectPrompt, disabled, prompts = PRINCIPAL_QUICK_PROMPTS }: QuickPromptsGridProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -53,7 +54,7 @@ export function QuickPromptsGrid({ onSelectPrompt, disabled }: QuickPromptsGridP
           alignItems: 'center',
         }}
       >
-        {PRINCIPAL_QUICK_PROMPTS.map(qp => {
+        {prompts.map(qp => {
           const isSelected = selectedId === qp.id;
           const isHovered = hoveredId === qp.id;
 

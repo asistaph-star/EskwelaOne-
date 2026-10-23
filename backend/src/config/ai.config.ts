@@ -75,8 +75,8 @@ export const aiConfig: AIConfig = {
   // Configurable runtime boundaries
   limits: {
     maxTurns: parseInt(process.env.AI_MAX_TURNS || '10', 10),
-    rateLimitPerMinute: parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || '10', 10),
-    rateLimitPerDay: parseInt(process.env.AI_RATE_LIMIT_PER_DAY || '100', 10),
+    rateLimitPerMinute: parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || (process.env.NODE_ENV === 'test' ? '100' : '10'), 10),
+    rateLimitPerDay: parseInt(process.env.AI_RATE_LIMIT_PER_DAY || (process.env.NODE_ENV === 'test' ? '500' : '100'), 10),
     maxPromptLength: parseInt(process.env.AI_MAX_PROMPT_LENGTH || '2000', 10),
     maxResponseTokens: parseInt(process.env.AI_MAX_RESPONSE_TOKENS || '1500', 10),
     maxToolCallsPerTurn: parseInt(process.env.AI_MAX_TOOL_CALLS_PER_TURN || '6', 10),
@@ -90,3 +90,6 @@ export const aiConfig: AIConfig = {
     callbackUrl: process.env.CHATGPT_PLAN_CALLBACK_URL || 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',
   },
 };
+
+export const SCHOOL_NAME = process.env.SCHOOL_NAME || 'Sindalan National High School';
+

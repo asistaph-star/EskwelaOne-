@@ -214,26 +214,32 @@ describe('DIGISKWELA — MILESTONE 3 PHASE C: PRINCIPAL V1 DOMAIN TOOLS', () => 
     expect(res8.data.reportPeriod).toBeDefined();
   });
 
-  // ─── 2. Teacher Cannot Invoke Principal Tools ──────────────────────
-  it('TC-PTOOLS-02: Teacher cannot access or invoke any Principal tools (403 Forbidden)', async () => {
+  // ─── 2. Teacher Cannot Invoke Principal-Only Tools ──────────────────────
+  it('TC-PTOOLS-02: Teacher cannot access or invoke Principal-only tools (403 Forbidden); getUpcomingEvents is shared', async () => {
     const teacherDeclarations = toolRegistry.getDeclarationsForUser(
       teacherContext.user.roles,
       teacherContext.user.permissions
     );
-    expect(teacherDeclarations.length).toBe(0);
+    // getUpcomingEvents is shared (A4); getMyIncompleteGrades is authorized for Teacher (B0)
+    const teacherToolNames = teacherDeclarations.map(d => d.name);
+    expect(teacherToolNames).toContain('getUpcomingEvents');
+    expect(teacherToolNames).toContain('getMyIncompleteGrades');
 
-    const toolsToTest = [
+    const principalOnlyTools = [
       'getSchoolOperationalFactSheet',
       'getFacultyAttendanceAudit',
       'getPendingLeaves',
-      'getUpcomingEvents',
       'getAdministrativeBehaviorSummary',
       'getAcademicAnalytics',
       'generatePrincipalMeetingBrief',
       'generateWeeklyOperationsReport'
     ];
 
-    for (const toolName of toolsToTest) {
+    for (const toolName of principalOnlyTools) {
+      expect(teacherToolNames).not.toContain(toolName);
+    }
+
+    for (const toolName of principalOnlyTools) {
       await expect(
         dispatchTool(toolName, {}, teacherContext)
       ).rejects.toThrow(/not authorized|lacks required permissions/i);
@@ -685,7 +691,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE C: PRINCIPAL V1 DOMAIN TOOLS', () => 
   // ─── 16. Attendance Status Filtering Distinction ──────────────────
   it('TC-PTOOLS-16: getFacultyAttendanceAudit distinguishes raw NO_GATE_CHECK_IN from NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND', async () => {
     const attTool = principalTools.find(t => t.name === 'getFacultyAttendanceAudit')!;
-    
+
     // Raw NO_GATE_CHECK_IN: returns all records where timeIn is null
     const resRaw = await attTool.execute({ statusFilter: 'NO_GATE_CHECK_IN' }, principalContext);
     expect(resRaw.records.every((r: any) => r.timeIn === null)).toBe(true);

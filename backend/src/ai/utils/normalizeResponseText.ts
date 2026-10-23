@@ -10,6 +10,7 @@
  * 6. Softens over-prescriptive actions to neutral administrative language
  * 7. Deduplicates narrative when rich structured UI cards represent the report
  */
+import { SCHOOL_NAME } from '../../config/ai.config.js';
 
 const ROUTE_LABELS: Record<string, string> = {
   'p-dashboard': 'Dashboard Overview',
@@ -217,7 +218,7 @@ export function normalizeAssistantText(
       return 'Here is your executive faculty meeting brief compiled from authoritative school records.';
     }
     if (options.toolName === 'generateWeeklyOperationsReport') {
-      return 'Here is the weekly operations summary report for Calulut Integrated School.';
+      return `Here is the weekly operations summary report for ${SCHOOL_NAME}.`;
     }
   }
 

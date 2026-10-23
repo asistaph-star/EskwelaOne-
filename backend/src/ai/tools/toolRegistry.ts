@@ -1,6 +1,11 @@
 import { DigiSkwelaTool } from './toolTypes.js';
 import { AIToolDeclaration } from '../provider/aiProvider.interface.js';
 import { principalTools } from './definitions/principalTools.js';
+import { 
+  getMyIncompleteGradesTool, 
+  getMyTeachingOperationsTool, 
+  getMyClassPerformanceTool 
+} from './definitions/teacherTools.js';
 
 class ToolRegistry {
   private tools: Map<string, DigiSkwelaTool> = new Map();
@@ -43,3 +48,9 @@ export const toolRegistry = new ToolRegistry();
 for (const tool of principalTools) {
   toolRegistry.register(tool);
 }
+
+// ─── REGISTER TEACHER TOOLS (PHASE B) ────────────────────────────────
+toolRegistry.register(getMyIncompleteGradesTool);
+toolRegistry.register(getMyTeachingOperationsTool);
+toolRegistry.register(getMyClassPerformanceTool);
+

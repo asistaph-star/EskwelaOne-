@@ -12,6 +12,8 @@ import {
 import { chatGPTTokenStorage, ChatGPTTokenStorage } from '../chatgpt/chatgptTokenStorage.js';
 import { chatGPTOAuthService, ChatGPTOAuthService } from '../chatgpt/chatgptOAuth.service.js';
 import { aiConfig } from '../../config/ai.config.js';
+import { DIGISKWELA_SYSTEM_PROMPT } from './groqAIProvider.js';
+import { TEACHER_SYSTEM_PROMPT } from '../prompts/teacherSystemPrompt.js';
 
 export interface ChatGPTDiscoveredModel {
   slug: string;
@@ -383,18 +385,17 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
 
     // 2. Prepare payload conforming to Responses API ChatGPT Plan contract
     const { instructions, input } = this.formatInputItems(request.messages);
+    const isTeacher = request.context?.authenticatedRole === 'Teacher' || request.context?.portal === 'Teacher';
+    const effectiveInstructions = instructions || (isTeacher ? TEACHER_SYSTEM_PROMPT : DIGISKWELA_SYSTEM_PROMPT);
     const formattedTools = this.formatTools(request.tools);
 
     const payload: ChatGPTResponsesRequestPayload = {
       model: activeModel,
       store: false, // Mandatory
       stream: true, // Mandatory
+      instructions: effectiveInstructions,
       input,
     };
-
-    if (instructions) {
-      payload.instructions = instructions;
-    }
 
     if (formattedTools && formattedTools.length > 0) {
       payload.tools = formattedTools;

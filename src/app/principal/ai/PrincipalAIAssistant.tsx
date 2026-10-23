@@ -9,11 +9,18 @@ import { normalizeAssistantResponse } from './utils/parseAssistantResponse.js';
 import { PrincipalAssistantDrawer } from './PrincipalAssistantDrawer.js';
 
 interface PrincipalAIAssistantProps {
-  onNavigate?: (screen: PScreen) => void;
-  currentScreen?: PScreen;
+  onNavigate?: (screen: PScreen | any) => void;
+  currentScreen?: PScreen | any;
+  portal?: 'Principal' | 'Teacher';
+  role?: 'Principal' | 'Teacher';
 }
 
-export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIAssistantProps) {
+export function PrincipalAIAssistant({ 
+  onNavigate, 
+  currentScreen,
+  portal = 'Principal',
+  role = portal,
+}: PrincipalAIAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<PrincipalAIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +49,7 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
     let isMounted = true;
     const restoreSession = async () => {
       try {
-        const res = await aiApi.getSession({ portal: 'Principal' });
+        const res = await aiApi.getSession({ portal });
         if (isMounted && res?.session?.messages && res.session.messages.length > 0) {
           const restored: PrincipalAIMessage[] = res.session.messages.map(m => ({
             id: m.id,
@@ -98,7 +105,7 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
 
       const res = await aiApi.chat({
         messages: payloadMessages,
-        portal: 'Principal',
+        portal,
         turnId: currentTurnId,
       });
 
@@ -141,15 +148,33 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
         } else if (err.status === 403) {
           errorMessage = 'You are not authorized to perform this AI operation.';
           canRetry = false;
-        } else if (err.status === 429 || err.code === 'RATE_LIMITED' || err.code === 'FREE_QUOTA_EXHAUSTED') {
-          errorMessage = 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.';
+        } else if (
+          err.status === 429 ||
+          err.code === 'RATE_LIMITED' ||
+          err.code === 'FREE_QUOTA_EXHAUSTED' ||
+          err.code === 'RATE_LIMIT_EXCEEDED' ||
+          err.code === 'DAILY_LIMIT_EXCEEDED'
+        ) {
+          errorCode = 'RATE_LIMITED';
+          errorMessage = err.message && !err.message.includes('429') && !err.message.includes('status code')
+            ? err.message
+            : 'Too many requests. Please wait a moment and try again.';
         } else if (err.status === 503 || err.code === 'PROVIDER_UNAVAILABLE' || err.code === 'PROVIDER_TIMEOUT') {
+          errorCode = 'PROVIDER_UNAVAILABLE';
           errorMessage = 'DigiSkwela AI is temporarily unavailable. Please try again later.';
         } else {
-          errorMessage = err.message || errorMessage;
+          errorMessage = 'DigiSkwela AI is temporarily unavailable. Please try again later.';
         }
-      } else if (err.message) {
-        errorMessage = err.message;
+      } else if (
+        err instanceof TypeError ||
+        (typeof err?.message === 'string' &&
+          (err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network')))
+      ) {
+        errorCode = 'SERVER_UNREACHABLE';
+        errorMessage = 'Server is currently unreachable. Please check your network connection and try again.';
+      } else {
+        errorCode = 'UNKNOWN_ERROR';
+        errorMessage = 'DigiSkwela AI is temporarily unavailable. Please try again later.';
       }
 
       const errorMsgId = `err_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -216,6 +241,8 @@ export function PrincipalAIAssistant({ onNavigate, currentScreen }: PrincipalAIA
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
           onClearSession={handleClearSession}
+          portal={portal}
+          role={role}
           onNavigate={screen => {
             if (onNavigate) {
               onNavigate(screen);

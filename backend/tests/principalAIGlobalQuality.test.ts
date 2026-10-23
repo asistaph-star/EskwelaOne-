@@ -5,7 +5,7 @@ import prisma from '../src/config/database.js';
 import { generateId } from '../src/common/utils/uuid.js';
 import { sign } from 'jsonwebtoken';
 import { config } from '../src/config/env.js';
-import { aiConfig } from '../src/config/ai.config.js';
+import { aiConfig, SCHOOL_NAME } from '../src/config/ai.config.js';
 import { 
   decodeHTMLEntities, 
   stripChatbotFiller, 
@@ -115,7 +115,7 @@ describe('DIGISKWELA — PRINCIPAL AI GLOBAL RESPONSE QUALITY & ARTIFACT REGRESS
       hasStructuredData: true,
       toolName: 'generateWeeklyOperationsReport',
     });
-    expect(normalizedWeekly).toBe('Here is the weekly operations summary report for Calulut Integrated School.');
+    expect(normalizedWeekly).toBe(`Here is the weekly operations summary report for ${SCHOOL_NAME}.`);
   });
 
   // ─── 2. Integration Tests Across Core Live Matrix ───────────────────────

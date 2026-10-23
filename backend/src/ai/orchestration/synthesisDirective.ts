@@ -1,6 +1,7 @@
 import { PrincipalRequestPlan } from './requestPlanner.js';
 import { AggregationResult } from './aggregator.js';
 import { AIMessage } from '../provider/aiProvider.interface.js';
+import { SCHOOL_NAME } from '../../config/ai.config.js';
 
 /**
  * Builds the provider synthesis directive inserted as a system instruction
@@ -11,7 +12,7 @@ export function buildSynthesisDirective(
   aggregateData: AggregationResult
 ): AIMessage {
   const parts: string[] = [
-    'You are performing the administrative synthesis turn for the Principal AI Assistant at Calulut Integrated School.',
+    `You are performing the administrative synthesis turn for the Principal AI Assistant at ${SCHOOL_NAME}.`,
     'Synthesize the verified tool outputs in conversation history into a unified, professional response.',
   ];
 

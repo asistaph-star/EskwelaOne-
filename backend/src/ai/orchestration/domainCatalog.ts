@@ -1,4 +1,5 @@
 import { NormalizedNavigationAction } from '../ai.service.js';
+import { SCHOOL_NAME } from '../../config/ai.config.js';
 
 export type OperationalDomainName = 
   | 'leaves' 
@@ -186,7 +187,7 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
     coverageRegex: /\b(weekly operations|weekly report)\b/i,
     defaultArgs: {},
     summarizeResult: (_result: any) => {
-      return "Here is the weekly operations summary report for Calulut Integrated School.";
+      return `Here is the weekly operations summary report for ${SCHOOL_NAME}.`;
     }
   }
 };

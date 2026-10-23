@@ -15,7 +15,9 @@
     "db:generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "fixture:seed": "tsx scripts/seed-teacher-demo-fixture.ts",
+    "fixture:cleanup": "tsx scripts/cleanup-teacher-demo-fixture.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",

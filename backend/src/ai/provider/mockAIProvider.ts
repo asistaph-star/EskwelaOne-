@@ -5,6 +5,7 @@ import {
   AIProviderError,
   AIToolCall
 } from './aiProvider.interface.js';
+import { SCHOOL_NAME } from '../../config/ai.config.js';
 
 /**
  * MockAIProvider — Deterministic, Local Development & Architecture Test Adapter
@@ -91,7 +92,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           if (content.includes('review') || content.includes('attention') || content.includes('unresolved') || content.includes('incomplete') || content.includes('exception')) {
             narrative = "Here are the operational items requiring administrative review today: 1 faculty leave application is pending approval, faculty attendance records have been cross-checked against approved leaves, 1 student behavior incident is currently active, and annual academic analytics remain partial pending complete term grade submissions.";
           } else {
-            narrative = 'Here is the authoritative daily executive operational fact sheet for Calulut Integrated School.';
+            narrative = `Here is the authoritative daily executive operational fact sheet for ${SCHOOL_NAME}.`;
           }
           break;
         case 'getPendingLeaves':
@@ -117,14 +118,14 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
           } else if (content.includes('draft') || content.includes('reminder') || content.includes('communication') || content.includes('memo')) {
             narrative = 'Here is a draft reminder for faculty regarding grade submissions for your review:\n\nSubject: Reminder: Submission and Finalization of Term Grades\n\nDear Faculty Members,\n\nPlease be reminded to review and finalize all pending student grade submissions for the current term in your Gradebook. Complete grade entries across all subjects are required to enable school-wide academic evaluation and student records processing.\n\nPlease ensure all submissions are completed before the scheduled administrative deadline. Thank you for your continued dedication to academic excellence.\n\n(Draft for Principal review · Read-only AI assistance)';
           } else {
-            narrative = 'Here are the authorized academic performance analytics for Calulut Integrated School.';
+            narrative = `Here are the authorized academic performance analytics for ${SCHOOL_NAME}.`;
           }
           break;
         case 'generatePrincipalMeetingBrief':
           narrative = 'Here is your executive meeting brief compiled from authoritative school records.';
           break;
         case 'generateWeeklyOperationsReport':
-          narrative = 'Here is the weekly operations summary report for Calulut Integrated School.';
+          narrative = `Here is the weekly operations summary report for ${SCHOOL_NAME}.`;
           break;
       }
 

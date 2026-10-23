@@ -24,6 +24,8 @@ import { normalizeAssistantText } from '../utils/normalizeResponseText.js';
 import { recordAIAuditLog } from '../audit/aiAudit.service.js';
 import { generateId } from '../../common/utils/uuid.js';
 import { aiConfig } from '../../config/ai.config.js';
+import { DIGISKWELA_SYSTEM_PROMPT } from '../provider/groqAIProvider.js';
+import { TEACHER_SYSTEM_PROMPT } from '../prompts/teacherSystemPrompt.js';
 import { 
   NormalizedStructuredData, 
   NormalizedProvenance, 
@@ -286,6 +288,17 @@ export class DigiSkwelaAgentHarness {
 
     const provider = input.provider || getAIProvider();
     const conversationWithTools: AIMessage[] = [...input.messages];
+
+    // Ensure role-specific grounding instructions are always effective
+    const hasSystem = conversationWithTools.some(m => m.role === 'system');
+    if (!hasSystem) {
+      const isTeacher = primaryRole === 'Teacher' || portal === 'Teacher';
+      conversationWithTools.unshift({
+        role: 'system',
+        content: isTeacher ? TEACHER_SYSTEM_PROMPT : DIGISKWELA_SYSTEM_PROMPT,
+      });
+    }
+
     let tokenUsageCombined: AITokenUsage | null = null;
     let finalTurnResponse: AICompletionResponse | null = null;
     let currentRound = 1;

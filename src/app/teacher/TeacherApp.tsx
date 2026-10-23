@@ -26,7 +26,7 @@ import { BehavioralReports } from "./reports/BehavioralReports";
 import { StubScreen } from "../shared/components/StubScreen";
 import { StudentDetailOverlay } from "./components/StudentDetailOverlay";
 import { NotificationDropdown } from "../shared/components/NotificationDropdown";
-import { AIAssistantWidget } from "../shared/components/AIAssistantWidget";
+import { PrincipalAIAssistant } from "../principal/ai/PrincipalAIAssistant";
 import { AppointmentsScreen } from "./appointments/AppointmentsScreen";
 import { DocRequestsScreen } from "./documents/DocRequestsScreen";
 import { CamScannerScreen } from "../shared/components/CamScannerScreen";
@@ -191,7 +191,8 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
       {gradeCard && (
         <StudentDetailOverlay student={{ id: 1, surname: gradeCard.name.split(',')[0], first: gradeCard.name.split(',')[1]?.trim() || '', avg: 85, status: 'Passed' }} onClose={() => setGradeCard(null)} />
       )}
-      <AIAssistantWidget role="Teacher" />
+      {/* AIAssistantWidget legacy mock widget replaced with shared parameterized assistant in Phase B */}
+      <PrincipalAIAssistant portal="Teacher" role="Teacher" />
     </div>
   );
 }
