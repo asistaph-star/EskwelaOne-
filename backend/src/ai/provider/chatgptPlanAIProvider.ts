@@ -502,6 +502,33 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
           }
         }
 
+        // Handle streaming completed output items (e.g. function_call or message)
+        if (currentEvent === 'response.output_item.done' || data?.type === 'response.output_item.done') {
+          const item = data?.item;
+          if (item?.type === 'function_call') {
+            let args: Record<string, any> = {};
+            try {
+              args = typeof item.arguments === 'string' ? JSON.parse(item.arguments) : item.arguments || {};
+            } catch {
+              args = {};
+            }
+            const callId = item.call_id || item.id || `call_${Date.now()}`;
+            if (!collectedToolCalls.some(tc => tc.id === callId)) {
+              collectedToolCalls.push({
+                id: callId,
+                name: item.name,
+                arguments: args,
+              });
+            }
+          } else if (item?.type === 'message' && Array.isArray(item?.content)) {
+            for (const part of item.content) {
+              if (part?.type === 'output_text' && part?.text && !accumulatedContent) {
+                accumulatedContent = part.text;
+              }
+            }
+          }
+        }
+
         // Handle response.completed final aggregate
         if (currentEvent === 'response.completed' || data?.type === 'response.completed') {
           completedResponse = data.response || data;
