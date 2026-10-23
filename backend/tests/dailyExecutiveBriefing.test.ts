@@ -117,7 +117,7 @@ describe('DIGISKWELA — MILESTONE 2B: DAILY EXECUTIVE BRIEFING UX', () => {
       const sections = buildBriefingSections(baseSummaryData);
 
       expect(sections.operations[0]).toBe('420 students are currently on campus.');
-      expect(sections.operations[1]).toBe('21 of 23 faculty members checked in today (19 currently on campus).');
+      expect(sections.operations[1]).toBe('21 of 23 faculty members checked in today (19 time-out pending).');
     });
 
     it('formats Needs Your Attention section when actionable items exist', () => {

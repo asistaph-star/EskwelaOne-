@@ -28,9 +28,12 @@ const ROUTE_LABELS: Record<string, string> = {
 
 const ENUM_REPLACEMENTS: Record<string, string> = {
   'partial_terms': 'partial terms',
+  'COMPLETED': 'completed',
   'TIME_OUT_PENDING': 'time-out pending',
   'ON_APPROVED_LEAVE': 'on approved leave',
+  'NO_GATE_CHECK_IN': 'no gate check-in recorded',
   'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND': 'no gate check-in recorded and no approved leave found',
+  'CHECKED_IN': 'checked in',
   'FACULTY_MEETING': 'Faculty Meeting',
   'UNDER_INVESTIGATION': 'under investigation',
   'PARENT_NOTIFIED': 'parent notified',

@@ -21,7 +21,7 @@ export interface SchoolFactSheet {
   };
 
   faculty: {
-    checkedInNow: number | null; // Currently on campus (timeOutPendingCount)
+    checkedInNow: number | null; // Time In recorded without Time Out (timeOutPendingCount)
     checkedInToday: number | null; // Total checked in today (checkedInCount)
     timedOutToday: number | null; // Completed departure (completedCount)
     totalActive: number | null; // Active faculty denominator

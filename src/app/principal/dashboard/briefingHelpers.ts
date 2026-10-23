@@ -124,7 +124,7 @@ export function buildBriefingSections(data: ExecutiveSummaryResponse | null): Fo
   if (typeof checkedToday === 'number' && typeof totalFaculty === 'number') {
     let facultyLine = `${checkedToday} of ${totalFaculty} faculty members checked in today`;
     if (typeof checkedNow === 'number' && checkedNow !== checkedToday) {
-      facultyLine += ` (${checkedNow} currently on campus)`;
+      facultyLine += ` (${checkedNow} time-out pending)`;
     }
     facultyLine += '.';
     opLines.push(facultyLine);
@@ -261,7 +261,7 @@ export function buildSynthesizedNarrative(data: ExecutiveSummaryResponse | null)
       : `${checkedToday} of ${totalFaculty} active faculty checked in today`;
     let text = `Current attendance records show that ${studentPart}, and ${facultyPart}`;
     if (typeof faculty?.checkedInNow === 'number' && faculty.checkedInNow !== checkedToday) {
-      text += ` (${faculty.checkedInNow} currently on campus)`;
+      text += ` (${faculty.checkedInNow} time-out pending)`;
     }
     text += '.';
     paragraphs.push(text);

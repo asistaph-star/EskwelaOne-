@@ -101,7 +101,7 @@ export class WeeklyReportService {
       checkedInToday: 0,
       timeOutPendingToday: 0,
       completedToday: 0,
-      attendanceSemanticsNote: 'Gate check-in status represents recorded scan presence. Lateness, undertime, absence, and unexcused status are not inferred without an authoritative DepEd faculty schedule policy.'
+      attendanceSemanticsNote: 'Gate check-in status represents recorded badge scan events, not verified physical presence. Lateness, undertime, absence, and unexcused status are not inferred without an authoritative DepEd faculty schedule policy.'
     };
 
     if (canAccessSource('FACULTY_ATTENDANCE', userPermissions)) {

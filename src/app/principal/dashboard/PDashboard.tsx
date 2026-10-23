@@ -220,7 +220,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
   }, [academicData]);
 
   const onCampusCount = dashData?.studentsOnCampus ?? 0;
-  const facultyOnCampus = facultySummary?.timeOutPendingCount ?? 0;
+  const facultyCheckedIn = facultySummary?.checkedInCount ?? 0;
   const facultyCompleted = facultySummary?.completedCount ?? 0;
   const totalFaculty = facultySummary?.totalActiveFaculty ?? 0;
 
@@ -239,14 +239,14 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     },
     { v: loading ? "..." : `${teachers} Faculty`, l: "Total Teachers", sub: "Registered Profiles", subColor: C.t3, color: C.m700, bg: C.m100, icon: GraduationCap, dest: "p-teachers" },
     { 
-      v: loading ? "..." : `${facultyOnCampus} / ${totalFaculty} Checked In`, 
+      v: loading ? "..." : `${facultyCheckedIn} / ${totalFaculty} Checked In`, 
       l: "Faculty Checked In Today", 
       sub: loading ? "Loading..." : facultyCompleted > 0
-        ? `${facultyCompleted} Timed Out · ${facultySummary?.pendingCheckInCount ?? 0} Pending`
+        ? `${facultyCompleted} Timed Out · ${facultySummary?.timeOutPendingCount ?? 0} Time-Out Pending`
         : `${facultySummary?.onLeaveCount ?? 0} On Leave · ${facultySummary?.pendingCheckInCount ?? 0} Pending Check-In${(facultySummary?.officialBusinessCount ?? 0) > 0 ? ` · ${facultySummary?.officialBusinessCount} Official Business` : ''}`, 
-      subColor: facultyOnCampus > 0 ? C.green : C.t3, 
-      color: facultyOnCampus > 0 ? C.green : C.amber, 
-      bg: facultyOnCampus > 0 ? C.greenBg : C.amberBg, 
+      subColor: facultyCheckedIn > 0 ? C.green : C.t3, 
+      color: facultyCheckedIn > 0 ? C.green : C.amber, 
+      bg: facultyCheckedIn > 0 ? C.greenBg : C.amberBg, 
       icon: GraduationCap, 
       dest: "p-teachers" 
     },

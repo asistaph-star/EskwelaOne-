@@ -83,7 +83,7 @@ export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
 export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
   id: 'PRIN-AI-02',
   name: 'getFacultyAttendanceAudit',
-  description: 'Audits today or a specific date faculty gate check-ins correlated with approved leaves. Returns neutral, factual presence status: COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, or NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND. This tool does not infer lateness, tardiness, undertime, absence, or unexcused absence, as no authoritative schedule policy exists.',
+  description: 'Audits today or a specific date faculty gate check-ins correlated with approved leaves. Returns neutral, factual gate attendance record status: COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, NO_GATE_CHECK_IN, or NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND. This tool does not infer physical presence, lateness, tardiness, undertime, absence, or unexcused absence, as no authoritative schedule policy exists.',
   allowedRoles: ['Principal'],
   requiredPermissions: [...SOURCE_PERMISSIONS.FACULTY_ATTENDANCE],
   inputSchema: z.object({
@@ -102,7 +102,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
   declaration: {
     id: 'PRIN-AI-02',
     name: 'getFacultyAttendanceAudit',
-    description: 'Audits faculty attendance check-ins and approved leaves without inferring lateness or unexcused absence.',
+    description: 'Audits faculty attendance check-ins and approved leaves without inferring physical presence, lateness, or unexcused absence.',
     parameters: {
       type: 'object',
       properties: {

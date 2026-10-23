@@ -8,9 +8,11 @@
 const KNOWN_PHRASE_MAP: Record<string, string> = {
   // Attendance gate statuses
   'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND': 'No gate check-in / no approved leave found',
+  'NO_GATE_CHECK_IN': 'No gate check-in recorded',
   'TIME_OUT_PENDING': 'Time-out pending',
   'ON_APPROVED_LEAVE': 'On approved leave',
   'COMPLETED': 'Completed',
+  'CHECKED_IN': 'Checked in',
 
   // Academic completeness statuses
   'partial_terms': 'Partial terms',

@@ -239,7 +239,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE E: GROQ FREE-TIER PROVIDER ADAPTER', 
               {
                 message: {
                   role: 'assistant',
-                  content: 'Based on verified gate logs, 28 of 30 faculty members are currently on campus.',
+                  content: 'Based on verified gate logs, 28 of 30 faculty members checked in today with time-out pending.',
                 },
                 finish_reason: 'stop',
               },
@@ -258,7 +258,7 @@ describe('DIGISKWELA — MILESTONE 3 PHASE E: GROQ FREE-TIER PROVIDER ADAPTER', 
 
     expect(response.finishReason).toBe('stop');
     expect(response.toolCalls).toBeUndefined();
-    expect(response.message.content).toBe('Based on verified gate logs, 28 of 30 faculty members are currently on campus.');
+    expect(response.message.content).toBe('Based on verified gate logs, 28 of 30 faculty members checked in today with time-out pending.');
     expect(response.usage?.totalTokens).toBe(85);
   });
 
