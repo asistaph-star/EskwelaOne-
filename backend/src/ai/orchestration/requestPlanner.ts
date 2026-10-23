@@ -366,6 +366,11 @@ export function analyzeRequest(raw: string, messages: AIMessage[]): RequestUnder
     for (const [domKey, meta] of Object.entries(DOMAIN_CATALOG)) {
       const dom = domKey as OperationalDomainName;
       if (meta.keywords.test(clauseLower)) {
+        // If clause specifically asks for "approved leave" without "pending", it's an attendance status query (getFacultyAttendanceAudit), not pending leaves
+        if (dom === 'leaves' && /\b(?:on\s+)?approved\s+leaves?\b/i.test(clauseLower) && !/\bpending\b/i.test(clauseLower)) {
+          continue;
+        }
+
         if (isDomainNegated(dom, clauseText, raw)) {
           clauseExcluded.push(dom);
           excludedDomainsSet.add(dom);
@@ -407,6 +412,20 @@ export function analyzeRequest(raw: string, messages: AIMessage[]): RequestUnder
 
     // Check attendance status qualifiers in this clause
     if (/\b(?:have\s+|with\s+)?no\s+(?:gate\s+)?check-?ins?\b|\bwithout\s+(?:gate\s+)?check-?ins?\b|\bmissing\s+(?:gate\s+)?check-?ins?\b|\bunchecked\b/i.test(clauseLower)) {
+      // Distinguish raw gate observation ("no gate check-in") from cross-check ("no gate check-in and no approved leave")
+      const explicitlyNoApprovedLeave = /\b(?:and\s+)?(?:with\s+)?no\s+approved\s+leaves?\b|\bwithout\s+approved\s+leaves?\b|\bunexplained\b/i.test(clauseLower);
+      const value = explicitlyNoApprovedLeave 
+        ? 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' 
+        : 'NO_GATE_CHECK_IN';
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value,
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    } else if (/\bno\s+approved\s+leaves?\b|\bwithout\s+approved\s+leaves?\b/i.test(clauseLower) && !/\b(?:who\s+are\s+|on\s+)?approved\s+leaves?\b/i.test(clauseLower)) {
       const c: RequestConstraint = {
         type: 'INCLUDE_ONLY',
         targetDomain: 'faculty_attendance',
@@ -542,7 +561,8 @@ export function analyzeRequest(raw: string, messages: AIMessage[]): RequestUnder
     /\b(cross-?check|audit)\b.*\b(attendance|gate(\s+records?|\s+check-?ins?)?)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
     /\b(check|audit|cross-?check)\b.*\bfaculty\s+(gate\s+records?|attendance)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
     /\b(gate\s+records?|gate\s+check-?ins?|faculty\s+attendance)\b.*\b(against|with)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
-    /\b(faculty\s+.*unresolved|attendance\s+.*exception|unresolved.*faculty)\b.*\b(explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower)
+    /\b(faculty\s+.*unresolved|attendance\s+.*exception|unresolved.*faculty)\b.*\b(explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower) ||
+    /\b(?:no\s+gate\s+check-?in|have\s+no\s+gate\s+check-?in)\b.*\b(?:explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower)
   );
 
   return {
@@ -823,10 +843,10 @@ export function buildRequestPlan(
     // A. If NO prior conversation context:
     if (priorContext.domains.size === 0) {
       // Check if current message has a self-contained noun antecedent:
-      // (e.g. "Look at today's operational concerns... review them" or "Check behavior cases and review them")
-      const selfContainedNoun = (currentDomains.length > 0 || /\b(concerns?|issues?|cases?|exceptions?|events?|records?|classes?|items?|findings?|infractions?|incidents?|grades?|reports?|members?|teachers?|students?)\b/i.test(lower)) && !isDirectAnaphora && !/^(them|those|these|they|that|explain the most important|which of them)\b/i.test(lower);
+      // (e.g. "Look at today's operational concerns... review them" or "Which faculty have no gate check-in, and which of those...")
+      const selfContainedNoun = (currentDomains.length > 0 || /\b(concerns?|issues?|cases?|exceptions?|events?|records?|classes?|items?|findings?|infractions?|incidents?|grades?|reports?|members?|teachers?|students?)\b/i.test(lower)) && !/^(them|those|these|they|that|explain the most important|which of (them|those)|who among them)\b/i.test(lower);
 
-      if (!selfContainedNoun && (isDirectAnaphora || (currentDomains.length === 0 && (hasReferent || isPrioritizeFollowUp || isNarrowing)))) {
+      if (!selfContainedNoun && !analysis.hasCurrentPromptAntecedent && !analysis.isAttendanceCrossCheck && (isDirectAnaphora || (currentDomains.length === 0 && (hasReferent || isPrioritizeFollowUp || isNarrowing)))) {
         return createPlan(
           'CLARIFICATION',
           [],
@@ -1079,7 +1099,8 @@ export function buildRequestPlan(
     !analysis.excludedDomains.includes('faculty_attendance') &&
     !analysis.positiveDomains.some(d => d !== 'faculty_attendance' && d !== 'leaves')
   ) {
-    const tools: PlannedToolDispatch[] = [{ name: 'getFacultyAttendanceAudit', args: {} }];
+    const attendanceArgs = buildDomainToolArgs('faculty_attendance', analysis.constraints);
+    const tools: PlannedToolDispatch[] = [{ name: 'getFacultyAttendanceAudit', args: attendanceArgs }];
     const domainObs: DomainObligation[] = [{ domain: 'faculty_attendance', description: 'Faculty attendance records' }];
     if (allowedToolNames.has('getPendingLeaves') && !analysis.excludedDomains.includes('leaves')) {
       tools.push({ name: 'getPendingLeaves', args: { limit: 10 } });

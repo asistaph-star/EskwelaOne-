@@ -681,4 +681,21 @@ describe('DIGISKWELA — MILESTONE 3 PHASE C: PRINCIPAL V1 DOMAIN TOOLS', () => 
     const authorizedReportRes = await dispatchTool('generateWeeklyOperationsReport', {}, authorizedContext);
     expect(authorizedReportRes.data.sourceDomains).toContain('Academic Analytics');
   });
+
+  // ─── 16. Attendance Status Filtering Distinction ──────────────────
+  it('TC-PTOOLS-16: getFacultyAttendanceAudit distinguishes raw NO_GATE_CHECK_IN from NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND', async () => {
+    const attTool = principalTools.find(t => t.name === 'getFacultyAttendanceAudit')!;
+    
+    // Raw NO_GATE_CHECK_IN: returns all records where timeIn is null
+    const resRaw = await attTool.execute({ statusFilter: 'NO_GATE_CHECK_IN' }, principalContext);
+    expect(resRaw.records.every((r: any) => r.timeIn === null)).toBe(true);
+
+    // Unexplained NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND: returns only records where attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
+    const resUnexplained = await attTool.execute({ statusFilter: 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' }, principalContext);
+    expect(resUnexplained.records.every((r: any) => r.attendanceStatus === 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND')).toBe(true);
+
+    // CHECKED_IN: returns only records where timeIn is not null
+    const resCheckedIn = await attTool.execute({ statusFilter: 'CHECKED_IN' }, principalContext);
+    expect(resCheckedIn.records.every((r: any) => r.timeIn !== null)).toBe(true);
+  });
 });

@@ -94,6 +94,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
       'TIME_OUT_PENDING',
       'ON_APPROVED_LEAVE',
       'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND',
+      'NO_GATE_CHECK_IN',
       'CHECKED_IN'
     ]).optional(),
     limit: z.number().int().min(1).max(100).optional()
@@ -111,7 +112,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
         },
         statusFilter: {
           type: 'string',
-          description: 'Optional filter: ALL, COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND, CHECKED_IN'
+          description: 'Optional filter: ALL, COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND, NO_GATE_CHECK_IN, CHECKED_IN'
         },
         limit: {
           type: 'number',
@@ -206,6 +207,8 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
     if (args.statusFilter && args.statusFilter !== 'ALL') {
       if (args.statusFilter === 'CHECKED_IN') {
         filtered = filtered.filter(r => r.attendanceStatus === 'COMPLETED' || r.attendanceStatus === 'TIME_OUT_PENDING');
+      } else if (args.statusFilter === 'NO_GATE_CHECK_IN') {
+        filtered = filtered.filter(r => r.timeIn === null);
       } else {
         filtered = filtered.filter(r => r.attendanceStatus === args.statusFilter);
       }

@@ -55,8 +55,8 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
       screen: 'p-monitoring',
       description: 'Open Gate Attendance Monitoring tab',
     },
-    keywords: /\b(faculty([- ]related)?\s*(attendance|presence|records?|concerns?|issues?|matters?|check(?:ed)?-?\s*ins?|time-?outs?|members?|ones?)|gate\s+(attendance|records?|check(?:ed)?-?\s*ins?|time-?outs?|scan)|check(?:ed)?-?\s*ins?|time-?outs?|attendance(\s+audit|\s+records?|\s+exceptions?)?)\b/i,
-    coverageRegex: /\b(attendance|check(?:ed)?-?\s*in|time-?out|gate records?|faculty)\b/i,
+    keywords: /\b(faculty([- ]related)?\s*(attendance|presence|records?|concerns?|issues?|matters?|check(?:ed)?-?\s*ins?|time-?outs?|members?|ones?)|gate\s+(attendance|records?|check(?:ed)?-?\s*ins?|time-?outs?|scan)|check(?:ed)?-?\s*ins?|time-?outs?|attendance(\s+audit|\s+records?|\s+exceptions?)?|approved\s+leaves?|on\s+approved\s+leave)\b/i,
+    coverageRegex: /\b(attendance|check(?:ed)?-?\s*in|time-?out|gate records?|faculty|approved\s+leave)\b/i,
     defaultArgs: {},
     summarizeResult: (result: any) => {
       const summary = result?.summary;

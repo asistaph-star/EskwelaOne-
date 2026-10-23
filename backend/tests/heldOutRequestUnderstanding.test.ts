@@ -288,15 +288,15 @@ describe('DIGISKWELA — HELD-OUT REQUEST UNDERSTANDING & CONSTRAINT SUITE', { t
 
   // 14. Attendance Status Qualifier Preservation (TC-PUI-07 regression)
   it('Case 14: Attendance Status Qualifiers: preserve qualifiers in plan, constraints, and tool args', () => {
-    // 14a: No gate check-in (TC-PUI-07)
+    // 14a: Raw no gate check-in observation (TC-PUI-07)
     const promptNoCheckIn = 'Show all faculty who have no gate check-in today and show their department.';
     const planNoCheckIn = buildRequestPlan([{ role: 'user', content: promptNoCheckIn }], 'Principal', 'Principal', principalTools);
     expect(planNoCheckIn).not.toBeNull();
     expect(planNoCheckIn!.primaryToolName).toBe('getFacultyAttendanceAudit');
-    expect(planNoCheckIn!.toolsToExecute[0].args.statusFilter).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+    expect(planNoCheckIn!.toolsToExecute[0].args.statusFilter).toBe('NO_GATE_CHECK_IN');
     const constraintNoCheckIn = planNoCheckIn!.constraints?.find(c => c.type === 'INCLUDE_ONLY');
     expect(constraintNoCheckIn).toBeDefined();
-    expect(constraintNoCheckIn!.value).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+    expect(constraintNoCheckIn!.value).toBe('NO_GATE_CHECK_IN');
 
     // 14b: Has checked in
     const promptCheckedIn = 'Show all faculty who have checked in today.';
@@ -317,5 +317,22 @@ describe('DIGISKWELA — HELD-OUT REQUEST UNDERSTANDING & CONSTRAINT SUITE', { t
     const promptGeneral = 'Show all faculty attendance records for today.';
     const planGeneral = buildRequestPlan([{ role: 'user', content: promptGeneral }], 'Principal', 'Principal', principalTools);
     expect(planGeneral!.toolsToExecute[0].args.statusFilter).toBeUndefined();
+
+    // 14f: No gate check-in AND no approved leave (unexplained absence)
+    const promptUnexplained = 'Show faculty with no gate check-in and no approved leave today.';
+    const planUnexplained = buildRequestPlan([{ role: 'user', content: promptUnexplained }], 'Principal', 'Principal', principalTools);
+    expect(planUnexplained!.toolsToExecute[0].args.statusFilter).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+
+    // 14g: On approved leave
+    const promptApproved = 'Show faculty who are on approved leave today.';
+    const planApproved = buildRequestPlan([{ role: 'user', content: promptApproved }], 'Principal', 'Principal', principalTools);
+    expect(planApproved!.toolsToExecute[0].args.statusFilter).toBe('ON_APPROVED_LEAVE');
+
+    // 14h: Cross-check: which have no gate check-in and which are explained by approved leave
+    const promptCrossCheck = 'Which faculty have no gate check-in, and which of those are explained by approved leave?';
+    const planCrossCheck = buildRequestPlan([{ role: 'user', content: promptCrossCheck }], 'Principal', 'Principal', principalTools);
+    expect(planCrossCheck!.intent).toBe('ATTENDANCE_CROSSCHECK');
+    expect(planCrossCheck!.toolsToExecute[0].args.statusFilter).toBe('NO_GATE_CHECK_IN');
+    expect(planCrossCheck!.toolsToExecute.some(t => t.name === 'getPendingLeaves')).toBe(true);
   });
 });
