@@ -18,6 +18,7 @@ import {
 import { dispatchTool } from '../tools/toolDispatcher.js';
 import { buildRequestPlan, PrincipalRequestPlan } from '../orchestration/requestPlanner.js';
 import { aggregateFacts, AggregationResult } from '../orchestration/aggregator.js';
+import { buildSynthesisDirective } from '../orchestration/synthesisDirective.js';
 import { validateAndRemedyCompleteness } from '../orchestration/completenessValidator.js';
 import { normalizeAssistantText } from '../utils/normalizeResponseText.js';
 import { recordAIAuditLog } from '../audit/aiAudit.service.js';
@@ -285,6 +286,81 @@ export class DigiSkwelaAgentHarness {
     let finalTurnResponse: AICompletionResponse | null = null;
     let currentRound = 1;
 
+    const isSimulation = input.messages.some(m => (m.content || '').includes('[simulate_'));
+
+    // Grounding: If planned operational tools exist for this domain request, dispatch them initially
+    if (!isSimulation && plan?.toolsToExecute && plan.toolsToExecute.length > 0 && turnState.toolsExecuted.length === 0) {
+      turnState.addSpan('PLANNED_TOOLS_DISPATCH', { round: 1, status: 'DISPATCHING' });
+
+      for (let idx = 0; idx < plan.toolsToExecute.length; idx++) {
+        if (turnState.toolsExecuted.length >= maxToolsPerTurn) break;
+
+        const pt = plan.toolsToExecute[idx];
+        const toolName = pt.name;
+        const toolArgs = pt.args || {};
+        const callId = turnState.generateCallId(1, toolName, idx);
+
+        if (!roleCapabilityRegistry.isToolAuthorizedForUser(toolName, userRoles, userPermissions)) {
+          turnState.addSpan('TOOL_UNAUTHORIZED_BLOCKED', { round: 1, toolName, callId, status: 'FORBIDDEN' });
+          conversationWithTools.push({
+            role: 'tool',
+            name: toolName,
+            toolCallId: callId,
+            content: JSON.stringify({ error: `Tool '${toolName}' is not authorized for your role.` })
+          });
+          continue;
+        }
+
+        const toolStartTime = Date.now();
+        let execResult: any = null;
+        let success = true;
+        let errorMessage: string | undefined = undefined;
+
+        try {
+          const dispatchRes = await dispatchTool(toolName, toolArgs, {
+            user: authUser,
+            correlationId,
+            portal
+          });
+          execResult = dispatchRes.data;
+        } catch (err: any) {
+          success = false;
+          errorMessage = err.message || 'Tool execution failed';
+        }
+        const toolDuration = Date.now() - toolStartTime;
+
+        turnState.recordToolExecution({
+          name: toolName,
+          args: toolArgs,
+          result: execResult,
+          success,
+          error: errorMessage,
+          toolCallId: callId
+        });
+
+        turnState.addSpan('TOOL_EXECUTED', {
+          round: 1,
+          toolName,
+          callId,
+          durationMs: toolDuration,
+          status: success ? 'SUCCESS' : 'FAILED'
+        });
+
+        conversationWithTools.push({
+          role: 'tool',
+          name: toolName,
+          toolCallId: callId,
+          content: success ? JSON.stringify(execResult) : JSON.stringify({ error: errorMessage })
+        });
+      }
+
+      if (plan && plan.obligations?.length > 0) {
+        const aggregateData = aggregateFacts(plan, turnState.executedResults);
+        const directiveMsg = buildSynthesisDirective(plan, aggregateData);
+        conversationWithTools.push(directiveMsg);
+      }
+    }
+
     // ─── 6. Bounded Iterative Tool-Use Loop ──────────────────────────────
     while (currentRound <= maxRounds) {
       turnState.addSpan(`ROUND_${currentRound}_START`, { round: currentRound });
@@ -319,7 +395,7 @@ export class DigiSkwelaAgentHarness {
 
       const toolCalls = modelResponse.toolCalls;
 
-      // If the model did NOT request tool calls, model provided synthesized text answer
+      // If the model did NOT request tool calls, this is the final synthesis turn
       if (!toolCalls || toolCalls.length === 0) {
         finalTurnResponse = modelResponse;
         break;
@@ -416,11 +492,26 @@ export class DigiSkwelaAgentHarness {
         });
       }
 
+      if (plan && plan.obligations?.length > 0 && turnState.toolsExecuted.length > 0) {
+        const hasDirective = conversationWithTools.some(m => m.role === 'system' && m.content.includes('OPERATIONAL OBLIGATIONS'));
+        if (!hasDirective) {
+          const aggregateData = aggregateFacts(plan, turnState.executedResults);
+          const directiveMsg = buildSynthesisDirective(plan, aggregateData);
+          conversationWithTools.push(directiveMsg);
+        }
+      }
+
       currentRound++;
     }
 
     // If loop reached max rounds without final text synthesis turn, perform final synthesis
     if (!finalTurnResponse || !finalTurnResponse.message?.content) {
+      if (plan && plan.obligations?.length > 0) {
+        const aggregateData = aggregateFacts(plan, turnState.executedResults);
+        const directiveMsg = buildSynthesisDirective(plan, aggregateData);
+        conversationWithTools.push(directiveMsg);
+      }
+
       turnState.addSpan('FINAL_SYNTHESIS_ROUND', { round: currentRound });
       finalTurnResponse = await provider.generateResponse({
         messages: conversationWithTools,
@@ -523,6 +614,14 @@ export class DigiSkwelaAgentHarness {
         model: activeFailover?.model || provider.model || null,
         turnId,
         roundsExecuted: currentRound,
+        orchestration: completionMetrics ? {
+          ...completionMetrics,
+          intent: plan?.intent,
+          obligationsTotal: plan?.obligations?.length || completionMetrics.obligationsTotal || 0,
+        } : (plan ? {
+          intent: plan.intent,
+          obligationsTotal: plan.obligations?.length || 0,
+        } : undefined),
       }
     });
 

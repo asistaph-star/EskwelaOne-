@@ -2,7 +2,8 @@ import {
   DigiSkwelaAIProvider, 
   AICompletionRequest, 
   AICompletionResponse, 
-  AIProviderError 
+  AIProviderError,
+  AIToolCall
 } from './aiProvider.interface.js';
 
 /**
@@ -228,6 +229,67 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
             ],
             finishReason: 'tool_calls',
             usage: { promptTokens: 50, completionTokens: 25, totalTokens: 75 }
+          };
+        }
+      }
+
+      // 0.1 Sweep intent ("what needs my review/attention today")
+      if (content.includes('what needs my review') || content.includes('what needs my attention') || content.includes('exceptions require my attention') || content.includes('what needs review') || content.includes('what needs attention')) {
+        const sweepTools: AIToolCall[] = [];
+        const att = availableTools.find(t => t.name === 'getFacultyAttendanceAudit');
+        const leave = availableTools.find(t => t.name === 'getPendingLeaves');
+        const beh = availableTools.find(t => t.name === 'getAdministrativeBehaviorSummary');
+        const facts = availableTools.find(t => t.name === 'getSchoolOperationalFactSheet');
+        if (att) sweepTools.push({ id: 'call_mock_sw_1', name: att.name, arguments: {} });
+        if (leave) sweepTools.push({ id: 'call_mock_sw_2', name: leave.name, arguments: { limit: 10 } });
+        if (beh) sweepTools.push({ id: 'call_mock_sw_3', name: beh.name, arguments: { limit: 10 } });
+        if (facts) sweepTools.push({ id: 'call_mock_sw_4', name: facts.name, arguments: {} });
+        if (sweepTools.length > 0) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: sweepTools,
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 60, completionTokens: 40, totalTokens: 100 }
+          };
+        }
+      }
+
+      // 0.2 Multi-domain / composite multi-question dispatch
+      const hasAtt = content.includes('faculty') || content.includes('attendance') || content.includes('check-in') || content.includes('gate');
+      const hasLeave = content.includes('leave') || content.includes('vacation');
+      const hasBeh = content.includes('behavior') || content.includes('discipline') || content.includes('incident');
+      const hasAcad = content.includes('academic') || content.includes('grade') || content.includes('pass rate') || content.includes('completeness');
+      const hasEvent = content.includes('event') || content.includes('calendar');
+
+      const domainCount = (hasAtt ? 1 : 0) + (hasLeave ? 1 : 0) + (hasBeh ? 1 : 0) + (hasAcad ? 1 : 0) + (hasEvent ? 1 : 0);
+      if (domainCount >= 2 && !content.includes('[simulate_sequential_tool]')) {
+        const matchedTools: AIToolCall[] = [];
+        if (hasAtt) {
+          const t = availableTools.find(x => x.name === 'getFacultyAttendanceAudit');
+          if (t) matchedTools.push({ id: 'call_mock_multi_att', name: t.name, arguments: {} });
+        }
+        if (hasLeave) {
+          const t = availableTools.find(x => x.name === 'getPendingLeaves');
+          if (t) matchedTools.push({ id: 'call_mock_multi_leave', name: t.name, arguments: { limit: 10 } });
+        }
+        if (hasBeh) {
+          const t = availableTools.find(x => x.name === 'getAdministrativeBehaviorSummary');
+          if (t) matchedTools.push({ id: 'call_mock_multi_beh', name: t.name, arguments: { limit: 10 } });
+        }
+        if (hasAcad) {
+          const t = availableTools.find(x => x.name === 'getAcademicAnalytics');
+          if (t) matchedTools.push({ id: 'call_mock_multi_acad', name: t.name, arguments: {} });
+        }
+        if (hasEvent) {
+          const t = availableTools.find(x => x.name === 'getUpcomingEvents');
+          if (t) matchedTools.push({ id: 'call_mock_multi_evt', name: t.name, arguments: {} });
+        }
+        if (matchedTools.length >= 2) {
+          return {
+            message: { role: 'assistant', content: '' },
+            toolCalls: matchedTools,
+            finishReason: 'tool_calls',
+            usage: { promptTokens: 60, completionTokens: 35, totalTokens: 95 }
           };
         }
       }

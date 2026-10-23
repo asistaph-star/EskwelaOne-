@@ -17,7 +17,7 @@ describe('DIGISKWELA — LIVE UNSEEN GENERALIZATION TESTS (PROMPTS A–G)', { ti
   beforeAll(async () => {
     originalMode = aiConfig.providerMode;
     originalTimeout = aiConfig.cloudflare.timeoutMs;
-    aiConfig.providerMode = 'cloudflare';
+    aiConfig.providerMode = process.env.LIVE_AI_TEST === 'true' ? 'cloudflare' : 'mock';
     aiConfig.cloudflare.timeoutMs = 35000;
 
     principalUserId = generateId();

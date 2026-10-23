@@ -79,7 +79,7 @@ export const aiConfig: AIConfig = {
     rateLimitPerDay: parseInt(process.env.AI_RATE_LIMIT_PER_DAY || '100', 10),
     maxPromptLength: parseInt(process.env.AI_MAX_PROMPT_LENGTH || '2000', 10),
     maxResponseTokens: parseInt(process.env.AI_MAX_RESPONSE_TOKENS || '1500', 10),
-    maxToolCallsPerTurn: parseInt(process.env.AI_MAX_TOOL_CALLS_PER_TURN || '3', 10),
+    maxToolCallsPerTurn: parseInt(process.env.AI_MAX_TOOL_CALLS_PER_TURN || '6', 10),
     toolTimeoutMs: parseInt(process.env.AI_TOOL_TIMEOUT_MS || '5000', 10),
     maxToolResults: parseInt(process.env.AI_MAX_TOOL_RESULTS || '50', 10),
     providerTimeoutMs: parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '10000', 10),

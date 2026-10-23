@@ -302,6 +302,7 @@ export class GroqAIProvider implements DigiSkwelaAIProvider {
 
       // Rate limit or free quota exhaustion
       if (status === 429 || message.includes('rate limit') || message.includes('quota') || err.code === 'rate_limit_exceeded') {
+        console.warn('[GROQ SDK CAUGHT ERROR]', err.message);
         throw new AIProviderError(
           'RATE_LIMITED',
           'Groq Free Tier rate limit or daily quota reached.',

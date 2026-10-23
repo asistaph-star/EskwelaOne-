@@ -635,7 +635,7 @@ export function buildRequestPlan(
       }
 
       // 4.6 Follow-up attendance status filtering ("Which of them are on approved leave?")
-      const isAttendanceScope = currentDomains.includes('faculty_attendance') || (currentDomains.length === 0 && priorContext.domains.has('faculty_attendance'));
+      const isAttendanceScope = currentDomains.includes('faculty_attendance') || (priorContext.domains.has('faculty_attendance') && (hasReferent || isDirectAnaphora || currentDomains.length === 0 || lower.includes('approved leave') || lower.includes('on leave')));
       if (isAttendanceScope && allowedToolNames.has('getFacultyAttendanceAudit')) {
         let statusFilter: 'ALL' | 'COMPLETED' | 'TIME_OUT_PENDING' | 'ON_APPROVED_LEAVE' | 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND' = 'ALL';
 
