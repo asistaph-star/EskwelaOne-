@@ -216,8 +216,8 @@ export function isDomainNegated(domain: OperationalDomainName, clauseText: strin
     return false;
   }
 
-  // Status filters like "no gate check-in" or "no check-in" represent attendance exception queries, not domain exclusion
-  if (domain === 'faculty_attendance' && /\bno\s+(?:gate\s+)?check-?ins?\b/i.test(clauseLower)) {
+  // Status filters like "no gate check-in", "no check-in", or "no time-out" represent attendance exception queries, not domain exclusion
+  if (domain === 'faculty_attendance' && /\b(?:have\s+|with\s+)?no\s+(?:gate\s+)?(?:check-?ins?|time-?outs?)\b/i.test(clauseLower)) {
     return false;
   }
 
@@ -405,6 +405,54 @@ export function analyzeRequest(raw: string, messages: AIMessage[]): RequestUnder
       overallConstraints.push(c);
     }
 
+    // Check attendance status qualifiers in this clause
+    if (/\b(?:have\s+|with\s+)?no\s+(?:gate\s+)?check-?ins?\b|\bwithout\s+(?:gate\s+)?check-?ins?\b|\bmissing\s+(?:gate\s+)?check-?ins?\b|\bunchecked\b/i.test(clauseLower)) {
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value: 'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND',
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    } else if (/\bno\s+time-?outs?\b|\bpending\s+time-?outs?\b|\bhas\s+not\s+timed\s+out\b|\bwithout\s+time-?outs?\b/i.test(clauseLower)) {
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value: 'TIME_OUT_PENDING',
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    } else if ((/\b(?:with\s+)?time-?outs?\s+recorded\b|\bcompleted\s+attendance\b|\btimed\s+out\b/i.test(clauseLower)) && !/\b(?:no|without)\s+time-?out/i.test(clauseLower)) {
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value: 'COMPLETED',
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    } else if (/\b(?:who\s+have\s+|who\s+)?(?:has\s+|have\s+)?checked\s+in\b|\bpresent\s+at\s+gate\b/i.test(clauseLower) && !/\bno\s+(?:gate\s+)?check-?in/i.test(clauseLower)) {
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value: 'CHECKED_IN',
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    } else if (/\b(?:who\s+are\s+|on\s+)?approved\s+leaves?\b/i.test(clauseLower)) {
+      const c: RequestConstraint = {
+        type: 'INCLUDE_ONLY',
+        targetDomain: 'faculty_attendance',
+        value: 'ON_APPROVED_LEAVE',
+        clauseText,
+      };
+      clauseConstraints.push(c);
+      overallConstraints.push(c);
+    }
+
     // Check clause-specific scope qualifier (e.g. "only for my assigned classes")
     if (/(?:only|just)\s+(?:for\s+)?(?:my\s+)?assigned\s+classes\b/i.test(clauseLower)) {
       const targetDom = clauseDomains[0] || 'faculty_attendance';
@@ -536,6 +584,14 @@ function buildDomainToolArgs(domainName: OperationalDomainName, constraints: Req
     const excludeResolved = constraints.some(c => c.type === 'EXCLUDE_STATUS' && c.value === 'Resolved');
     if (excludeResolved) {
       args = { ...args, status: 'Under investigation' };
+    }
+  }
+  if (domainName === 'faculty_attendance') {
+    const attendanceConstraint = constraints.find(
+      c => (c.type === 'INCLUDE_ONLY' || c.type === 'FILTER') && c.targetDomain === 'faculty_attendance' && c.value
+    );
+    if (attendanceConstraint?.value) {
+      args = { ...args, statusFilter: attendanceConstraint.value };
     }
   }
   return args;
@@ -1154,14 +1210,7 @@ export function buildRequestPlan(
       const catalogEntry = DOMAIN_CATALOG[domainName];
       if (allowedToolNames.has(catalogEntry.toolName)) {
         if (!tools.some(t => t.name === catalogEntry.toolName)) {
-          let toolArgs = catalogEntry.defaultArgs ? { ...catalogEntry.defaultArgs } : {};
-          // Propagate exclusion filters if tool supports it (Requirement 6)
-          if (domainName === 'behavior') {
-            const excludeResolved = analysis.constraints.some(c => c.type === 'EXCLUDE_STATUS' && c.value === 'Resolved');
-            if (excludeResolved) {
-              toolArgs = { ...toolArgs, status: 'Under investigation' };
-            }
-          }
+          const toolArgs = buildDomainToolArgs(domainName, analysis.constraints);
           tools.push({ name: catalogEntry.toolName, args: toolArgs });
         }
         domainObs.push({ domain: domainName, description: `${catalogEntry.displayName} records` });

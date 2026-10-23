@@ -93,7 +93,8 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
       'COMPLETED',
       'TIME_OUT_PENDING',
       'ON_APPROVED_LEAVE',
-      'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
+      'NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND',
+      'CHECKED_IN'
     ]).optional(),
     limit: z.number().int().min(1).max(100).optional()
   }).strict(),
@@ -110,7 +111,7 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
         },
         statusFilter: {
           type: 'string',
-          description: 'Optional filter: ALL, COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND'
+          description: 'Optional filter: ALL, COMPLETED, TIME_OUT_PENDING, ON_APPROVED_LEAVE, NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND, CHECKED_IN'
         },
         limit: {
           type: 'number',
@@ -203,7 +204,11 @@ export const getFacultyAttendanceAuditTool: DigiSkwelaTool = {
     // Filter by status if specified
     let filtered = mapped;
     if (args.statusFilter && args.statusFilter !== 'ALL') {
-      filtered = filtered.filter(r => r.attendanceStatus === args.statusFilter);
+      if (args.statusFilter === 'CHECKED_IN') {
+        filtered = filtered.filter(r => r.attendanceStatus === 'COMPLETED' || r.attendanceStatus === 'TIME_OUT_PENDING');
+      } else {
+        filtered = filtered.filter(r => r.attendanceStatus === args.statusFilter);
+      }
     }
 
     const limit = Math.min(Math.max(args.limit || 50, 1), 100);

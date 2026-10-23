@@ -285,4 +285,37 @@ describe('DIGISKWELA — HELD-OUT REQUEST UNDERSTANDING & CONSTRAINT SUITE', { t
     expect(d.origin).toBe('LOCAL_APPLICATION');
     expect(d.message.content).toContain('Good day. How may I assist you with school operations?');
   });
+
+  // 14. Attendance Status Qualifier Preservation (TC-PUI-07 regression)
+  it('Case 14: Attendance Status Qualifiers: preserve qualifiers in plan, constraints, and tool args', () => {
+    // 14a: No gate check-in (TC-PUI-07)
+    const promptNoCheckIn = 'Show all faculty who have no gate check-in today and show their department.';
+    const planNoCheckIn = buildRequestPlan([{ role: 'user', content: promptNoCheckIn }], 'Principal', 'Principal', principalTools);
+    expect(planNoCheckIn).not.toBeNull();
+    expect(planNoCheckIn!.primaryToolName).toBe('getFacultyAttendanceAudit');
+    expect(planNoCheckIn!.toolsToExecute[0].args.statusFilter).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+    const constraintNoCheckIn = planNoCheckIn!.constraints?.find(c => c.type === 'INCLUDE_ONLY');
+    expect(constraintNoCheckIn).toBeDefined();
+    expect(constraintNoCheckIn!.value).toBe('NO_GATE_CHECK_IN_NO_APPROVED_LEAVE_FOUND');
+
+    // 14b: Has checked in
+    const promptCheckedIn = 'Show all faculty who have checked in today.';
+    const planCheckedIn = buildRequestPlan([{ role: 'user', content: promptCheckedIn }], 'Principal', 'Principal', principalTools);
+    expect(planCheckedIn!.toolsToExecute[0].args.statusFilter).toBe('CHECKED_IN');
+
+    // 14c: Time-out recorded
+    const promptTimeOut = 'List faculty with time-out recorded today.';
+    const planTimeOut = buildRequestPlan([{ role: 'user', content: promptTimeOut }], 'Principal', 'Principal', principalTools);
+    expect(planTimeOut!.toolsToExecute[0].args.statusFilter).toBe('COMPLETED');
+
+    // 14d: No time-out
+    const promptPending = 'List faculty with no time-out recorded today.';
+    const planPending = buildRequestPlan([{ role: 'user', content: promptPending }], 'Principal', 'Principal', principalTools);
+    expect(planPending!.toolsToExecute[0].args.statusFilter).toBe('TIME_OUT_PENDING');
+
+    // 14e: General attendance (no qualifier) does not restrict statusFilter
+    const promptGeneral = 'Show all faculty attendance records for today.';
+    const planGeneral = buildRequestPlan([{ role: 'user', content: promptGeneral }], 'Principal', 'Principal', principalTools);
+    expect(planGeneral!.toolsToExecute[0].args.statusFilter).toBeUndefined();
+  });
 });
