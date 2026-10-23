@@ -394,6 +394,26 @@ export function validateAndRemedyCompleteness(
     }
   }
 
+  // ─── 2.5. CONSTRAINTS & EXCLUSIONS EVALUATION (Requirements 22 & 23) ───
+  if (plan.constraints && plan.constraints.length > 0) {
+    for (const constraint of plan.constraints) {
+      if (constraint.type === 'EXCLUDE_STATUS' && constraint.value === 'Resolved') {
+        if (/resolved\s+(cases?|records?|incidents?)\s+(require|needing|open|active)\b/i.test(finalized)) {
+          remediedCount++;
+          const remedy = 'Note: Resolved behavioral records are excluded from active operational attention per request.';
+          addendumLines.push(remedy);
+        }
+      } else if (constraint.type === 'SEPARATE_UNRELATED' || plan.hasSeparateUnrelated) {
+        const mentionsUnrelated = /\b(unrelated|independent|no connection|no overlap|separate from)\b/i.test(finalized);
+        if (!mentionsUnrelated) {
+          remediedCount++;
+          const unrelatedNotice = 'Note: Findings across the remaining operational domains have no recorded date or identity overlap and represent independent matters.';
+          addendumLines.push(unrelatedNotice);
+        }
+      }
+    }
+  }
+
   // ─── 3. COMBINE CONTENT & DETERMINISTIC GROUNDED ADDENDA ───────────────
   if (addendumLines.length > 0) {
     if (finalized.length > 0) {

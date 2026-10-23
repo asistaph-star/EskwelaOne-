@@ -54,4 +54,5 @@ export interface AgentTurnResult {
   scopeDecision: string;
   completion?: ObligationMetricSummary;
   traceSpans?: TurnTraceSpan[];
+  origin?: 'STATIC_UI' | 'LOCAL_APPLICATION' | 'AI_PROVIDER' | 'ERROR_FALLBACK';
 }

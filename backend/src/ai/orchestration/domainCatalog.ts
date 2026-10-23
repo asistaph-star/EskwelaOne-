@@ -77,8 +77,8 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
       screen: 'p-behavior',
       description: 'Open Behavioral Reports tab',
     },
-    keywords: /\b(behavior|disciplinary|incident|behavioral|misconduct|student\s+(cases?|matters?|concerns?)|infraction)\b/i,
-    coverageRegex: /\b(behavior|incident|cases?)\b/i,
+    keywords: /\b(behavior(al)?|disciplin(e|ary)|incidents?|misconduct|student\s+(cases?|matters?|concerns?)|infractions?)\b/i,
+    coverageRegex: /\b(behavior|incident|cases?|infraction)\b/i,
     defaultArgs: { limit: 10 },
     summarizeResult: (result: any) => {
       const summary = result?.summary;

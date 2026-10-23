@@ -38,6 +38,7 @@ export interface ProcessChatResponseOutput {
   toolsExecuted: string[];
   completion?: ObligationMetricSummary;
   traceSpans?: TurnTraceSpan[];
+  origin?: 'STATIC_UI' | 'LOCAL_APPLICATION' | 'AI_PROVIDER' | 'ERROR_FALLBACK';
 }
 
 export const AIService = {
@@ -97,6 +98,7 @@ export const AIService = {
         toolsExecuted: turnResult.toolsExecuted,
         completion: turnResult.completion,
         traceSpans: turnResult.traceSpans,
+        origin: turnResult.origin,
       };
     } catch (err: any) {
       const isProviderErr = err instanceof AIProviderError;
@@ -128,7 +130,9 @@ export const AIService = {
         if (err.code === 'RATE_LIMITED' || err.code === 'FREE_QUOTA_EXHAUSTED') {
           const content = provider.mode === 'chatgpt_plan' && err.message
             ? err.message
-            : 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.';
+            : (err.code === 'FREE_QUOTA_EXHAUSTED' || (err.message && err.message.toLowerCase().includes('quota'))
+                ? 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.'
+                : 'DigiSkwela AI is temporarily unavailable because the free AI service limit has been reached. Please try again later.');
 
           return {
             turnId: input.turnId || `turn_${generateId()}`,
@@ -140,11 +144,12 @@ export const AIService = {
             responseType: 'text',
             traceId,
             scopeDecision: 'RATE_LIMITED',
-            toolsExecuted: []
+            toolsExecuted: [],
+            origin: 'ERROR_FALLBACK',
           };
         }
 
-        if (err.code === 'PROVIDER_TIMEOUT' || err.code === 'PROVIDER_UNAVAILABLE') {
+        if (err.code === 'PROVIDER_TIMEOUT') {
           const content = provider.mode === 'chatgpt_plan' && err.message
             ? err.message
             : 'DigiSkwela AI is temporarily unavailable. Please try again later.';
@@ -159,12 +164,54 @@ export const AIService = {
             responseType: 'text',
             traceId,
             scopeDecision: 'PROVIDER_UNAVAILABLE',
-            toolsExecuted: []
+            toolsExecuted: [],
+            origin: 'ERROR_FALLBACK',
+          };
+        }
+
+        if (err.code === 'PROVIDER_UNAVAILABLE') {
+          const content = provider.mode === 'chatgpt_plan' && err.message
+            ? err.message
+            : 'DigiSkwela AI service is currently unavailable. Please verify connection and try again.';
+
+          return {
+            turnId: input.turnId || `turn_${generateId()}`,
+            sessionId: input.sessionId,
+            message: {
+              role: 'assistant',
+              content
+            },
+            responseType: 'text',
+            traceId,
+            scopeDecision: 'PROVIDER_UNAVAILABLE',
+            toolsExecuted: [],
+            origin: 'ERROR_FALLBACK',
+          };
+        }
+
+        if (err.code === 'INVALID_PROVIDER_RESPONSE' || err.code === 'UNKNOWN_ERROR') {
+          const content = provider.mode === 'chatgpt_plan' && err.message
+            ? err.message
+            : 'DigiSkwela AI encountered an unexpected response from the AI service. Please try again.';
+
+          return {
+            turnId: input.turnId || `turn_${generateId()}`,
+            sessionId: input.sessionId,
+            message: {
+              role: 'assistant',
+              content
+            },
+            responseType: 'text',
+            traceId,
+            scopeDecision: err.code,
+            toolsExecuted: [],
+            origin: 'ERROR_FALLBACK',
           };
         }
       }
 
       throw err;
     }
+
   }
 };

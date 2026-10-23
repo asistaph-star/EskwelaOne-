@@ -178,7 +178,8 @@ export class DigiSkwelaAgentHarness {
           },
           responseType: 'text',
           scopeDecision: 'OUT_OF_SCOPE',
-          toolsExecuted: []
+          toolsExecuted: [],
+          origin: 'LOCAL_APPLICATION',
         };
       }
 
@@ -207,7 +208,8 @@ export class DigiSkwelaAgentHarness {
           },
           responseType: 'text',
           scopeDecision: 'ALLOWED',
-          toolsExecuted: []
+          toolsExecuted: [],
+          origin: 'LOCAL_APPLICATION',
         };
       }
 
@@ -237,7 +239,8 @@ export class DigiSkwelaAgentHarness {
           responseType: 'text',
           navigationActions: plan.navigationAction ? [plan.navigationAction] : undefined,
           scopeDecision: 'ALLOWED',
-          toolsExecuted: []
+          toolsExecuted: [],
+          origin: 'LOCAL_APPLICATION',
         };
       }
 
@@ -266,7 +269,8 @@ export class DigiSkwelaAgentHarness {
           },
           responseType: 'text',
           scopeDecision: 'ALLOWED',
-          toolsExecuted: []
+          toolsExecuted: [],
+          origin: 'LOCAL_APPLICATION',
         };
       }
     }
@@ -546,11 +550,19 @@ export class DigiSkwelaAgentHarness {
     const primaryToolName = plan?.primaryToolName || turnState.toolsExecuted[0] || '';
     const primaryResult = successfulResults.find(r => r.name === primaryToolName)?.result || successfulResults[0]?.result;
 
-    if (primaryResult && primaryToolName) {
+    const isMultiDomainTurn = plan?.intent === 'MULTI_DOMAIN';
+
+    if (!isMultiDomainTurn && primaryResult && primaryToolName) {
       const mapping = mapToolToNormalizedOutput(primaryToolName, primaryResult);
       structuredData = mapping.structuredData;
       provenance = mapping.provenance;
       navigationActions = mapping.navigationActions;
+    } else if (isMultiDomainTurn) {
+      // Option A: True multi-domain turns render complete narrative without a single-domain structured card dominance
+      structuredData = undefined;
+      if (plan?.navigationAction) {
+        navigationActions = [plan.navigationAction];
+      }
     }
 
     if (plan) {
@@ -564,6 +576,13 @@ export class DigiSkwelaAgentHarness {
         if (structuredData) {
           structuredData.provenance = provenance;
         }
+      }
+
+      if (!provenance) {
+        provenance = {
+          sourceDomains: turnState.toolsExecuted.length > 0 ? turnState.toolsExecuted : ['DigiSkwela Operations'],
+          asOf: new Date().toISOString()
+        };
       }
 
       const normalized = normalizeAssistantText(finalizedContent, {
@@ -585,6 +604,13 @@ export class DigiSkwelaAgentHarness {
       finalizedContent = validated.finalizedContent;
       completionMetrics = validated.auditMetrics;
     } else {
+      if (!provenance) {
+        provenance = {
+          sourceDomains: turnState.toolsExecuted.length > 0 ? turnState.toolsExecuted : ['DigiSkwela Operations'],
+          asOf: new Date().toISOString()
+        };
+      }
+
       finalizedContent = normalizeAssistantText(finalizedContent, {
         hasStructuredData: Boolean(structuredData),
         toolName: primaryToolName || undefined,
@@ -645,7 +671,8 @@ export class DigiSkwelaAgentHarness {
       toolsExecuted: turnState.toolsExecuted,
       scopeDecision: 'ALLOWED',
       completion: completionMetrics,
-      traceSpans: turnState.traceSpans
+      traceSpans: turnState.traceSpans,
+      origin: 'AI_PROVIDER',
     };
   }
 }

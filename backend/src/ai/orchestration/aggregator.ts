@@ -19,6 +19,7 @@ export interface AggregationResult {
   priorities: ReviewPriorityItem[];
   priorityDisclaimer?: string;
   mergedSourceDomains: string[];
+  unrelatedDomains?: string[];
 }
 
 /**
@@ -134,6 +135,27 @@ export function aggregateFacts(
     });
   }
 
+  // ─── 3. Unrelated Domains Identification (Requirement 23) ───────────
+  const correlatedDomains = new Set<string>();
+  for (const c of correlations) {
+    correlatedDomains.add(c.domainA.toLowerCase());
+    correlatedDomains.add(c.domainB.toLowerCase());
+  }
+
+  const executedDomainNames = executedResults
+    .filter(r => r.success)
+    .map(r => {
+      if (r.name === 'getFacultyAttendanceAudit') return 'Faculty Attendance';
+      if (r.name === 'getPendingLeaves') return 'Leave Management';
+      if (r.name === 'getAdministrativeBehaviorSummary') return 'Behavioral Reports';
+      if (r.name === 'getAcademicAnalytics') return 'Academic Analytics';
+      if (r.name === 'getUpcomingEvents') return 'School Events';
+      if (r.name === 'getSchoolOperationalFactSheet') return 'Dashboard Overview';
+      return r.name;
+    });
+
+  const unrelatedDomains = executedDomainNames.filter(d => !correlatedDomains.has(d.toLowerCase()));
+
   return {
     correlations,
     priorities,
@@ -141,5 +163,6 @@ export function aggregateFacts(
       ? '(Suggested review order based on operational urgency; not DepEd policy)'
       : undefined,
     mergedSourceDomains: Array.from(allSourceDomains),
+    unrelatedDomains,
   };
 }

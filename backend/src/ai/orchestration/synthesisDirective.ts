@@ -37,6 +37,29 @@ export function buildSynthesisDirective(
     parts.push('CRITICAL REQUIREMENT: You MUST include this exact disclaimer with the review order: "(Suggested review order based on operational urgency; not DepEd policy)".');
   }
 
+  if (plan.constraints && plan.constraints.length > 0) {
+    parts.push('ACTIVE CONSTRAINTS & EXCLUSIONS TO ENFORCE:');
+    for (const c of plan.constraints) {
+      if (c.type === 'EXCLUDE_DOMAIN' && c.targetDomain) {
+        parts.push(`- EXCLUDE DOMAIN: Do not report on or synthesize ${c.targetDomain} records. Strictly exclude this domain as requested.`);
+      } else if (c.type === 'EXCLUDE_STATUS' && c.value) {
+        parts.push(`- EXCLUDE STATUS: Exclude ${c.value} records. Focus strictly on active/unresolved records.`);
+      } else if (c.type === 'INCLUDE_ONLY' && c.value) {
+        parts.push(`- INCLUDE ONLY: Filter findings strictly to ${c.value} records.`);
+      } else if (c.type === 'SCOPE' && c.value) {
+        parts.push(`- SCOPE CONSTRAINT: Apply scope '${c.value}' strictly to ${c.targetDomain || 'the specified domain'}. Do not constrain other domains.`);
+      }
+    }
+  }
+
+  if (plan.hasSeparateUnrelated || (aggregateData.unrelatedDomains && aggregateData.unrelatedDomains.length > 0)) {
+    parts.push('UNRELATED SEPARATION REQUIREMENT:');
+    parts.push('- You MUST clearly identify which operational findings are connected/correlated and explicitly state which ones are unrelated.');
+    if (aggregateData.unrelatedDomains && aggregateData.unrelatedDomains.length > 0) {
+      parts.push(`- Note: Authoritative records show that findings in ${aggregateData.unrelatedDomains.join(', ')} have no date or identity overlap with other issues and are unrelated.`);
+    }
+  }
+
   if (plan.isDraft) {
     parts.push('DRAFTING REQUIREMENT:');
     parts.push('- Synthesize the verified records into a ready-to-review administrative communication.');
