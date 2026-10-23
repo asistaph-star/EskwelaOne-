@@ -318,10 +318,26 @@ export class ChatGPTPlanAIProvider implements DigiSkwelaAIProvider {
       }
 
       if (msg.role === 'tool') {
+        const callId = msg.toolCallId || 'call_0';
+        const toolName = msg.name || 'unspecified_tool';
+        const hasMatchingCall = inputItems.some(item => item.type === 'function_call' && item.call_id === callId);
+
+        if (!hasMatchingCall) {
+          // Wire protocol normalization: OpenAI Responses API requires every function_call_output
+          // to be preceded by a corresponding function_call item in input.
+          inputItems.push({
+            type: 'function_call',
+            id: `fc_${callId}`,
+            call_id: callId,
+            name: toolName,
+            arguments: '{}',
+          });
+        }
+
         // Function output item matching call_id
         inputItems.push({
           type: 'function_call_output',
-          call_id: msg.toolCallId || 'call_0',
+          call_id: callId,
           output: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
         });
       }

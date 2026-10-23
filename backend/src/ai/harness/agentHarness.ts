@@ -287,11 +287,9 @@ export class DigiSkwelaAgentHarness {
     let currentRound = 1;
 
     const isSimulation = input.messages.some(m => (m.content || '').includes('[simulate_'));
-    const isChatGPTPlan = provider.mode === 'chatgpt_plan' || (provider.name && provider.name.toLowerCase().includes('chatgpt'));
 
     // Grounding: If planned operational tools exist for this domain request, dispatch them initially
-    // (Excluded for ChatGPT Plan which strictly enforces model-initiated function call history under Responses API)
-    if (!isSimulation && !isChatGPTPlan && plan?.toolsToExecute && plan.toolsToExecute.length > 0 && turnState.toolsExecuted.length === 0) {
+    if (!isSimulation && plan?.toolsToExecute && plan.toolsToExecute.length > 0 && turnState.toolsExecuted.length === 0) {
       turnState.addSpan('PLANNED_TOOLS_DISPATCH', { round: 1, status: 'DISPATCHING' });
 
       for (let idx = 0; idx < plan.toolsToExecute.length; idx++) {

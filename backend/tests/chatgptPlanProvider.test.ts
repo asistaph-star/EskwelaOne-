@@ -1330,6 +1330,158 @@ describe('DIGISKWELA — CHATGPT PLAN PROVIDER QUALIFICATION', () => {
       // Invariant: exactly 2 bounded attempts made to /responses
       expect(responseAttempts).toBe(2);
     });
+
+    it('TC-CGP-33: Wire protocol normalization automatically pairs orphaned tool messages with preceding function_call in Responses API input payload', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_protocol_test',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let capturedPayload: any = null;
+      const mockFetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        capturedPayload = JSON.parse(init.body);
+        const sseText = `event: response.completed\ndata: ${JSON.stringify({
+          response: {
+            output: [{
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Synthesis complete.' }]
+            }]
+          }
+        })}\n\n`;
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'text/event-stream' }),
+          text: async () => sseText,
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      const res = await provider.generateResponse({
+        messages: [
+          { role: 'user', content: 'What needs my review today?' },
+          {
+            role: 'tool',
+            name: 'getFacultyAttendanceAudit',
+            toolCallId: 'call_preplanned_001',
+            content: JSON.stringify({ activeTeachers: 10, completedCount: 9 })
+          }
+        ]
+      });
+
+      expect(res.message.content).toBe('Synthesis complete.');
+      expect(capturedPayload).toBeDefined();
+
+      const items = capturedPayload.input;
+      expect(items).toHaveLength(3); // user message, synthesized function_call, function_call_output
+
+      // Item 0: user message
+      expect(items[0]).toEqual({ role: 'user', content: 'What needs my review today?' });
+
+      // Item 1: synthesized preceding function_call
+      expect(items[1]).toEqual({
+        type: 'function_call',
+        id: 'fc_call_preplanned_001',
+        call_id: 'call_preplanned_001',
+        name: 'getFacultyAttendanceAudit',
+        arguments: '{}'
+      });
+
+      // Item 2: function_call_output
+      expect(items[2]).toEqual({
+        type: 'function_call_output',
+        call_id: 'call_preplanned_001',
+        output: JSON.stringify({ activeTeachers: 10, completedCount: 9 })
+      });
+    });
+
+    it('TC-CGP-34: Wire protocol retains natural function_call without duplicate injection when preceding assistant tool call exists', async () => {
+      storage.saveCredentials({
+        accessToken: 'access_protocol_test',
+        tokenType: 'Bearer',
+        expiresAt: Date.now() + 3600000,
+        scope: 'openid profile email offline_access resource.invoke chatgpt.tokens.use.direct',
+      });
+
+      let capturedPayload: any = null;
+      const mockFetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+        if (url.includes('/models')) {
+          return {
+            ok: true,
+            json: async () => ({ models: [{ slug: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' }] }),
+          };
+        }
+        capturedPayload = JSON.parse(init.body);
+        const sseText = `event: response.completed\ndata: ${JSON.stringify({
+          response: {
+            output: [{
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Second round response.' }]
+            }]
+          }
+        })}\n\n`;
+        return {
+          ok: true,
+          status: 200,
+          headers: new Headers({ 'content-type': 'text/event-stream' }),
+          text: async () => sseText,
+        };
+      });
+
+      const provider = new ChatGPTPlanAIProvider({
+        storage,
+        fetchFn: mockFetch as any,
+      });
+
+      await provider.generateResponse({
+        messages: [
+          { role: 'user', content: 'Check attendance' },
+          {
+            role: 'assistant',
+            content: '',
+            toolCalls: [{ id: 'call_model_001', name: 'getFacultyAttendanceAudit', arguments: { statusFilter: 'ALL' } }]
+          },
+          {
+            role: 'tool',
+            name: 'getFacultyAttendanceAudit',
+            toolCallId: 'call_model_001',
+            content: JSON.stringify({ ok: true })
+          }
+        ]
+      });
+
+      expect(capturedPayload).toBeDefined();
+      const items = capturedPayload.input;
+      expect(items).toHaveLength(3); // user message, model function_call, function_call_output
+
+      expect(items[1]).toEqual({
+        type: 'function_call',
+        id: 'fc_call_model_001',
+        call_id: 'call_model_001',
+        name: 'getFacultyAttendanceAudit',
+        arguments: JSON.stringify({ statusFilter: 'ALL' })
+      });
+
+      expect(items[2]).toEqual({
+        type: 'function_call_output',
+        call_id: 'call_model_001',
+        output: JSON.stringify({ ok: true })
+      });
+    });
   });
 });
 
