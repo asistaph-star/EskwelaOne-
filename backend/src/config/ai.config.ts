@@ -91,5 +91,5 @@ export const aiConfig: AIConfig = {
   },
 };
 
-export const SCHOOL_NAME = process.env.SCHOOL_NAME || 'Sindalan National High School';
+export const SCHOOL_NAME = process.env.SCHOOL_NAME || 'Calulut Integrated National High School';
 
