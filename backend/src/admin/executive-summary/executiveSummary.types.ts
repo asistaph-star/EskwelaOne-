@@ -17,6 +17,7 @@ export interface SchoolFactSheet {
 
   students: {
     enrolled: number | null;
+    timeInNoTimeoutCount: number | null;
     onCampusNow: number | null;
   };
 
@@ -64,6 +65,7 @@ export interface ExecutiveSummaryResponse {
   metrics: {
     students: {
       enrolled: number | null;
+      timeInNoTimeoutCount?: number | null;
       onCampusNow: number | null;
     };
     faculty: {

@@ -271,8 +271,8 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.students?.enrolled ?? 'N/A'}</div>
           </div>
           <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
-            <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Students On Campus</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.students?.onCampusNow ?? 'N/A'}</div>
+            <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Gate Time-In (No Time-Out)</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.t1 }}>{raw.students?.timeInNoTimeoutCount ?? raw.students?.onCampusNow ?? 'N/A'}</div>
           </div>
           <div style={{ padding: '8px 10px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3, textTransform: 'uppercase', fontWeight: 600 }}>Active Faculty</div>
@@ -586,8 +586,8 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{exec.enrolledStudents ?? 'N/A'}</div>
           </div>
           <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
-            <div style={{ fontSize: 9, color: C.t3 }}>Students On Campus</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{exec.studentsOnCampusToday ?? 'N/A'}</div>
+            <div style={{ fontSize: 9, color: C.t3 }}>Gate Time-In (No Time-Out)</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{exec.studentsTimeInNoTimeoutToday ?? exec.studentsOnCampusToday ?? 'N/A'}</div>
           </div>
           <div style={{ padding: '6px 8px', background: C.paper, borderRadius: 6, border: '1px solid #CBD5E1' }}>
             <div style={{ fontSize: 9, color: C.t3 }}>Faculty Checked In</div>

@@ -34,8 +34,8 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
       screen: 'p-leaves',
       description: 'Open Leave Management tab',
     },
-    keywords: /\b(leave|leaves|vacation|sick leave|leave application|leave request|time off|absence request)\b/i,
-    coverageRegex: /\b(leave|leaves|vacation)\b/i,
+    keywords: /\b(leaves|vacation|sick leave|leave (?:application|request|approval|status|record|credit|management|balance)s?|pending leave|approved leave|on leave|take(?: a)? leave|faculty leave|staff leave|time off|absence request)\b|(?<!\b(?:i|you|we|they|he|she|before|when|as|after|time to|ready to|going to|plan to)\s+)leave(?!\s+(?:the|campus|school|office|today|early|room|building|now|at|for))\b/i,
+    coverageRegex: /\b(leaves|vacation|sick leave|leave (?:application|request)s?|pending leave|approved leave)\b|(?<!\b(?:i|before|when|as|after)\s+)leave(?!\s+(?:the|campus|school|office|today))\b/i,
     defaultArgs: { limit: 10 },
     summarizeResult: (result: any) => {
       const count = result?.totalPending ?? (Array.isArray(result?.requests) ? result.requests.length : 0);

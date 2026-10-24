@@ -18,14 +18,14 @@ import { SCHOOL_NAME } from '../../../config/ai.config.js';
 export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
   id: 'PRIN-AI-01',
   name: 'getSchoolOperationalFactSheet',
-  description: `Retrieves the authoritative daily executive operational fact sheet for ${SCHOOL_NAME}. Use for conversational operational questions regarding overall school pulse, student enrollment, campus attendance, faculty presence, open administrative cases, and pending operations. Aggregate facts only; does not expose individual student records.`,
+  description: `Retrieves the authoritative daily executive operational fact sheet for ${SCHOOL_NAME}. Use for conversational operational questions regarding overall school pulse, student enrollment, student gate check-in records, faculty presence, open administrative cases, and pending operations. Aggregate facts only; does not expose individual student records.`,
   allowedRoles: ['Principal'],
   requiredPermissions: [...SOURCE_PERMISSIONS.FACT_SHEET],
   inputSchema: z.object({}).strict(),
   declaration: {
     id: 'PRIN-AI-01',
     name: 'getSchoolOperationalFactSheet',
-    description: 'Retrieves the authoritative daily executive operational fact sheet for daily attention items, overall school pulse, student attendance, faculty presence, open cases, and pending operations.',
+    description: 'Retrieves the authoritative daily executive operational fact sheet for daily attention items, overall school pulse, student gate check-in records, faculty presence, open cases, and pending operations.',
     parameters: {
       type: 'object',
       properties: {},
@@ -42,7 +42,8 @@ export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
       asOfFormatted: rawFactSheet.asOfFormatted,
       students: {
         enrolled: rawFactSheet.students.enrolled,
-        onCampusNow: rawFactSheet.students.onCampusNow,
+        timeInNoTimeoutCount: rawFactSheet.students.timeInNoTimeoutCount,
+        onCampusNow: rawFactSheet.students.timeInNoTimeoutCount,
       },
       faculty: {
         checkedInNow: rawFactSheet.faculty.checkedInNow,

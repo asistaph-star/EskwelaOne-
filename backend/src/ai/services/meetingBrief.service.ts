@@ -52,8 +52,9 @@ export class MeetingBriefService {
         if (factSheet.students.enrolled !== null) {
           highlights.push({ label: 'Enrolled Students', value: factSheet.students.enrolled });
         }
-        if (factSheet.students.onCampusNow !== null) {
-          highlights.push({ label: 'Students on Campus Today', value: factSheet.students.onCampusNow });
+        const studentGateCount = factSheet.students.timeInNoTimeoutCount ?? factSheet.students.onCampusNow;
+        if (studentGateCount !== null) {
+          highlights.push({ label: 'Students with Gate Time-In (No Time-Out)', value: studentGateCount });
         }
 
         if (factSheet.faculty.totalActive !== null) {

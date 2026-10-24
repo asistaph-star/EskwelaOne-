@@ -158,8 +158,14 @@ export function cleanAwkwardLanguage(text: string): string {
   result = result.replace(/\bApprove the leave\b/gi, 'Review the leave');
   result = result.replace(/\bTake disciplinary action\b/gi, 'Review the behavior case');
   result = result.replace(/\bRefer the student to Guidance\b/gi, 'Review Guidance counseling options');
-  result = result.replace(/\bContact the parent immediately\b/gi, 'Review parent communication history');
   result = result.replace(/\bUnexcused absence\b/gi, 'No gate check-in recorded and no approved leave found');
+
+  // Student physical presence -> neutral gate scan observation
+  result = result.replace(/\b(?:0|no)\s+students?\s+(?:are\s+)?(?:currently\s+)?(?:recorded\s+)?on campus\b/gi, 'no student gate time-in is recorded today');
+  result = result.replace(/\b0 recorded on campus\b/gi, 'no student gate time-in is recorded today');
+  result = result.replace(/\b(\d+)\s+students?\s+(?:are\s+)?currently\s+(?:recorded\s+)?on campus\b/gi, '$1 student(s) recorded with a gate time-in and no time-out');
+  result = result.replace(/\bcurrently on campus\b/gi, 'recorded with a gate time-in and no time-out');
+  result = result.replace(/\brecorded on campus\b/gi, 'recorded with a gate time-in');
 
   // Strip excessive em dashes: replace standalone " — " or " —" with comma or colon where suitable
   result = result.replace(/(\w)\s*—\s*(\w)/g, '$1: $2');

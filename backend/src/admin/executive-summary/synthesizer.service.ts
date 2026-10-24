@@ -43,6 +43,7 @@ export class ExecutiveSummarySynthesizer {
       metrics: {
         students: {
           enrolled: factSheet.students.enrolled,
+          timeInNoTimeoutCount: factSheet.students.timeInNoTimeoutCount,
           onCampusNow: factSheet.students.onCampusNow
         },
         faculty: {
@@ -88,17 +89,23 @@ export class ExecutiveSummarySynthesizer {
     const sentences: string[] = [];
 
     // 1. Campus & Faculty Operational Status
-    const onCampus = facts.students.onCampusNow;
+    const onCampus = facts.students.timeInNoTimeoutCount ?? facts.students.onCampusNow;
     const checkedIn = facts.faculty.checkedInToday;
     const totalFaculty = facts.faculty.totalActive;
 
     if (onCampus !== null && checkedIn !== null && totalFaculty !== null) {
+      const studentPart = onCampus === 0
+        ? 'no student gate time-in recorded today'
+        : `${onCampus} ${onCampus === 1 ? 'student has' : 'students have'} a gate time-in recorded with no time-out today`;
       sentences.push(
-        `School operations are underway with ${onCampus} students currently on campus and ${checkedIn} of ${totalFaculty} faculty checked in today.`
+        `School operations are underway with ${studentPart}, and ${checkedIn} of ${totalFaculty} faculty checked in today.`
       );
     } else if (onCampus !== null) {
+      const studentPart = onCampus === 0
+        ? 'no student gate time-in recorded today'
+        : `${onCampus} ${onCampus === 1 ? 'student has' : 'students have'} a gate time-in recorded with no time-out today`;
       sentences.push(
-        `School operations are underway with ${onCampus} students currently on campus.`
+        `School operations are underway with ${studentPart}.`
       );
     } else if (facts.students.enrolled !== null) {
       sentences.push(

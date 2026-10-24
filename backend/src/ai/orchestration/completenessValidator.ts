@@ -407,7 +407,7 @@ export function validateAndRemedyCompleteness(
         const mentionsUnrelated = /\b(unrelated|independent|no connection|no overlap|separate from)\b/i.test(finalized);
         if (!mentionsUnrelated) {
           remediedCount++;
-          const unrelatedNotice = 'Note: Findings across the remaining operational domains have no recorded date or identity overlap and represent independent matters.';
+          const unrelatedNotice = 'Note: No cross-domain relationship analysis was performed for findings across other operational domains.';
           addendumLines.push(unrelatedNotice);
         }
       }

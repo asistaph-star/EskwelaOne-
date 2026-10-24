@@ -63,7 +63,7 @@ export async function buildSchoolFactSheet(): Promise<SchoolFactSheet> {
     });
   }
 
-  // 2. Students on Campus Now (Authoritative Asia/Manila Date)
+  // 2. Students with Gate Time-In and No Time-Out Recorded (Authoritative Asia/Manila Date)
   const { dateObj: phToday } = getPhilippineCalendarDate();
   const onCampusNow = await prisma.gateAttendance.count({
     where: {
@@ -217,6 +217,7 @@ export async function buildSchoolFactSheet(): Promise<SchoolFactSheet> {
     asOfFormatted,
     students: {
       enrolled,
+      timeInNoTimeoutCount: onCampusNow,
       onCampusNow
     },
     faculty: {

@@ -235,7 +235,7 @@ export class MockAIProvider implements DigiSkwelaAIProvider {
       }
 
       // 0.1 Sweep intent ("what needs my review/attention today")
-      if (content.includes('what needs my review') || content.includes('what needs my attention') || content.includes('exceptions require my attention') || content.includes('what needs review') || content.includes('what needs attention')) {
+      if (content.includes('what needs my review') || content.includes('what needs my attention') || content.includes('exceptions require my attention') || content.includes('what needs review') || content.includes('what needs attention') || content.includes('what do i need to do before i leave')) {
         const sweepTools: AIToolCall[] = [];
         const att = availableTools.find(t => t.name === 'getFacultyAttendanceAudit');
         const leave = availableTools.find(t => t.name === 'getPendingLeaves');

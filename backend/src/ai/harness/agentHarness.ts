@@ -636,7 +636,7 @@ export class DigiSkwelaAgentHarness {
       const normalized = normalizeAssistantText(finalizedContent, {
         hasStructuredData: Boolean(structuredData),
         toolName: primaryToolName || undefined,
-        skipFeatureMenuRule: plan.skipFeatureMenuRule,
+        skipFeatureMenuRule: plan.skipFeatureMenuRule || turnState.toolsExecuted.length > 0,
       });
 
       const validated = validateAndRemedyCompleteness(
