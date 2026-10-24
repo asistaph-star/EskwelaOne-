@@ -372,17 +372,57 @@ export const getMyTeachingOperationsTool: DigiSkwelaTool = {
       return getPhilippineCalendarDate(apt.date).dateStr === calDate.dateStr;
     });
 
+    const now = new Date();
+    const nowParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    }).formatToParts(now);
+
+    let currentManilaHour = 0;
+    let currentManilaMinute = 0;
+    for (const p of nowParts) {
+      if (p.type === 'hour') currentManilaHour = parseInt(p.value, 10);
+      if (p.type === 'minute') currentManilaMinute = parseInt(p.value, 10);
+    }
+    const currentMinutesFromMidnight = currentManilaHour * 60 + currentManilaMinute;
+
     // Map appointments without leaking guardian phone/email or LRN
     const mappedAppointments = todaysAppointments.map(apt => {
       const studentName = apt.student?.user
         ? `${apt.student.user.first_name} ${apt.student.user.last_name}`.trim()
         : 'Assigned Student';
+
+      const timeFormatted = formatManilaTime(apt.time) || '10:00 AM';
+
+      let isPast = false;
+      if (apt.time) {
+        const aptParts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Manila',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: false,
+        }).formatToParts(new Date(apt.time));
+
+        let aptHour = 0;
+        let aptMin = 0;
+        for (const p of aptParts) {
+          if (p.type === 'hour') aptHour = parseInt(p.value, 10);
+          if (p.type === 'minute') aptMin = parseInt(p.value, 10);
+        }
+        const aptMinutesFromMidnight = aptHour * 60 + aptMin;
+        isPast = currentMinutesFromMidnight > aptMinutesFromMidnight;
+      }
+
       return {
         appointmentId: apt.id,
         studentId: apt.student_id,
         studentName,
         date: calDate.dateStr,
-        time: formatManilaTime(apt.time) || '10:00 AM',
+        time: timeFormatted,
+        isPast,
+        timeStatus: isPast ? 'scheduled_earlier_today' : 'upcoming_today',
         status: 'Confirmed',
         direction: apt.direction,
       };
@@ -433,6 +473,7 @@ export const getMyTeachingOperationsTool: DigiSkwelaTool = {
     return {
       asOf: new Date().toISOString(),
       schoolDate: calDate.dateStr,
+      currentTimeManila: formatManilaTime(now),
       teacherId: teacher.id,
       assignments: mappedAssignments,
       appointmentsToday: mappedAppointments,

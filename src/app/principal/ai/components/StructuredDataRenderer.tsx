@@ -617,10 +617,6 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
     );
   }
 
-  // Fallback for generic JSON
-  return (
-    <pre style={{ margin: 0, padding: 8, background: C.paper, borderRadius: 6, fontSize: 10, overflowX: 'auto' }}>
-      {JSON.stringify(raw, null, 2)}
-    </pre>
-  );
+  // Tools without dedicated visual card components should never dump raw JSON into the chat bubble
+  return null;
 }

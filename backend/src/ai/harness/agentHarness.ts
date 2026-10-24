@@ -578,12 +578,47 @@ export class DigiSkwelaAgentHarness {
       }
     }
 
+    // Merge runtime provenance across all successful grounding tool executions
+    if (successfulResults.length > 0) {
+      const mergedDomains: string[] = [];
+      const seenDomains = new Set<string>();
+      let latestAsOf = provenance?.asOf || new Date().toISOString();
+
+      for (const res of successfulResults) {
+        const mapping = mapToolToNormalizedOutput(res.name, res.result);
+        if (mapping.provenance?.asOf) {
+          latestAsOf = mapping.provenance.asOf;
+        }
+        const domains = mapping.provenance?.sourceDomains || [res.name];
+        for (const dom of domains) {
+          if (!seenDomains.has(dom)) {
+            seenDomains.add(dom);
+            mergedDomains.push(dom);
+          }
+        }
+      }
+
+      if (mergedDomains.length > 0) {
+        provenance = {
+          sourceDomains: mergedDomains,
+          asOf: latestAsOf,
+        };
+        if (structuredData) {
+          structuredData.provenance = provenance;
+        }
+      }
+    }
+
     if (plan) {
       const aggregateData = aggregateFacts(plan, turnState.executedResults);
 
       if (aggregateData.mergedSourceDomains.length > 0) {
+        const combined = Array.from(new Set([
+          ...(provenance?.sourceDomains || []),
+          ...aggregateData.mergedSourceDomains
+        ]));
         provenance = {
-          sourceDomains: aggregateData.mergedSourceDomains,
+          sourceDomains: combined,
           asOf: provenance?.asOf || new Date().toISOString()
         };
         if (structuredData) {
@@ -593,7 +628,7 @@ export class DigiSkwelaAgentHarness {
 
       if (!provenance) {
         provenance = {
-          sourceDomains: turnState.toolsExecuted.length > 0 ? turnState.toolsExecuted : ['DigiSkwela Operations'],
+          sourceDomains: successfulResults.length > 0 ? successfulResults.map(r => r.name) : ['DigiSkwela Operations'],
           asOf: new Date().toISOString()
         };
       }
@@ -619,7 +654,7 @@ export class DigiSkwelaAgentHarness {
     } else {
       if (!provenance) {
         provenance = {
-          sourceDomains: turnState.toolsExecuted.length > 0 ? turnState.toolsExecuted : ['DigiSkwela Operations'],
+          sourceDomains: successfulResults.length > 0 ? successfulResults.map(r => r.name) : ['DigiSkwela Operations'],
           asOf: new Date().toISOString()
         };
       }

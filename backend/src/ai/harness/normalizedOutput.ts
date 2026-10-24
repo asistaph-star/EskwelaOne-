@@ -16,7 +16,7 @@ export interface NormalizedStructuredData {
 }
 
 export function mapToolToNormalizedOutput(toolName: string, data: any): {
-  structuredData: NormalizedStructuredData;
+  structuredData?: NormalizedStructuredData;
   provenance?: NormalizedProvenance;
   navigationActions?: NormalizedNavigationAction[];
 } {
@@ -92,18 +92,35 @@ export function mapToolToNormalizedOutput(toolName: string, data: any): {
       type = 'generic';
   }
 
-  const structuredData: NormalizedStructuredData = {
-    type,
-    raw: data,
-    provenance: {
-      sourceDomains: [type],
-      asOf: new Date().toISOString(),
-    },
-  };
+  // Specialized source domains from tool result if available, otherwise type or toolName
+  const explicitSourceDomains = Array.isArray(data?.provenance?.sourceDomains) && data.provenance.sourceDomains.length > 0
+    ? data.provenance.sourceDomains
+    : Array.isArray(data?.sourceDomains) && data.sourceDomains.length > 0
+      ? data.sourceDomains
+      : undefined;
+
+  const resolvedSourceDomains = explicitSourceDomains || (type !== 'generic' ? [type] : [toolName]);
+  const asOf = data?.provenance?.asOf || data?.asOf || new Date().toISOString();
+
+  // Only emit structuredData when a dedicated, designed visual card component exists.
+  // Tools without dedicated UI cards rely on natural-language narrative and markdown presentation.
+  const structuredData: NormalizedStructuredData | undefined = type !== 'generic'
+    ? {
+      type,
+      raw: data,
+      provenance: {
+        sourceDomains: resolvedSourceDomains,
+        asOf,
+      },
+    }
+    : undefined;
 
   return {
     structuredData,
-    provenance: structuredData.provenance,
+    provenance: {
+      sourceDomains: resolvedSourceDomains,
+      asOf,
+    },
     navigationActions: navAction ? [navAction] : undefined,
   };
 }
