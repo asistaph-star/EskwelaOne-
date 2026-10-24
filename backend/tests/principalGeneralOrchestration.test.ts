@@ -179,7 +179,7 @@ describe('DIGISKWELA — PRINCIPAL GENERAL-PURPOSE INTELLIGENT AI ORCHESTRATION 
       expect(res.status).toBe(200);
       const content = res.body.data.message.content;
 
-      expect(content).toContain('(Suggested review order based on operational urgency; not DepEd policy)');
+      expect(content).toContain('Items are listed in no particular order of importance.');
     });
   });
 

@@ -82,7 +82,7 @@ describe('DIGISKWELA — LIVE UNSEEN GENERALIZATION TESTS (PROMPTS A–G)', { ti
     expect(tools).toContain('getFacultyAttendanceAudit');
     expect(tools).toContain('getPendingLeaves');
     expect(tools).toContain('getAdministrativeBehaviorSummary');
-    expect(content).toContain('(Suggested review order based on operational urgency; not DepEd policy)');
+    expect(content).toContain('Items are listed in no particular order of importance.');
 
     const orch = await getAuditOrch(d.traceId);
     expect(orch).toBeDefined();
@@ -296,7 +296,7 @@ describe('DIGISKWELA — LIVE UNSEEN GENERALIZATION TESTS (PROMPTS A–G)', { ti
     expect(tools2.length).toBe(1);
 
     // 3. Read-only review prioritization disclaimer included
-    expect(content2).toContain('(Suggested review order based on operational urgency; not DepEd policy)');
+    expect(content2).toContain('Items are listed in no particular order of importance.');
 
     // 4. Verify server session holds all 4 messages (persisted multi-turn interaction)
     const sessionRes2 = await request(app)

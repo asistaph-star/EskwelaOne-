@@ -43,7 +43,6 @@ export const getSchoolOperationalFactSheetTool: DigiSkwelaTool = {
       students: {
         enrolled: rawFactSheet.students.enrolled,
         timeInNoTimeoutCount: rawFactSheet.students.timeInNoTimeoutCount,
-        onCampusNow: rawFactSheet.students.timeInNoTimeoutCount,
       },
       faculty: {
         checkedInNow: rawFactSheet.faculty.checkedInNow,

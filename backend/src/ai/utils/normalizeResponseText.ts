@@ -166,6 +166,8 @@ export function cleanAwkwardLanguage(text: string): string {
   result = result.replace(/\b(\d+)\s+students?\s+(?:are\s+)?currently\s+(?:recorded\s+)?on campus\b/gi, '$1 student(s) recorded with a gate time-in and no time-out');
   result = result.replace(/\bcurrently on campus\b/gi, 'recorded with a gate time-in and no time-out');
   result = result.replace(/\brecorded on campus\b/gi, 'recorded with a gate time-in');
+  // Priority ordering disclaimer -> neutral authorized statement
+  result = result.replace(/\(?Suggested review order based on operational urgency; not DepEd policy\)?/gi, 'Items are listed in no particular order of importance.');
 
   // Strip excessive em dashes: replace standalone " — " or " —" with comma or colon where suitable
   result = result.replace(/(\w)\s*—\s*(\w)/g, '$1: $2');

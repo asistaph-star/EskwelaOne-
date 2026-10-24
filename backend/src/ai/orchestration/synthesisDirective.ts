@@ -36,7 +36,7 @@ export function buildSynthesisDirective(
       parts.push(`- ${p.domain}: ${p.item}`);
     });
     parts.push('CRITICAL REQUIREMENT: Present these items neutrally as items requiring review, without claiming any item is the "top priority" or "most urgent" unless direct comparative evidence from tool data justifies that ranking.');
-    parts.push('You MUST include this exact disclaimer with any suggested review items: "(Suggested review order based on operational urgency; not DepEd policy) (Items are listed in no particular order of importance.)".');
+    parts.push('You MUST include this exact disclaimer with any suggested review items: "Items are listed in no particular order of importance.".');
   }
 
   if (plan.constraints && plan.constraints.length > 0) {

@@ -305,7 +305,7 @@ export function validateAndRemedyCompleteness(
 
       case 'prioritize': {
         const hasReviewOrder = /\b(review order|order|first|priority|urgent|suggested)\b/i.test(finalized);
-        const hasDisclaimer = finalized.includes('not DepEd policy') || addendumLines.some(l => l.includes('not DepEd policy'));
+        const hasDisclaimer = finalized.includes('no particular order of importance') || addendumLines.some(l => l.includes('no particular order of importance')) || finalized.includes('not DepEd policy');
 
         if (hasReviewOrder && hasDisclaimer) {
           satisfiedOperationCount++;
@@ -317,7 +317,7 @@ export function validateAndRemedyCompleteness(
         } else if (!hasReviewOrder && aggregateData.priorities.length > 0) {
           remediedCount++;
           const lines = aggregateData.priorities.map(p => `${p.priority}. ${p.domain}: ${p.item}`);
-          const remedy = `Suggested Review Order:\n${lines.join('\n')}\n\n${aggregateData.priorityDisclaimer || '(Suggested review order based on operational urgency; not DepEd policy)'}`;
+          const remedy = `Suggested Review Items:\n${lines.join('\n')}\n\n${aggregateData.priorityDisclaimer || 'Items are listed in no particular order of importance.'}`;
           addendumLines.push(remedy);
           operationRecords.push({ operation: op, targetDomain, description: opObligation.description, status: 'REMEDIED', remedyApplied: remedy });
         } else {

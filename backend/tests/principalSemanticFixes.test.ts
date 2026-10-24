@@ -8,6 +8,7 @@ import { SchoolFactSheet } from '../src/admin/executive-summary/executiveSummary
 import { PrincipalRequestPlan } from '../src/ai/orchestration/requestPlanner.js';
 import { AggregationResult } from '../src/ai/orchestration/aggregator.js';
 import { DIGISKWELA_SYSTEM_PROMPT } from '../src/ai/provider/groqAIProvider.js';
+import { getSchoolOperationalFactSheetTool } from '../src/ai/tools/definitions/principalTools.js';
 
 describe('DIGISKWELA — PRINCIPAL AI SEMANTIC FIXES EVALUATION', () => {
   const allowedTools = new Set([
@@ -128,6 +129,16 @@ describe('DIGISKWELA — PRINCIPAL AI SEMANTIC FIXES EVALUATION', () => {
       expect(normalizeAssistantText(sample3)).toContain('85 student(s) recorded with a gate time-in and no time-out');
       expect(normalizeAssistantText(sample3)).not.toMatch(/on campus/i);
     });
+
+    it('getSchoolOperationalFactSheetTool DTO strictly excludes onCampusNow and provides timeInNoTimeoutCount', async () => {
+      const mockContext: any = {
+        user: { id: 'u1', roles: ['Principal'], permissions: ['*'] },
+        portal: 'Principal'
+      };
+      const dto: any = await getSchoolOperationalFactSheetTool.execute({}, mockContext);
+      expect(dto.students).toHaveProperty('timeInNoTimeoutCount');
+      expect(dto.students).not.toHaveProperty('onCampusNow');
+    });
   });
 
   // ─── 2. Faculty Wording Invariants Unchanged ──────────────────────────────
@@ -211,6 +222,8 @@ describe('DIGISKWELA — PRINCIPAL AI SEMANTIC FIXES EVALUATION', () => {
       expect(directive.content).toContain('BROAD OPERATIONAL INQUIRIES & COVERAGE HONESTY:');
       expect(directive.content).toContain('Explicitly list WHICH operational areas were checked');
       expect(directive.content).toContain('Never present any single item as the "top priority" or "main action"');
+      expect(directive.content).not.toContain('DepEd policy');
+      expect(directive.content).not.toContain('operational urgency');
     });
 
     it('domainCatalog leaves keyword does not match departure verb in "What do I need to do before I leave today?"', () => {

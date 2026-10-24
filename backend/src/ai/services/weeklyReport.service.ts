@@ -19,8 +19,7 @@ export interface WeeklyReportDTO {
   };
   executiveSummaryFacts: {
     enrolledStudents: number | null;
-    studentsTimeInNoTimeoutToday?: number | null;
-    studentsOnCampusToday: number | null;
+    studentsTimeInNoTimeoutToday: number | null;
     totalActiveFaculty: number | null;
     facultyCheckedInToday: number | null;
   };
@@ -224,7 +223,6 @@ export class WeeklyReportService {
       executiveSummaryFacts: {
         enrolledStudents: factSheet?.students?.enrolled ?? null,
         studentsTimeInNoTimeoutToday: (factSheet?.students as any)?.timeInNoTimeoutCount ?? factSheet?.students?.onCampusNow ?? null,
-        studentsOnCampusToday: (factSheet?.students as any)?.timeInNoTimeoutCount ?? factSheet?.students?.onCampusNow ?? null,
         totalActiveFaculty: factSheet?.faculty?.totalActive ?? null,
         facultyCheckedInToday: factSheet?.faculty?.checkedInToday ?? null
       },

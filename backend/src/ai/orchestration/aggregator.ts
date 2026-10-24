@@ -160,7 +160,7 @@ export function aggregateFacts(
     correlations,
     priorities,
     priorityDisclaimer: priorities.length > 0
-      ? '(Suggested review order based on operational urgency; not DepEd policy) (Items are listed in no particular order of importance.)'
+      ? 'Items are listed in no particular order of importance.'
       : undefined,
     mergedSourceDomains: Array.from(allSourceDomains),
     unrelatedDomains,
