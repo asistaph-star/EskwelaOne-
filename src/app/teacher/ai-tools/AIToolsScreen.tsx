@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { DocPanel } from '../../shared/components/DocPanel';
 import { EmptyState } from '../../shared/components/EmptyState';
-import { useMyClasses } from '../shared/useMyClasses';
+import { academicApi, TeacherAssignment } from '../../../api/academic.api';
 import { 
   studentSupportApi, 
   TeacherStudentSupportResponse, 
@@ -21,8 +21,7 @@ import {
 } from '../../../api/studentSupport.api';
 
 export function AIToolsScreen() {
-  const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
-
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [data, setData] = useState<TeacherStudentSupportResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -33,13 +32,35 @@ export function AIToolsScreen() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
 
+  // Load teacher's own assignments for the active academic year (GET /api/academic/years/:yearId/assignments/me)
+  useEffect(() => {
+    let isMounted = true;
+    async function loadAssignments() {
+      try {
+        const years = await academicApi.getYears();
+        const currentYear = years.find((y: any) => y.is_current) || years[0];
+        if (currentYear && isMounted) {
+          const assignments = await academicApi.getMyAssignments(currentYear.id);
+          if (Array.isArray(assignments) && isMounted) {
+            setTeacherAssignments(assignments);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load teacher assignments for filter options:', err);
+      }
+    }
+    loadAssignments();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Derive unique sections and subjects from teacher's assignments
   const sectionOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of myClasses) {
-      const sId = c.sectionId || c.section_id;
-      if (sId) {
-        map.set(sId, `Grade ${c.grade} - ${c.section}`);
+    for (const a of teacherAssignments) {
+      if (a.section_id && a.section) {
+        map.set(a.section_id, `Grade ${a.section.grade_level} - ${a.section.name}`);
       }
     }
     // Also include sections from API response if any
@@ -51,14 +72,13 @@ export function AIToolsScreen() {
       }
     }
     return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
-  }, [myClasses, data]);
+  }, [teacherAssignments, data]);
 
   const subjectOptions = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of myClasses) {
-      const subId = c.subjectId || c.subject_id;
-      if (subId) {
-        map.set(subId, c.subject);
+    for (const a of teacherAssignments) {
+      if (a.subject_id && a.subject) {
+        map.set(a.subject_id, a.subject.name);
       }
     }
     if (data?.students) {
@@ -69,7 +89,7 @@ export function AIToolsScreen() {
       }
     }
     return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
-  }, [myClasses, data]);
+  }, [teacherAssignments, data]);
 
   const fetchIndicators = useCallback(async () => {
     setIsLoading(true);
