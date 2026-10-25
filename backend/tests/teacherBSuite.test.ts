@@ -1,9 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { toolRegistry } from '../src/ai/tools/toolRegistry.js';
 import { dispatchTool } from '../src/ai/tools/toolDispatcher.js';
 import prisma from '../src/config/database.js';
+import { setupTeacherDemoFixture, teardownTeacherDemoFixture } from './helpers/fixtureLifecycle.js';
 
 describe('Phase B Teacher Tools — B1, B2, B3 Scope, RBAC, Semantics & Privacy', () => {
+  beforeAll(async () => {
+    await setupTeacherDemoFixture();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTeacherDemoFixture();
+  }, 30000);
   // Canonical Demo Teacher User (Maria Clara / demo-teacher-1)
   const teacherUser = {
     id: 'demo-teacher-1',

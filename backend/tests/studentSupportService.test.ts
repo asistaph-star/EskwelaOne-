@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
@@ -15,6 +15,7 @@ import {
   resetStudentSupportRateLimits,
   setStudentSupportRateLimits
 } from '../src/modules/student-support/studentSupport.limiter.js';
+import { setupTeacherDemoFixture, teardownTeacherDemoFixture } from './helpers/fixtureLifecycle.js';
 
 describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
   const teacherToken = jwt.sign(
@@ -46,6 +47,14 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     config.jwt.secret,
     { expiresIn: '1h' }
   );
+
+  beforeAll(async () => {
+    await setupTeacherDemoFixture();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTeacherDemoFixture();
+  }, 30000);
 
   beforeEach(() => {
     resetStudentSupportRateLimits();

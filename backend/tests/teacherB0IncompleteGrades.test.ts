@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
@@ -7,8 +7,16 @@ import prisma from '../src/config/database.js';
 import { toolRegistry } from '../src/ai/tools/toolRegistry.js';
 import { roleCapabilityRegistry } from '../src/ai/harness/roleCapabilityRegistry.js';
 import { dispatchTool } from '../src/ai/tools/toolDispatcher.js';
+import { setupTeacherDemoFixture, teardownTeacherDemoFixture } from './helpers/fixtureLifecycle.js';
 
 describe('DIGISKWELA — PHASE B0: DYNAMIC TEACHER TOOL-DISCOVERY GATE', () => {
+  beforeAll(async () => {
+    await setupTeacherDemoFixture();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTeacherDemoFixture();
+  }, 30000);
   // ─── 1. Tool Registration & Role Exposure ────────────────────────────────
   it('B0-REG-01: getMyIncompleteGrades is registered with Teacher-only role & permissions', () => {
     const tool = toolRegistry.getTool('getMyIncompleteGrades');
