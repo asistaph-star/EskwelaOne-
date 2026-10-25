@@ -89,13 +89,9 @@ router.get(
     try {
       const authUser = (req as any).user as AuthenticatedUser;
 
-      // Role check: Principal, Admin, or ITAdmin only. Strictly forbidden to Teacher.
-      const isAuthorizedRole = authUser.roles.includes('Principal') || 
-                               authUser.roles.includes('Admin') || 
-                               authUser.roles.includes('ITAdmin');
-
-      if (!isAuthorizedRole || authUser.roles.includes('Teacher')) {
-        throw new AppError(403, 'FORBIDDEN', 'Access to principal student support aggregate is restricted to administrative staff.');
+      // Role check: Strictly Principal only. Forbidden to Teacher, Student, Admin, ITAdmin.
+      if (!authUser.roles.includes('Principal')) {
+        throw new AppError(403, 'FORBIDDEN', 'Access to principal student support aggregate is restricted to the Principal role.');
       }
 
       // Enforce date-range semantics: both or neither, and start <= end

@@ -35,6 +35,18 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     { expiresIn: '1h' }
   );
 
+  const adminToken = jwt.sign(
+    { userId: 'demo-admin-1', roles: ['Admin'] },
+    config.jwt.secret,
+    { expiresIn: '1h' }
+  );
+
+  const itAdminToken = jwt.sign(
+    { userId: 'demo-admin-1', roles: ['ITAdmin'] },
+    config.jwt.secret,
+    { expiresIn: '1h' }
+  );
+
   beforeEach(() => {
     resetStudentSupportRateLimits();
   });
@@ -88,6 +100,10 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(data.metadata.attendanceWindow.endDate).toBeDefined();
     expect(data.metadata.rules.belowPassingTerms).toContain('recorded term grade');
     expect(data.metadata.rules.belowPassingTerms).not.toContain('failing');
+    expect(data.metadata.rules.recordedAbsences).not.toMatch(/unexcused/i);
+    expect(data.metadata.rules.recordedAbsences).toContain('status A (absent)');
+    expect(data.metadata.rules.recordedAbsences).toContain('L (tardy)');
+    expect(data.metadata.rules.recordedAbsences).toContain('E (excused)');
 
     // Exactly 5 students
     expect(data.students).toHaveLength(5);
@@ -181,6 +197,8 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     const data = response.body.data;
     expect(data.metadata).toBeDefined();
     expect(data.metadata.passingGradeThreshold).toBe(75);
+    expect(data.metadata.rules.recordedAbsences).not.toMatch(/unexcused/i);
+    expect(data.metadata.rules.recordedAbsences).toContain('ClassAttendance status A');
     expect(data.totals.studentsBelowPassingCount).toBe(2);
     expect(data.totals.studentsWithThreeOrMoreAbsencesCount).toBe(1);
     expect(data.totals.totalSectionsEvaluated).toBeGreaterThanOrEqual(1);
@@ -222,7 +240,16 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(response.body.success).toBe(false);
   });
 
-  it('C1-SEC-03: 403 when Teacher attempts to access Principal aggregate endpoint', async () => {
+  it('C1-SEC-03: 200 OK when Principal accesses Principal aggregate endpoint', async () => {
+    const response = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+  });
+
+  it('C1-SEC-04: 403 when Teacher attempts to access Principal aggregate endpoint', async () => {
     const response = await request(app)
       .get('/api/student-support/principal/aggregate')
       .set('Authorization', `Bearer ${teacherToken}`);
@@ -231,7 +258,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(response.body.success).toBe(false);
   });
 
-  it('C1-SEC-04: 403 when Student attempts to access Principal aggregate endpoint', async () => {
+  it('C1-SEC-05: 403 when Student attempts to access Principal aggregate endpoint', async () => {
     const response = await request(app)
       .get('/api/student-support/principal/aggregate')
       .set('Authorization', `Bearer ${studentToken}`);
@@ -240,7 +267,25 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(response.body.success).toBe(false);
   });
 
-  it('C1-SEC-05: 403 when Teacher queries an unassigned section', async () => {
+  it('C1-SEC-06: 403 when Admin attempts to access Principal aggregate endpoint', async () => {
+    const response = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('C1-SEC-07: 403 when ITAdmin attempts to access Principal aggregate endpoint', async () => {
+    const response = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${itAdminToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.success).toBe(false);
+  });
+
+  it('C1-SEC-08: 403 when Teacher queries an unassigned section', async () => {
     const response = await request(app)
       .get('/api/student-support/teacher/indicators?sectionId=nonexistent-or-unassigned-section-id')
       .set('Authorization', `Bearer ${teacherToken}`);
@@ -250,7 +295,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(response.body.error.message).toMatch(/not authorized/i);
   });
 
-  it('C1-SEC-06: 401 when request is unauthenticated', async () => {
+  it('C1-SEC-09: 401 when request is unauthenticated', async () => {
     const resTeacher = await request(app).get('/api/student-support/teacher/indicators');
     expect(resTeacher.status).toBe(401);
 
@@ -354,4 +399,182 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(res3.status).toBe(429);
     expect(res3.body.error.code).toBe('RATE_LIMIT_EXCEEDED');
   });
+
+  // ─── 9. Neutral Attendance Semantics Verification ──────────────────────────
+  it('C1-ATT-01: Metadata uses strictly neutral attendance wording with no unexcused assumptions', async () => {
+    const resTeacher = await request(app)
+      .get('/api/student-support/teacher/indicators')
+      .set('Authorization', `Bearer ${teacherToken}`);
+    expect(resTeacher.status).toBe(200);
+    const tRule = resTeacher.body.data.metadata.rules.recordedAbsences;
+    expect(tRule).not.toMatch(/unexcused/i);
+    expect(tRule).toContain('status A (absent)');
+    expect(tRule).toContain('L (tardy)');
+    expect(tRule).toContain('E (excused)');
+
+    const resPrin = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${principalToken}`);
+    expect(resPrin.status).toBe(200);
+    const pRule = resPrin.body.data.metadata.rules.recordedAbsences;
+    expect(pRule).not.toMatch(/unexcused/i);
+    expect(pRule).toContain('ClassAttendance status A');
+  });
+
+  // ─── 10. Duplicate Grade Latest-Record Authoritative Behavior ─────────────
+  it('C1-DUP-01: Invariant: When duplicate Grade records exist for (student, subject, term), the row with latest updated_at is authoritative with no double counting', async () => {
+    const ay = await prisma.academicYear.findFirst({ where: { is_current: true } }) || await prisma.academicYear.findFirst();
+    if (!ay) throw new Error('No academic year found');
+
+    const testIdOlder = 'test-dup-grade-older';
+    const testIdNewer = 'test-dup-grade-newer';
+
+    const now = Date.now();
+    const olderDate = new Date(now + 100_000);
+    const newerDate = new Date(now + 200_000);
+    const newestDate = new Date(now + 300_000);
+
+    try {
+      // Step 1: Insert older record (term_grade: 80 - passing)
+      // and newer record (term_grade: 70 - below passing) for Juan Dela Cruz (demo-student-1)
+      await prisma.grade.create({
+        data: {
+          id: testIdOlder,
+          student_id: 'demo-student-1',
+          subject_id: 'demo-subj-math10',
+          term: 'T1',
+          term_grade: 80,
+          academic_year_id: ay.id,
+          created_at: olderDate,
+          updated_at: olderDate,
+        }
+      });
+
+      await prisma.grade.create({
+        data: {
+          id: testIdNewer,
+          student_id: 'demo-student-1',
+          subject_id: 'demo-subj-math10',
+          term: 'T1',
+          term_grade: 70,
+          academic_year_id: ay.id,
+          created_at: newerDate,
+          updated_at: newerDate,
+        }
+      });
+
+      // Teacher endpoint check:
+      // Latest record (70) wins. Juan Dela Cruz now has belowPassingTerms = [{ term: 'T1', grade: 70 }].
+      // Must NOT have duplicate T1 entries.
+      const resTeacher1 = await request(app)
+        .get('/api/student-support/teacher/indicators?term=T1')
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(resTeacher1.status).toBe(200);
+      const juan1 = resTeacher1.body.data.students.find((s: any) => s.studentDisplayName === 'Juan Dela Cruz');
+      expect(juan1).toBeDefined();
+      expect(juan1.belowPassingTerms).toEqual([{ term: 'T1', grade: 70 }]);
+
+      // Principal aggregate endpoint check:
+      // Juan is counted once (no double counting). Count increases from 2 to 3.
+      const resPrin1 = await request(app)
+        .get('/api/student-support/principal/aggregate?term=T1')
+        .set('Authorization', `Bearer ${principalToken}`);
+      expect(resPrin1.status).toBe(200);
+      expect(resPrin1.body.data.totals.studentsBelowPassingCount).toBe(3);
+
+      // Step 2: Update the newer record to passing (term_grade: 85) with an even newer updated_at
+      await prisma.grade.update({
+        where: { id: testIdNewer },
+        data: {
+          term_grade: 85,
+          updated_at: newestDate,
+        }
+      });
+
+      // Teacher endpoint check:
+      // Latest record (85) wins. Juan is no longer below passing.
+      const resTeacher2 = await request(app)
+        .get('/api/student-support/teacher/indicators?term=T1')
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(resTeacher2.status).toBe(200);
+      const juan2 = resTeacher2.body.data.students.find((s: any) => s.studentDisplayName === 'Juan Dela Cruz');
+      expect(juan2).toBeDefined();
+      expect(juan2.belowPassingTerms).toEqual([]);
+
+      // Principal aggregate endpoint check:
+      // Count returns to 2.
+      const resPrin2 = await request(app)
+        .get('/api/student-support/principal/aggregate?term=T1')
+        .set('Authorization', `Bearer ${principalToken}`);
+      expect(resPrin2.status).toBe(200);
+      expect(resPrin2.body.data.totals.studentsBelowPassingCount).toBe(2);
+    } finally {
+      await prisma.grade.deleteMany({
+        where: { id: { in: [testIdOlder, testIdNewer] } }
+      });
+    }
+  });
+
+  // ─── 11. Optional Term Scoping Contract ────────────────────────────────────
+  // Authoritative schema-enforced relationship:
+  // gradebook_columns belongs to gradebooks via gradebook_id,
+  // and gradebooks belongs to Term via term_id (key: TermKey).
+  // Unique constraint: @@unique([assignment_id, term_id]) on gradebooks.
+  // This guarantees that all gradebook columns and their entries are uniquely and strictly partitioned by TermKey.
+  it('C1-TERM-01: Scoping by term=T1 scopes below-passing grades and missing scores to T1', async () => {
+    // Teacher endpoint
+    const resTeacher = await request(app)
+      .get('/api/student-support/teacher/indicators?term=T1')
+      .set('Authorization', `Bearer ${teacherToken}`);
+    expect(resTeacher.status).toBe(200);
+    const tData = resTeacher.body.data;
+
+    // Below passing terms: only T1
+    const belowPassingTerms = tData.students.flatMap((s: any) => s.belowPassingTerms);
+    expect(belowPassingTerms.length).toBeGreaterThan(0);
+    for (const bpt of belowPassingTerms) {
+      expect(bpt.term).toBe('T1');
+    }
+
+    // Missing scores parity: exactly 6 missing cells across 4 students in T1
+    const missingTotal = tData.students.reduce((sum: number, s: any) => sum + s.missingScoresCount, 0);
+    expect(missingTotal).toBe(6);
+
+    // Principal endpoint
+    const resPrin = await request(app)
+      .get('/api/student-support/principal/aggregate?term=T1')
+      .set('Authorization', `Bearer ${principalToken}`);
+    expect(resPrin.status).toBe(200);
+    expect(resPrin.body.data.totals.studentsBelowPassingCount).toBe(2);
+  });
+
+  it('C1-TERM-02: Scoping by term=T2 returns 0 below-passing and 0 missing scores in fixture, while attendance is date-window scoped', async () => {
+    // Teacher endpoint
+    const resTeacher = await request(app)
+      .get('/api/student-support/teacher/indicators?term=T2')
+      .set('Authorization', `Bearer ${teacherToken}`);
+    expect(resTeacher.status).toBe(200);
+    const tData = resTeacher.body.data;
+
+    // No below passing in T2
+    for (const student of tData.students) {
+      expect(student.belowPassingTerms).toEqual([]);
+      expect(student.missingScoresCount).toBe(0);
+    }
+
+    // Wilfred Valdez still has 4 absences because attendance is scoped by date window, not term
+    const wilfred = tData.students.find((s: any) => s.studentDisplayName === 'Wilfred Valdez');
+    expect(wilfred).toBeDefined();
+    expect(wilfred.recordedAbsences.absences).toBe(4);
+
+    // Principal endpoint
+    const resPrin = await request(app)
+      .get('/api/student-support/principal/aggregate?term=T2')
+      .set('Authorization', `Bearer ${principalToken}`);
+    expect(resPrin.status).toBe(200);
+    expect(resPrin.body.data.totals.studentsBelowPassingCount).toBe(0);
+    // 3+ absences remains 1 (Wilfred) because attendance is date-window scoped
+    expect(resPrin.body.data.totals.studentsWithThreeOrMoreAbsencesCount).toBe(1);
+  });
 });
+

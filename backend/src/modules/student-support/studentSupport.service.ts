@@ -411,7 +411,7 @@ export async function getTeacherStudentSupportIndicators(
     },
     rules: {
       belowPassingTerms: `Terms where the recorded term grade is below ${PASSING_GRADE}. A term grade below ${PASSING_GRADE} is not a final result; final evaluation requires all terms.`,
-      recordedAbsences: `Count of ClassAttendance records with status A (unexcused absence), L (tardy), and E (excused) in the resolved date window. Never accesses GateAttendance.`,
+      recordedAbsences: `Count of recorded ClassAttendance records with status A (absent), L (tardy), and E (excused) in the resolved date window. Never accesses GateAttendance.`,
       missingScoresCount: `Count of missing gradebook cells for applicable assignments. A score of 0 is a recorded score and is not missing.`,
     },
     disclaimer: `Factual records from DigiSkwela. This is not a prediction. A grade below ${PASSING_GRADE} in one term is not a final result. Review before acting.`,
@@ -486,19 +486,33 @@ export async function getPrincipalStudentSupportAggregate(
     }
 
     // 1. Students with at least one recorded term grade below PASSING_GRADE in this section
-    const gradesBelowPassing = await prisma.grade.findMany({
+    // Invariant: If duplicate Grade tuples exist, the row with the latest updated_at is authoritative
+    const allSectionGrades = await prisma.grade.findMany({
       where: {
         student_id: { in: studentIds },
-        term_grade: { lt: PASSING_GRADE, not: null },
+        term_grade: { not: null },
         ...(normalizedTerm ? { term: normalizedTerm as any } : {}),
       },
-      select: {
-        student_id: true,
-      }
+      orderBy: { updated_at: 'desc' }
     });
 
-    const distinctStudentsBelowPassing = new Set(gradesBelowPassing.map(g => g.student_id));
-    const studentsBelowPassingCount = distinctStudentsBelowPassing.size;
+    const latestGradeMap = new Map<string, number>();
+    for (const g of allSectionGrades) {
+      if (g.term_grade === null || g.term_grade === undefined || isNaN(g.term_grade)) continue;
+      const key = `${g.student_id}:${g.subject_id}:${g.term}`;
+      if (!latestGradeMap.has(key)) {
+        latestGradeMap.set(key, g.term_grade);
+      }
+    }
+
+    const studentsBelowPassingSet = new Set<string>();
+    for (const [key, gradeVal] of latestGradeMap.entries()) {
+      if (gradeVal < PASSING_GRADE) {
+        const studentId = key.split(':')[0];
+        studentsBelowPassingSet.add(studentId);
+      }
+    }
+    const studentsBelowPassingCount = studentsBelowPassingSet.size;
 
     // 2. Students with 3 or more recorded A entries in the window (ClassAttendance ONLY)
     const absentRecords = await prisma.classAttendance.findMany({
@@ -558,7 +572,7 @@ export async function getPrincipalStudentSupportAggregate(
     },
     rules: {
       belowPassingTerms: `Count of distinct actively enrolled students in the section with at least one recorded term grade below ${PASSING_GRADE}. A term grade below ${PASSING_GRADE} is not a final result; final evaluation requires all terms.`,
-      recordedAbsences: `Count of distinct actively enrolled students in the section with 3 or more recorded absences (status A) in ClassAttendance within the resolved date window. Never accesses GateAttendance.`,
+      recordedAbsences: `Count of distinct actively enrolled students in the section with 3 or more recorded absences (ClassAttendance status A) in the resolved date window. Never accesses GateAttendance.`,
       missingScoresCount: `Not aggregated at school-wide level. Available exclusively to assigned classroom teachers.`,
     },
     disclaimer: `Factual aggregate records from DigiSkwela. This is not a prediction or risk classification. Review before acting.`,
