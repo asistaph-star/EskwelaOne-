@@ -1,303 +1,553 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Activity, AlertTriangle, UserMinus, Lightbulb, FileText, Download, X, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { 
+  FileText, 
+  AlertCircle, 
+  RefreshCw, 
+  Filter, 
+  Info,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  ShieldCheck
+} from 'lucide-react';
 import { DocPanel } from '../../shared/components/DocPanel';
-import { Stamp } from '../../shared/components/Stamp';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { useMyClasses } from '../shared/useMyClasses';
+import { 
+  studentSupportApi, 
+  TeacherStudentSupportResponse, 
+  TeacherStudentSupportIndicator 
+} from '../../../api/studentSupport.api';
 
 export function AIToolsScreen() {
-  const [reportGenerating, setReportGenerating] = useState<string | null>(null);
-  const [previewReport, setPreviewReport] = useState<string | null>(null);
-  const [activePlan, setActivePlan] = useState<string | null>(null);
+  const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
+
+  const [data, setData] = useState<TeacherStudentSupportResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState<boolean>(false);
+
+  // Filters
+  const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedTerm, setSelectedTerm] = useState<string>('all');
+
+  // Derive unique sections and subjects from teacher's assignments
+  const sectionOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of myClasses) {
+      const sId = c.sectionId || c.section_id;
+      if (sId) {
+        map.set(sId, `Grade ${c.grade} - ${c.section}`);
+      }
+    }
+    // Also include sections from API response if any
+    if (data?.students) {
+      for (const s of data.students) {
+        if (s.sectionId && !map.has(s.sectionId)) {
+          map.set(s.sectionId, `Grade ${s.gradeLevel} - ${s.sectionName}`);
+        }
+      }
+    }
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [myClasses, data]);
+
+  const subjectOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of myClasses) {
+      const subId = c.subjectId || c.subject_id;
+      if (subId) {
+        map.set(subId, c.subject);
+      }
+    }
+    if (data?.students) {
+      for (const s of data.students) {
+        if (s.subjectId && !map.has(s.subjectId)) {
+          map.set(s.subjectId, s.subjectName);
+        }
+      }
+    }
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [myClasses, data]);
+
+  const fetchIndicators = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    setIsUnauthorized(false);
+
+    try {
+      const response = await studentSupportApi.getTeacherIndicators({
+        sectionId: selectedSection || undefined,
+        subjectId: selectedSubject || undefined,
+        term: selectedTerm !== 'all' ? selectedTerm : undefined,
+      });
+      setData(response);
+    } catch (err: any) {
+      console.error('Failed to load student support indicators:', err);
+      if (err?.status === 403 || err?.code === 'FORBIDDEN') {
+        setIsUnauthorized(true);
+      } else {
+        setErrorMessage(err?.message || 'Records could not be loaded. Please check your connection and try again.');
+      }
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedSection, selectedSubject, selectedTerm]);
+
+  useEffect(() => {
+    fetchIndicators();
+  }, [fetchIndicators]);
+
+  const threshold = data?.metadata?.passingGradeThreshold ?? 75;
+  const attendanceWindow = data?.metadata?.attendanceWindow;
+  const students = data?.students || [];
 
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 24, background: "transparent", position: "relative" }}>
+      {/* 1. Header */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Sparkles size={24} color={C.gold} />
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>AI Insights & Reports</div>
-        </div>
-        <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Automated diagnostic reporting and data-driven pedagogical insights.</div>
-      </div>
-
-      {/* Automated Class Diagnostics - Full Width */}
-      <div style={{ marginBottom: 24 }}>
-        <DocPanel title="Automated Class Diagnostics" icon={Activity}>
-          <div style={{ padding: 20, display: "flex", gap: 24, alignItems: "center" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: C.t2, marginBottom: 8 }}>Overall Performance Status</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: C.green, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>On Track</div>
-              <div style={{ fontSize: 13, color: C.t3, marginTop: 4, lineHeight: 1.6 }}>The majority of students across your assigned sections are meeting or exceeding the passing threshold. However, specific interventions are needed for isolated cases.</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ 
+              width: 36, 
+              height: 36, 
+              borderRadius: 8, 
+              background: C.m50, 
+              border: `1px solid ${C.borderMed}`, 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center" 
+            }}>
+              <FileText size={20} color={C.m700} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, borderLeft: `1px solid ${C.border}`, paddingLeft: 24 }}>
-              <div>
-                <div style={{ fontSize: 11, color: C.t3, textTransform: "uppercase", fontWeight: 700 }}>Class Average</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'JetBrains Mono',monospace" }}>82.4%</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: C.t3, textTransform: "uppercase", fontWeight: 700 }}>Passing Threshold</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'JetBrains Mono',monospace" }}>75.0%</div>
+            <div>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
+                Student Support Insights
+              </h1>
+              <div style={{ fontSize: 13, color: C.t3, marginTop: 2 }}>
+                Factual classroom attendance, grades, and gradebook records from DigiSkwela.
               </div>
             </div>
           </div>
-        </DocPanel>
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-
-          {/* Granular At-Risk Alerts */}
-          <DocPanel title="Granular At-Risk Alerts" icon={AlertTriangle}>
-            <div style={{ padding: 16 }}>
-              {[
-                { name: "Espino, Hannah Grace", weak: "Fractions, Ratios", action: "Small group remediation" },
-                { name: "Hernandez, Mark Ryan", weak: "Algebraic Expressions", action: "Subject tutoring" },
-                { name: "Bondoc, Ramon Jr.", weak: "Reading Comprehension", action: "Peer mentoring" },
-              ].map((s, i) => (
-                <div key={i} style={{ padding: 12, border: `1px solid ${C.red}40`, background: C.redBg, borderRadius: 6, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{s.name}</div>
-                    <Stamp label="Below 75%" color={C.red} bg="#fff" />
-                  </div>
-                  <div style={{ fontSize: 12, color: C.t2 }}><strong>Weak Learning Areas:</strong> {s.weak}</div>
-                  <div style={{ fontSize: 12, color: C.t2, marginTop: 4 }}><strong>Suggested Intervention:</strong> {s.action}</div>
-                </div>
-              ))}
-            </div>
-          </DocPanel>
-
-          {/* Behavioral & Attendance Tracking */}
-          <DocPanel title="Behavioral & Attendance Tracking" icon={UserMinus}>
-            <div style={{ padding: 16 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: C.m50, borderBottom: `1px solid ${C.border}` }}>
-                    <th style={{ textAlign: "left", padding: "8px 12px", fontSize: 10, color: C.t3, textTransform: "uppercase" }}>Student Name</th>
-                    <th style={{ textAlign: "left", padding: "8px 12px", fontSize: 10, color: C.t3, textTransform: "uppercase" }}>Incident</th>
-                    <th style={{ textAlign: "left", padding: "8px 12px", fontSize: 10, color: C.t3, textTransform: "uppercase" }}>Recommended Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, color: C.t1 }}>Ocampo, Renz</td>
-                    <td style={{ padding: "10px 12px", fontSize: 12, color: C.amber, fontWeight: 600 }}>Frequent Tardiness</td>
-                    <td style={{ padding: "10px 12px", fontSize: 12, color: C.t2 }}>Parent-teacher conference</td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: "10px 12px", fontSize: 12, fontWeight: 600, color: C.t1 }}>Dela Cruz, Juan</td>
-                    <td style={{ padding: "10px 12px", fontSize: 12, color: C.red, fontWeight: 600 }}>Excessive Absences (5 days)</td>
-                    <td style={{ padding: "10px 12px", fontSize: 12, color: C.t2 }}>Guidance referral & home visit</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </DocPanel>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {/* Pedagogical Action Plans */}
-          <DocPanel title="Pedagogical Action Plans" icon={Lightbulb}>
-            <div style={{ padding: 16 }}>
-              <div style={{ fontSize: 12, color: C.t2, marginBottom: 16, lineHeight: 1.5 }}>Based on recent academic data, AI suggests the following classroom-level strategies. Click a plan to view implementation details.</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[
-                  { title: "Implement Peer Mentoring", target: "8 Rizal (Mathematics)", desc: "Pair high-performers with struggling students." },
-                  { title: "Small Group Remediation", target: "9 Einstein (Science)", desc: "Focusing on basic chemical equations." },
-                  { title: "Targeted Intervention Sessions", target: "10 Pilot (Filipino)", desc: "Fridays for students with missing requirements." },
-                ].map((plan, idx) => (
-                  <div key={idx} 
-                    onClick={() => setActivePlan(plan.title)}
-                    style={{ padding: 12, border: `1px solid ${C.borderMed}`, borderRadius: 6, cursor: "pointer", background: "#fff", transition: "all 0.15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.goldLight; (e.currentTarget as HTMLElement).style.borderColor = C.gold; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; (e.currentTarget as HTMLElement).style.borderColor = C.borderMed; }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: C.m900 }}>{plan.title}</div>
-                      <ChevronRight size={14} color={C.t3} />
-                    </div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.m700, marginBottom: 4 }}>{plan.target}</div>
-                    <div style={{ fontSize: 12, color: C.t2 }}>{plan.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </DocPanel>
-
-          {/* AI Smart Report Generator */}
-          <DocPanel title="AI Smart Report Generator" icon={FileText}>
-            <div style={{ padding: 16 }}>
-              <div style={{ fontSize: 12, color: C.t2, marginBottom: 16, lineHeight: 1.5 }}>Generate structured analytical reports based on actual system data with a single click.</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[
-                  "Term Class Performance Report",
-                  "Attendance Summary",
-                  "Grade Analysis",
-                  "Student Performance Summary"
-                ].map((report, idx) => (
-                  <button key={idx} onClick={() => {
-                    setReportGenerating(report);
-                    setTimeout(() => {
-                      setReportGenerating(null);
-                      setPreviewReport(report);
-                    }, 2000);
-                  }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, cursor: "pointer" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.m50; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: C.t1 }}>
-                      {reportGenerating === report ? "Generating..." : report}
-                    </span>
-                    <Download size={14} color={reportGenerating === report ? C.t3 : C.m700} />
-                  </button>
-                ))}
-              </div>
-              {reportGenerating && (
-                <div style={{ marginTop: 16, padding: "8px 12px", background: C.goldLight, border: `1px solid ${C.gold}`, borderRadius: 4, color: C.m900, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Sparkles size={12} /> Synthesizing data for {reportGenerating}...
-                </div>
-              )}
-            </div>
-          </DocPanel>
+          <button
+            onClick={() => fetchIndicators()}
+            disabled={isLoading}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "#fff",
+              border: `1px solid ${C.borderMed}`,
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: C.t1,
+              cursor: isLoading ? "not-allowed" : "pointer",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={e => { if (!isLoading) (e.currentTarget as HTMLElement).style.background = C.m50; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "#fff"; }}
+          >
+            <RefreshCw size={14} color={C.t2} className={isLoading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
-      {/* AI Preview Modal */}
-      {previewReport && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,8,8,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setPreviewReport(null); }}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 600, borderRadius: 8, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-            <div style={{ background: C.m900, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>{previewReport}</div>
-              <button onClick={() => setPreviewReport(null)} style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}><X size={16}/></button>
+      {/* 2. Required Explanatory Note Banner */}
+      <div style={{ 
+        marginBottom: 20, 
+        padding: "14px 18px", 
+        background: C.m50, 
+        border: `1px solid ${C.borderMed}`, 
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12
+      }}>
+        <Info size={18} color={C.m700} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.5 }}>
+          <strong>Notice: </strong>
+          Factual records from DigiSkwela. This is not a prediction. A recorded term grade below {threshold} in one term is not a final result. Final evaluation requires all terms. Review before acting.
+        </div>
+      </div>
+
+      {/* 3. Rules & Context Bar */}
+      {attendanceWindow && (
+        <div style={{ 
+          marginBottom: 20, 
+          padding: "12px 16px", 
+          background: "#fff", 
+          border: `1px solid ${C.border}`, 
+          borderRadius: 8,
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.t2 }}>
+              <Calendar size={14} color={C.m700} />
+              <span>
+                <strong>Attendance Window:</strong> {attendanceWindow.startDate} to {attendanceWindow.endDate} ({attendanceWindow.timezone})
+              </span>
             </div>
-            <div style={{ padding: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <Sparkles size={16} color={C.gold} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>AI-Generated Report Ready</span>
-              </div>
-              <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
-                {previewReport === "Term Class Performance Report" && (
-                  <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade 8 - Rizal (Mathematics) - T1 Summary</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Class Average:</strong> 82.4% (Pass Rate: 85%)</li>
-                      <li><strong>Key Strengths:</strong> Geometry & Measurement (Avg: 88%)</li>
-                      <li><strong>Weak Learning Areas:</strong> Fractions & Ratios (3 students scored below 75%)</li>
-                      <li><strong>AI Recommendation:</strong> Implement small group remediation for Hannah Grace Espino and Mark Ryan Hernandez focusing on basic fractional operations before T2.</li>
-                    </ul>
-                  </div>
-                )}
-                {previewReport === "Attendance Summary" && (
-                  <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Cross-Section Attendance Report - T1</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Overall Attendance Rate:</strong> 94.2% (Target: 95%)</li>
-                      <li><strong>Chronic Absences:</strong> Juan Dela Cruz (5 days), Miguel Rivera (4 days)</li>
-                      <li><strong>Tardiness Alerts:</strong> Renz Ocampo has been frequently tardy for 1st-period classes.</li>
-                      <li><strong>AI Recommendation:</strong> Schedule an immediate Parent-Teacher Conference (PTC) and guidance referral for Juan Dela Cruz to address chronic absenteeism.</li>
-                    </ul>
-                  </div>
-                )}
-                {previewReport === "Grade Analysis" && (
-                  <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>Grade Distribution & Trend Analysis</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>90-100 (Outstanding):</strong> 12 students (30%)</li>
-                      <li><strong>85-89 (Very Satisfactory):</strong> 15 students (38%)</li>
-                      <li><strong>80-84 (Satisfactory):</strong> 8 students (20%)</li>
-                      <li><strong>75-79 (Fairly Satisfactory):</strong> 3 students (8%)</li>
-                      <li><strong>Below 75 (Did Not Meet Expectations):</strong> 2 students (4%)</li>
-                      <li><strong>AI Insight:</strong> Class average increased by 2.4% compared to previous diagnostic tests. High concentration of students in the Very Satisfactory tier indicates effective instructional delivery.</li>
-                    </ul>
-                  </div>
-                )}
-                {previewReport === "Student Performance Summary" && (
-                  <div>
-                    <div style={{ fontWeight: 700, color: C.t1, marginBottom: 8, fontSize: 14 }}>At-Risk & High-Performer Summary</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Hannah Grace Espino:</strong> Math (68.5) - Needs immediate intervention on Term Assessments.</li>
-                      <li><strong>Mark Ryan Hernandez:</strong> Math (71.0) - Failing due to missed Performance Tasks.</li>
-                      <li><strong>Ramon Bondoc Jr.:</strong> Math (76.8) - Borderline passing, monitor closely in T2.</li>
-                      <li><strong>Trisha Ann Cruz:</strong> Math (93.1) - Excelling, recommended for peer-mentoring program.</li>
-                      <li><strong>AI Recommendation:</strong> Pair Trisha Ann Cruz with Hannah Grace Espino for weekly peer-mentoring sessions.</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                <button onClick={() => setPreviewReport(null)} style={{ padding: "8px 16px", borderRadius: 4, background: "transparent", border: `1px solid ${C.borderMed}`, color: C.t2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Close</button>
-                <button onClick={() => { setPreviewReport(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                  <Download size={14} /> Download PDF
-                </button>
-              </div>
+
+            <div style={{ width: 1, height: 16, background: C.border }} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.t2 }}>
+              <ShieldCheck size={14} color={C.m700} />
+              <span>
+                <strong>Passing Threshold:</strong> {threshold}
+              </span>
             </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: C.t3, display: "flex", alignItems: "center", gap: 10 }}>
+            <span title="Source: Grade model term_grade">Grades: Term Grade Records</span>
+            <span>•</span>
+            <span title="Source: ClassAttendance only. Gate attendance is not used.">Attendance: ClassAttendance (Gate scans not used)</span>
+            <span>•</span>
+            <span title="Source: Gradebook column entries">Scores: Gradebook Cells</span>
           </div>
         </div>
       )}
-      {/* AI Action Plan Modal */}
-      {activePlan && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(15,8,8,0.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
-          onClick={(e) => { if (e.target === e.currentTarget) setActivePlan(null); }}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 600, borderRadius: 8, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-            <div style={{ background: C.m900, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 14 }}>Proposed AI Action Plan</div>
-              <button onClick={() => setActivePlan(null)} style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer" }}><X size={16}/></button>
-            </div>
-            <div style={{ padding: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <Lightbulb size={20} color={C.gold} />
-                <span style={{ fontSize: 16, fontWeight: 700, color: C.t1 }}>{activePlan}</span>
-              </div>
-              
-              <div style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, background: C.paper, padding: 16, borderRadius: 4, border: `1px solid ${C.border}` }}>
-                {activePlan === "Implement Peer Mentoring" && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 8 Rizal has a bimodal grade distribution in Mathematics. Pairing top performers with at-risk students has a 78% historical success rate in improving term scores.</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Target Subject:</strong> Mathematics 8 (Fractions & Ratios)</li>
-                      <li><strong>AI Suggested Matches:</strong> 
-                        <ul style={{ paddingLeft: 16, marginTop: 4, color: C.t2 }}>
-                          <li>Trisha Ann Cruz (93%) mentors Hannah Grace Espino (68%)</li>
-                          <li>Joshua Ferrer (90%) mentors Mark Ryan Hernandez (71%)</li>
-                        </ul>
-                      </li>
-                      <li><strong>Schedule:</strong> Tuesdays & Thursdays, 3:00 PM - 3:30 PM</li>
-                    </ul>
-                  </div>
-                )}
-                {activePlan === "Small Group Remediation" && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> 25% of 9 Einstein scored below the passing threshold on the recent diagnostic test for basic chemical equations. Immediate remediation is required to prevent falling behind in T2.</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Target Subject:</strong> Science 9 (Chemical Equations)</li>
-                      <li><strong>Targeted Students:</strong> Paulo Bautista (69.2%), Kevin Mendoza (77.5%)</li>
-                      <li><strong>Material:</strong> Remedial Module 4A (Pre-generated by AI)</li>
-                      <li><strong>Schedule:</strong> Wednesdays, 2:00 PM - 3:00 PM</li>
-                    </ul>
-                  </div>
-                )}
-                {activePlan === "Targeted Intervention Sessions" && (
-                  <div>
-                    <div style={{ marginBottom: 12 }}><strong>Rationale:</strong> Several students in 10 Pilot are at risk of failing T1 due to missing requirements rather than poor test scores. An intervention session can help them catch up.</div>
-                    <ul style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-                      <li><strong>Target Subject:</strong> Filipino 10 (T1 Requirements)</li>
-                      <li><strong>Targeted Students:</strong> Miguel Rivera (4 missing tasks), Renz Adrian Ocampo (2 missing tasks)</li>
-                      <li><strong>Objective:</strong> Guided completion of Performance Task 2 and Quiz 3 makeup.</li>
-                      <li><strong>Schedule:</strong> Fridays, 1:00 PM - 2:00 PM</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-              
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                <button onClick={() => setActivePlan(null)} style={{ padding: "8px 16px", borderRadius: 4, background: "transparent", border: `1px solid ${C.borderMed}`, color: C.t2, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Dismiss Plan</button>
-                <button onClick={() => { setActivePlan(null); }} style={{ padding: "8px 16px", borderRadius: 4, background: C.m700, border: "none", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckCircle2 size={14} /> Approve & Implement
-                </button>
-              </div>
-            </div>
-          </div>
+
+      {/* 4. Filter Bar */}
+      <div style={{ 
+        marginBottom: 24, 
+        padding: "12px 16px", 
+        background: "#fff", 
+        border: `1px solid ${C.border}`, 
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        flexWrap: "wrap"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: C.t1 }}>
+          <Filter size={14} color={C.m700} />
+          <span>Filters:</span>
         </div>
+
+        {/* Section Filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <label htmlFor="filter-section" style={{ fontSize: 12, color: C.t2, fontWeight: 600 }}>Section:</label>
+          <select
+            id="filter-section"
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              fontSize: 12,
+              borderRadius: 6,
+              border: `1px solid ${C.borderMed}`,
+              background: "#fff",
+              color: C.t1,
+              outline: "none",
+              cursor: "pointer",
+            }}
+          >
+            <option value="">All Assigned Sections</option>
+            {sectionOptions.map(s => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Subject Filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <label htmlFor="filter-subject" style={{ fontSize: 12, color: C.t2, fontWeight: 600 }}>Subject:</label>
+          <select
+            id="filter-subject"
+            value={selectedSubject}
+            onChange={(e) => setSelectedSubject(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              fontSize: 12,
+              borderRadius: 6,
+              border: `1px solid ${C.borderMed}`,
+              background: "#fff",
+              color: C.t1,
+              outline: "none",
+              cursor: "pointer",
+            }}
+          >
+            <option value="">All Assigned Subjects</option>
+            {subjectOptions.map(sub => (
+              <option key={sub.id} value={sub.id}>{sub.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Term Filter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <label htmlFor="filter-term" style={{ fontSize: 12, color: C.t2, fontWeight: 600 }}>Term:</label>
+          <select
+            id="filter-term"
+            value={selectedTerm}
+            onChange={(e) => setSelectedTerm(e.target.value)}
+            style={{
+              padding: "6px 12px",
+              fontSize: 12,
+              borderRadius: 6,
+              border: `1px solid ${C.borderMed}`,
+              background: "#fff",
+              color: C.t1,
+              outline: "none",
+              cursor: "pointer",
+            }}
+          >
+            <option value="all">All Terms</option>
+            <option value="T1">Term 1 (T1)</option>
+            <option value="T2">Term 2 (T2)</option>
+            <option value="T3">Term 3 (T3)</option>
+            <option value="T4">Term 4 (T4)</option>
+          </select>
+        </div>
+
+        {(selectedSection || selectedSubject || selectedTerm !== 'all') && (
+          <button
+            onClick={() => {
+              setSelectedSection('');
+              setSelectedSubject('');
+              setSelectedTerm('all');
+            }}
+            style={{
+              marginLeft: "auto",
+              padding: "4px 8px",
+              fontSize: 11,
+              color: C.m700,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
+
+      {/* 5. Main Content Area */}
+      {isLoading ? (
+        <DocPanel title="Classroom Support Records" icon={FileText}>
+          <div style={{ padding: "48px 24px", textAlign: "center" }}>
+            <div style={{ 
+              width: 32, 
+              height: 32, 
+              border: `3px solid ${C.borderMed}`, 
+              borderTopColor: C.m700, 
+              borderRadius: "50%", 
+              animation: "spin 0.8s linear infinite", 
+              margin: "0 auto 16px" 
+            }} />
+            <div style={{ fontSize: 14, fontWeight: 600, color: C.t1 }}>Loading student support records...</div>
+            <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Querying authoritative classroom records from DigiSkwela.</div>
+          </div>
+        </DocPanel>
+      ) : isUnauthorized ? (
+        <div style={{ maxWidth: 600, margin: "40px auto" }}>
+          <EmptyState
+            icon={AlertCircle}
+            title="Access Restricted"
+            description="You are not authorized to view student support indicators for the requested section or assignment."
+            guidance="You may only view indicators for sections and subjects currently assigned to your teacher account."
+          />
+        </div>
+      ) : errorMessage ? (
+        <div style={{ maxWidth: 600, margin: "40px auto", textAlign: "center" }}>
+          <EmptyState
+            icon={AlertCircle}
+            title="Failed to Load Records"
+            description={errorMessage}
+            guidance="Please verify your network connection and click retry to attempt reloading the records."
+          />
+          <button
+            onClick={() => fetchIndicators()}
+            style={{
+              marginTop: 16,
+              padding: "10px 20px",
+              background: C.m700,
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Retry Loading
+          </button>
+        </div>
+      ) : students.length === 0 ? (
+        <DocPanel title="Classroom Support Records" icon={FileText}>
+          <div style={{ padding: 24 }}>
+            <EmptyState
+              icon={CheckCircle2}
+              title="No Support Indicators Found"
+              description="No students with the selected factual indicators were found for these filters."
+              guidance="This view only displays students who have at least one factual indicator: a recorded term grade below the passing threshold, recorded class attendance marks, or missing gradebook scores."
+            />
+          </div>
+        </DocPanel>
+      ) : (
+        <DocPanel 
+          title={`Classroom Support Records (${students.length} student${students.length === 1 ? '' : 's'})`} 
+          icon={FileText}
+        >
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+              <thead>
+                <tr style={{ background: C.m50, borderBottom: `1.5px solid ${C.border}` }}>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em" }}>Student</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em" }}>Section</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em" }}>Subject</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em" }}>Recorded Term Grade Below {threshold}</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>Recorded Absences</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>Late</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>Excused</th>
+                  <th style={{ padding: "12px 16px", fontSize: 11, fontWeight: 700, color: C.t1, textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center" }}>Missing Scores</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student: TeacherStudentSupportIndicator, idx: number) => {
+                  const hasBelowPassing = student.belowPassingTerms && student.belowPassingTerms.length > 0;
+                  const rowBg = idx % 2 === 0 ? "#fff" : C.paper;
+
+                  return (
+                    <tr 
+                      key={student.studentId}
+                      style={{ 
+                        background: rowBg, 
+                        borderBottom: `1px solid ${C.border}`,
+                        transition: "background 0.1s ease" 
+                      }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = C.m50; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg; }}
+                    >
+                      {/* Student Name */}
+                      <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 700, color: C.t1 }}>
+                        {student.studentDisplayName}
+                      </td>
+
+                      {/* Section */}
+                      <td style={{ padding: "12px 16px", fontSize: 12, color: C.t2 }}>
+                        {student.sectionName}
+                      </td>
+
+                      {/* Subject */}
+                      <td style={{ padding: "12px 16px", fontSize: 12, color: C.t2 }}>
+                        {student.subjectName}
+                      </td>
+
+                      {/* Recorded Term Grade Below Threshold */}
+                      <td style={{ padding: "12px 16px", fontSize: 12 }}>
+                        {hasBelowPassing ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                            {student.belowPassingTerms.map((bpt, i) => (
+                              <span 
+                                key={i}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: C.red,
+                                }}
+                              >
+                                {bpt.term} — {bpt.grade} (below {threshold})
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: C.t3, fontSize: 12 }}>None recorded below {threshold}</span>
+                        )}
+                      </td>
+
+                      {/* Recorded Absences */}
+                      <td style={{ padding: "12px 16px", fontSize: 13, textAlign: "center", fontWeight: 700 }}>
+                        {student.recordedAbsences.absences > 0 ? (
+                          <span style={{ 
+                            padding: "3px 8px", 
+                            background: student.recordedAbsences.absences >= 3 ? C.redBg : C.amberBg,
+                            color: student.recordedAbsences.absences >= 3 ? C.red : C.amber,
+                            borderRadius: 12,
+                            fontSize: 11
+                          }}>
+                            {student.recordedAbsences.absences}
+                          </span>
+                        ) : (
+                          <span style={{ color: C.t3, fontWeight: 400 }}>0</span>
+                        )}
+                      </td>
+
+                      {/* Late */}
+                      <td style={{ padding: "12px 16px", fontSize: 12, textAlign: "center", color: C.t2 }}>
+                        {student.recordedAbsences.tardies > 0 ? (
+                          <span style={{ 
+                            padding: "3px 8px", 
+                            background: C.amberBg, 
+                            color: C.amber, 
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 600
+                          }}>
+                            {student.recordedAbsences.tardies}
+                          </span>
+                        ) : (
+                          <span style={{ color: C.t3 }}>0</span>
+                        )}
+                      </td>
+
+                      {/* Excused */}
+                      <td style={{ padding: "12px 16px", fontSize: 12, textAlign: "center", color: C.t2 }}>
+                        {student.recordedAbsences.excused > 0 ? (
+                          <span style={{ 
+                            padding: "3px 8px", 
+                            background: C.blueBg, 
+                            color: C.blue, 
+                            borderRadius: 12,
+                            fontSize: 11,
+                            fontWeight: 600
+                          }}>
+                            {student.recordedAbsences.excused}
+                          </span>
+                        ) : (
+                          <span style={{ color: C.t3 }}>0</span>
+                        )}
+                      </td>
+
+                      {/* Missing Scores */}
+                      <td style={{ padding: "12px 16px", fontSize: 13, textAlign: "center", fontWeight: 700 }}>
+                        {student.missingScoresCount > 0 ? (
+                          <span style={{ 
+                            padding: "3px 8px", 
+                            background: C.amberBg, 
+                            color: C.amber, 
+                            borderRadius: 12,
+                            fontSize: 11
+                          }}>
+                            {student.missingScoresCount}
+                          </span>
+                        ) : (
+                          <span style={{ color: C.t3, fontWeight: 400 }}>0</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </DocPanel>
       )}
     </div>
   );
 }
-
-/* ─── SCREEN 5 - Professional Development ───────────────────── */

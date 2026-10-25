@@ -411,7 +411,7 @@ export async function getTeacherStudentSupportIndicators(
     },
     rules: {
       belowPassingTerms: `Terms where the recorded term grade is below ${PASSING_GRADE}. A term grade below ${PASSING_GRADE} is not a final result; final evaluation requires all terms.`,
-      recordedAbsences: `Count of recorded ClassAttendance records with status A (absent), L (tardy), and E (excused) in the resolved date window. Never accesses GateAttendance.`,
+      recordedAbsences: `Count of recorded ClassAttendance records with status A (absent), L (late), and E (excused) in the resolved date window. Never accesses GateAttendance.`,
       missingScoresCount: `Count of missing gradebook cells for applicable assignments. A score of 0 is a recorded score and is not missing.`,
     },
     disclaimer: `Factual records from DigiSkwela. This is not a prediction. A grade below ${PASSING_GRADE} in one term is not a final result. Review before acting.`,

@@ -5,6 +5,7 @@ import { PTableHeader } from '../shared/PTableHeader';
 import { Stamp } from '../../shared/components/Stamp';
 import { Sparkles, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../../api/client';
+import { studentSupportApi, PrincipalStudentSupportResponse } from '../../../api/studentSupport.api';
 
 export interface AcademicAnalyticsResponse {
   schoolAverageByGradeLevel: {
@@ -51,6 +52,9 @@ export function PAcademics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const [supportData, setSupportData] = useState<PrincipalStudentSupportResponse | null>(null);
+  const [supportLoading, setSupportLoading] = useState(true);
+
   useEffect(() => {
     apiClient.get<AcademicAnalyticsResponse>('/admin/analytics/academics')
       .then((res) => {
@@ -61,6 +65,16 @@ export function PAcademics() {
         console.error(err);
         setError(true);
         setLoading(false);
+      });
+
+    studentSupportApi.getPrincipalAggregate()
+      .then((res) => {
+        setSupportData(res);
+        setSupportLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load student support aggregate:', err);
+        setSupportLoading(false);
       });
   }, []);
 
@@ -214,6 +228,48 @@ export function PAcademics() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Student Support Indicators (Section Aggregates) */}
+      <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ padding: "10px 16px", borderBottom: `0.5px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>
+            Student Support Indicators
+          </div>
+          {supportData && (
+            <div style={{ fontSize: 10, color: C.t3 }}>
+              Passing Threshold: {supportData.metadata.passingGradeThreshold} • Window: {supportData.metadata.attendanceWindow.startDate} to {supportData.metadata.attendanceWindow.endDate}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "6px 16px 8px", fontSize: 10, color: C.t3, borderBottom: `0.5px solid ${C.border}`, background: C.paper }}>
+          Factual aggregate records from DigiSkwela. This is not a prediction or risk classification. Review before acting.
+        </div>
+        {supportLoading ? (
+          <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>Loading student support indicators...</div>
+        ) : !supportData || supportData.aggregates.length === 0 ? (
+          <div style={{ padding: 20, textAlign: "center", fontSize: 11, color: C.t3 }}>No section aggregate data available.</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <PTableHeader cols={["Grade Level", "Section", `Recorded Term Grade Below ${supportData.metadata.passingGradeThreshold}`, "3+ Recorded Absences"]} />
+            </thead>
+            <tbody>
+              {supportData.aggregates.map((agg, i) => (
+                <tr key={agg.sectionId} style={{ borderBottom: i < supportData.aggregates.length - 1 ? `0.5px solid ${C.border}` : "none" }}>
+                  <td style={{ padding: "9px 16px", fontSize: 11, color: C.t3 }}>Grade {agg.gradeLevel}</td>
+                  <td style={{ padding: "9px 16px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{agg.sectionName}</td>
+                  <td style={{ padding: "9px 16px", fontSize: 12, fontWeight: 700, color: agg.studentsBelowPassingCount > 0 ? C.red : C.t3 }}>
+                    {agg.studentsBelowPassingCount}
+                  </td>
+                  <td style={{ padding: "9px 16px", fontSize: 12, fontWeight: 700, color: agg.studentsWithThreeOrMoreAbsencesCount > 0 ? C.amber : C.t3 }}>
+                    {agg.studentsWithThreeOrMoreAbsencesCount}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Top 10 Performers (School-Wide) */}

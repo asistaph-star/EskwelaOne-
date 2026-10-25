@@ -29,7 +29,7 @@ const T_NAV_GROUPS: SidebarGroupConfig<TScreen>[] = [
   { category: "Tools & Growth", items: [
     { id: "t-ranking",          label: "Career Progression", icon: Award },
     { id: "pro-dev",            label: "Professional Development", icon: GraduationCap },
-    { id: "ai-tools",           label: "AI Insights & Reports",    icon: Sparkles },
+    { id: "ai-tools",           label: "Student Support Insights",    icon: Sparkles },
     { id: "leave-requests",     label: "My Leave Requests",        icon: Calendar },
   ]},
 ];

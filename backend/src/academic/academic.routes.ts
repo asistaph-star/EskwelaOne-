@@ -266,6 +266,8 @@ router.get('/my-classes', requirePermissions('assignment:read_own'), async (req:
       
       return {
         id: a.id,
+        sectionId: a.section_id,
+        subjectId: a.subject_id,
         grade: a.section.grade_level,
         section: a.section.name,
         subject: a.subject.name,

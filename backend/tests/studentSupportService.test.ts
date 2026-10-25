@@ -102,7 +102,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(data.metadata.rules.belowPassingTerms).not.toContain('failing');
     expect(data.metadata.rules.recordedAbsences).not.toMatch(/unexcused/i);
     expect(data.metadata.rules.recordedAbsences).toContain('status A (absent)');
-    expect(data.metadata.rules.recordedAbsences).toContain('L (tardy)');
+    expect(data.metadata.rules.recordedAbsences).toContain('L (late)');
     expect(data.metadata.rules.recordedAbsences).toContain('E (excused)');
 
     // Exactly 5 students
@@ -409,7 +409,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     const tRule = resTeacher.body.data.metadata.rules.recordedAbsences;
     expect(tRule).not.toMatch(/unexcused/i);
     expect(tRule).toContain('status A (absent)');
-    expect(tRule).toContain('L (tardy)');
+    expect(tRule).toContain('L (late)');
     expect(tRule).toContain('E (excused)');
 
     const resPrin = await request(app)

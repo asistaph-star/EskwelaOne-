@@ -60,7 +60,7 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
     "attendance-direct": { title: "Attendance Quick Access" },
     "clinic-visits": { title: "Student Clinic Logs", sub: " Health Unit" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
-    "ai-tools": { title: "AI Assistant Tools", sub: "Smart teaching aids" },
+    "ai-tools": { title: "Student Support Insights", sub: "Factual classroom attendance, grades, and gradebook records" },
     "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
     "t-ranking": { title: "Career Progression", sub: "Teacher Ranking & Comparative Assessment" },
     calendar: { title: "Calendar & Schedule" },
