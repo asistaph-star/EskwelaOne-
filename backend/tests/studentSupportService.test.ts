@@ -339,6 +339,64 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(window.timezone).toBe('Asia/Manila');
   });
 
+  it('C1-DATE-05: Teacher no-date request resolves locked 30-day default window ending on current Manila date', async () => {
+    const res = await request(app)
+      .get('/api/student-support/teacher/indicators')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(res.status).toBe(200);
+    const win = res.body.data.metadata.attendanceWindow;
+    expect(win.isDefaultWindow).toBe(true);
+    expect(win.timezone).toBe('Asia/Manila');
+    const startDate = new Date(`${win.startDate}T00:00:00Z`);
+    const endDate = new Date(`${win.endDate}T00:00:00Z`);
+    const diffDays = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    expect(diffDays).toBe(29);
+  });
+
+  it('C1-DATE-06: Principal no-date request resolves exact same 30-day default window as Teacher', async () => {
+    const teacherRes = await request(app)
+      .get('/api/student-support/teacher/indicators')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    const principalRes = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(principalRes.status).toBe(200);
+    const pWin = principalRes.body.data.metadata.attendanceWindow;
+    const tWin = teacherRes.body.data.metadata.attendanceWindow;
+
+    expect(pWin.startDate).toBe(tWin.startDate);
+    expect(pWin.endDate).toBe(tWin.endDate);
+    expect(pWin.timezone).toBe('Asia/Manila');
+    expect(pWin.isDefaultWindow).toBe(true);
+  });
+
+  it('C1-DATE-07: Principal request with explicit dates sets isDefaultWindow: false', async () => {
+    const res = await request(app)
+      .get('/api/student-support/principal/aggregate?startDate=2026-10-01&endDate=2026-10-15')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(res.status).toBe(200);
+    const win = res.body.data.metadata.attendanceWindow;
+    expect(win.startDate).toBe('2026-10-01');
+    expect(win.endDate).toBe('2026-10-15');
+    expect(win.isDefaultWindow).toBe(false);
+  });
+
+  it('C1-DATE-08: Principal no-date request preserves exact aggregate counts without broadening window', async () => {
+    const res = await request(app)
+      .get('/api/student-support/principal/aggregate')
+      .set('Authorization', `Bearer ${principalToken}`);
+
+    expect(res.status).toBe(200);
+    const data = res.body.data;
+    expect(data.totals.studentsBelowPassingCount).toBe(2);
+    expect(data.totals.studentsWithThreeOrMoreAbsencesCount).toBe(1);
+    expect(data.metadata.attendanceWindow.isDefaultWindow).toBe(true);
+  });
+
   // ─── 7. Proof No GateAttendance is Read ────────────────────────────────────
   it('C1-GATE-01: Service never reads or accesses GateAttendance', async () => {
     const gateSpy = (prisma as any).gateAttendance?.findMany;
