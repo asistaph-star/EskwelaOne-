@@ -9,7 +9,8 @@ import { saveLedger } from '../src/gradebooks/ledger.service.js';
 
 describe('DIGISKWELA — Gradebook QA Column UUID Regression Gate', () => {
   const teacherUserId = 'demo-teacher-1';
-  const classAssignmentId = 'demo-assign-1';
+  const classAssignmentId = 'fix-assign-qa-uuid';
+  const fixtureSectionId = 'fix-sec-qa-uuid';
   let teacherToken: string;
 
   async function cleanupGradebookData() {
@@ -25,11 +26,36 @@ describe('DIGISKWELA — Gradebook QA Column UUID Regression Gate', () => {
         where: { id: gb.id }
       });
     }
+    await prisma.teacherSubjectAssignment.deleteMany({ where: { id: classAssignmentId } });
+    await prisma.section.deleteMany({ where: { id: fixtureSectionId } });
   }
 
   beforeAll(async () => {
     teacherToken = sign({ userId: teacherUserId }, config.jwt.secret, { expiresIn: '1h' });
     await cleanupGradebookData();
+
+    await prisma.section.upsert({
+      where: { id: fixtureSectionId },
+      update: {},
+      create: {
+        id: fixtureSectionId,
+        academic_year_id: 'demo-ay-2026',
+        name: 'QA-UUID-Section',
+        grade_level: 10
+      }
+    });
+
+    await prisma.teacherSubjectAssignment.upsert({
+      where: { id: classAssignmentId },
+      update: {},
+      create: {
+        id: classAssignmentId,
+        academic_year_id: 'demo-ay-2026',
+        teacher_id: 'demo-teacher-1',
+        section_id: fixtureSectionId,
+        subject_id: 'demo-subj-math10'
+      }
+    });
   });
 
   afterAll(async () => {

@@ -95,7 +95,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
   // ─── 3. Demo Fixture Teacher Acceptance Test ───────────────────────────────
   it('C1-TCH-01: Teacher endpoint returns exactly the 5 authoritative fixture indicator students sorted alphabetically', async () => {
     const response = await request(app)
-      .get('/api/student-support/teacher/indicators')
+      .get('/api/student-support/teacher/indicators?sectionId=fix-sec-teacher-tests')
       .set('Authorization', `Bearer ${teacherToken}`);
 
     expect(response.status).toBe(200);
@@ -197,7 +197,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
   // ─── 4. Principal Aggregate Acceptance Test ────────────────────────────────
   it('C1-PRN-01: Principal aggregate returns exact fixture counts 2 below passing / 1 with 3+ absences, with zero student names', async () => {
     const response = await request(app)
-      .get('/api/student-support/principal/aggregate')
+      .get('/api/student-support/principal/aggregate?sectionId=fix-sec-teacher-tests')
       .set('Authorization', `Bearer ${principalToken}`);
 
     expect(response.status).toBe(200);
@@ -396,7 +396,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
 
   it('C1-DATE-08: Principal no-date request preserves exact aggregate counts without broadening window', async () => {
     const res = await request(app)
-      .get('/api/student-support/principal/aggregate')
+      .get('/api/student-support/principal/aggregate?sectionId=fix-sec-teacher-tests')
       .set('Authorization', `Bearer ${principalToken}`);
 
     expect(res.status).toBe(200);
@@ -591,7 +591,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
   it('C1-TERM-01: Scoping by term=T1 scopes below-passing grades and missing scores to T1', async () => {
     // Teacher endpoint
     const resTeacher = await request(app)
-      .get('/api/student-support/teacher/indicators?term=T1')
+      .get('/api/student-support/teacher/indicators?sectionId=fix-sec-teacher-tests&term=T1')
       .set('Authorization', `Bearer ${teacherToken}`);
     expect(resTeacher.status).toBe(200);
     const tData = resTeacher.body.data;
@@ -609,7 +609,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
 
     // Principal endpoint
     const resPrin = await request(app)
-      .get('/api/student-support/principal/aggregate?term=T1')
+      .get('/api/student-support/principal/aggregate?sectionId=fix-sec-teacher-tests&term=T1')
       .set('Authorization', `Bearer ${principalToken}`);
     expect(resPrin.status).toBe(200);
     expect(resPrin.body.data.totals.studentsBelowPassingCount).toBe(2);
