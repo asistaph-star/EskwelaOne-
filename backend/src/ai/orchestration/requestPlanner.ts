@@ -227,7 +227,7 @@ export function isDomainNegated(domain: OperationalDomainName, clauseText: strin
   // 1. Direct leading negation in the clause:
   // e.g. "not attendance", "don't include attendance", "excluding attendance", "ignore attendance", "without attendance", "aside from attendance", "except attendance"
   const directPrefixNegation = new RegExp(
-    `\\b(?:not|no|don't|do\\s+not|never|exclude|excluding|ignore|ignoring|skip|without|isn't|is\\s+not|aren't|are\\s+not|aside\\s+from|except)\\s+(?:about\\s+|on\\s+|for\\s+|in\\s+)?(?:the\\s+)?(?:my\\s+)?[^.?!;,]*?\\b(?:${meta.keywords.source})\\b`,
+    `\\b(?:not|no|don't|do\\s+not|never|exclude|excluding|ignore|ignoring|without|isn't|is\\s+not|aren't|are\\s+not|aside\\s+from|except)\\s+(?:about\\s+|on\\s+|for\\s+|in\\s+)?(?:the\\s+)?(?:my\\s+)?[^.?!;,]*?\\b(?:${meta.keywords.source})\\b`,
     'i'
   );
   if (directPrefixNegation.test(clauseLower)) {

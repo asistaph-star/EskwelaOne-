@@ -214,7 +214,7 @@ export function normalizeAssistantText(
       /^(?:which digiskwela feature|which feature would you like)/i.test(cleaned) ||
       lower.includes('help me find or understand a digiskwela feature') ||
       (lower.includes('which digiskwela feature') && (lower.includes('gate attendance') || lower.includes('leave management'))) ||
-      (/(?:which|select|choose|find|understand|explore)\s+(?:a\s+)?(?:digiskwela\s+)?feature/i.test(cleaned) && cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
+      (cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
     )
   ) {
     return 'Which DigiSkwela feature do you need help with?';

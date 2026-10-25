@@ -29,7 +29,7 @@ describe('DIGISKWELA — PRINCIPAL BENCHMARK DEFECT PASS DETERMINISTIC SUITE', (
     const excludedPhrases = [
       "don't check faculty attendance",
       'exclude faculty attendance',
-      'skip faculty attendance',
+      'ignoring faculty attendance',
       'ignore attendance',
     ];
 
