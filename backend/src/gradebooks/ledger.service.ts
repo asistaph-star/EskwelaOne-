@@ -155,7 +155,7 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
       });
     }
 
-    const qaNid = 'qa-' + gb.id;
+    const qaNid = generateId();
     colIdMap['qa'] = qaNid;
     await prisma.gradebook_columns.create({
       data: { id: qaNid, gradebook_id: gb.id, type: 'QA', label: 'Term Assessment', max_score: termData.qaMax || 100, sort_order: sort++, updated_at: new Date() }
