@@ -274,7 +274,11 @@ export function validateAndRemedyCompleteness(
           operationRecords.push({ operation: op, targetDomain, description: opObligation.description, status: 'REMEDIED', remedyApplied: groundedExplanation });
         } else {
           unmetCount++;
-          const unavail = `Note: Could not explain operational cause for ${opObligation.description}.`;
+          const checkedDomains = (plan.domainObligations || []).map(d => DOMAIN_CATALOG[d.domain]?.displayName || d.domain);
+          const domainContext = checkedDomains.length > 0 
+            ? `from the ${checkedDomains.join(' and ')} records checked` 
+            : 'from the records checked';
+          const unavail = `No verified operational cause was established ${domainContext}.`;
           addendumLines.push(unavail);
           operationRecords.push({ operation: op, targetDomain, description: opObligation.description, status: 'UNAVAILABLE', remedyApplied: unavail });
         }

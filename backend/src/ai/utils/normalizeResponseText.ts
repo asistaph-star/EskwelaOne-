@@ -161,6 +161,7 @@ export function cleanAwkwardLanguage(text: string): string {
   result = result.replace(/\bUnexcused absence\b/gi, 'No gate check-in recorded and no approved leave found');
 
   // Student physical presence -> neutral gate scan observation
+  result = result.replace(/\bcampus presence\b/gi, 'student gate activity');
   result = result.replace(/\b(?:0|no)\s+students?\s+(?:are\s+)?(?:currently\s+)?(?:recorded\s+)?on campus\b/gi, 'no student gate time-in is recorded today');
   result = result.replace(/\b0 recorded on campus\b/gi, 'no student gate time-in is recorded today');
   result = result.replace(/\b(\d+)\s+students?\s+(?:are\s+)?currently\s+(?:recorded\s+)?on campus\b/gi, '$1 student(s) recorded with a gate time-in and no time-out');
@@ -213,7 +214,7 @@ export function normalizeAssistantText(
       /^(?:which digiskwela feature|which feature would you like)/i.test(cleaned) ||
       lower.includes('help me find or understand a digiskwela feature') ||
       (lower.includes('which digiskwela feature') && (lower.includes('gate attendance') || lower.includes('leave management'))) ||
-      (cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
+      (/(?:which|select|choose|find|understand|explore)\s+(?:a\s+)?(?:digiskwela\s+)?feature/i.test(cleaned) && cleaned.includes('Gate Attendance Monitoring') && cleaned.includes('Leave Management') && cleaned.includes('Behavioral Reports') && cleaned.includes('Academic Analytics') && !cleaned.includes('weekly'))
     )
   ) {
     return 'Which DigiSkwela feature do you need help with?';

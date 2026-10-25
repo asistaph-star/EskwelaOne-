@@ -151,7 +151,7 @@ export const DOMAIN_CATALOG: Record<OperationalDomainName, DomainMetadata> = {
     coverageRegex: /\b(operational|pulse|fact sheet|enrollment|campus)\b/i,
     defaultArgs: {},
     summarizeResult: (_result: any) => {
-      return "The daily operational fact sheet reflects authoritative student enrollment, campus presence, and operational counters.";
+      return "The daily operational fact sheet reflects authoritative student enrollment, student gate activity, and operational counters.";
     }
   },
 

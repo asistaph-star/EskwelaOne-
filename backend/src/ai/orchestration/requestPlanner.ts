@@ -216,15 +216,18 @@ export function isDomainNegated(domain: OperationalDomainName, clauseText: strin
     return false;
   }
 
-  // Status filters like "no gate check-in", "no check-in", or "no time-out" represent attendance exception queries, not domain exclusion
-  if (domain === 'faculty_attendance' && /\b(?:have\s+|with\s+)?no\s+(?:gate\s+)?(?:check-?ins?|time-?outs?)\b/i.test(clauseLower)) {
+  // Status filters like "no gate check-in", "without a gate check-in", "no check-in", or "no time-out" represent attendance exception queries, not domain exclusion
+  if (domain === 'faculty_attendance' && (
+    /\b(?:have\s+|with\s+)?no\s+(?:gate\s+)?(?:check-?ins?|time-?outs?)\b/i.test(clauseLower) ||
+    /\bwithout\s+(?:a\s+)?(?:gate\s+)?(?:check-?ins?|time-?outs?)\b/i.test(clauseLower)
+  )) {
     return false;
   }
 
   // 1. Direct leading negation in the clause:
   // e.g. "not attendance", "don't include attendance", "excluding attendance", "ignore attendance", "without attendance", "aside from attendance", "except attendance"
   const directPrefixNegation = new RegExp(
-    `\\b(?:not|no|don't|do\\s+not|never|exclude|excluding|ignore|ignoring|without|isn't|is\\s+not|aren't|are\\s+not|aside\\s+from|except)\\s+(?:about\\s+|on\\s+|for\\s+|in\\s+)?(?:the\\s+)?(?:my\\s+)?[^.?!;,]*?\\b(?:${meta.keywords.source})\\b`,
+    `\\b(?:not|no|don't|do\\s+not|never|exclude|excluding|ignore|ignoring|skip|without|isn't|is\\s+not|aren't|are\\s+not|aside\\s+from|except)\\s+(?:about\\s+|on\\s+|for\\s+|in\\s+)?(?:the\\s+)?(?:my\\s+)?[^.?!;,]*?\\b(?:${meta.keywords.source})\\b`,
     'i'
   );
   if (directPrefixNegation.test(clauseLower)) {
@@ -559,9 +562,9 @@ export function analyzeRequest(raw: string, messages: AIMessage[]): RequestUnder
 
   const isAttendanceCrossCheck = !lower.includes('pending') && !lower.includes('behavior') && !lower.includes('incident') && !lower.includes('cases') && (
     /\b(cross-?check|audit)\b.*\b(attendance|gate(\s+records?|\s+check-?ins?)?)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
-    /\b(check|audit|cross-?check)\b.*\bfaculty\s+(gate\s+records?|attendance)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
-    /\b(gate\s+records?|gate\s+check-?ins?|faculty\s+attendance)\b.*\b(against|with)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
-    /\b(faculty\s+.*unresolved|attendance\s+.*exception|unresolved.*faculty)\b.*\b(explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower) ||
+    /\b(check|audit|cross-?check)\b.*\b(?:faculty|teachers?|staff)\s+(gate\s+records?|attendance)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
+    /\b(gate\s+records?|gate\s+check-?ins?|(?:faculty|teachers?|staff)\s+attendance)\b.*\b(against|with)\b.*\b(approved\s+)?leaves?\b/i.test(lower) ||
+    /\b((?:faculty|teachers?|staff)\s+.*unresolved|attendance\s+.*exception|unresolved.*(?:faculty|teachers?|staff))\b.*\b(explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower) ||
     /\b(?:no\s+gate\s+check-?in|have\s+no\s+gate\s+check-?in)\b.*\b(?:explained|covered)\s+by\s+(approved\s+)?leaves?\b/i.test(lower)
   );
 

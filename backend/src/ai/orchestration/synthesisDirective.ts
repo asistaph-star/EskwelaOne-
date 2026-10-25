@@ -61,9 +61,10 @@ export function buildSynthesisDirective(
 
   parts.push('BROAD OPERATIONAL INQUIRIES & COVERAGE HONESTY:');
   parts.push('- When responding to broad operational inquiries regarding what needs review, attention, or actions before departure:');
-  parts.push('  1. Explicitly list WHICH operational areas were checked (e.g. faculty attendance, pending leaves, events, behavior, academics) and WHICH were NOT checked.');
+  parts.push('  1. Explicitly list WHICH operational areas were checked (e.g. faculty attendance, pending leaves, events, behavior, academics, aggregate inventory totals) and WHICH were NOT checked (e.g. detailed item-level inventory records, individual student scans).');
   parts.push('  2. Never present any single item as the "top priority" or "main action" unless an authoritative comparison across all relevant operational areas established that ranking.');
   parts.push('  3. Present administrative findings neutrally without ungrounded importance claims.');
+  parts.push('  4. INVENTORY SCOPE: Aggregate inventory totals (current accountable, in repair, borrowed, lost/damaged units) are provided via getSchoolOperationalFactSheet. Detailed item-level inventory records are not available through AI tools and were not checked.');
 
   if (plan.isDraft) {
     parts.push('DRAFTING REQUIREMENT:');
