@@ -3,6 +3,7 @@ import { analyzeRequest, buildRequestPlan, isDomainNegated } from '../src/ai/orc
 import { DOMAIN_CATALOG } from '../src/ai/orchestration/domainCatalog.js';
 import { validateAndRemedyCompleteness } from '../src/ai/orchestration/completenessValidator.js';
 import { principalTools } from '../src/ai/tools/definitions/principalTools.js';
+import { dispatchTool } from '../src/ai/tools/toolDispatcher.js';
 
 describe('DIGISKWELA — PRINCIPAL BENCHMARK DEFECT PASS DETERMINISTIC SUITE', () => {
   const allowedTools = new Set(principalTools.map(t => t.name));
@@ -135,4 +136,38 @@ describe('DIGISKWELA — PRINCIPAL BENCHMARK DEFECT PASS DETERMINISTIC SUITE', (
     const dedicatedInventoryTool = principalTools.find(t => t.name.toLowerCase().includes('inventory'));
     expect(dedicatedInventoryTool).toBeUndefined();
   });
+
+  // ─── G. PRIVACY: BEHAVIOR TOOL MODEL-FACING RESULT ──────────────────────────
+  it('TC-BENCH-08: getAdministrativeBehaviorSummary model-facing result contains zero student names', async () => {
+    const principalContext = {
+      user: {
+        id: 'test-principal',
+        email: 'principal@demo.com',
+        roles: ['Principal'],
+        permissions: ['behavior:read']
+      },
+      correlationId: 'test-corr-behavior-privacy',
+      portal: 'principal'
+    };
+
+    const res = await dispatchTool('getAdministrativeBehaviorSummary', {}, principalContext);
+    expect(res.success).toBe(true);
+
+    const data = res.data;
+    expect(data.cases).toBeDefined();
+    expect(data.cases.length).toBeGreaterThan(0);
+
+    for (const c of data.cases) {
+      expect(c.studentDisplayName).toBeUndefined();
+      expect(c.studentName).toBeUndefined();
+      expect(c.name).toBeUndefined();
+      expect(c.caseId).toBeDefined();
+      expect(c.gradeLevel).toBeDefined();
+      expect(c.section).toBeDefined();
+      expect(c.status).toBeDefined();
+      expect(c.category).toBeDefined();
+      expect(c.incidentDate).toBeDefined();
+    }
+  });
 });
+

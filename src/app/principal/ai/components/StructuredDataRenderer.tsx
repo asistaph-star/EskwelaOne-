@@ -422,7 +422,7 @@ export function StructuredDataRenderer({ data, onNavigate }: StructuredDataRende
             {cases.map((c: any, i: number) => (
               <div key={i} style={{ padding: '8px 10px', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: 6, fontSize: 11 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600, color: C.t1 }}>{c.studentName} (Gr. {c.gradeLevel})</span>
+                  <span style={{ fontWeight: 600, color: C.t1 }}>Grade {c.gradeLevel} · Section {c.section}</span>
                   <StatusBadge status={c.status} />
                 </div>
                 <div style={{ color: C.t3, fontSize: 10, marginTop: 3 }}>

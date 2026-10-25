@@ -415,10 +415,9 @@ export const getAdministrativeBehaviorSummaryTool: DigiSkwelaTool = {
     const limit = Math.min(Math.max(args.limit || 20, 1), 50);
     const paginatedLogs = filteredLogs.slice(0, limit);
 
-    // Purpose-specific DTO: Strictly exclude raw notes/narratives, guidance disclosures, and clinical data
+    // Purpose-specific DTO: Strictly exclude student names, raw notes/narratives, guidance disclosures, and clinical data
     const safeCases = paginatedLogs.map(l => ({
       caseId: l.id,
-      studentDisplayName: l.studentName,
       gradeLevel: l.gradeLevel,
       section: l.sectionName,
       incidentDate: l.date instanceof Date ? l.date.toISOString().split('T')[0] : String(l.date).split('T')[0],

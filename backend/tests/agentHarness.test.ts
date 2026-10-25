@@ -93,7 +93,7 @@ describe('DIGISKWELA — ROLE-AWARE AI AGENT HARNESS & MULTI-STEP ORCHESTRATION'
               statusBreakdown: { underInvestigation: 1, reported: 1, resolved: 0 },
               summary: { totalCases: 2, underInvestigation: 1, reported: 1, resolved: 0 },
               cases: [
-                { caseId: 'CASE-1', studentDisplayName: 'John Doe', status: 'Under investigation', category: 'Bullying' }
+                { caseId: 'CASE-1', gradeLevel: 10, section: 'Rizal', status: 'Under investigation', category: 'Bullying' }
               ]
             }
           };
