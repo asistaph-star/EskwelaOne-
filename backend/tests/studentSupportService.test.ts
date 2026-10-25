@@ -212,7 +212,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
     expect(data.totals.studentsWithThreeOrMoreAbsencesCount).toBe(1);
     expect(data.totals.totalSectionsEvaluated).toBeGreaterThanOrEqual(1);
 
-    const rizal = data.aggregates.find((a: any) => a.sectionName === 'Rizal');
+    const rizal = data.aggregates.find((a: any) => a.sectionId === 'fix-sec-teacher-tests');
     expect(rizal).toBeDefined();
     expect(rizal.gradeLevel).toBe(10);
     expect(rizal.studentsBelowPassingCount).toBe(2);
@@ -542,9 +542,9 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
       expect(juan1.belowPassingTerms).toEqual([{ term: 'T1', grade: 70 }]);
 
       // Principal aggregate endpoint check:
-      // Juan is counted once (no double counting). Count increases from 2 to 3.
+      // Juan is counted once (no double counting). Count in fixture section increases from 2 to 3.
       const resPrin1 = await request(app)
-        .get('/api/student-support/principal/aggregate?term=T1')
+        .get('/api/student-support/principal/aggregate?term=T1&sectionId=fix-sec-teacher-tests')
         .set('Authorization', `Bearer ${principalToken}`);
       expect(resPrin1.status).toBe(200);
       expect(resPrin1.body.data.totals.studentsBelowPassingCount).toBe(3);
@@ -569,9 +569,9 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
       expect(juan2.belowPassingTerms).toEqual([]);
 
       // Principal aggregate endpoint check:
-      // Count returns to 2.
+      // Count in fixture section returns to 2.
       const resPrin2 = await request(app)
-        .get('/api/student-support/principal/aggregate?term=T1')
+        .get('/api/student-support/principal/aggregate?term=T1&sectionId=fix-sec-teacher-tests')
         .set('Authorization', `Bearer ${principalToken}`);
       expect(resPrin2.status).toBe(200);
       expect(resPrin2.body.data.totals.studentsBelowPassingCount).toBe(2);

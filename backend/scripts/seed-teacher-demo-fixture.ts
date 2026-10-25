@@ -51,10 +51,7 @@ const FIXTURE_STUDENTS: FixtureStudentDef[] = [
 export async function seedFixture(): Promise<void> {
   console.log('[FIXTURE SEED] Starting synthetic Rizal section student fixture...');
 
-  // 1. Verify section, academic year, and assignment exist
-  const section = await prisma.section.findUnique({ where: { id: 'demo-sec-rizal10' } });
-  if (!section) throw new Error('Section demo-sec-rizal10 not found. Run base seed first.');
-
+  // 1. Verify academic year and demo teacher exist
   const ay = await prisma.academicYear.findUnique({ where: { id: 'demo-ay-2026' } });
   if (!ay) throw new Error('Academic year demo-ay-2026 not found. Run base seed first.');
 
@@ -67,10 +64,39 @@ export async function seedFixture(): Promise<void> {
   const term = await prisma.term.findFirst({ where: { academic_year_id: ay.id, key: 'T1' } });
   if (!term) throw new Error('Term T1 not found. Run base seed first.');
 
-  const assignment = await prisma.teacherSubjectAssignment.findFirst({
-    where: { section_id: section.id, teacher_id: teacher.id }
+  // Create isolated fixture section
+  const section = await prisma.section.upsert({
+    where: { id: 'fix-sec-teacher-tests' },
+    update: {
+      name: 'Rizal-Fixture',
+      grade_level: 10,
+      academic_year_id: ay.id,
+    },
+    create: {
+      id: 'fix-sec-teacher-tests',
+      name: 'Rizal-Fixture',
+      grade_level: 10,
+      academic_year_id: ay.id,
+    }
   });
-  if (!assignment) throw new Error('TeacherSubjectAssignment for Rizal / Math not found.');
+
+  // Create isolated fixture teacher subject assignment
+  const assignment = await prisma.teacherSubjectAssignment.upsert({
+    where: { id: 'fix-assign-teacher-tests' },
+    update: {
+      teacher_id: teacher.id,
+      section_id: section.id,
+      subject_id: 'demo-subj-math10',
+      academic_year_id: ay.id,
+    },
+    create: {
+      id: 'fix-assign-teacher-tests',
+      teacher_id: teacher.id,
+      section_id: section.id,
+      subject_id: 'demo-subj-math10',
+      academic_year_id: ay.id,
+    }
+  });
 
   // Valid, non-exposed bcrypt hash for inactive accounts
   const fixturePasswordHash = await bcrypt.hash(`FIXTURE_NON_LOGIN_${crypto.randomUUID()}`, 10);
@@ -182,6 +208,20 @@ export async function seedFixture(): Promise<void> {
       attendanceCreated++;
     }
   }
+
+  // 5b. Enrollment for baseline demo student (Juan Dela Cruz) in fixture section
+  await prisma.enrollment.upsert({
+    where: { id: 'fix-enroll-juan' },
+    update: { section_id: section.id, status: 'Enrolled' },
+    create: {
+      id: 'fix-enroll-juan',
+      academic_year_id: ay.id,
+      student_id: 'demo-student-1',
+      section_id: section.id,
+      status: 'Enrolled',
+    }
+  });
+  enrollmentsCreated++;
 
   // 6. Excuse Letters
   await prisma.excuseLetter.upsert({

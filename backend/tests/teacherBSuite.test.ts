@@ -175,7 +175,7 @@ describe('Phase B Teacher Tools — B1, B2, B3 Scope, RBAC, Semantics & Privacy'
   // ─── 3. B2: getMyIncompleteGrades VERIFICATION (from B0) ───────────────
   it('TC-TCH-B2-01: B2 enforces that legitimate score 0 is NOT treated as missing', async () => {
     const res = await dispatchTool('getMyIncompleteGrades', {
-      sectionId: 'demo-sec-rizal10',
+      sectionId: 'fix-sec-teacher-tests',
       subjectId: 'demo-subj-math10',
       term: 'T1'
     }, { user: teacherUser });
@@ -200,7 +200,7 @@ describe('Phase B Teacher Tools — B1, B2, B3 Scope, RBAC, Semantics & Privacy'
   // ─── 4. B3: getMyClassPerformance VERIFICATION ─────────────────────────
   it('TC-TCH-B3-01: B3 returns submitted grade averages and trend conclusion', async () => {
     const res = await dispatchTool('getMyClassPerformance', {
-      sectionId: 'demo-sec-rizal10',
+      sectionId: 'fix-sec-teacher-tests',
       subjectId: 'demo-subj-math10',
       term: 'T1'
     }, { user: teacherUser });
@@ -208,7 +208,7 @@ describe('Phase B Teacher Tools — B1, B2, B3 Scope, RBAC, Semantics & Privacy'
     expect(res.success).toBe(true);
     const data = res.data;
 
-    expect(data.sectionName).toBe('Rizal');
+    expect(data.sectionName).toContain('Rizal');
     expect(data.subjectName).toBe('Mathematics 10');
 
     // Grades
@@ -224,7 +224,7 @@ describe('Phase B Teacher Tools — B1, B2, B3 Scope, RBAC, Semantics & Privacy'
 
   it('TC-TCH-B3-02: B3 uses ClassAttendance ONLY and defaults to current Monday-Friday Manila week', async () => {
     const res = await dispatchTool('getMyClassPerformance', {
-      sectionId: 'demo-sec-rizal10',
+      sectionId: 'fix-sec-teacher-tests',
       subjectId: 'demo-subj-math10',
     }, { user: teacherUser });
 
