@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
     "fixture:seed": "tsx scripts/seed-teacher-demo-fixture.ts",
-    "fixture:cleanup": "tsx scripts/cleanup-teacher-demo-fixture.ts"
+    "fixture:cleanup": "tsx scripts/cleanup-teacher-demo-fixture.ts",
+    "backup": "tsx scripts/run-backup.ts",
+    "backup:verify-restore": "tsx scripts/verify-restore.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
@@ -25,11 +27,12 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-    "express": "^5.1.0",
+    "express": "^5.3.0",
     "file-type": "^22.0.2",
     "groq-sdk": "^1.6.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.3.0",
+    "multer": "^2.5.0",
     "prisma-field-encryption": "^1.6.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.0"

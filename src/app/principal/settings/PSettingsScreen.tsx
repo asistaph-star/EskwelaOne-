@@ -9,9 +9,11 @@ import { useAppContext } from "../../shared/AppContext";
 import { usersApi } from "../../../api/users.api";
 import { academicApi, AcademicYear, Term } from "../../../api/academic.api";
 import { apiClient } from "../../../api/client";
+import { useSchoolSettings } from "../../shared/context/SchoolSettingsContext";
 
 export function PSettingsScreen() {
   const { currentUser, setCurrentUser } = useAppContext();
+  const { settings } = useSchoolSettings();
 
   // Profile Form State
   const [firstName, setFirstName] = useState("");
@@ -505,7 +507,7 @@ export function PSettingsScreen() {
                   Institution Name
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.t1 }}>
-                  Calulut Integrated School
+                  {settings.schoolName || "DigiSkwela Institution"}
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
                   Official Institutional Portal

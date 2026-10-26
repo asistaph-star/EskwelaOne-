@@ -12,10 +12,10 @@ export const upsertGradeSchema = z.object({
   subjectId: z.string().min(1),
   term: z.enum(['T1', 'T2', 'T3', 'T4']),
   schoolYear: z.string().min(1),
-  writtenWork: z.number().min(0).max(100).optional().nullable(),
-  performanceTask: z.number().min(0).max(100).optional().nullable(),
-  termAssessment: z.number().min(0).max(100).optional().nullable(),
-  termGrade: z.number().min(0).max(100).optional().nullable(),
+  writtenWork: z.number().finite().min(0).max(100).optional().nullable(),
+  performanceTask: z.number().finite().min(0).max(100).optional().nullable(),
+  termAssessment: z.number().finite().min(0).max(100).optional().nullable(),
+  termGrade: z.number().finite().min(0).max(100).optional().nullable(),
 });
 
 // ─── SERVICE ───────────────────────────────────────────────
@@ -28,24 +28,25 @@ export async function upsertGrade(
   actorId: string,
   correlationId?: string,
 ) {
+  const validatedInput = upsertGradeSchema.parse(input);
   return withTransaction(async (tx) => {
     // 1. Lookup academic year id
     const academicYear = await tx.academicYear.findUnique({
-      where: { name: input.schoolYear }
+      where: { name: validatedInput.schoolYear }
     });
     if (!academicYear) throw new AppError(404, 'NOT_FOUND', 'Academic year not found');
     const academic_year_id = academicYear.id;
 
     // Enforce ownership: The teacher must be assigned to the student's section for this subject
     const enrollment = await tx.enrollment.findFirst({
-      where: { student_id: input.studentId, academic_year_id, status: 'Enrolled' }
+      where: { student_id: validatedInput.studentId, academic_year_id, status: 'Enrolled' }
     });
     if (!enrollment) throw new AppError(404, 'NOT_FOUND', 'Student enrollment not found');
 
     const assignment = await tx.teacherSubjectAssignment.findFirst({
       where: {
         section_id: enrollment.section_id,
-        subject_id: input.subjectId,
+        subject_id: validatedInput.subjectId,
         teacher: { user_id: actorId }
       }
     });
@@ -56,18 +57,18 @@ export async function upsertGrade(
 
     const existing = await tx.grade.findFirst({
       where: {
-        student_id: input.studentId,
-        subject_id: input.subjectId,
-        term: input.term,
+        student_id: validatedInput.studentId,
+        subject_id: validatedInput.subjectId,
+        term: validatedInput.term,
         academic_year_id,
       },
     });
 
     const data = {
-      written_work: input.writtenWork,
-      performance_task: input.performanceTask,
-      term_assessment: input.termAssessment,
-      term_grade: input.termGrade,
+      written_work: validatedInput.writtenWork,
+      performance_task: validatedInput.performanceTask,
+      term_assessment: validatedInput.termAssessment,
+      term_grade: validatedInput.termGrade,
     };
 
     let result;
@@ -82,16 +83,16 @@ export async function upsertGrade(
         action: 'GRADE_UPDATED',
         resourceType: 'grade',
         resourceId: result.id,
-        newState: input,
+        newState: validatedInput,
         correlationId,
       }, tx);
     } else {
       result = await tx.grade.create({
         data: {
           id: generateId(),
-          student_id: input.studentId,
-          subject_id: input.subjectId,
-          term: input.term,
+          student_id: validatedInput.studentId,
+          subject_id: validatedInput.subjectId,
+          term: validatedInput.term,
           academic_year_id,
           ...data,
         },
@@ -102,7 +103,7 @@ export async function upsertGrade(
         action: 'GRADE_CREATED',
         resourceType: 'grade',
         resourceId: result.id,
-        newState: input,
+        newState: validatedInput,
         correlationId,
       }, tx);
 

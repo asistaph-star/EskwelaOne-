@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { Search, Printer, FileText, User, Award, BookOpen } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { usersApi, UserProfile } from "../../../api/users.api";
+import { useSchoolSettings } from "../../shared/context/SchoolSettingsContext";
 
 export function StudentDataSearch() {
+  const { settings } = useSchoolSettings();
   const [query, setQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
@@ -139,7 +141,7 @@ export function StudentDataSearch() {
             </div>
             
             <div style={{ fontSize: 11, color: C.t3, textAlign: "center", marginTop: 40, paddingTop: 20, borderTop: `1px dotted ${C.borderMed}` }}>
-              System Generated Document &bull; Calulut Integrated School Admin/IT Portal
+              System Generated Document &bull; {settings.schoolName || "DigiSkwela"} Admin/IT Portal
             </div>
           </div>
         </div>

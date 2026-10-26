@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authMiddleware, requirePermissions, AuthenticatedUser } from '../../common/middleware/auth.js';
 import { AppError } from '../../common/middleware/errorHandler.js';
 import { facultyAttendanceService } from './facultyAttendance.service.js';
+import { emitFacultyAttendanceChanged } from '../../attendance/attendanceBroadcaster.service.js';
 import {
   timeInInputSchema,
   timeOutInputSchema,
@@ -31,6 +32,7 @@ router.post('/time-in', requireTeacherRole, async (req: Request, res: Response, 
     const input = timeInInputSchema.parse(req.body || {});
     const user = (req as any).user as AuthenticatedUser;
     const result = await facultyAttendanceService.recordTimeIn(user.id, input.remarks);
+    emitFacultyAttendanceChanged();
     res.status(201).json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -46,6 +48,7 @@ router.post('/time-out', requireTeacherRole, async (req: Request, res: Response,
     const input = timeOutInputSchema.parse(req.body || {});
     const user = (req as any).user as AuthenticatedUser;
     const result = await facultyAttendanceService.recordTimeOut(user.id, input.remarks);
+    emitFacultyAttendanceChanged();
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -106,6 +109,7 @@ router.patch('/:id', requirePermissions('faculty_attendance:write'), async (req:
     const id = req.params.id as string;
     const correlationId = (req as any).correlationId;
     const updated = await facultyAttendanceService.adminCorrection(id, input, user.id, correlationId);
+    emitFacultyAttendanceChanged();
     res.json({ success: true, data: updated });
   } catch (err) {
     next(err);

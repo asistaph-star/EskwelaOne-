@@ -1,3 +1,4 @@
+import './env.js';
 import { PrismaClient } from '@prisma/client';
 import { fieldEncryptionExtension } from 'prisma-field-encryption';
 

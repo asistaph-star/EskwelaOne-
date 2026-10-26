@@ -11,7 +11,8 @@ datasource db {
 
 model User {
   id                             String                @id @db.VarChar(36)
-  email                          String                @unique @db.VarChar(255)
+  school_id                      String                @unique @default(cuid()) @db.VarChar(100)
+  email                          String?               @unique @db.VarChar(255)
   password_hash                  String                @db.VarChar(255)
   first_name                     String                @db.VarChar(100)
   last_name                      String                @db.VarChar(100)
@@ -19,7 +20,7 @@ model User {
   status                         String                @default("active") @db.VarChar(20)
   created_at                     DateTime              @default(now())
   updated_at                     DateTime              @updatedAt
-  must_change_password           Boolean               @default(true)
+  must_change_password           Boolean               @default(false)
   announcements                  Announcement[]
   audit_logs                     AuditLog[]
   ai_audit_logs                  AIAuditLog[]
@@ -43,6 +44,7 @@ model User {
   user_roles                     UserRole[]
   campus_media                   CampusMedia[]
   faculty_attendance_corrections FacultyAttendance[]   @relation("FacultyAttendanceCorrections")
+  school_settings_updated        SchoolSettings[]      @relation("SchoolSettingsUpdater")
 
   @@map("users")
 }
@@ -88,6 +90,7 @@ model UserRole {
 model Student {
   id                  String            @id(map: "student_profiles_pkey") @db.VarChar(36)
   user_id             String            @unique(map: "student_profiles_user_id_key") @db.VarChar(36)
+  student_number      String?           @unique(map: "student_profiles_student_number_key") @db.VarChar(100)
   /// @encrypted?mode=strict
   lrn                 String            @unique(map: "student_profiles_lrn_key")
   grade_level         Int
@@ -601,21 +604,31 @@ model InventoryUpdate {
 }
 
 model AuditLog {
-  id             String   @id @db.VarChar(36)
-  actor_user_id  String?  @db.VarChar(36)
-  action         String   @db.VarChar(100)
-  resource_type  String   @db.VarChar(50)
-  resource_id    String?  @db.VarChar(36)
-  previous_state Json?
-  new_state      Json?
-  reason         String?
-  correlation_id String?  @db.VarChar(36)
-  created_at     DateTime @default(now())
-  actor          User?    @relation(fields: [actor_user_id], references: [id], onDelete: Restrict)
+  id              String   @id @db.VarChar(36)
+  actor_user_id   String?  @db.VarChar(36)
+  actor_school_id String?  @db.VarChar(100)
+  actor_role      String?  @db.VarChar(50)
+  action          String   @db.VarChar(100)
+  category        String?  @db.VarChar(50)
+  resource_type   String   @db.VarChar(50)
+  resource_id     String?  @db.VarChar(36)
+  target_label    String?  @db.VarChar(255)
+  result          String   @default("SUCCESS") @db.VarChar(20)
+  ip_address      String?  @db.VarChar(45)
+  user_agent      String?  @db.VarChar(255)
+  previous_state  Json?
+  new_state       Json?
+  reason          String?
+  correlation_id  String?  @db.VarChar(36)
+  created_at      DateTime @default(now())
+  actor           User?    @relation(fields: [actor_user_id], references: [id], onDelete: Restrict)
 
   @@index([resource_type, resource_id])
   @@index([actor_user_id])
   @@index([created_at])
+  @@index([category])
+  @@index([action])
+  @@index([result])
   @@map("audit_logs")
 }
 
@@ -818,4 +831,27 @@ model AIAuditLog {
   @@index([created_at], map: "ai_audit_logs_created_at_idx")
   @@index([portal], map: "ai_audit_logs_portal_idx")
   @@map("ai_audit_logs")
+}
+
+model SchoolSettings {
+  id                   String   @id @default("default") @db.VarChar(36)
+  school_name          String   @default("Calulut Integrated School") @db.VarChar(255)
+  school_short_name    String   @default("CIS") @db.VarChar(50)
+  logo_url             String?  @db.VarChar(500)
+  favicon_url          String?  @db.VarChar(500)
+  login_background_url String?  @db.VarChar(500)
+  primary_color        String   @default("#0A192F") @db.VarChar(20)
+  secondary_color      String   @default("#1B3A6B") @db.VarChar(20)
+  accent_color         String   @default("#F5A623") @db.VarChar(20)
+  address              String?  @db.VarChar(255)
+  contact_email        String?  @db.VarChar(255)
+  contact_number       String?  @db.VarChar(50)
+  login_welcome_text   String?  @default("Education Shapes the Future") @db.VarChar(255)
+  footer_text          String?  @default("DigiSkwela · School Management System") @db.VarChar(255)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  updated_by_id        String?  @db.VarChar(36)
+  updated_by           User?    @relation("SchoolSettingsUpdater", fields: [updated_by_id], references: [id])
+
+  @@map("school_settings")
 }

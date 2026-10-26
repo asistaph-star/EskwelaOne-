@@ -17,20 +17,30 @@ import mediaRoutes from './admin/media.routes.js';
 import principalRoutes from './principal/principal.routes.js';
 import aiRoutes from './ai/ai.routes.js';
 import studentSupportRoutes from './modules/student-support/studentSupport.routes.js';
+import settingsRoutes from './settings/settings.routes.js';
+import auditRoutes from './audit/audit.routes.js';
+import securityOverviewRoutes from './security/securityOverview.routes.js';
+import systemHealthRoutes from './health/systemHealth.routes.js';
+import rolesPermissionsRoutes from './security/rolesPermissions.routes.js';
+import backupStatusRoutes from './backup/backupStatus.routes.js';
 
 import { initMediaStorage } from './config/storage.config.js';
+import { securityHeaders } from './common/middleware/securityHeaders.js';
 
 // Initialize required directories
 initMediaStorage();
 
 const app = express();
 
+// ─── Security Headers ───────────────────────────────────────
+app.use(securityHeaders);
+
 // ─── Global Middleware ──────────────────────────────────────
 app.use(cors({
   origin: [config.corsOrigin, 'http://localhost:5174'],
   credentials: true,
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
 
@@ -63,6 +73,12 @@ app.use('/api/principal', principalRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/student-support', studentSupportRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/admin/audit-logs', auditRoutes);
+app.use('/api/admin/security-overview', securityOverviewRoutes);
+app.use('/api/admin/system-health', systemHealthRoutes);
+app.use('/api/admin/roles-permissions', rolesPermissionsRoutes);
+app.use('/api/admin/backup-status', backupStatusRoutes);
 
 // ─── 404 Handler ────────────────────────────────────────────
 app.use((_req, res) => {

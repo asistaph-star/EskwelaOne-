@@ -129,6 +129,7 @@ import { RegistrarApp } from "./principal/RegistrarApp";
 import { AdminApp } from "./admin/AdminApp";
 import { GuidanceApp } from "./guidance/GuidanceApp";
 import { GateTerminalApp } from "./gate/GateTerminalApp";
+import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 
 import { useAppContext } from "./shared/AppContext";
 
@@ -136,10 +137,8 @@ export default function App() {
   const { currentUser, setCurrentUser } = useAppContext();
 
   if (!currentUser) {
-    return <LoginScreen />;
+    return <LoginScreen key="login-screen" />;
   }
-
-  const role = currentUser.role;
 
   const handleLogout = async () => {
     try {
@@ -151,36 +150,54 @@ export default function App() {
     localStorage.removeItem('currentUser');
   };
 
+  // Centralized Mandatory First-Login Password Change Guard
+  if (currentUser.mustChangePassword) {
+    return (
+      <ChangePasswordScreen
+        key="change-password-screen"
+        onLogout={handleLogout}
+        onSuccess={() => {
+          setCurrentUser({
+            ...currentUser,
+            mustChangePassword: false,
+          });
+        }}
+      />
+    );
+  }
+
+  const role = currentUser.role;
+
   if (role === "GateOperator") {
-    return <GateTerminalApp onLogout={handleLogout} />;
+    return <GateTerminalApp key="gate-terminal-app" onLogout={handleLogout} />;
   }
   if (role === "Principal") {
-    return <PrincipalApp onLogout={handleLogout} />;
+    return <PrincipalApp key="principal-app" onLogout={handleLogout} />;
   }
   if (role === "Admin" || role === "ITAdmin") {
-    return <AdminApp onLogout={handleLogout} />;
+    return <AdminApp key="admin-app" onLogout={handleLogout} />;
   }
   if (role === "Registrar") {
-    return <RegistrarApp onLogout={handleLogout} />;
+    return <RegistrarApp key="registrar-app" onLogout={handleLogout} />;
   }
   if (role === "Student") {
-    return <StudentPortal onLogout={handleLogout} />;
+    return <StudentPortal key="student-portal-app" onLogout={handleLogout} />;
   }
   if (role === "Parent") {
-    return <SimpleShell role={role as any} onLogout={handleLogout} />;
+    return <SimpleShell key="parent-portal-app" role={role as any} onLogout={handleLogout} />;
   }
   if (role === "Nurse") {
-    return <NurseApp onLogout={handleLogout} />;
+    return <NurseApp key="nurse-app" onLogout={handleLogout} />;
   }
   if (role === "Guidance") {
-    return <GuidanceApp onLogout={handleLogout} />;
+    return <GuidanceApp key="guidance-app" onLogout={handleLogout} />;
   }
   if (role === "Teacher") {
-    return <TeacherApp onLogout={handleLogout} />;
+    return <TeacherApp key="teacher-app" onLogout={handleLogout} />;
   }
   
   return (
-    <div style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
+    <div key="access-denied-screen" style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
       <h2 style={{ color: '#d97706', marginBottom: 8 }}>Access Denied</h2>
       <p style={{ color: '#4b5563', marginBottom: 24 }}>Your account does not have a recognized portal role.</p>
       <button 

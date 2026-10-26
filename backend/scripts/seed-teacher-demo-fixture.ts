@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import '../src/config/env.js';
+import prisma from '../src/config/database.js';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { getPhilippineCalendarDate } from '../src/common/utils/dateTime.js';
 
 // Hard-block execution in production
 if (process.env.NODE_ENV === 'production') {
@@ -101,7 +101,8 @@ export async function seedFixture(): Promise<void> {
   // Valid, non-exposed bcrypt hash for inactive accounts
   const fixturePasswordHash = await bcrypt.hash(`FIXTURE_NON_LOGIN_${crypto.randomUUID()}`, 10);
 
-  const today = new Date(new Date().setHours(0, 0, 0, 0));
+  const philDate = getPhilippineCalendarDate();
+  const today = philDate.dateObj;
 
   let usersCreated = 0;
   let studentsCreated = 0;
@@ -119,9 +120,10 @@ export async function seedFixture(): Promise<void> {
     // 1. Inactive User
     await prisma.user.upsert({
       where: { id: userId },
-      update: { status: 'inactive' },
+      update: { status: 'inactive', school_id: `FIX-STU-${s.num}` },
       create: {
         id: userId,
+        school_id: `FIX-STU-${s.num}`,
         email,
         password_hash: fixturePasswordHash,
         first_name: s.first,
@@ -141,10 +143,11 @@ export async function seedFixture(): Promise<void> {
     // 2. Student Profile
     await prisma.student.upsert({
       where: { id: studentId },
-      update: { current_section_id: section.id },
+      update: { current_section_id: section.id, student_number: `FIX-STU-${s.num}` },
       create: {
         id: studentId,
         user_id: userId,
+        student_number: `FIX-STU-${s.num}`,
         lrn,
         grade_level: 10,
         current_section_id: section.id,
@@ -338,21 +341,40 @@ export async function seedFixture(): Promise<void> {
   }
 
   // 10. Class Attendance (`class_attendance`)
-  // 5 historical class sessions: Day -4, Day -3, Day -2, Day -1, Day 0
+  // Deterministic sessions across current Asia/Manila Monday-Friday week (Days 0..4)
+  // plus historical counterparts for any future week days so that both:
+  // a) Current Monday-Friday week query (getMyClassPerformance) has full 5-session week data
+  // b) 30-day default window ending on today (studentSupportService) has full 5-session historical data
   let classAttendanceCreated = 0;
-  const attendanceDates: Date[] = [];
-  for (let d = 4; d >= 0; d--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - d);
-    attendanceDates.push(date);
+  const d = new Date(Date.UTC(philDate.year, philDate.month - 1, philDate.day));
+  const dayOfWeek = d.getUTCDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  interface SessionPlan {
+    date: Date;
+    dayIdx: number;
+    suffix: string;
+  }
+
+  const sessionsToSeed: SessionPlan[] = [];
+  for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
+    const sessionDate = new Date(Date.UTC(philDate.year, philDate.month - 1, philDate.day + mondayOffset + dayOffset));
+    sessionsToSeed.push({ date: sessionDate, dayIdx: dayOffset, suffix: `w${dayOffset}` });
+
+    // If sessionDate is strictly in the future relative to today, create historical counterpart in previous week
+    if (sessionDate.getTime() > today.getTime()) {
+      const histDate = new Date(Date.UTC(philDate.year, philDate.month - 1, philDate.day + mondayOffset - (7 - dayOffset)));
+      sessionsToSeed.push({ date: histDate, dayIdx: dayOffset, suffix: `h${dayOffset}` });
+    }
   }
 
   for (const s of FIXTURE_STUDENTS) {
     const enrollmentId = `fix-enroll-${s.num}`;
 
-    for (let dayIdx = 0; dayIdx < attendanceDates.length; dayIdx++) {
-      const date = attendanceDates[dayIdx];
-      const attId = `fix-ca-${s.num}-d${dayIdx}`;
+    for (const plan of sessionsToSeed) {
+      const date = plan.date;
+      const dayIdx = plan.dayIdx;
+      const attId = `fix-ca-${s.num}-${plan.suffix}`;
 
       let status = 'P'; // default Present
       let remarks: string | null = null;

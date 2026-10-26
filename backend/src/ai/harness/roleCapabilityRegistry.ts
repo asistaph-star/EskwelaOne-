@@ -129,7 +129,7 @@ export class RoleCapabilityRegistry {
       toolName: 'getMyClassPerformance',
       allowedRoles: ['Teacher'],
       requiredPermissions: ['assignment:read_own', 'grade:read', 'attendance:read'],
-      description: 'Submitted grade averages and classroom attendance metrics (P/A/L/E) for an assigned section and subject.',
+      description: 'Class-level academic performance, student-level recorded term grades, term averages, and student-level classroom attendance records (P/A/L/E) for an assigned section and subject.',
     });
   }
 

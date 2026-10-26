@@ -34,6 +34,9 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     let aRole = await prisma.role.findFirst({ where: { name: 'Admin' } });
     if (!aRole) aRole = await prisma.role.create({ data: { id: generateId(), name: 'Admin' } });
 
+    let itRole = await prisma.role.findFirst({ where: { name: 'ITAdmin' } });
+    if (!itRole) itRole = await prisma.role.create({ data: { id: generateId(), name: 'ITAdmin' } });
+
     let sRole = await prisma.role.findFirst({ where: { name: 'Student' } });
     if (!sRole) sRole = await prisma.role.create({ data: { id: generateId(), name: 'Student' } });
 
@@ -67,18 +70,18 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     principalUserId = generateId();
     await prisma.user.create({
       data: {
-        id: principalUserId, email: 'p_create@calulut.edu.ph', password_hash, first_name: 'P', last_name: 'Test', status: 'active', must_change_password: false,
+        id: principalUserId, school_id: `PRIN-${principalUserId.slice(-6)}`, email: 'p_create@calulut.edu.ph', password_hash, first_name: 'P', last_name: 'Test', status: 'active', must_change_password: false,
         user_roles: { create: { role_id: pRole.id } }
       }
     });
     principalToken = sign({ userId: principalUserId }, config.jwt.secret, { expiresIn: '1h' });
 
-    // Create Admin
+    // Create Admin/ITAdmin
     adminUserId = generateId();
     await prisma.user.create({
       data: {
-        id: adminUserId, email: 'a_create@calulut.edu.ph', password_hash, first_name: 'A', last_name: 'Test', status: 'active', must_change_password: false,
-        user_roles: { create: { role_id: aRole.id } }
+        id: adminUserId, school_id: `ADM-${adminUserId.slice(-6)}`, email: 'a_create@calulut.edu.ph', password_hash, first_name: 'A', last_name: 'Test', status: 'active', must_change_password: false,
+        user_roles: { create: [{ role_id: aRole.id }, { role_id: itRole.id }] }
       }
     });
     adminToken = sign({ userId: adminUserId }, config.jwt.secret, { expiresIn: '1h' });
@@ -87,7 +90,7 @@ describe('Phase 5D: Principal Least-Privilege User Creation Authorization', () =
     studentUserId = generateId();
     await prisma.user.create({
       data: {
-        id: studentUserId, email: 's_create@calulut.edu.ph', password_hash, first_name: 'S', last_name: 'Test', status: 'active', must_change_password: false,
+        id: studentUserId, school_id: `STU-${studentUserId.slice(-6)}`, email: 's_create@calulut.edu.ph', password_hash, first_name: 'S', last_name: 'Test', status: 'active', must_change_password: false,
         user_roles: { create: { role_id: sRole.id } }
       }
     });

@@ -60,6 +60,19 @@ export function useGateAttendanceSSE(
 
     es.addEventListener('connected', () => {
       setStatus('live');
+      // Missed-event recovery:
+      // When connection is established or restored after network interruption / sleep,
+      // immediately reconcile authoritative state with PostgreSQL.
+      refreshGateAttendance();
+      if (studentCbRef.current) {
+        studentCbRef.current();
+      }
+      if (facultyCbRef.current) {
+        facultyCbRef.current();
+      }
+      if (legacyCbRef.current) {
+        legacyCbRef.current();
+      }
     });
 
     es.addEventListener('attendance-changed', () => {
@@ -103,11 +116,6 @@ export function useGateAttendanceSSE(
       // automatically with an exponential backoff. When the connection
       // is re-established, 'connected' will fire again and reset status to 'live'.
     };
-
-    es.addEventListener('connected', () => {
-      // Re-fires on each successful reconnect
-      setStatus('live');
-    });
 
     return () => {
       es.close();

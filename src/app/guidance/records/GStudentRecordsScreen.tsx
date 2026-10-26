@@ -5,6 +5,7 @@ import {
   Clock, BookOpen, ShieldAlert, UserCheck, MessageSquare, CalendarCheck,
   ChevronRight, ArrowLeft, FileText, Mail, Phone
 } from 'lucide-react';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 export type StudentRecordStatus = "Active monitoring" | "Case resolved" | "Needs follow-up" | "New case";
 export type StudentRecord = {
@@ -73,6 +74,7 @@ export type CounselingLog = {
 };
 
 export function GStudentRecordsScreen() {
+  const { settings } = useSchoolSettings();
   const counselingLogs: CounselingLog[] = [];
   const studentRecords: StudentRecord[] = [];
   const [searchTerm, setSearchTerm] = useState("");
@@ -300,7 +302,7 @@ export function GStudentRecordsScreen() {
             onClick={() => {
               const subject = encodeURIComponent(`Guidance Update: ${selected.fullName} (${selected.grade} - ${selected.section})`);
               const body = encodeURIComponent(
-                `Dear ${selected.parentName},\n\nThis is Counselor Perez from the Guidance Office of Calulut Integrated School. I am writing to provide you with an update regarding your child, ${selected.fullName} (LRN: ${selected.lrn}).\n\n[Please add your message here]\n\nPlease feel free to contact us if you have any questions or concerns.\n\nRespectfully,\nCounselor Perez\nGuidance Office`
+                `Dear ${selected.parentName},\n\nThis is Counselor Perez from the Guidance Office${settings.schoolName ? ` of ${settings.schoolName}` : ''}. I am writing to provide you with an update regarding your child, ${selected.fullName} (LRN: ${selected.lrn}).\n\n[Please add your message here]\n\nPlease feel free to contact us if you have any questions or concerns.\n\nRespectfully,\nCounselor Perez\nGuidance Office`
               );
               window.open(`mailto:${selected.parentEmail}?subject=${subject}&body=${body}`, '_blank');
             }}

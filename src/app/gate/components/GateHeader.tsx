@@ -1,4 +1,6 @@
 import React, { useRef } from 'react';
+import { GraduationCap } from 'lucide-react';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 interface GateHeaderProps {
   terminalType: 'student' | 'faculty';
@@ -11,6 +13,10 @@ export function GateHeader({ terminalType, terminalName, terminalId, onOpenAdmin
   const isFaculty = terminalType === 'faculty';
   const tapCountRef = useRef(0);
   const lastTapTimeRef = useRef(0);
+  const { settings } = useSchoolSettings();
+
+  const schoolLogo = settings.logoUrl;
+  const schoolNameUpper = (settings.schoolName || 'DigiSkwela Campus Gate').toUpperCase();
 
   // Industry-standard kiosk secret gesture: 5 taps on school seal opens admin maintenance
   const handleSealTap = () => {
@@ -37,15 +43,21 @@ export function GateHeader({ terminalType, terminalName, terminalId, onOpenAdmin
           type="button"
           onClick={handleSealTap}
           className="focus:outline-none cursor-default bg-transparent p-0 border-0"
-          aria-label="Calulut Integrated School Seal"
+          aria-label={`${schoolNameUpper} Logo`}
           tabIndex={-1}
         >
-          <img src="/school_seal.png" alt="School Seal" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
+          {schoolLogo ? (
+            <img src={schoolLogo} alt="School Logo" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 md:h-12 md:w-12 lg:h-14 lg:w-14">
+              <GraduationCap className="h-6 w-6 text-amber-400 md:h-7 md:w-7" />
+            </div>
+          )}
         </button>
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-2">
             <h1 className="text-base font-semibold tracking-normal text-white md:text-lg lg:text-xl leading-tight">
-              CALULUT INTEGRATED SCHOOL
+              {schoolNameUpper}
             </h1>
             <span className="text-slate-500 text-xs hidden sm:inline">•</span>
             <span className="text-xs font-bold text-amber-300 tracking-wide uppercase hidden sm:inline">

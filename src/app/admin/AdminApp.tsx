@@ -9,8 +9,13 @@ import { C } from "../shared/constants/tokens";
 
 import { CampusMediaManagement } from "./operations/CampusMediaManagement";
 import { GateTerminalsManagement } from "./operations/GateTerminalsManagement";
+import { SchoolCustomization } from "./operations/SchoolCustomization";
+import { AuditLogsScreen } from "./operations/AuditLogsScreen";
+import { SecurityAccessScreen } from "./operations/SecurityAccessScreen";
+import { SystemHealthScreen } from "./operations/SystemHealthScreen";
+import { RolesPermissionsScreen } from "./operations/RolesPermissionsScreen";
 
-export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "inventory" | "accounts" | "campus-media" | "terminals";
+export type AdminScreen = "dashboard" | "attendance" | "teacher-create" | "inventory" | "accounts" | "campus-media" | "terminals" | "customization" | "audit-logs" | "security-access" | "system-health" | "roles-permissions";
 
 export function AdminApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useState<AdminScreen>("dashboard");
@@ -24,6 +29,11 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
       case "accounts": return "Account Management";
       case "campus-media": return "Campus Media Management";
       case "terminals": return "Gate Terminals";
+      case "customization": return "School Customization";
+      case "audit-logs": return "Audit Logs";
+      case "security-access": return "Security & Access";
+      case "system-health": return "System Health";
+      case "roles-permissions": return "Roles & Permissions";
       default: return "";
     }
   };
@@ -44,6 +54,11 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
           {screen === "accounts" && <AccountManagement />}
           {screen === "campus-media" && <CampusMediaManagement />}
           {screen === "terminals" && <GateTerminalsManagement />}
+          {screen === "customization" && <SchoolCustomization />}
+          {screen === "audit-logs" && <AuditLogsScreen />}
+          {screen === "security-access" && <SecurityAccessScreen onNavigate={setScreen} />}
+          {screen === "system-health" && <SystemHealthScreen />}
+          {screen === "roles-permissions" && <RolesPermissionsScreen />}
         </main>
       </div>
     </div>

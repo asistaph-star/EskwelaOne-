@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, RefreshCw, Calendar, Users, CheckCircle2, Clock, CalendarDays, Briefcase, UserX, ChevronLeft, ChevronRight } from 'lucide-react';
 import { facultyAttendanceApi, FacultyAttendanceItem, FacultyAttendanceSummary, getManilaTodayDateString } from '../../../api/facultyAttendance.api';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 export function FacultyAttendanceTable() {
+  const { settings } = useSchoolSettings();
   const [date, setDate] = useState<string>(getManilaTodayDateString());
   const [search, setSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
@@ -114,7 +116,7 @@ export function FacultyAttendanceTable() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            DepEd Calulut Integrated School · Official Faculty Attendance Roster (Asia/Manila)
+            {settings.schoolName ? `${settings.schoolName} · ` : ''}Official Faculty Attendance Roster (Asia/Manila)
           </p>
         </div>
 

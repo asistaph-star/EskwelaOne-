@@ -14,9 +14,11 @@ import { StudentReportCard } from '../components/StudentReportCard';
 import { Form138PDFDocument } from '../components/Form138PDFDocument';
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import { getStudentRankAndStanding, getStudentRecentQuizzes, getStudentSubjectGrades } from '../../shared/utils/gradesService';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 
 export function StudentAcademics({ setTab, currentUser }: any) {
+  const { settings } = useSchoolSettings();
   const studentId = currentUser?.id;
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [pdfToast, setPdfToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -40,7 +42,7 @@ export function StudentAcademics({ setTab, currentUser }: any) {
     setIsExportingPDF(true);
     setPdfToast(null);
     try {
-      const blob = await pdf(<Form138PDFDocument student={currentUser} subjects={realSubjectGrades} />).toBlob();
+      const blob = await pdf(<Form138PDFDocument student={currentUser} subjects={realSubjectGrades} schoolName={settings.schoolName} />).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;

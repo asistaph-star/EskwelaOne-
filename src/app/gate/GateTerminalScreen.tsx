@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ScannerState, GateScanPayload } from '../shared/hooks/useHardwareScanner';
 import { GateHeader } from './components/GateHeader';
 import { CampusMediaPlayback } from './components/CampusMediaPlayback';
+import { useSchoolSettings } from '../shared/context/SchoolSettingsContext';
 
 export interface RecentScan extends GateScanPayload {}
 
@@ -26,6 +27,7 @@ export function GateTerminalScreen({
   terminalId,
   onOpenAdminConfig,
 }: GateTerminalScreenProps) {
+  const { settings } = useSchoolSettings();
   const [isIdleMedia, setIsIdleMedia] = useState(false);
 
   // Idle Timer Logic
@@ -67,9 +69,11 @@ export function GateTerminalScreen({
     <div className="relative flex h-screen w-full flex-col bg-gradient-to-b from-slate-100 to-white font-sans text-slate-800">
       
       {/* Huge Background Watermark */}
-      <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.06] overflow-hidden">
-         <img src="/school_seal.png" alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
-      </div>
+      {settings.logoUrl && (
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.06] overflow-hidden">
+           <img src={settings.logoUrl} alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
+        </div>
+      )}
 
       {/* 1. Header Section */}
       <div className="relative z-20">
@@ -101,7 +105,7 @@ export function GateTerminalScreen({
             const isFaculty = scan.entityType === 'FACULTY';
             const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
             const subTitle = isFaculty ? `${scan.department || 'FACULTY'} • ${scan.position || 'TEACHER'}` : 'GRADE 10 • RIZAL';
-            const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
+            const photoSrc = isFaculty ? (settings.logoUrl || '/student_photo.png') : '/student_photo.png';
 
             return (
               <div key={i} className="flex h-[4.5rem] break-inside-avoid items-center gap-3 border-b border-slate-200 bg-white/50 px-3 transition-colors hover:bg-white rounded-lg">
@@ -163,10 +167,10 @@ export function GateTerminalScreen({
       {/* 3. Bottom Detailed Profile Section (Two side-by-side panels) */}
       <section className="relative z-10 flex h-72 shrink-0 justify-center gap-4 bg-transparent p-4 md:h-80 md:gap-8 md:p-6 lg:h-[26rem]">
          <div className="w-full max-w-md lg:max-w-lg">
-           <ProfileCard scan={leftScan} />
+           <ProfileCard scan={leftScan} logoUrl={settings.logoUrl} />
          </div>
          <div className="w-full max-w-md lg:max-w-lg">
-           <ProfileCard scan={rightScan} />
+           <ProfileCard scan={rightScan} logoUrl={settings.logoUrl} />
          </div>
       </section>
       </>
@@ -191,7 +195,7 @@ export function GateTerminalScreen({
   );
 }
 
-function ProfileCard({ scan }: { scan: RecentScan | null }) {
+function ProfileCard({ scan, logoUrl }: { scan: RecentScan | null; logoUrl?: string | null }) {
   if (!scan) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/50">
@@ -204,7 +208,7 @@ function ProfileCard({ scan }: { scan: RecentScan | null }) {
   const isFaculty = scan.entityType === 'FACULTY';
   const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
   const subTitle = isFaculty ? `${scan.department || 'FACULTY'} • ${scan.position || 'TEACHER'}` : 'GRADE 10 • RIZAL';
-  const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
+  const photoSrc = isFaculty ? (logoUrl || '/student_photo.png') : '/student_photo.png';
   
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">

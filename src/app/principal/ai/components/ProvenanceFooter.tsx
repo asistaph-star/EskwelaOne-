@@ -9,6 +9,12 @@ interface ProvenanceFooterProps {
   };
 }
 
+const SOURCE_DISPLAY_LABELS: Record<string, string> = {
+  getMyTeachingOperations: 'DigiSkwela Teaching Records',
+  getMyClassPerformance: 'DigiSkwela Class Records',
+  getMyIncompleteGrades: 'DigiSkwela Gradebook',
+};
+
 export function ProvenanceFooter({ provenance }: ProvenanceFooterProps) {
   if (!provenance || !provenance.sourceDomains || provenance.sourceDomains.length === 0) {
     return null;
@@ -57,25 +63,28 @@ export function ProvenanceFooter({ provenance }: ProvenanceFooterProps) {
         <Database size={10} color={C.m700} aria-hidden="true" focusable="false" />
         <span>Sources:</span>
       </div>
-      {provenance.sourceDomains.map((src, i) => (
-        <span
-          key={i}
-          data-testid={`source-domain-${i}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            padding: '2px 8px',
-            borderRadius: 20,
-            background: C.m50,
-            color: C.m700,
-            fontWeight: 600,
-            fontSize: 9.5,
-            border: `1px solid rgba(29,78,216,0.18)`,
-          }}
-        >
-          {src}
-        </span>
-      ))}
+      {provenance.sourceDomains.map((src, i) => {
+        const displayLabel = SOURCE_DISPLAY_LABELS[src] || src;
+        return (
+          <span
+            key={i}
+            data-testid={`source-domain-${i}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '2px 8px',
+              borderRadius: 20,
+              background: C.m50,
+              color: C.m700,
+              fontWeight: 600,
+              fontSize: 9.5,
+              border: `1px solid rgba(29,78,216,0.18)`,
+            }}
+          >
+            {displayLabel}
+          </span>
+        );
+      })}
       {formattedTime && (
         <span style={{ fontSize: 9, color: C.t3, marginLeft: 'auto', flexShrink: 0 }}>
           • {formattedTime}

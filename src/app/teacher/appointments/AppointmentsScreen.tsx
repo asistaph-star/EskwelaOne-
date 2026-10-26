@@ -3,11 +3,13 @@ import { C } from '../../shared/constants/tokens';
 import { useAppContext } from '../../shared/AppContext';
 import { CalendarCheck, Clock, Mail, User, Send, CheckCircle, XCircle, ChevronDown, Users, FileText, Filter, Search, Eye } from 'lucide-react';
 import { apiClient } from '../../../api/client';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 type AppointmentStatus = "Pending" | "Confirmed" | "Declined" | "Completed" | "Cancelled";
 
 export function AppointmentsScreen() {
   const { addNotification } = useAppContext();
+  const { settings } = useSchoolSettings();
   
   const [activeTab, setActiveTab] = useState<"incoming" | "outgoing" | "history">("incoming");
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -588,11 +590,11 @@ export function AppointmentsScreen() {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>From:</span>
-                  <span style={{ fontSize: 11, color: C.t1 }}>noreply@calulut-is.edu.ph</span>
+                  <span style={{ fontSize: 11, color: C.t1 }}>{settings.schoolContactEmail || 'School Administration'}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>Subject:</span>
-                  <span style={{ fontSize: 11, color: C.t1, fontWeight: 600 }}>Appointment Request - Calulut Integrated School</span>
+                  <span style={{ fontSize: 11, color: C.t1, fontWeight: 600 }}>Appointment Request{settings.schoolName ? ` - ${settings.schoolName}` : ''}</span>
                 </div>
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16, marginTop: 4 }}>
                   <div style={{ fontSize: 12, color: C.t1, lineHeight: 1.7, background: C.paper, padding: "16px 18px", borderRadius: 8, border: `1px solid ${C.border}` }}>
@@ -608,7 +610,7 @@ export function AppointmentsScreen() {
                       <li><strong>Purpose:</strong> {appt.purpose}</li>
                     </ul>
                     <p style={{ margin: "0 0 10px" }}>Please confirm your attendance by replying to this email or contacting the school office.</p>
-                    <p style={{ margin: "0", color: C.t3 }}>— Calulut Integrated School</p>
+                    <p style={{ margin: "0", color: C.t3 }}>— {settings.schoolName || 'School Administration'}</p>
                   </div>
                 </div>
                 <div style={{ display: "flex", justifyContent: "center", paddingTop: 4 }}>

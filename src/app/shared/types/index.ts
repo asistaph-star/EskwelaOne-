@@ -65,10 +65,12 @@ export type GbItem = { id: string; label: string; max: number };
 export type GbGrades = Record<string | number, Record<string, string>>;
 export type TermKey = "T1" | "T2" | "T3" | "T4";
 export interface TermData {
+  version?: number;
   wwItems: GbItem[];
   ptItems: GbItem[];
   qaMax: number;
   grades: GbGrades;
+  deletedColumnIds?: string[];
 }
 
 export type CurriculumType = "new" | "old";

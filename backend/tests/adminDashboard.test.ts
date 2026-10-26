@@ -52,9 +52,9 @@ describe('Phase 5D: Principal Dashboard Aggregation API', () => {
     // Create Principal and Student users for Auth
     await prisma.user.createMany({
       data: [
-        { id: principalId, email: pEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'P', last_name: 'P' },
-        { id: studentUserId, email: sEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'S', last_name: 'S' },
-        { id: teacherId, email: tEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'T', last_name: 'T' }
+        { id: principalId, school_id: `SCH-P-${principalId.slice(-6)}`, email: pEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'P', last_name: 'P' },
+        { id: studentUserId, school_id: `SCH-S-${studentUserId.slice(-6)}`, email: sEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'S', last_name: 'S' },
+        { id: teacherId, school_id: `SCH-T-${teacherId.slice(-6)}`, email: tEmail, password_hash: await bcrypt.hash('password123', 10), status: 'active', first_name: 'T', last_name: 'T' }
       ]
     });
 
@@ -76,9 +76,9 @@ describe('Phase 5D: Principal Dashboard Aggregation API', () => {
 
 
     // Generate tokens
-    const pRes = await request(app).post('/api/auth/login').send({ email: pEmail, password: 'password123' });
+    const pRes = await request(app).post('/api/auth/login').send({ schoolId: `SCH-P-${principalId.slice(-6)}`, password: 'password123' });
     principalToken = pRes.headers['set-cookie'] ? pRes.headers['set-cookie'][0] : '';
-    const sRes = await request(app).post('/api/auth/login').send({ email: sEmail, password: 'password123' });
+    const sRes = await request(app).post('/api/auth/login').send({ schoolId: `SCH-S-${studentUserId.slice(-6)}`, password: 'password123' });
     studentToken = sRes.headers['set-cookie'] ? sRes.headers['set-cookie'][0] : '';
 
     // Measure Baselines FIRST
@@ -120,8 +120,8 @@ describe('Phase 5D: Principal Dashboard Aggregation API', () => {
     cleanupIds.users.push(s2UserId, s3UserId);
     await prisma.user.createMany({
       data: [
-        { id: s2UserId, email: 'dash_s2' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S2', last_name: 'S2' },
-        { id: s3UserId, email: 'dash_s3' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S3', last_name: 'S3' }
+        { id: s2UserId, school_id: 'SCH-S2-' + s2UserId.slice(-6), email: 'dash_s2' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S2', last_name: 'S2' },
+        { id: s3UserId, school_id: 'SCH-S3-' + s3UserId.slice(-6), email: 'dash_s3' + Date.now() + '@dash.com', password_hash: '123', status: 'Active', first_name: 'S3', last_name: 'S3' }
       ]
     });
 

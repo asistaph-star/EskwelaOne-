@@ -64,7 +64,6 @@ describe('Phase 4G: Clinic Records Characterization Tests', () => {
         { role_id: clinicRole.id, permission_id: permWrite.id },
         { role_id: adminRole.id, permission_id: permRead.id },
         { role_id: adminRole.id, permission_id: permWrite.id },
-        { role_id: studentRole.id, permission_id: permRead.id } // grant student read to test privacy scoping
       ],
       skipDuplicates: true
     });
@@ -212,7 +211,8 @@ describe('Phase 4G: Clinic Records Characterization Tests', () => {
       });
       expect(audit).toBeTruthy();
       expect(audit?.actor_user_id).toBe(nurseUserId);
-      expect(audit?.new_state).toHaveProperty('symptoms', 'Headache');
+      expect(audit?.new_state).toHaveProperty('studentId', student1Id);
+      expect(audit?.new_state).not.toHaveProperty('symptoms');
       expect(audit?.new_state).not.toHaveProperty('temperature'); // vitals omitted
     });
 

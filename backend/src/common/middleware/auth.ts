@@ -6,12 +6,14 @@ import prisma from '../../config/database.js';
 
 export interface AuthenticatedUser {
   id: string;
-  email: string;
+  schoolId: string;
+  email?: string | null;
   firstName: string;
   lastName: string;
   status: string;
   permissions: string[];
   roles: string[];
+  mustChangePassword?: boolean;
 }
 
 /**
@@ -64,6 +66,22 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
       throw new AppError(401, 'ACCOUNT_INACTIVE', 'Your account has been deactivated.');
     }
 
+    // Server-side boundary: users with must_change_password=true can ONLY access exempt auth routes
+    if (user.must_change_password) {
+      const exemptPaths = ['/api/auth/me', '/api/auth/change-password', '/api/auth/logout'];
+      const rawUrl = req.originalUrl || req.url || '';
+      const fullPath = rawUrl.split('?')[0];
+      const isExempt = exemptPaths.some(p => fullPath === p || fullPath.endsWith(p));
+
+      if (!isExempt) {
+        throw new AppError(
+          403,
+          'MUST_CHANGE_PASSWORD',
+          'You must change your temporary password before accessing the application.'
+        );
+      }
+    }
+
     // Collect all permissions from all roles
     const permissions = new Set<string>();
     const roles: string[] = [];
@@ -77,12 +95,14 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
 
     (req as any).user = {
       id: user.id,
+      schoolId: user.school_id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       status: user.status,
       permissions: Array.from(permissions),
       roles,
+      mustChangePassword: user.must_change_password,
     } satisfies AuthenticatedUser;
 
     next();

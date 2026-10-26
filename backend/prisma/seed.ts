@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import '../src/config/env.js';
+import prisma from '../src/config/database.js';
 import { generateId } from '../src/common/utils/uuid.js';
-
-const prisma = new PrismaClient();
 
 const PERMISSIONS = [
   // User Management
@@ -31,6 +30,7 @@ const PERMISSIONS = [
   'announcement:write',
   'leave:approve',
   'inventory:read', 'inventory:write',
+  'campus_media:manage', 'campus_media:read',
 ];
 
 const ROLES = {
@@ -62,7 +62,7 @@ const ROLES = {
     'user:read', 'guidance:read', 'guidance:write', 'behavior:read', 'behavior:write'
   ],
   GateOperator: [
-    'attendance:write'
+    'attendance:write', 'campus_media:read'
   ]
 };
 

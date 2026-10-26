@@ -40,7 +40,7 @@ router.get('/serve', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     // Verify token
-    const secret = process.env.JWT_SECRET || 'fallback-secret';
+    const secret = config.jwt.secret;
     let payload: any;
     try {
       payload = jwt.verify(token, secret);
@@ -235,7 +235,7 @@ router.post('/:id/presign-download', requirePermissions('document:read'), async 
     }
 
     // Generate a temporary JWT-backed URL to serve the file
-    const secret = process.env.JWT_SECRET || 'fallback-secret';
+    const secret = config.jwt.secret;
     // Expire in 5 minutes (standard presigned URL expiry)
     const token = jwt.sign({ documentId: document.id }, secret, { expiresIn: '5m' });
     const localUrl = `/api/documents/serve?token=${token}`;

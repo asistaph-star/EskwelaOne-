@@ -161,7 +161,7 @@ describe('Phase 5D: Principal Behavioral Reports Authorization, Aggregates & Rea
         status: 'active',
         must_change_password: false,
         user_roles: { create: { role_id: testRoleStudentId } },
-        student: { create: { id: studentId, lrn: '123456789012', grade_level: 9 } }
+        student: { create: { id: studentId, lrn: '123456789099', grade_level: 9 } }
       }
     });
     studentToken = sign({ userId: studentUserId }, config.jwt.secret, { expiresIn: '1h' });

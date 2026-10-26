@@ -71,16 +71,16 @@ export const BookIcon = () => (
   </Svg>
 );
 
-export const PDFHeaderBar = ({ title, subtitle, documentId }: { title: string; subtitle?: string; documentId?: string }) => (
+export const PDFHeaderBar = ({ title, subtitle, documentId, schoolName }: { title: string; subtitle?: string; documentId?: string; schoolName?: string }) => (
   <View style={pdfStyles.headerBar}>
     <View style={pdfStyles.headerLeft}>
       <View style={pdfStyles.logoBox}>
         <BookIcon />
       </View>
       <View>
-        <Text style={pdfStyles.headerTextRep}>Republic of the Philippines · Department of Education · Region III</Text>
-        <Text style={pdfStyles.headerTextSchool}>Calulut Integrated School</Text>
-        <Text style={pdfStyles.headerTextAddress}>Sindalan, City of San Fernando, Pampanga · Division of San Fernando City · School ID: 300941</Text>
+        <Text style={pdfStyles.headerTextRep}>Republic of the Philippines · Department of Education</Text>
+        <Text style={pdfStyles.headerTextSchool}>{schoolName || "DigiSkwela Official Academic Record"}</Text>
+        <Text style={pdfStyles.headerTextAddress}>Official DepEd Academic Report</Text>
       </View>
     </View>
     <View style={pdfStyles.headerRight}>

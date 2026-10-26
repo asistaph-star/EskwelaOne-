@@ -508,12 +508,12 @@ export const getMyTeachingOperationsTool: DigiSkwelaTool = {
 export const getMyClassPerformanceTool: DigiSkwelaTool = {
   id: 'TCH-AI-03',
   name: 'getMyClassPerformance',
-  description: 'Retrieves submitted grade averages and classroom attendance metrics (P/A/L/E) for an assigned section and subject. Uses ClassAttendance only (never GateAttendance). Factual absence lists do not classify or label student risk.',
+  description: 'Retrieves class-level academic performance, student-level recorded term grades, term averages, trends, and student-level classroom attendance records (P/A/L/E) for an assigned section and subject. Uses ClassAttendance only (never GateAttendance). Student absence/attendance records and grades are factual and do not classify or label student risk.',
   allowedRoles: ['Teacher'],
   requiredPermissions: ['assignment:read_own', 'grade:read', 'attendance:read'],
   inputSchema: z.object({
-    sectionId: z.string({ required_error: 'sectionId is required' }).min(1),
-    subjectId: z.string({ required_error: 'subjectId is required' }).min(1),
+    sectionId: z.string().optional(),
+    subjectId: z.string().optional(),
     term: z.string().optional(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
@@ -521,17 +521,17 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
   declaration: {
     id: 'TCH-AI-03',
     name: 'getMyClassPerformance',
-    description: 'Retrieves submitted grade averages and classroom attendance metrics (P/A/L/E) for an assigned section and subject. Uses ClassAttendance only.',
+    description: 'Retrieves class-level academic performance, student-level recorded term grades, term averages, and student-level classroom attendance records (P/A/L/E) for an assigned section and subject. Uses ClassAttendance only.',
     parameters: {
       type: 'object',
       properties: {
         sectionId: {
           type: 'string',
-          description: 'Required section ID assigned to the teacher.'
+          description: 'Optional section ID or name assigned to the teacher. If omitted and teacher has one class, defaults to that class.'
         },
         subjectId: {
           type: 'string',
-          description: 'Required subject ID assigned to the teacher.'
+          description: 'Optional subject ID or name assigned to the teacher. If omitted and teacher has one class, defaults to that class.'
         },
         term: {
           type: 'string',
@@ -546,7 +546,7 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
           description: 'Optional end date for attendance window in YYYY-MM-DD format.'
         }
       },
-      required: ['sectionId', 'subjectId'],
+      required: [],
       additionalProperties: false
     }
   },
@@ -560,27 +560,49 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
       throw new AppError(403, 'FORBIDDEN', 'Authenticated user is not registered as a teacher.');
     }
 
-    // 2. Strict Scope Verification: Check assignment ownership
-    const assignment = await prisma.teacherSubjectAssignment.findFirst({
-      where: {
-        teacher_id: teacher.id,
-        section_id: args.sectionId,
-        subject_id: args.subjectId,
-      },
+    // 2. Strict Scope Verification: Fetch teacher's own assignments
+    const teacherAssignments = await prisma.teacherSubjectAssignment.findMany({
+      where: { teacher_id: teacher.id },
       include: {
         section: true,
         subject: true,
       }
     });
 
-    if (!assignment) {
-      throw new AppError(403, 'FORBIDDEN', `You are not authorized for section '${args.sectionId}' and subject '${args.subjectId}'.`);
+    if (teacherAssignments.length === 0) {
+      throw new AppError(403, 'FORBIDDEN', 'Authenticated teacher has no assigned classes.');
+    }
+
+    let assignment: typeof teacherAssignments[0] | undefined;
+
+    if (args.sectionId || args.subjectId) {
+      assignment = teacherAssignments.find(a => {
+        const matchSec = !args.sectionId ||
+          a.section_id === args.sectionId ||
+          a.section.name.toLowerCase().includes(args.sectionId.toLowerCase()) ||
+          args.sectionId.toLowerCase().includes(a.section.name.toLowerCase());
+        const matchSubj = !args.subjectId ||
+          a.subject_id === args.subjectId ||
+          a.subject.name.toLowerCase().includes(args.subjectId.toLowerCase()) ||
+          args.subjectId.toLowerCase().includes(a.subject.name.toLowerCase());
+        return matchSec && matchSubj;
+      });
+
+      if (!assignment) {
+        throw new AppError(403, 'FORBIDDEN', `You are not authorized for section '${args.sectionId || 'any'}' and subject '${args.subjectId || 'any'}'.`);
+      }
+    } else {
+      if (teacherAssignments.length === 1) {
+        assignment = teacherAssignments[0];
+      } else {
+        throw new AppError(400, 'BAD_REQUEST', 'Please specify a sectionId and subjectId among your assigned classes.');
+      }
     }
 
     // 3. Fetch Actively Enrolled Students in this Section
     const enrollments = await prisma.enrollment.findMany({
       where: {
-        section_id: args.sectionId,
+        section_id: assignment.section_id,
         status: { in: ['Enrolled', 'enrolled', 'Active', 'active'] },
       },
       include: {
@@ -594,7 +616,11 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
             }
           }
         }
-      }
+      },
+      orderBy: [
+        { student: { user: { last_name: 'asc' } } },
+        { student: { user: { first_name: 'asc' } } },
+      ]
     });
 
     const enrollmentIds = enrollments.map(e => e.id);
@@ -620,7 +646,7 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
     const grades = await prisma.grade.findMany({
       where: {
         student_id: { in: studentIds },
-        subject_id: args.subjectId,
+        subject_id: assignment.subject_id,
         ...(normalizedTermKey ? { term: normalizedTermKey as any } : {})
       }
     });
@@ -641,6 +667,25 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
         term: termKey,
         studentsEvaluated: scores.length,
         averageGrade: avg,
+      };
+    });
+
+    // Determine effective term for student-level recorded grades
+    const effectiveTerm = normalizedTermKey || (termAverages.length > 0 ? termAverages[termAverages.length - 1].term : 'T1');
+
+    // Build student-level recorded term grades collection
+    // Invariant: A score of 0 is a valid recorded score, not missing/null.
+    // Invariant: Missing or unrecorded grade returns null.
+    // Invariant: Strictly no PII (no LRN, email, phone, guardian, clinic, guidance).
+    const studentGradeRecords = enrollments.map(e => {
+      const sId = e.student_id;
+      const studentName = studentNameMap.get(sId) || 'Enrolled Student';
+      const g = grades.find(gr => gr.student_id === sId && gr.term === effectiveTerm);
+      const hasGrade = g && g.term_grade !== null && g.term_grade !== undefined && !isNaN(g.term_grade);
+      return {
+        studentId: sId,
+        studentName,
+        recordedTermGrade: hasGrade ? g!.term_grade : null,
       };
     });
 
@@ -672,6 +717,16 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
       windowEndStr = args.endDate;
       startUtc = parseCalendarDate(args.startDate);
       endUtc = parseCalendarDate(args.endDate);
+    } else if (args.startDate && !args.endDate) {
+      windowStartStr = args.startDate;
+      windowEndStr = args.startDate;
+      startUtc = parseCalendarDate(args.startDate);
+      endUtc = parseCalendarDate(args.startDate);
+    } else if (!args.startDate && args.endDate) {
+      windowStartStr = args.endDate;
+      windowEndStr = args.endDate;
+      startUtc = parseCalendarDate(args.endDate);
+      endUtc = parseCalendarDate(args.endDate);
     } else {
       // Current Monday-Friday calendar week in Asia/Manila
       const cal = getPhilippineCalendarDate();
@@ -695,6 +750,9 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
           gte: startUtc,
           lte: endUtc,
         }
+      },
+      orderBy: {
+        date: 'asc',
       }
     });
 
@@ -704,6 +762,36 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
     let countE = 0;
     const absencesPerEnrollment: Record<string, number> = {};
 
+    // 6. Authorized student-level ClassAttendance records (strictly own assigned students)
+    // Invariants:
+    // - ClassAttendance ONLY (never GateAttendance).
+    // - Strictly no LRN, email, phone, guardian, clinic, or guidance data.
+    // - Only actively enrolled students.
+    // - Distinct statuses: P (Present), A (Absent), L (Late), E (Excused).
+    const studentAttendanceMap = new Map<string, {
+      studentId: string;
+      studentName: string;
+      presentCount: number;
+      absentCount: number;
+      lateCount: number;
+      excusedCount: number;
+      records: Array<{ date: string; status: string }>;
+    }>();
+
+    for (const e of enrollments) {
+      const sId = e.student_id;
+      const sName = studentNameMap.get(sId) || 'Enrolled Student';
+      studentAttendanceMap.set(e.id, {
+        studentId: sId,
+        studentName: sName,
+        presentCount: 0,
+        absentCount: 0,
+        lateCount: 0,
+        excusedCount: 0,
+        records: [],
+      });
+    }
+
     for (const ca of classAttendances) {
       const s = ca.status.toUpperCase();
       if (s === 'P') countP++;
@@ -712,7 +800,31 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
         absencesPerEnrollment[ca.enrollment_id] = (absencesPerEnrollment[ca.enrollment_id] || 0) + 1;
       } else if (s === 'L') countL++;
       else if (s === 'E') countE++;
+
+      const studentAtt = studentAttendanceMap.get(ca.enrollment_id);
+      if (studentAtt) {
+        if (s === 'P') studentAtt.presentCount++;
+        else if (s === 'A') studentAtt.absentCount++;
+        else if (s === 'L') studentAtt.lateCount++;
+        else if (s === 'E') studentAtt.excusedCount++;
+
+        const dateStr = ca.date instanceof Date 
+          ? ca.date.toISOString().slice(0, 10) 
+          : String(ca.date).slice(0, 10);
+
+        studentAtt.records.push({
+          date: dateStr,
+          status: s,
+        });
+      }
     }
+
+    // Sort records by date for each student
+    for (const att of studentAttendanceMap.values()) {
+      att.records.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    const studentAttendanceList = Array.from(studentAttendanceMap.values());
 
     // Factual list of students with 3+ recorded A entries inside requested window
     // STRICTLY NEVER label as at risk, dropout risk, truant, problematic, or failing.
@@ -732,6 +844,31 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
       }
     }
 
+    const attendancePayload = {
+      source: 'ClassAttendance',
+      attendanceDateWindow: {
+        startDate: windowStartStr,
+        endDate: windowEndStr,
+        isDefaultMondayToFridayWeek: !args.startDate && !args.endDate,
+      },
+      counts: {
+        present: countP,
+        absent: countA,
+        late: countL,
+        excused: countE,
+        totalRecordedSessions: classAttendances.length,
+      },
+      present: countP,
+      absent: countA,
+      late: countL,
+      excused: countE,
+      totalRecordedSessions: classAttendances.length,
+      hasRecordedAttendance: classAttendances.length > 0,
+      studentsWithThreeOrMoreAbsences,
+      students: studentAttendanceList,
+      semanticsNote: 'Factual record of recorded classroom attendance only. Does not classify, label, or determine student risk.',
+    };
+
     return {
       asOf: new Date().toISOString(),
       assignmentId: assignment.id,
@@ -740,27 +877,16 @@ export const getMyClassPerformanceTool: DigiSkwelaTool = {
       gradeLevel: assignment.section.grade_level,
       subjectId: assignment.subject_id,
       subjectName: assignment.subject.name,
+      term: effectiveTerm,
       grades: {
+        term: effectiveTerm,
         termAverages,
         trend: trendConclusion,
+        students: studentGradeRecords,
       },
-      classroomAttendance: {
-        source: 'ClassAttendance',
-        attendanceDateWindow: {
-          startDate: windowStartStr,
-          endDate: windowEndStr,
-          isDefaultMondayToFridayWeek: !args.startDate && !args.endDate,
-        },
-        counts: {
-          present: countP,
-          absent: countA,
-          late: countL,
-          excused: countE,
-          totalRecordedSessions: classAttendances.length,
-        },
-        studentsWithThreeOrMoreAbsences,
-        semanticsNote: 'Factual record of recorded classroom attendance only. Does not classify, label, or determine student risk.',
-      }
+      students: studentGradeRecords,
+      classroomAttendance: attendancePayload,
+      attendance: attendancePayload,
     };
   }
 };

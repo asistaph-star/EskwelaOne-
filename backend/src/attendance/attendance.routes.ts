@@ -18,48 +18,20 @@ router.use('/faculty', facultyAttendanceRouter);
 router.use('/excuses', excuseLettersRouter);
 router.use('/', classAttendanceRouter);
 
-// ─── SSE Client Registry ──────────────────────────────────────────────────────
-// Tracks all active Principal Monitoring SSE connections.
-// When a gate scan succeeds, we emit 'attendance-changed' (students) or
-// 'faculty-attendance-changed' (teachers) to all connected clients.
-// The event carries no attendance data — the client must call GET /attendance/gate
-// or GET /attendance/faculty to get the authoritative PostgreSQL-backed records.
-const sseClients = new Set<Response>();
+import {
+  registerSSEClient,
+  emitGateAttendanceChanged,
+  emitFacultyAttendanceChanged,
+  emitInvalidScan
+} from './attendanceBroadcaster.service.js';
 
-function emitGateAttendanceChanged(): void {
-  for (const client of sseClients) {
-    try {
-      client.write('event: attendance-changed\ndata: {}\n\n');
-    } catch {
-      sseClients.delete(client);
-    }
-  }
-}
-
-export function emitFacultyAttendanceChanged(): void {
-  for (const client of sseClients) {
-    try {
-      client.write('event: faculty-attendance-changed\ndata: {}\n\n');
-    } catch {
-      sseClients.delete(client);
-    }
-  }
-}
-
-function emitInvalidScan(barcode: string): void {
-  for (const client of sseClients) {
-    try {
-      client.write(`event: invalid-scan\ndata: ${JSON.stringify({ barcode, time: new Date().toISOString() })}\n\n`);
-    } catch {
-      sseClients.delete(client);
-    }
-  }
-}
+// Re-export broadcaster utilities for backwards compatibility
+export { emitFacultyAttendanceChanged, emitGateAttendanceChanged, emitInvalidScan };
 
 /**
  * GET /api/attendance/gate/events
  * SSE stream for Principal Monitoring real-time updates.
- * Emits 'attendance-changed' whenever a gate scan is saved to PostgreSQL.
+ * Emits 'attendance-changed' whenever a gate scan or manual attendance is saved to PostgreSQL.
  * Authentication: inherits router-level authMiddleware (cookie-based JWT).
  * Authorization: attendance:read permission required.
  *
@@ -73,8 +45,8 @@ router.get('/gate/events', requirePermissions('attendance:read'), (req: Request,
   res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx buffering if proxied
   res.flushHeaders();
 
-  // Register this client
-  sseClients.add(res);
+  // Register this client with centralized broadcaster
+  const unregister = registerSSEClient(res);
 
   // Send a confirmation event so the client knows the stream is live
   res.write('event: connected\ndata: {}\n\n');
@@ -94,7 +66,7 @@ router.get('/gate/events', requirePermissions('attendance:read'), (req: Request,
   // Clean up when the client disconnects
   req.on('close', () => {
     clearInterval(heartbeat);
-    sseClients.delete(res);
+    unregister();
   });
 });
 
@@ -794,6 +766,9 @@ router.post('/gate', requireAnyPermission('attendance:write', 'attendance:write_
         correlationId,
       });
     }
+
+    // Notify connected Principal Monitoring clients that student gate attendance was updated/created
+    emitGateAttendanceChanged();
 
     res.json({ success: true, data: entry });
   } catch (err) {

@@ -80,6 +80,31 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     }
   }
 
+  // Body parser errors (payload too large or malformed syntax)
+  if ((err as any).type === 'entity.too.large' || (err as any).status === 413) {
+    res.status(413).json({
+      success: false,
+      error: {
+        code: 'PAYLOAD_TOO_LARGE',
+        message: 'Request payload exceeds the allowable size limit.',
+      },
+      requestId: correlationId,
+    });
+    return;
+  }
+
+  if ((err as any).type === 'entity.parse.failed' || ((err as any).status === 400 && 'body' in (err as any))) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Malformed JSON payload.',
+      },
+      requestId: correlationId,
+    });
+    return;
+  }
+
   // Unknown errors — never expose stack traces in production
   console.error(`[${correlationId}] Unhandled error:`, err);
 

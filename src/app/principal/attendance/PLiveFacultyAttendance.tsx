@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { User, ArrowLeft } from 'lucide-react';
+import { User, ArrowLeft, GraduationCap } from 'lucide-react';
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
 import { facultyAttendanceApi, FacultyAttendanceItem } from '../../../api/facultyAttendance.api';
 import { useAppContext } from '../../shared/AppContext';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 export interface GateScanItem {
   id: string;
@@ -25,6 +26,7 @@ interface PLiveFacultyAttendanceProps {
 }
 
 export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiveFacultyAttendanceProps) {
+  const { settings } = useSchoolSettings();
   const [feedMode, setFeedMode] = useState<'student' | 'faculty'>(initialMode);
   const [facultyList, setFacultyList] = useState<FacultyAttendanceItem[]>([]);
   const [time, setTime] = useState(new Date());
@@ -49,15 +51,21 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
       });
   }, []);
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [loadData]);
-
   // Real-Time SSE Listener — Invalidation-only refetch upon gate scan
   // Principal TV is strictly READ-ONLY: it does NOT capture scanner input or submit scans.
   const sseStatus = useGateAttendanceSSE(loadData);
+
+  // Adaptive Fallback Polling:
+  // When SSE is 'live', push invalidation handles updates instantly without wasteful polling.
+  // When SSE is disconnected or reconnecting ('error' | 'connecting'), fall back to periodic polling (15s).
+  useEffect(() => {
+    loadData();
+    if (sseStatus === 'live') {
+      return;
+    }
+    const interval = setInterval(loadData, 15000);
+    return () => clearInterval(interval);
+  }, [loadData, sseStatus]);
 
   // Transform Authoritative Faculty Attendance into Chronological Gate Events (Newest First)
   // Per locked requirements: ZERO Late or Absent classification is applied.
@@ -147,9 +155,11 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
     <div className="relative flex h-screen w-full flex-col bg-gradient-to-b from-slate-100 to-white font-sans text-slate-800 overflow-hidden">
       
       {/* Huge Background Watermark — Identical to Student Gate Monitor */}
-      <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.06] overflow-hidden">
-        <img src="/school_seal.png" alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
-      </div>
+      {settings.logoUrl && (
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.06] overflow-hidden">
+          <img src={settings.logoUrl} alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
+        </div>
+      )}
 
       {/* 1. Header Section — Identical to Student Gate Header */}
       <header className="relative z-20 flex shrink-0 items-center justify-between border-b-2 border-amber-400 bg-slate-900 px-5 py-3 md:px-6">
@@ -163,10 +173,16 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
             <span>Exit to Dashboard</span>
           </button>
 
-          <img src="/school_seal.png" alt="School Seal" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="School Logo" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 md:h-12 md:w-12 lg:h-14 lg:w-14">
+              <GraduationCap className="h-6 w-6 text-amber-400 md:h-7 md:w-7" />
+            </div>
+          )}
           <div className="flex flex-col justify-center">
             <h1 className="text-lg font-semibold tracking-normal text-white md:text-xl lg:text-2xl leading-tight">
-              CALULUT INTEGRATED SCHOOL
+              {(settings.schoolName || 'DigiSkwela Gate Attendance').toUpperCase()}
             </h1>
             <div className="text-[10px] font-bold text-amber-400 tracking-wider uppercase">
               {feedMode === 'faculty' ? 'GATE ATTENDANCE MONITORING — FACULTY (READ-ONLY)' : 'GATE ATTENDANCE MONITORING — STUDENTS (READ-ONLY)'}
@@ -221,7 +237,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
           )}
 
           <div className="font-mono text-xl font-bold tracking-tight text-white">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {time.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
           </div>
         </div>
       </header>
@@ -252,7 +268,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
               const subTitle = isFaculty 
                 ? `${scan.employeeId || 'ID'} • ${scan.department || 'FACULTY'}${scan.position ? ` • ${scan.position}` : ''}`
                 : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel} • ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
-              const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
+              const photoSrc = isFaculty ? (settings.logoUrl || '/student_photo.png') : '/student_photo.png';
 
               return (
                 <div key={scan.id || i} className="flex h-[4.5rem] break-inside-avoid items-center gap-3 border-b border-slate-200 bg-white/50 px-3 transition-colors hover:bg-white rounded-lg shadow-sm">
@@ -282,10 +298,10 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
       {/* 3. Bottom Detailed Profile Section (Two side-by-side featured panels) — Identical to Student Gate Monitor */}
       <section className="relative z-10 flex h-72 shrink-0 justify-center gap-4 bg-transparent p-4 md:h-80 md:gap-8 md:p-6 lg:h-[26rem]">
         <div className="w-full max-w-md lg:max-w-lg">
-          <ProfileCard scan={leftScan} />
+          <ProfileCard scan={leftScan} logoUrl={settings.logoUrl} />
         </div>
         <div className="w-full max-w-md lg:max-w-lg">
-          <ProfileCard scan={rightScan} />
+          <ProfileCard scan={rightScan} logoUrl={settings.logoUrl} />
         </div>
       </section>
 
@@ -306,7 +322,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
   );
 }
 
-function ProfileCard({ scan }: { scan: GateScanItem | null }) {
+function ProfileCard({ scan, logoUrl }: { scan: GateScanItem | null; logoUrl?: string | null }) {
   if (!scan) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white/50">
@@ -321,7 +337,7 @@ function ProfileCard({ scan }: { scan: GateScanItem | null }) {
   const subTitle = isFaculty 
     ? `${scan.employeeId || 'ID'} • ${scan.department || 'FACULTY'}${scan.position ? ` • ${scan.position}` : ''}`
     : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel} • ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
-  const photoSrc = isFaculty ? '/school_seal.png' : '/student_photo.png';
+  const photoSrc = isFaculty ? (logoUrl || '/student_photo.png') : '/student_photo.png';
   
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">

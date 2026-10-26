@@ -2,6 +2,7 @@ import { BookMarked } from 'lucide-react';
 import React from 'react';
 import { C } from '../../shared/constants/tokens';
 import { gradeColor } from '../../shared/utils/helpers';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 function Stamp({ label, color, bg, border }: { label: string; color: string; bg: string; border?: string }) {
   return (
@@ -78,6 +79,10 @@ export function StudentReportCard({
   statuses?: { term1: string; term2: string; term3: string }; 
   compact?: boolean; 
 }) {
+  const { settings } = useSchoolSettings();
+  const schoolDisplayName = settings.schoolName || "DigiSkwela Official Academic Record";
+  const schoolAddressDisplay = settings.schoolAddress || "";
+
   const subs = subjects && subjects.length > 0
     ? subjects
     : student.avg
@@ -151,11 +156,13 @@ export function StudentReportCard({
               Republic of the Philippines · Department of Education · Region III
             </div>
             <div style={{ color: "#fff", fontSize: 14.5, fontWeight: 800, fontFamily: "'Fraunces', serif", whiteSpace: "nowrap" }}>
-              Calulut Integrated School
+              {schoolDisplayName}
             </div>
-            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 8.5, whiteSpace: "nowrap" }}>
-              Sindalan, City of San Fernando, Pampanga · Division of San Fernando City · School ID: 300941
-            </div>
+            {schoolAddressDisplay && (
+              <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 8.5, whiteSpace: "nowrap" }}>
+                {schoolAddressDisplay}
+              </div>
+            )}
           </div>
         </div>
 
@@ -425,7 +432,7 @@ export function StudentReportCard({
         WebkitPrintColorAdjust: "exact",
         printColorAdjust: "exact"
       }}>
-        <div style={{ whiteSpace: "nowrap" }}>Official DepEd Form 138-JHS (SF9) · Calulut Integrated School · DigiSkwela Security Verified</div>
+        <div style={{ whiteSpace: "nowrap" }}>Official DepEd Form 138-JHS (SF9) · {schoolDisplayName} · DigiSkwela Security Verified</div>
         <div style={{ display: "flex", gap: 14, whiteSpace: "nowrap" }}>
           <span>LRN: <strong>{student.lrn}</strong></span>
           <span>Date Issued: <strong>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</strong></span>

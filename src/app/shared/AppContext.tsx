@@ -22,6 +22,7 @@ export interface CurrentUser {
   permissions?: string[];
   rawRoles?: string[];
   studentProfile?: any;
+  mustChangePassword?: boolean;
 }
 export type Message = { id: string; senderId: string; senderName: string; receiverId?: string; receiverName?: string; text?: string; content?: string; timestamp: string; isAI?: boolean; read?: boolean; };
 export type Announcement = { id: string; author: string; title: string; body: string; audience: string; timestamp: string };
@@ -191,7 +192,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             role: meData.roles?.[0] || '',
             permissions: meData.permissions || [],
             rawRoles: meData.roles,
-            studentProfile: meData.studentProfile
+            studentProfile: meData.studentProfile,
+            mustChangePassword: !!meData.mustChangePassword,
           });
         } catch (err: any) {
           setCurrentUser(null);
@@ -368,7 +370,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   if (!isLoaded) {
     return (
-      <div style={{ display: "flex", height: "100vh", width: "100vw", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#64748b" }}>
+      <div key="loading-secure-env" style={{ display: "flex", height: "100vh", width: "100vw", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", background: "#f8fafc", color: "#64748b" }}>
         Loading Secure Environment...
       </div>
     );

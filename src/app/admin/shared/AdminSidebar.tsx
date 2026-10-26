@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, UserPlus, Package, Users, MonitorPlay, ScanLine } from "lucide-react";
+import { LayoutDashboard, UserPlus, Package, Users, MonitorPlay, ScanLine, Palette, ShieldCheck, Lock, Activity, Shield } from "lucide-react";
 import { AdminScreen } from "../AdminApp";
 import { PortalSidebar, SidebarGroupConfig } from "../../shared/components/navigation/PortalSidebar";
 
@@ -13,6 +13,13 @@ const ADMIN_NAV_GROUPS: SidebarGroupConfig<AdminScreen>[] = [
   { category: "Access Management", items: [
     { id: "teacher-create", label: "Provision Account", icon: UserPlus },
     { id: "accounts", label: "Account Management", icon: Users },
+  ]},
+  { category: "System", items: [
+    { id: "customization", label: "School Customization", icon: Palette },
+    { id: "audit-logs", label: "Audit Logs", icon: ShieldCheck },
+    { id: "security-access", label: "Security & Access", icon: Lock },
+    { id: "system-health", label: "System Health", icon: Activity },
+    { id: "roles-permissions", label: "Roles & Permissions", icon: Shield },
   ]}
 ];
 

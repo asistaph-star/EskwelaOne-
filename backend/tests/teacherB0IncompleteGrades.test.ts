@@ -129,7 +129,7 @@ describe('DIGISKWELA — PHASE B0: DYNAMIC TEACHER TOOL-DISCOVERY GATE', () => {
     expect(Array.isArray(data.classes)).toBe(true);
     expect(data.classes.length).toBeGreaterThanOrEqual(1);
 
-    const rizalClass = data.classes.find((c: any) => c.sectionId === 'fix-sec-teacher-tests' || c.sectionName.includes('Rizal'));
+    const rizalClass = data.classes.find((c: any) => c.sectionId === 'fix-sec-teacher-tests') || data.classes.find((c: any) => c.sectionName.includes('Rizal'));
     expect(rizalClass).toBeDefined();
     expect(rizalClass.totalStudents).toBe(25); // 24 fixture students + 1 baseline demo student
     expect(rizalClass.totalColumns).toBe(2);

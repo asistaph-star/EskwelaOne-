@@ -22,6 +22,7 @@ export interface Form138Props {
   student?: Form138Student;
   subjects?: SubjectGrade[];
   attendance?: Form138Attendance;
+  schoolName?: string;
 }
 
 const styles = StyleSheet.create({
@@ -133,7 +134,7 @@ const getGradeColor = (grade?: number) => {
   return styles.tdTextTermNormal;
 };
 
-export function Form138PDFDocument({ student, subjects, attendance }: Form138Props) {
+export function Form138PDFDocument({ student, subjects, attendance, schoolName }: Form138Props) {
   // GUARD: if any required prop is missing, render a visible error page
   if (!student || !subjects || subjects.length === 0) {
     return (
@@ -168,6 +169,7 @@ export function Form138PDFDocument({ student, subjects, attendance }: Form138Pro
             title="Learner's Official Progress Report Card" 
             subtitle="School Year 2025–2026"
             documentId="DepEd Form 138 / SF9-JHS"
+            schoolName={schoolName}
           />
 
           {/* Student Profile Row */}
@@ -306,7 +308,7 @@ export function Form138PDFDocument({ student, subjects, attendance }: Form138Pro
 
           {/* Footer Bottom Bar */}
           <View style={styles.footerBottom}>
-            <Text style={styles.footerBottomText}>Official DepEd Form 138-JHS (SF9) · Calulut Integrated School · DigiSkwela Security Verified</Text>
+            <Text style={styles.footerBottomText}>Official DepEd Form 138-JHS (SF9) · {schoolName || 'DigiSkwela'} · DigiSkwela Security Verified</Text>
             <Text style={styles.footerBottomText}>LRN: {student.lrn || ''}    Date Issued: Aug 21, 2026</Text>
           </View>
         </View>

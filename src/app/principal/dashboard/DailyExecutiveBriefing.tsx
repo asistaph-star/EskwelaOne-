@@ -15,6 +15,7 @@ import {
   formatPrincipalGreeting, 
   buildSynthesizedNarrative 
 } from './briefingHelpers';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 export interface DailyExecutiveBriefingProps {
   summaryData: ExecutiveSummaryResponse | null;
@@ -37,6 +38,7 @@ export function DailyExecutiveBriefing({
   onNav,
   currentUser,
 }: DailyExecutiveBriefingProps) {
+  const { settings } = useSchoolSettings();
   const [showSources, setShowSources] = useState(false);
 
   // Time-aware greeting in Asia/Manila (UTC+8)
@@ -172,7 +174,7 @@ export function DailyExecutiveBriefing({
             {greeting}
           </h2>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 4, marginBottom: 0, fontWeight: 500 }}>
-            Here’s what’s happening at Calulut Integrated School today.
+            Here’s what’s happening at {settings.schoolName || 'your institution'} today.
           </p>
         </div>
 

@@ -1,6 +1,9 @@
-  import { createRoot } from "react-dom/client";
-  import App from "./app/App.tsx";
-  import { AppProvider } from "./app/shared/AppContext.tsx";
+import { initDOMSafety } from "./app/shared/utils/domSafety";
+initDOMSafety();
+
+import { createRoot } from "react-dom/client";
+import App from "./app/App.tsx";
+import { AppProvider } from "./app/shared/AppContext.tsx";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
 class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null, info: ErrorInfo | null}> {
@@ -33,12 +36,15 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
   }
 }
 
-  import "./styles/index.css";
+import { SchoolSettingsProvider } from "./app/shared/context/SchoolSettingsContext.tsx";
+import "./styles/index.css";
 
-  createRoot(document.getElementById("root")!).render(
-    <ErrorBoundary>
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
     <AppProvider>
-      <App />
+      <SchoolSettingsProvider>
+        <App />
+      </SchoolSettingsProvider>
     </AppProvider>
-    </ErrorBoundary>
-  );
+  </ErrorBoundary>
+);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../../constants/tokens';
-import { ChevronDown, LogOut, User } from 'lucide-react';
+import { ChevronDown, GraduationCap, LogOut, User } from 'lucide-react';
+import { useSchoolSettings } from '../../context/SchoolSettingsContext';
 
 export type SidebarItemConfig<T extends string> = {
   id: T;
@@ -52,6 +53,7 @@ export function PortalSidebar<T extends string>({
   theme = "default"
 }: PortalSidebarProps<T>) {
   const [showMenu, setShowMenu] = useState(false);
+  const { settings } = useSchoolSettings();
 
   const isGold = theme === "gold";
   
@@ -65,16 +67,26 @@ export function PortalSidebar<T extends string>({
   const initialsBg = isGold ? C.gold : C.m700;
   const initialsColor = isGold ? C.m900 : "#fff";
 
+  const schoolLogo = settings.logoUrl;
+  const schoolDisplayName = settings.schoolShortName || settings.schoolName || "DigiSkwela";
+  const sidebarBg = settings.primaryColor || C.m900;
+
   return (
-    <div style={{ width: collapsed ? 70 : 240, background: C.m900, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+    <div style={{ width: collapsed ? 70 : 240, background: sidebarBg, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden", flexShrink: 0 }}>
       {/* Brand */}
       <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, position: "relative", zIndex: 1 }}>
         {!collapsed && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img src="/school_seal.png" alt="CIS Logo" style={{ width: brandLogoSize, height: brandLogoSize, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+            {schoolLogo ? (
+              <img src={schoolLogo} alt={`${schoolDisplayName} Logo`} style={{ width: brandLogoSize, height: brandLogoSize, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+            ) : (
+              <div style={{ width: brandLogoSize, height: brandLogoSize, borderRadius: 8, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <GraduationCap size={Math.round(brandLogoSize * 0.7)} color={isGold ? C.gold : "#fff"} />
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", justifyContent: "center" }}>
               <div style={{ color: "#ffffff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                Calulut
+                {schoolDisplayName}
               </div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 3, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", lineHeight: 1 }}>
                 {brandSubtitle}
@@ -82,7 +94,15 @@ export function PortalSidebar<T extends string>({
             </div>
           </div>
         )}
-        {collapsed && <img src="/school_seal.png" alt="CIS Logo" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />}
+        {collapsed && (
+          schoolLogo ? (
+            <img src={schoolLogo} alt={`${schoolDisplayName} Logo`} style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          ) : (
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <GraduationCap size={22} color={isGold ? C.gold : "#fff"} />
+            </div>
+          )
+        )}
       </div>
 
       {/* Nav */}

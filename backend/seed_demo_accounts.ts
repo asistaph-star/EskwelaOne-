@@ -1,8 +1,18 @@
-import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+if ((process.env.NODE_ENV || '').trim() === 'test' || process.env.TARGET_DB === 'test') {
+  const testEnvPath = path.resolve(process.cwd(), '.env.test');
+  if (fs.existsSync(testEnvPath)) {
+    dotenv.config({ path: testEnvPath, override: true });
+  }
+}
+
+import './src/config/env.js';
+import prisma from './src/config/database.js';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding demo accounts and relational data...');
@@ -25,15 +35,17 @@ async function main() {
   const roleAdmin = await ensureRole('Admin');
   const roleRegistrar = await ensureRole('Registrar');
   const roleGateOperator = await ensureRole('GateOperator');
+  const roleITAdmin = await ensureRole('ITAdmin');
 
   // Helper to create user
-  async function ensureUser(id: string, email: string, firstName: string, lastName: string, roleId: string) {
+  async function ensureUser(id: string, email: string, schoolId: string, firstName: string, lastName: string, roleId: string) {
     const user = await prisma.user.upsert({
       where: { id },
-      update: { email, password_hash: passwordHash, first_name: firstName, last_name: lastName },
+      update: { email, school_id: schoolId, password_hash: passwordHash, first_name: firstName, last_name: lastName },
       create: {
         id,
         email,
+        school_id: schoolId,
         password_hash: passwordHash,
         first_name: firstName,
         last_name: lastName,
@@ -50,14 +62,15 @@ async function main() {
     return user;
   }
 
-  const studentUser = await ensureUser('demo-student-1', 'student@demo.com', 'Juan', 'Dela Cruz', roleStudent.id);
-  const teacherUser = await ensureUser('demo-teacher-1', 'teacher@demo.com', 'Maria', 'Clara', roleTeacher.id);
-  const nurseUser = await ensureUser('demo-nurse-1', 'nurse@demo.com', 'Florence', 'Nightingale', roleNurse.id);
-  const principalUser = await ensureUser('demo-principal-1', 'principal@demo.com', 'Jose', 'Rizal', rolePrincipal.id);
-  const guidanceUser = await ensureUser('demo-guidance-1', 'guidance@demo.com', 'Sigmund', 'Freud', roleGuidance.id);
-  const adminUser = await ensureUser('demo-admin-1', 'admin@demo.com', 'System', 'Admin', roleAdmin.id);
-  const registrarUser = await ensureUser('demo-registrar-1', 'registrar@demo.com', 'Records', 'Officer', roleRegistrar.id);
-  const gateUser = await ensureUser('demo-gate-1', 'gate@demo.com', 'Gate', 'Operator', roleGateOperator.id);
+  const studentUser = await ensureUser('demo-student-1', 'student@demo.com', '2026-00001', 'Juan', 'Dela Cruz', roleStudent.id);
+  const teacherUser = await ensureUser('demo-teacher-1', 'teacher@demo.com', 'EMP-T-001', 'Maria', 'Clara', roleTeacher.id);
+  const nurseUser = await ensureUser('demo-nurse-1', 'nurse@demo.com', 'EMP-N-001', 'Florence', 'Nightingale', roleNurse.id);
+  const principalUser = await ensureUser('demo-principal-1', 'principal@demo.com', 'EMP-P-001', 'Jose', 'Rizal', rolePrincipal.id);
+  const guidanceUser = await ensureUser('demo-guidance-1', 'guidance@demo.com', 'EMP-G-001', 'Sigmund', 'Freud', roleGuidance.id);
+  const adminUser = await ensureUser('demo-admin-1', 'admin@demo.com', 'ADM-001', 'System', 'Admin', roleAdmin.id);
+  const registrarUser = await ensureUser('demo-registrar-1', 'registrar@demo.com', 'EMP-R-001', 'Records', 'Officer', roleRegistrar.id);
+  const gateUser = await ensureUser('demo-gate-1', 'gate@demo.com', 'GATE-001', 'Gate', 'Operator', roleGateOperator.id);
+  const itAdminUser = await ensureUser('demo-itadmin-1', 'itadmin@demo.com', 'IT-001', 'IT', 'Admin', roleITAdmin.id);
 
   // Ensure Academic Year & Term
   const ayId = 'demo-ay-2026';
@@ -127,10 +140,11 @@ async function main() {
   // Ensure Student Profile
   await prisma.student.upsert({
     where: { user_id: studentUser.id },
-    update: { current_section_id: finalSectionId },
+    update: { current_section_id: finalSectionId, student_number: '2026-00001' },
     create: {
       id: studentUser.id,
       user_id: studentUser.id,
+      student_number: '2026-00001',
       lrn: '123456789012',
       grade_level: 10,
       current_section_id: finalSectionId,
@@ -163,6 +177,26 @@ async function main() {
     where: { user_id: principalUser.id },
     update: {},
     create: { id: principalUser.id, user_id: principalUser.id, employee_id: 'EMP-P-001', department: 'Administration', position: 'Principal' }
+  });
+  await prisma.staff.upsert({
+    where: { user_id: itAdminUser.id },
+    update: {},
+    create: { id: itAdminUser.id, user_id: itAdminUser.id, employee_id: 'IT-001', department: 'Information Technology', position: 'IT Administrator' }
+  });
+  await prisma.staff.upsert({
+    where: { user_id: adminUser.id },
+    update: {},
+    create: { id: adminUser.id, user_id: adminUser.id, employee_id: 'ADM-001', department: 'Administration', position: 'Administrative Officer' }
+  });
+  await prisma.staff.upsert({
+    where: { user_id: registrarUser.id },
+    update: {},
+    create: { id: registrarUser.id, user_id: registrarUser.id, employee_id: 'EMP-R-001', department: 'Registrar Office', position: 'Registrar I' }
+  });
+  await prisma.staff.upsert({
+    where: { user_id: gateUser.id },
+    update: {},
+    create: { id: gateUser.id, user_id: gateUser.id, employee_id: 'GATE-001', department: 'Security', position: 'Gate Operator' }
   });
 
   // Clinic Referral (Nurse)
@@ -231,21 +265,18 @@ async function main() {
   });
 
   // Gate Attendance
-  const gateId = 'demo-gate-1';
-  const existingGate = await prisma.gateAttendance.findFirst({
-    where: { student_id: studentUser.id, date: new Date(new Date().setHours(0,0,0,0)) }
+  const today = new Date(new Date().setHours(0,0,0,0));
+  await prisma.gateAttendance.upsert({
+    where: { student_id_date: { student_id: studentUser.id, date: today } },
+    update: {},
+    create: {
+      id: 'demo-gate-att-1',
+      student_id: studentUser.id,
+      date: today,
+      time_in: new Date(),
+      status: 'Present'
+    }
   });
-  if (!existingGate) {
-    await prisma.gateAttendance.create({
-      data: {
-        id: gateId,
-        student_id: studentUser.id,
-        date: new Date(new Date().setHours(0,0,0,0)),
-        time_in: new Date(),
-        status: 'Present'
-      }
-    });
-  }
 
   console.log('Seed complete!');
   console.log('Demo Credentials (Password: password123):');

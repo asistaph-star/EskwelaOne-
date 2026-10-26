@@ -39,8 +39,10 @@ out/
 
 # Environment variables
 .env
+.env.*
 .env.local
 .env.development.local
+.env.test
 .env.test.local
 .env.production.local
 
@@ -80,4 +82,9 @@ backend/src/scratch_rename.ts
 backend/src/check-terms.ts
 backend/src/check-users.ts
 backend/check_fks.ts
+backend/scripts/verify_rizal_scores_readonly.ts
+storage/
 backend/storage/
+backend/backups/
+*.tar.gz
+

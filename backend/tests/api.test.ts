@@ -61,6 +61,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
     await prisma.user.create({
       data: {
         id: testUserId,
+        school_id: 'TEST-SCH-001',
         email: TEST_EMAIL,
         password_hash,
         first_name: 'Test',
@@ -75,6 +76,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
         student: {
           create: {
             id: testStudentId,
+            student_number: 'TEST-SCH-001',
             lrn: TEST_LRN,
             grade_level: 10
           }
@@ -105,7 +107,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
     it('should reject invalid login', async () => {
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: TEST_EMAIL, password: 'WrongPassword' });
+        .send({ schoolId: 'TEST-SCH-001', password: 'WrongPassword' });
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
     });
@@ -113,7 +115,7 @@ describe('Phase 1A: Backend Regression Tests', () => {
     it('should allow valid login', async () => {
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: TEST_EMAIL, password: TEST_PASSWORD });
+        .send({ schoolId: 'TEST-SCH-001', password: TEST_PASSWORD });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.headers['set-cookie']).toBeDefined();

@@ -1,8 +1,13 @@
 import app from './app.js';
-import { config } from './config/env.js';
+import { config, assertProductionConfig } from './config/env.js';
 import prisma from './config/database.js';
 
 async function main() {
+  // Fail fast immediately if running in production with unsafe configuration
+  if (config.nodeEnv === 'production') {
+    assertProductionConfig();
+  }
+
   // Verify database connection
   try {
     await prisma.$connect();

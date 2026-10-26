@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requirePermissions, AuthenticatedUser } from '../../common/middleware/auth.js';
+import { AppError } from '../../common/middleware/errorHandler.js';
 import { clinicInventorySchema, consumeInventorySchema } from './clinicInventory.schema.js';
 import { getInventoryItems, createInventoryItem, consumeInventoryStock } from './clinicInventory.service.js';
 
@@ -10,6 +11,10 @@ const router = Router();
  */
 router.get('/', requirePermissions('clinic:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const user = (req as any).user as AuthenticatedUser;
+    if (user.roles?.includes('Student')) {
+      throw new AppError(403, 'FORBIDDEN', 'Students cannot access clinic inventory.');
+    }
     const items = await getInventoryItems();
     res.json({ success: true, data: items });
   } catch (err) {

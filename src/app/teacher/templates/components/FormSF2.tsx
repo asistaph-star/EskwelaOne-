@@ -1,6 +1,7 @@
 import React from 'react';
 import { C } from '../../../shared/constants/tokens';
 import { SECTION_GRADES } from '../../../shared/constants/seedData';
+import { useSchoolSettings } from '../../../shared/context/SchoolSettingsContext';
 
 interface FormSF2Props {
   section: string;
@@ -9,6 +10,7 @@ interface FormSF2Props {
 }
 
 export function FormSF2({ section, month, sy }: FormSF2Props) {
+  const { settings } = useSchoolSettings();
   // Resolve section name to map to seed data keys
   const sectionKey = section.includes("Rizal") ? "Rizal (Gr.8)" :
                      section.includes("Einstein") ? "Einstein (Gr.9)" :
@@ -172,7 +174,7 @@ export function FormSF2({ section, month, sy }: FormSF2Props) {
         </div>
         <div>
           <span style={{ fontWeight: "bold", fontSize: 8 }}>School Name:</span>{" "}
-          <span style={{ borderBottom: "1px solid #000", paddingBottom: 1, fontWeight: 600 }}>ICT High School</span>
+          <span style={{ borderBottom: "1px solid #000", paddingBottom: 1, fontWeight: 600 }}>{settings.schoolName || "DigiSkwela"}</span>
         </div>
         <div>
           <span style={{ fontWeight: "bold", fontSize: 8 }}>Grade & Section:</span>{" "}
@@ -341,7 +343,7 @@ export function FormSF2({ section, month, sy }: FormSF2Props) {
             </div>
           </div>
           <div style={{ fontSize: 7, color: "#666", border: "1px dashed #ccc", padding: 6, borderRadius: 3, marginTop: 10 }}>
-            <strong>Generating Agency:</strong> Calulut Integrated School Forms & Records Core Module.<br />
+            <strong>Generating Agency:</strong> {settings.schoolName || "DigiSkwela"} Forms & Records Core Module.<br />
             <strong>DepEd Compliance:</strong> Matches formatting and computation guidelines for Philippine Public Schools.
           </div>
         </div>

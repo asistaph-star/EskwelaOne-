@@ -1,12 +1,42 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { analyzeRequest, buildRequestPlan, isDomainNegated } from '../src/ai/orchestration/requestPlanner.js';
 import { DOMAIN_CATALOG } from '../src/ai/orchestration/domainCatalog.js';
 import { validateAndRemedyCompleteness } from '../src/ai/orchestration/completenessValidator.js';
 import { principalTools } from '../src/ai/tools/definitions/principalTools.js';
 import { dispatchTool } from '../src/ai/tools/toolDispatcher.js';
+import prisma from '../src/config/database.js';
 
 describe('DIGISKWELA — PRINCIPAL BENCHMARK DEFECT PASS DETERMINISTIC SUITE', () => {
   const allowedTools = new Set(principalTools.map(t => t.name));
+  let benchBehaviorLogId: string | null = null;
+
+  beforeAll(async () => {
+    const count = await prisma.behaviorLog.count();
+    if (count === 0) {
+      const student = await prisma.student.findFirst();
+      const reporter = await prisma.user.findFirst();
+      if (student && reporter) {
+        benchBehaviorLogId = `bench-beh-${Date.now()}`;
+        await prisma.behaviorLog.create({
+          data: {
+            id: benchBehaviorLogId,
+            student_id: student.id,
+            type: 'Classroom Disruption',
+            date: new Date(),
+            status: 'Reported',
+            note: 'Benchmark test note',
+            reported_by: reporter.id,
+          },
+        });
+      }
+    }
+  });
+
+  afterAll(async () => {
+    if (benchBehaviorLogId) {
+      await prisma.behaviorLog.deleteMany({ where: { id: benchBehaviorLogId } });
+    }
+  });
 
   // ─── A. NEGATION BUG ────────────────────────────────────────────────────────
   it('TC-BENCH-01: "without a gate check-in" phrases MUST NOT exclude faculty_attendance', () => {

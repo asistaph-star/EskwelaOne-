@@ -13,6 +13,7 @@ export interface ReportCardPDFProps {
   };
   subjects: SubjectGrade[];
   schoolYear?: string;
+  schoolName?: string;
 }
 
 /**
@@ -21,7 +22,8 @@ export interface ReportCardPDFProps {
 export async function generateReportCardPDF({
   student,
   subjects,
-  schoolYear = "2025–2026"
+  schoolYear = "2025–2026",
+  schoolName
 }: ReportCardPDFProps): Promise<void> {
   const element = document.getElementById('form138-print-root') || document.getElementById('printable-report-card');
   const safeFilename = `SF9_Form138_ReportCard_${(student.name || 'Student').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
@@ -89,7 +91,7 @@ export async function generateReportCardPDF({
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('CALULUT INTEGRATED SCHOOL', pageWidth / 2, y + 10, { align: 'center' });
+  doc.text((schoolName || 'DIGISKWELA OFFICIAL REPORT').toUpperCase(), pageWidth / 2, y + 10, { align: 'center' });
 
   doc.save(safeFilename);
 }

@@ -8,10 +8,12 @@ import {
 
 import { authApi } from '../../../api/auth.api';
 import { useAppContext } from '../../shared/AppContext';
+import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 
 export function LoginScreen() {
   const { setCurrentUser } = useAppContext();
-  const [email, setEmail] = useState("");
+  const { settings } = useSchoolSettings();
+  const [schoolId, setSchoolId] = useState("");
   const [pass, setPass] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,18 +22,20 @@ export function LoginScreen() {
 
   const [error, setError] = useState("");
 
-  async function handleDirectLogin(loginEmail: string, loginPass: string) {
+  async function handleDirectLogin(loginSchoolId: string, loginPass: string) {
     setLoading(true);
     setError("");
     try {
-      const { user } = await authApi.login({ email: loginEmail, password: loginPass });
+      const { user } = await authApi.login({ schoolId: loginSchoolId.trim(), password: loginPass });
       setCurrentUser({
         id: user.id,
+        schoolId: user.schoolId,
         name: `${user.firstName} ${user.lastName}`,
         role: user.roles?.[0] || '',
         permissions: user.permissions || [],
         rawRoles: user.roles || [],
-        studentProfile: user.studentProfile
+        studentProfile: user.studentProfile,
+        mustChangePassword: !!user.mustChangePassword,
       });
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
@@ -42,17 +46,17 @@ export function LoginScreen() {
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !pass) {
-      setError("Please enter your email and password.");
+    if (!schoolId || !pass) {
+      setError("Please enter your School ID and password.");
       return;
     }
-    await handleDirectLogin(email, pass);
+    await handleDirectLogin(schoolId, pass);
   }
 
-  const handleDemoLogin = (demoEmail: string) => {
-    setEmail(demoEmail);
+  const handleDemoLogin = (demoSchoolId: string) => {
+    setSchoolId(demoSchoolId);
     setPass("password123");
-    handleDirectLogin(demoEmail, "password123");
+    handleDirectLogin(demoSchoolId, "password123");
   };
 
   return (
@@ -63,7 +67,9 @@ export function LoginScreen() {
         <div style={{
           position: "absolute",
           inset: 0,
-          background: `linear-gradient(135deg, rgba(10,25,47,1) 0%, rgba(2,6,23,1) 100%)`
+          background: settings.loginBackgroundUrl
+            ? `url(${settings.loginBackgroundUrl}) center/cover no-repeat`
+            : `linear-gradient(135deg, ${settings.primaryColor || '#0A192F'} 0%, ${settings.secondaryColor || '#020617'} 100%)`
         }} />
       </div>
       {/* ── LEFT BRAND PANEL (58%) ── */}
@@ -71,17 +77,25 @@ export function LoginScreen() {
 
         {/* Top Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <img src="/school_seal.png" alt="CIS Logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="School Logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <GraduationCap size={26} color="#fff" />
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", overflow: "hidden", justifyContent: "center" }}>
             <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 600, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-              Calulut Integrated School
+              {settings.schoolName || "DigiSkwela"}
             </div>
           </div>
         </div>
 
         {/* Middle hero */}
         <div style={{ maxWidth: 500, margin: "auto 0" }}>
-          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 46, fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 16px" }}>Education<br />Shapes the Future</h1>
+          <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 44, fontWeight: 700, color: "#fff", lineHeight: 1.15, margin: "0 0 16px" }}>
+            {settings.loginWelcomeText || "Education Shapes the Future"}
+          </h1>
           <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, margin: "0 0 28px" }}>Empowering every learner, supporting every educator, and building a better tomorrow together.</p>
 
           {/* Commitment banner */}
@@ -135,14 +149,14 @@ export function LoginScreen() {
                 {error}
               </div>
             )}
-            {/* Email */}
+            {/* School ID */}
             <div style={{ marginBottom: 12 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5 }}>Email Address</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 5 }}>School ID</label>
               <div style={{ position: "relative" }}>
-                <Mail size={14} color={C.t3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your institutional email"
-                  onFocus={() => setFocused("e")} onBlur={() => setFocused(null)}
-                  style={{ width: "100%", boxSizing: "border-box", border: focused === "e" ? `1.5px solid ${C.m700}` : `1px solid ${C.borderMed}`, borderRadius: 6, padding: "10px 12px 10px 34px", fontSize: 12.5, color: C.t1, background: focused === "e" ? "#fff" : C.m50, outline: "none", transition: "all 0.15s", fontFamily: "'Inter',sans-serif" }} />
+                <ShieldCheck size={14} color={C.t3} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+                <input type="text" value={schoolId} onChange={e => setSchoolId(e.target.value)} placeholder="Enter your School ID"
+                  onFocus={() => setFocused("s")} onBlur={() => setFocused(null)}
+                  style={{ width: "100%", boxSizing: "border-box", border: focused === "s" ? `1.5px solid ${C.m700}` : `1px solid ${C.borderMed}`, borderRadius: 6, padding: "10px 12px 10px 34px", fontSize: 12.5, color: C.t1, background: focused === "s" ? "#fff" : C.m50, outline: "none", transition: "all 0.15s", fontFamily: "'Inter',sans-serif" }} />
               </div>
             </div>
 
@@ -177,7 +191,17 @@ export function LoginScreen() {
               onMouseEnter={e => { if (!loading) e.currentTarget.style.background = C.m800; }}
               onMouseLeave={e => { if (!loading) e.currentTarget.style.background = C.m700; }}
             >
-              {loading ? (<><svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: "spin 0.8s linear infinite" }}><circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" /><path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" /></svg>Signing in…</>) : (<>Sign In</>)}
+              {loading ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 16 16" style={{ animation: "spin 0.8s linear infinite" }}>
+                    <circle cx="8" cy="8" r="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+                    <path d="M8 2A6 6 0 0 1 14 8" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span>Signing in…</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
             </button>
           </form>
 
@@ -207,8 +231,6 @@ export function LoginScreen() {
           </div>
         </div>
       </div>
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
     </div>
   );
 }

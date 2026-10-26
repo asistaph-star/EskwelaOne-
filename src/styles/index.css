@@ -47,7 +47,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url('/school_seal.png');
+  background-image: var(--school-watermark, none);
   background-size: 850px;
   background-repeat: no-repeat;
   background-position: center calc(50% + 28px);
@@ -55,3 +55,21 @@
   pointer-events: none;
   z-index: -1;
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

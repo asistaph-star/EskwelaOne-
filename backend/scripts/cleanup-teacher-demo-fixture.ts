@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import '../src/config/env.js';
+import prisma from '../src/config/database.js';
 
 // Hard-block execution in production
 if (process.env.NODE_ENV === 'production') {

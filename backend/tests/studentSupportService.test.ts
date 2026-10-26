@@ -67,7 +67,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
 
   // ─── 2. Missing Score Parity & Zero-Score Invariant ────────────────────────
   it('C1-PARITY-01: Missing score parity matches getMyIncompleteGrades: exactly 6 missing cells across 4 students', async () => {
-    const res = await getTeacherStudentSupportIndicators('demo-teacher-1', { term: 'T1' });
+    const res = await getTeacherStudentSupportIndicators('demo-teacher-1', { sectionId: 'fix-sec-teacher-tests', term: 'T1' });
     expect(res).toBeDefined();
 
     // Verify missing scores breakdown
@@ -618,7 +618,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
   it('C1-TERM-02: Scoping by term=T2 returns 0 below-passing and 0 missing scores in fixture, while attendance is date-window scoped', async () => {
     // Teacher endpoint
     const resTeacher = await request(app)
-      .get('/api/student-support/teacher/indicators?term=T2')
+      .get('/api/student-support/teacher/indicators?sectionId=fix-sec-teacher-tests&term=T2')
       .set('Authorization', `Bearer ${teacherToken}`);
     expect(resTeacher.status).toBe(200);
     const tData = resTeacher.body.data;
@@ -636,7 +636,7 @@ describe('DIGISKWELA — PHASE C1: STUDENT SUPPORT SERVICE & ENDPOINTS', () => {
 
     // Principal endpoint
     const resPrin = await request(app)
-      .get('/api/student-support/principal/aggregate?term=T2')
+      .get('/api/student-support/principal/aggregate?sectionId=fix-sec-teacher-tests&term=T2')
       .set('Authorization', `Bearer ${principalToken}`);
     expect(resPrin.status).toBe(200);
     expect(resPrin.body.data.totals.studentsBelowPassingCount).toBe(0);

@@ -81,7 +81,7 @@ export class ClinicRecordsService {
       action: 'CLINIC_RECORD_CREATED',
       resourceType: 'clinic_record',
       resourceId: record.id,
-      newState: { studentId: data.studentId, symptoms: data.symptoms },
+      newState: { studentId: data.studentId },
       correlationId,
     });
 

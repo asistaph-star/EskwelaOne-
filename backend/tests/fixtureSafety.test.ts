@@ -73,7 +73,7 @@ describe('DIGISKWELA — TEACHER DEMO FIXTURE SECURITY & ISOLATION INVARIANTS', 
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          email: targetUser.email,
+          schoolId: targetUser.school_id,
           password: 'AttemptLoginPassword123!'
         });
 

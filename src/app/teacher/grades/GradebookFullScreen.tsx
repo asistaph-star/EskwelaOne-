@@ -88,7 +88,14 @@ export function GradebookFullScreen({ classId, onBack, hideBack=false }:{ classI
     setAllData(prev=>({...prev,[term]:{...prev[term],wwItems:[...prev[term].wwItems,{id:`ww${n}`,label:`WW ${n}`,max:100}]}}));
   }
   function deleteWW(id:string) {
-    setAllData(prev=>({...prev,[term]:{...prev[term],wwItems:prev[term].wwItems.filter(x=>x.id!==id)}}));
+    setAllData(prev=>({
+      ...prev,
+      [term]:{
+        ...prev[term],
+        wwItems:prev[term].wwItems.filter(x=>x.id!==id),
+        deletedColumnIds:[...(prev[term].deletedColumnIds || []), id]
+      }
+    }));
   }
 
   function addPT() {
@@ -97,7 +104,14 @@ export function GradebookFullScreen({ classId, onBack, hideBack=false }:{ classI
   }
   /* ── update max for an activity in the active term ── */
   function deletePT(id:string) {
-    setAllData(prev=>({...prev,[term]:{...prev[term],ptItems:prev[term].ptItems.filter(x=>x.id!==id)}}));
+    setAllData(prev=>({
+      ...prev,
+      [term]:{
+        ...prev[term],
+        ptItems:prev[term].ptItems.filter(x=>x.id!==id),
+        deletedColumnIds:[...(prev[term].deletedColumnIds || []), id]
+      }
+    }));
   }
 
   function updateWWMax(id:string, max:number) {
@@ -320,8 +334,17 @@ export function GradebookFullScreen({ classId, onBack, hideBack=false }:{ classI
             setIsLoading(true);
             import('../../../api/client').then(({ apiClient }) => {
               apiClient.post('/gradebooks/ledger', { classId: classId.toString(), terms: allData })
-                .then(() => alert("Grades saved successfully!"))
-                .catch((err: any) => alert("Failed to save grades: " + err.message))
+                .then(() => {
+                  alert("Grades saved successfully!");
+                  return apiClient.get(`/gradebooks/ledger?classId=${classId}`);
+                })
+                .then((res: any) => {
+                  if (res) {
+                    setAllData(res.terms || {});
+                    setRoster(res.roster || []);
+                  }
+                })
+                .catch((err: any) => alert("Failed to save grades: " + (err.response?.data?.error?.message || err.message)))
                 .finally(() => setIsLoading(false));
             });
           }} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 14px",
