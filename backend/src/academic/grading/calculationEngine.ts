@@ -229,9 +229,17 @@ function findMissingAssessments(
       missing.push({ type: 'PT', id: item.id, label: item.label });
     }
   }
-  if (input.st1.score === null) missing.push({ type: 'ST1' });
-  if (input.st2.score === null) missing.push({ type: 'ST2' });
-  if (input.te.score  === null) missing.push({ type: 'TE'  });
+  if (input.dynamicExams && input.dynamicExams.length > 0) {
+    for (const dex of input.dynamicExams) {
+      if (dex.score === null) {
+        missing.push({ type: 'EX', id: dex.id, label: dex.label });
+      }
+    }
+  } else {
+    if (input.st1 && input.st1.score === null) missing.push({ type: 'ST1' });
+    if (input.st2 && input.st2.score === null) missing.push({ type: 'ST2' });
+    if (input.te && input.te.score  === null) missing.push({ type: 'TE'  });
+  }
 
   return missing;
 }
@@ -278,14 +286,31 @@ export function calculateStudentTermGrade(
     if (err) validationErrors.push(err);
   }
 
-  const st1Err = validateExamScore(input.st1, 'ST1');
-  if (st1Err) validationErrors.push(st1Err);
-
-  const st2Err = validateExamScore(input.st2, 'ST2');
-  if (st2Err) validationErrors.push(st2Err);
-
-  const teErr = validateExamScore(input.te, 'TE');
-  if (teErr) validationErrors.push(teErr);
+  if (input.dynamicExams && input.dynamicExams.length > 0) {
+    for (const dex of input.dynamicExams) {
+      if (!Number.isFinite(dex.maxScore) || dex.maxScore <= 0) {
+        validationErrors.push(`Exam "${dex.label || dex.id}": maxScore must be a positive finite number.`);
+      }
+      if (dex.score !== null) {
+        if (!Number.isFinite(dex.score) || dex.score < 0 || dex.score > dex.maxScore) {
+          validationErrors.push(`Exam "${dex.label || dex.id}": score must be between 0 and maxScore.`);
+        }
+      }
+    }
+  } else {
+    if (input.st1) {
+      const st1Err = validateExamScore(input.st1, 'ST1');
+      if (st1Err) validationErrors.push(st1Err);
+    }
+    if (input.st2) {
+      const st2Err = validateExamScore(input.st2, 'ST2');
+      if (st2Err) validationErrors.push(st2Err);
+    }
+    if (input.te) {
+      const teErr = validateExamScore(input.te, 'TE');
+      if (teErr) validationErrors.push(teErr);
+    }
+  }
 
   // If validation errors exist, return immediately — no grade produced
   if (validationErrors.length > 0) {
@@ -325,26 +350,63 @@ export function calculateStudentTermGrade(
     ? calcComponentScore(input.ptScores, policy.weights.ptWeight)
     : null;
 
-  const exResult = calcExamScore(
-    input.st1,
-    input.st2,
-    input.te,
-    policy.examWeights,
-    policy.weights.exWeight,
-  );
+  let exResult: ExamComponentResult;
+  if (input.dynamicExams && input.dynamicExams.length > 0) {
+    const totalWeight = input.dynamicExams.reduce((s, it) => s + (it.weight || 0), 0) || 100;
+    let allPresent = true;
+    let examPS = 0;
+    for (const it of input.dynamicExams) {
+      if (it.score === null || it.maxScore <= 0) {
+        allPresent = false;
+        break;
+      }
+      const itemPS = (it.score / it.maxScore) * 100;
+      examPS += itemPS * ((it.weight || 0) / totalWeight);
+    }
+
+    const examPercentageScore = allPresent ? examPS : null;
+    const weightedScore = (allPresent && examPercentageScore !== null)
+      ? roundHalfUp(examPercentageScore * policy.weights.exWeight, 2)
+      : null;
+
+    exResult = {
+      st1PercentageScore: input.dynamicExams[0]?.score !== null && input.dynamicExams[0]?.maxScore > 0 ? (input.dynamicExams[0].score! / input.dynamicExams[0].maxScore) * 100 : null,
+      st2PercentageScore: input.dynamicExams[1]?.score !== null && input.dynamicExams[1]?.maxScore > 0 ? (input.dynamicExams[1].score! / input.dynamicExams[1].maxScore) * 100 : null,
+      tePercentageScore:  input.dynamicExams[2]?.score !== null && input.dynamicExams[2]?.maxScore > 0 ? (input.dynamicExams[2].score! / input.dynamicExams[2].maxScore) * 100 : null,
+      examPercentageScore,
+      weightedScore,
+    };
+  } else {
+    exResult = calcExamScore(
+      input.st1 ?? { score: null, maxScore: 25 },
+      input.st2 ?? { score: null, maxScore: 25 },
+      input.te  ?? { score: null, maxScore: 50 },
+      policy.examWeights,
+      policy.weights.exWeight,
+    );
+  }
 
   // ── 4. Compute Initial Grade ─────────────────────────────────────────────────
-  // Only when all components are available AND complete
+  // Only when assessments are complete and at least one score is recorded
   let initialGrade: number | null = null;
   let termGrade:    number | null = null;
 
+  const hasRecordedScore =
+    input.wwScores.some(s => s.score !== null) ||
+    input.ptScores.some(s => s.score !== null) ||
+    (input.dynamicExams && input.dynamicExams.some(e => e.score !== null)) ||
+    (input.st1?.score !== null && input.st1?.score !== undefined) ||
+    (input.st2?.score !== null && input.st2?.score !== undefined) ||
+    (input.te?.score !== null && input.te?.score !== undefined);
+
   if (
     isComplete &&
-    wwResult !== null &&
-    ptResult !== null &&
+    hasRecordedScore &&
     exResult.weightedScore !== null
   ) {
-    const rawIG = wwResult.weightedScore + ptResult.weightedScore + exResult.weightedScore;
+    const wwWS = wwResult ? wwResult.weightedScore : 0;
+    const ptWS = ptResult ? ptResult.weightedScore : 0;
+    const rawIG = wwWS + ptWS + exResult.weightedScore;
     initialGrade = roundHalfUp(rawIG, 2);
 
     // ── 5. Transmute to Term Grade ─────────────────────────────────────────────

@@ -590,7 +590,7 @@ export function AppointmentsScreen() {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>From:</span>
-                  <span style={{ fontSize: 11, color: C.t1 }}>{settings.schoolContactEmail || 'School Administration'}</span>
+                  <span style={{ fontSize: 11, color: C.t1 }}>{settings.contactEmail || 'School Administration'}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, width: 50 }}>Subject:</span>

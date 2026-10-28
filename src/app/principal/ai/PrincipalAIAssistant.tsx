@@ -11,8 +11,8 @@ import { PrincipalAssistantDrawer } from './PrincipalAssistantDrawer.js';
 interface PrincipalAIAssistantProps {
   onNavigate?: (screen: PScreen | any) => void;
   currentScreen?: PScreen | any;
-  portal?: 'Principal' | 'Teacher';
-  role?: 'Principal' | 'Teacher';
+  portal?: 'Principal' | 'Teacher' | 'Nurse' | 'Guidance' | 'Registrar' | 'Admin' | string;
+  role?: string;
 }
 
 export function PrincipalAIAssistant({ 

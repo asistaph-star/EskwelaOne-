@@ -1,6 +1,7 @@
 
 
 export const C = {
+  navy: "#0A192F", navyMuted: "#64748B", slate: "#64748B",
   m900: "#0A192F", m800: "#112240", m700: "#1D4ED8",
   m600: "#2563EB", m500: "#3B82F6", m200: "#BFDBFE", m100: "#DBEAFE", m50: "#EFF6FF",
   gold: "#F59E0B", goldLight: "#FEF3C7",

@@ -9,7 +9,7 @@ import { GStudentRecordsScreen } from './records/GStudentRecordsScreen';
 import { StubScreen } from '../shared/components/StubScreen';
 import { Settings, HelpCircle, Bell } from 'lucide-react';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
-import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { PrincipalAIAssistant } from '../principal/ai/PrincipalAIAssistant';
 import { useAppContext } from '../shared/AppContext';
 
 export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
@@ -79,7 +79,7 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
         )}
       </div>
 
-      <AIAssistantWidget role="Guidance Counselor" />
+      <PrincipalAIAssistant portal="Guidance" role="Guidance Counselor" />
     </div>
   );
 }

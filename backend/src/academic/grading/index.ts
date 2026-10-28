@@ -36,6 +36,7 @@ export {
   zeroBasedGrade,
   applyTransmutation,
   TransmutationError,
+  getPerformanceDescriptor,
   ADJUSTED_PASSING_IG_THRESHOLD,
   ADJUSTED_TABLE_2026,
 } from './transmutation.js';

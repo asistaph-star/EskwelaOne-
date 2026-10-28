@@ -26,15 +26,15 @@ function Stamp({ label, color, bg, border }: { label: string; color: string; bg:
   );
 }
 
-export const RC_SUBJECTS = [
-  { name: "Filipino", short: "Filipino", term1: 89.5, term2: 92.0, term3: 90.8 },
-  { name: "English", short: "English", term1: 90.2, term2: 91.4, term3: 88.8 },
-  { name: "Mathematics", short: "Math", term1: 83.0, term2: 85.2, term3: 82.6 },
-  { name: "Science", short: "Science", term1: 95.0, term2: 96.5, term3: 94.0 },
-  { name: "Araling Panlipunan", short: "A.P.", term1: 94.8, term2: 96.0, term3: 94.2 },
-  { name: "Technology & Livelihood Educ.", short: "TLE", term1: 91.8, term2: 93.8, term3: 92.5 },
-  { name: "MAPEH", short: "MAPEH", term1: 96.0, term2: 97.2, term3: 95.0 },
-  { name: "Edukasyon sa Pagpapakatao", short: "EsP", term1: 97.8, term2: 98.8, term3: 96.8 },
+export const RC_SUBJECTS: SubjectGradeItem[] = [
+  { name: "Filipino", short: "Filipino", term1: 0, term2: 0, term3: 0 },
+  { name: "English", short: "English", term1: 0, term2: 0, term3: 0 },
+  { name: "Mathematics", short: "Math", term1: 0, term2: 0, term3: 0 },
+  { name: "Science", short: "Science", term1: 0, term2: 0, term3: 0 },
+  { name: "Araling Panlipunan", short: "A.P.", term1: 0, term2: 0, term3: 0 },
+  { name: "Technology & Livelihood Educ.", short: "TLE", term1: 0, term2: 0, term3: 0 },
+  { name: "MAPEH", short: "MAPEH", term1: 0, term2: 0, term3: 0 },
+  { name: "Edukasyon sa Pagpapakatao", short: "EsP", term1: 0, term2: 0, term3: 0 },
 ];
 
 export interface RCStudent {
@@ -57,17 +57,6 @@ export interface SubjectGradeItem {
   term4?: number;
 }
 
-export function getDynamicGrades(surname: string, targetAvg: number) {
-  return RC_SUBJECTS.map((s, i) => {
-    const diff = (s.short === "Math" || s.short === "Science") ? -2 : (s.short === "MAPEH" || s.short === "EsP") ? +2 : 0;
-    const rand = (surname.charCodeAt(0) + i * 7) % 7 - 3;
-    const term1 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + rand)));
-    const term2 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + (rand * -1) % 4)));
-    const term3 = Math.max(60, Math.min(99, Math.round(targetAvg + diff + (rand + 1) % 4)));
-    return { ...s, term1, term2, term3 };
-  });
-}
-
 export function StudentReportCard({ 
   student, 
   subjects,
@@ -81,35 +70,39 @@ export function StudentReportCard({
 }) {
   const { settings } = useSchoolSettings();
   const schoolDisplayName = settings.schoolName || "DigiSkwela Official Academic Record";
-  const schoolAddressDisplay = settings.schoolAddress || "";
+  const schoolAddressDisplay = settings.address || "";
 
-  const subs = subjects && subjects.length > 0
-    ? subjects
-    : student.avg
-      ? getDynamicGrades(student.surname, student.avg)
-      : RC_SUBJECTS;
+  // Strictly legitimate saved grades — no synthetic random generation
+  const subs = subjects && subjects.length > 0 ? subjects : RC_SUBJECTS;
 
+  /**
+   * DepEd Form 138 / SF9-JHS authoritative formula from AGONCILLO ECR & SF9:
+   * =IF(COUNT(T1,T2,T3)<3, "", ROUND(AVERAGE(T1,T2,T3), 0))
+   */
   function calcSubAvg(sg: { term1?: number; term2?: number; term3?: number; term4?: number }) {
-    const terms = [sg.term1, sg.term2, sg.term3].filter((t): t is number => typeof t === 'number' && t > 0);
-    if (terms.length === 0) return 0;
-    const sum = terms.reduce((a, b) => a + b, 0);
-    return Math.round((sum / terms.length) * 10) / 10;
+    if (!sg.term1 || !sg.term2 || !sg.term3 || sg.term1 <= 0 || sg.term2 <= 0 || sg.term3 <= 0) {
+      return 0;
+    }
+    return Math.round((sg.term1 + sg.term2 + sg.term3) / 3);
   }
 
   const term1List = subs.map(s => s.term1).filter((t): t is number => typeof t === 'number' && t > 0);
   const term2List = subs.map(s => s.term2).filter((t): t is number => typeof t === 'number' && t > 0);
   const term3List = subs.map(s => s.term3).filter((t): t is number => typeof t === 'number' && t > 0);
 
-  const t1Avg = term1List.length > 0 ? (term1List.reduce((a, b) => a + b, 0) / term1List.length).toFixed(1) : "-";
-  const t2Avg = term2List.length > 0 ? (term2List.reduce((a, b) => a + b, 0) / term2List.length).toFixed(1) : "-";
-  const t3Avg = term3List.length > 0 ? (term3List.reduce((a, b) => a + b, 0) / term3List.length).toFixed(1) : "-";
+  const t1Avg = term1List.length > 0 ? Math.round(term1List.reduce((a, b) => a + b, 0) / term1List.length).toString() : "-";
+  const t2Avg = term2List.length > 0 ? Math.round(term2List.reduce((a, b) => a + b, 0) / term2List.length).toString() : "-";
+  const t3Avg = term3List.length > 0 ? Math.round(term3List.reduce((a, b) => a + b, 0) / term3List.length).toString() : "-";
 
   const allAvgs = subs.map(s => calcSubAvg(s)).filter(a => a > 0);
-  const genAvg = allAvgs.length > 0 ? Math.round((allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length) * 10) / 10 : 0;
+  const hasAllSubjects = allAvgs.length === subs.length && subs.length > 0;
+  // General Average: integer rounded average of all completed learning areas
+  const genAvg = hasAllSubjects ? Math.round(allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length) : 0;
   const failedCount = allAvgs.filter(a => a < 75).length;
 
   const isPromoted = genAvg >= 75;
   const finalRemark = isPromoted ? (failedCount === 0 ? "PROMOTED" : "CONDITIONAL") : "RETAINED";
+
 
   return (
     <div style={{ 
@@ -266,7 +259,7 @@ export function StudentReportCard({
                         fontFamily: "'JetBrains Mono',monospace",
                         color: val && val >= 90 ? "#15803d" : val && val >= 85 ? "#1e40af" : val && val >= 75 ? "#0f172a" : "#b91c1c"
                       }}>
-                        {val && val > 0 ? val.toFixed(1) : "-"}
+                        {val && val > 0 ? (Number.isInteger(val) ? val : val.toFixed(1)) : "-"}
                       </span>
                     </td>
                   ))}
@@ -278,7 +271,7 @@ export function StudentReportCard({
                       fontFamily: "'JetBrains Mono',monospace", 
                       color: avg < 75 && avg > 0 ? "#b91c1c" : avg >= 90 ? "#15803d" : C.t1 
                     }}>
-                      {avg > 0 ? avg.toFixed(1) : "-"}
+                      {avg > 0 ? avg : "-"}
                     </span>
                   </td>
                   {/* Remarks Badge */}
@@ -319,7 +312,7 @@ export function StudentReportCard({
                   <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 7.5, color: "rgba(255,255,255,0.65)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Final Rating</div>
                     <div style={{ fontSize: 19, fontWeight: 800, color: genAvg >= 75 ? C.gold : "#f87171", fontFamily: "'Plus Jakarta Sans',sans-serif", lineHeight: 1 }}>
-                      {genAvg > 0 ? genAvg.toFixed(1) : "-"}
+                      {genAvg > 0 ? genAvg : "-"}
                     </div>
                   </div>
                   <div style={{ width: 1.5, height: 24, background: "rgba(255,255,255,0.2)" }} />
@@ -375,14 +368,14 @@ export function StudentReportCard({
           </div>
         </div>
 
-        {/* 2. Grading Scale */}
+        {/* 2. Grading Scale (DepEd DO 015, s. 2026) */}
         <div style={{ padding: "10px 14px", borderRight: `1px solid ${C.borderMed}` }}>
           <div style={{ fontSize: 8, fontWeight: 800, color: C.m700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>
-            Descriptors & Grading Scale
+            Descriptors & Grading Scale (DepEd DO 015, s. 2026)
           </div>
           <div style={{ fontSize: 7.5, color: C.t2, lineHeight: 1.35, background: "#fff", padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.borderMed}` }}>
-            <div><strong>90–100:</strong> Outstanding · <strong>85–89:</strong> Very Satisfactory</div>
-            <div><strong>80–84:</strong> Satisfactory · <strong>75–79:</strong> Fairly Satisfactory · <strong>&lt;75:</strong> Failed</div>
+            <div><strong>90–100:</strong> Advancing (A) · <strong>80–89:</strong> Benchmarking (B)</div>
+            <div><strong>75–79:</strong> Connecting (C) · <strong>65–74:</strong> Developing (D) · <strong>&lt;75:</strong> Failed</div>
           </div>
         </div>
 

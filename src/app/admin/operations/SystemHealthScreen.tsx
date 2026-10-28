@@ -227,7 +227,7 @@ export function SystemHealthScreen() {
 
   const isFetchingRef = useRef<boolean>(false);
   const isMountedRef = useRef<boolean>(true);
-  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
 
   const executeFetch = useCallback(async (isManual: boolean = false) => {

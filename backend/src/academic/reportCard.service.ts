@@ -38,9 +38,14 @@ export interface ReportCardDTO {
 }
 
 export async function getReportCardData(studentId: string, actorId: string): Promise<ReportCardDTO> {
-  // 1. Resolve student and current enrollment/section
-  const student = await prisma.student.findUnique({
-    where: { id: studentId },
+  // 1. Resolve student and current enrollment/section (supports both student.id and student.user_id)
+  const student = await prisma.student.findFirst({
+    where: {
+      OR: [
+        { id: studentId },
+        { user_id: studentId },
+      ]
+    },
     include: {
       user: true,
       current_section: {
@@ -62,12 +67,13 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     throw new AppError(422, 'UNPROCESSABLE_ENTITY', 'Student has no active section/enrollment');
   }
 
-  // 2. Authorization: Must be assigned to this section OR be an admin (assuming teachers here)
-  const isAuthorized = student.current_section.assignments.some(a => a.teacher.user_id === actorId);
-  if (!isAuthorized) {
-    // Add global role check if Admin/Principal is implemented. For now, strict teacher assignment rule:
+  // 2. Authorization: Student viewing their own card OR teacher assigned to this section OR Admin/Principal/Registrar
+  const isStudentSelf = student.user_id === actorId || student.id === actorId;
+  const isAuthorizedTeacher = student.current_section.assignments.some(a => a.teacher.user_id === actorId);
+
+  if (!isStudentSelf && !isAuthorizedTeacher) {
     const actorUser = await prisma.user.findUnique({ where: { id: actorId }, include: { user_roles: { include: { role: true } } } });
-    const isGlobalAdmin = actorUser?.user_roles.some(ur => ur.role.name === 'Admin' || ur.role.name === 'Principal');
+    const isGlobalAdmin = actorUser?.user_roles.some(ur => ['Admin', 'Principal', 'Registrar', 'Guidance'].includes(ur.role.name));
     if (!isGlobalAdmin) {
       throw new AppError(403, 'FORBIDDEN', 'You are not authorized to access this student\'s report card.');
     }
@@ -122,7 +128,15 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     let finalRating: number | null = null;
     let remarks: 'PASSED' | 'FAILED' | null = null;
 
-    if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null && sg.T4 !== null) {
+    // In Calulut Integrated School, the academic year consists of 3 terms: T1, T2, T3
+    // Verified Excel formula (AGONCILLO ECR - SEPT4 FINAL GRADES / SF9):
+    // =IF(COUNT(T1, T2, T3) < 3, "", ROUND(AVERAGE(T1, T2, T3), 0))
+    if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null) {
+      finalRating = Math.round((sg.T1 + sg.T2 + sg.T3) / 3);
+      remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
+      totalFinalRating += finalRating;
+      finalRatingCount++;
+    } else if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null && sg.T4 !== null) {
       finalRating = Math.round((sg.T1 + sg.T2 + sg.T3 + sg.T4) / 4);
       remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
       totalFinalRating += finalRating;

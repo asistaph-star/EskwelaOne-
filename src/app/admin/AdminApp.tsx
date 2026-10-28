@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AdminSidebar } from "./shared/AdminSidebar";
+import { PrincipalAIAssistant } from "../principal/ai/PrincipalAIAssistant";
 import { AdminDashboard } from "./dashboard/AdminDashboard";
 import { CreateTeacher } from "./operations/CreateTeacher";
 import { InventoryManagement } from "./operations/InventoryManagement";
@@ -61,6 +62,7 @@ export function AdminApp({ onLogout }: { onLogout: () => void }) {
           {screen === "roles-permissions" && <RolesPermissionsScreen />}
         </main>
       </div>
+      <PrincipalAIAssistant portal="Admin" role="Admin" />
     </div>
   );
 }

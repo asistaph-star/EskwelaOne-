@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { X, BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight } from 'lucide-react';
-import { StudentReportCard, getDynamicGrades } from '../../student/components/StudentReportCard';
+import { StudentReportCard } from '../../student/components/StudentReportCard';
 import { Stamp } from '../../shared/components/Stamp';
+import { getStudentSubjectGrades } from '../../shared/utils/gradesService';
 
 export function StudentDetailOverlay({ student, onClose }: { student:{id:number,surname:string,first:string,avg:number,status:string}, onClose:()=>void }) {
   const [showCard, setShowCard] = useState(false);
   const atRisk = student.status==="At Risk" || student.status==="Failing";
   
-  const dynamicSubs = getDynamicGrades(student.surname, student.avg);
-  const subjectGrades = dynamicSubs.map(sg=>({
-    name:sg.short, full:sg.name, avg: Math.round((sg.term1+sg.term2+sg.term3)/3*10)/10,
-  }));
+  const realSubjectGrades = getStudentSubjectGrades(student.id.toString(), {});
+  const subjectGrades = realSubjectGrades.map(sg => {
+    const validTerms = [sg.term1, sg.term2, sg.term3].filter(t => t > 0);
+    const avg = validTerms.length === 3 ? Math.round((sg.term1 + sg.term2 + sg.term3) / 3) : (validTerms.length > 0 ? Math.round(validTerms.reduce((a, b) => a + b, 0) / validTerms.length) : 0);
+    return {
+      name: sg.short,
+      full: sg.name,
+      avg,
+    };
+  });
 
   return (
     <div style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(15,8,8,0.65)", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"32px 20px", overflowY:"auto" }}
@@ -30,7 +37,7 @@ export function StudentDetailOverlay({ student, onClose }: { student:{id:number,
                 <button onClick={onClose} style={{ width:26, height:26, borderRadius:3, background:"rgba(255,255,255,0.08)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}><X size={14}/></button>
               </div>
             </div>
-            <StudentReportCard student={{ surname:student.surname, first:student.first, lrn:`20000${student.id}`, grade:8, section:"Rizal", adviser:"Ana R. Soriano", gender:"male", avg:student.avg }} />
+            <StudentReportCard student={{ surname:student.surname, first:student.first, lrn:`20000${student.id}`, grade:8, section:"Rizal", adviser:"Ana R. Soriano", gender:"male", avg:student.avg }} subjects={realSubjectGrades} />
           </>
         ) : (
           <>

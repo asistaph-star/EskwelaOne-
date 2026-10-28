@@ -13,7 +13,7 @@ import { StudentDataSearch } from './records/StudentDataSearch';
 import { StubScreen } from '../shared/components/StubScreen';
 import { Settings, HelpCircle, FolderOpen } from 'lucide-react';
 import { X } from 'lucide-react';
-import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { PrincipalAIAssistant } from './ai/PrincipalAIAssistant';
 
 export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen]   = useState<RScreen>("r-dashboard");
@@ -76,7 +76,7 @@ export function RegistrarApp({ onLogout }: { onLogout:()=>void }) {
           )}
         </div>
       </div>
-      <AIAssistantWidget role="Registrar" />
+      <PrincipalAIAssistant portal="Registrar" role="Registrar" />
     </div>
   );
 }

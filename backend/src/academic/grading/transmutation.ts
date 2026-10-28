@@ -255,6 +255,29 @@ export function applyTransmutation(ig: number, policyVersion: GradingPolicyVersi
   }
 }
 
+// ─── Performance Descriptors ──────────────────────────────────────────────────
+
+/**
+ * Resolves the official DepEd / Calulut Integrated School performance descriptor
+ * from a transmuted numerical grade (60-100).
+ * Source: AGONCILLO ECR - SEPT4.xlsx sheet HELPER (Cells F7:H48).
+ *
+ *   90 - 100 : "Advancing"
+ *   80 - 89  : "Benchmarking"
+ *   75 - 79  : "Connecting"
+ *   65 - 74  : "Developing"
+ *   60 - 64  : "Emerging"
+ */
+export function getPerformanceDescriptor(grade: number | null): string | null {
+  if (grade === null || !Number.isFinite(grade)) return null;
+  const rounded = Math.round(grade);
+  if (rounded >= 90) return 'Advancing';
+  if (rounded >= 80) return 'Benchmarking';
+  if (rounded >= 75) return 'Connecting';
+  if (rounded >= 65) return 'Developing';
+  return 'Emerging';
+}
+
 // ─── Module-Level Invariant Verification ─────────────────────────────────────
 
 /**

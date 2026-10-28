@@ -144,7 +144,15 @@ export async function getSF10Data(studentId: string, actorId: string): Promise<S
       let finalRating: number | null = null;
       let remarks: 'PASSED' | 'FAILED' | null = null;
 
-      if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null && sg.T4 !== null) {
+      // In Calulut Integrated School, the academic year consists of 3 terms: T1, T2, T3
+      // Verified Excel formula (AGONCILLO ECR - SEPT4 FINAL GRADES / SF9):
+      // =IF(COUNT(T1, T2, T3) < 3, "", ROUND(AVERAGE(T1, T2, T3), 0))
+      if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null) {
+        finalRating = Math.round((sg.T1 + sg.T2 + sg.T3) / 3);
+        remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
+        totalFinalRating += finalRating;
+        finalRatingCount++;
+      } else if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null && sg.T4 !== null) {
         finalRating = Math.round((sg.T1 + sg.T2 + sg.T3 + sg.T4) / 4);
         remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
         totalFinalRating += finalRating;

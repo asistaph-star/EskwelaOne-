@@ -62,15 +62,31 @@ export interface GradeCardInfo {
 }
 
 export type GbItem = { id: string; label: string; max: number };
+export type ExamItem = { id: string; label: string; max: number; weight: number };
+export type CustomWeights = { ww: number; pt: number; qa: number };
 export type GbGrades = Record<string | number, Record<string, string>>;
 export type TermKey = "T1" | "T2" | "T3" | "T4";
 export interface TermData {
   version?: number;
   wwItems: GbItem[];
   ptItems: GbItem[];
-  qaMax: number;
+  examItems?: ExamItem[];
+  customWeights?: CustomWeights;
+  st1Max?: number;
+  st2Max?: number;
+  teMax?: number;
+  qaMax?: number;
   grades: GbGrades;
   deletedColumnIds?: string[];
+  computed?: Record<string, {
+    initialGrade: number | null;
+    termGrade: number | null;
+    descriptor: string | null;
+    isComplete: boolean;
+    wwResult: any;
+    ptResult: any;
+    exResult: any;
+  }>;
 }
 
 export type CurriculumType = "new" | "old";

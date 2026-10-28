@@ -85,11 +85,11 @@ export function PortalSidebar<T extends string>({
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", justifyContent: "center" }}>
-              <div style={{ color: "#ffffff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
-                {schoolDisplayName}
+              <div style={{ color: "#ffffff", fontSize: 19, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                Calulut
               </div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 3, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", lineHeight: 1 }}>
-                {brandSubtitle}
+                {brandSubtitle || "Integrated School"}
               </div>
             </div>
           </div>

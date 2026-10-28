@@ -1,5 +1,6 @@
 import { TermKey, TermData, GbItem, GbGrades, SubjectHistory, GradeRecord } from '../types';
 import { gradeAvg } from './helpers';
+import { calculateStudentGrade, transmuteInitialGrade, roundHalfUp } from './gradingEngineFrontend';
 
 export interface SubjectGrade {
   name: string;
@@ -505,15 +506,47 @@ export function psFor(sid: number | string, items: GbItem[], g: GbGrades): numbe
 export function computeTermGrade(
   sid: number | string,
   d?: TermData,
-  weights = { ww: 25, pt: 50, qa: 25 }
+  weights?: { ww: number; pt: number; qa: number },
+  subjectType: 'CORE' | 'TECHNICAL' = 'CORE'
 ): number {
   if (!d || !d.grades) return 0;
-  const sg = d.grades[sid] ?? d.grades[sid.toString()] ?? {};
+  
+  // 1. Check precomputed ledger grade if present from authoritative backend
+  const sidKey = sid.toString();
+  if (d.computed && d.computed[sidKey]?.termGrade) {
+    return d.computed[sidKey].termGrade!;
+  }
+
+  const sg = d.grades[sid] ?? d.grades[sidKey] ?? {};
+  
+  // 2. Authoritative DepEd 2026 / Calulut Integrated School calculation
+  const calc = calculateStudentGrade(
+    sg,
+    d.wwItems || [],
+    d.ptItems || [],
+    d.st1Max ?? 25,
+    d.st2Max ?? 25,
+    d.teMax ?? (d.qaMax ?? 50),
+    subjectType
+  );
+
+  if (calc.termGrade !== null) {
+    return calc.termGrade;
+  }
+
+  if (calc.initialGrade !== null && calc.initialGrade > 0) {
+    return transmuteInitialGrade(calc.initialGrade) ?? 0;
+  }
+
+  // Legacy fallback if only single QA was entered without ST1/ST2
   const wwPS = psFor(sid, d.wwItems || [], d.grades);
   const ptPS = psFor(sid, d.ptItems || [], d.grades);
-  const qaVal = parseFloat(sg.qa) || 0;
-  const qaPS = d.qaMax > 0 ? Math.round((qaVal / d.qaMax) * 1000) / 10 : 0;
-  return Math.round((wwPS * (weights.ww / 100) + ptPS * (weights.pt / 100) + qaPS * (weights.qa / 100)) * 10) / 10;
+  const qaVal = parseFloat(sg.qa ?? sg.te) || 0;
+  const maxQA = d.teMax ?? d.qaMax ?? 100;
+  const qaPS = maxQA > 0 ? Math.round((qaVal / maxQA) * 1000) / 10 : 0;
+  const w = weights ?? (subjectType === 'TECHNICAL' ? { ww: 20, pt: 60, qa: 20 } : { ww: 20, pt: 50, qa: 30 });
+  const legacyIG = roundHalfUp(wwPS * (w.ww / 100) + ptPS * (w.pt / 100) + qaPS * (w.qa / 100), 2);
+  return legacyIG > 0 ? (transmuteInitialGrade(legacyIG) ?? 0) : 0;
 }
 
 /**

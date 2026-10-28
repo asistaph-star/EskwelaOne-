@@ -78,6 +78,14 @@ export interface ExamScore {
   maxScore: number;
 }
 
+export interface DynamicExamScore {
+  id:       string;
+  label?:   string;
+  score:    number | null;
+  maxScore: number;
+  weight:   number; // percentage weight within examinations (e.g. 30 for 30%)
+}
+
 /**
  * Complete raw-score payload for one student's term calculation.
  *
@@ -85,12 +93,13 @@ export interface ExamScore {
  * The engine NEVER reads from or writes to the database.
  */
 export interface StudentTermScoreInput {
-  enrollmentId: string;
-  wwScores:     AssessmentScore[];
-  ptScores:     AssessmentScore[];
-  st1:          ExamScore;
-  st2:          ExamScore;
-  te:           ExamScore;
+  enrollmentId:  string;
+  wwScores:      AssessmentScore[];
+  ptScores:      AssessmentScore[];
+  st1?:          ExamScore;
+  st2?:          ExamScore;
+  te?:           ExamScore;
+  dynamicExams?: DynamicExamScore[];
 }
 
 // ─── Policy Configuration ─────────────────────────────────────────────────────
@@ -129,7 +138,7 @@ export interface ExamComponentResult {
 
 /** Reference to a specific missing assessment for diagnostic output. */
 export interface MissingAssessmentRef {
-  type:   'WW' | 'PT' | 'ST1' | 'ST2' | 'TE';
+  type:   'WW' | 'PT' | 'ST1' | 'ST2' | 'TE' | 'EX';
   id?:    string;
   label?: string;
 }

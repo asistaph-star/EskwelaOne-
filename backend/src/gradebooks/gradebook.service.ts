@@ -106,9 +106,9 @@ export async function upsertGrade(
         newState: validatedInput,
         correlationId,
       }, tx);
-
-      return result;
     }
+
+    return result;
   });
 }
 

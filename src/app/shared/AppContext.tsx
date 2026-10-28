@@ -12,6 +12,7 @@ export type GradeStatus = "Draft" | "Submitted" | "Published" | "Returned";
 /** Represents the currently logged-in user identity */
 export interface CurrentUser {
   id: string;
+  schoolId?: string;
   name: string;
   role: string;
   section?: string;

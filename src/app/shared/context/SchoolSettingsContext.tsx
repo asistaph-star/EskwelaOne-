@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { settingsApi, SchoolSettingsData } from '../../../api/settings.api';
 
 export const GENERIC_DEFAULT_SETTINGS: SchoolSettingsData = {
-  schoolName: '',
-  schoolShortName: '',
+  schoolName: 'Calulut Integrated School',
+  schoolShortName: 'CIS',
   logoUrl: null,
   faviconUrl: null,
   loginBackgroundUrl: null,

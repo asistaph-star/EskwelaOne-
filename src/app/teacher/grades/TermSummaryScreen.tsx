@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { ChevronDown, Download, FileText, ArrowRight, BarChart2 } from 'lucide-react';
+import { ChevronDown, Download, FileText } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
 import { academicApi, TeacherAssignment, StudentEnrollment } from '../../../api/academic.api';
-import { gradebookApi, Gradebook, GradebookColumn } from '../../../api/gradebook.api';
+import { gradebookApi, Gradebook } from '../../../api/gradebook.api';
+import {
+  calculateStudentGrade,
+  calculateAnnualFinalGrade,
+  getPerformanceDescriptor,
+  transmuteInitialGrade
+} from '../../shared/utils/gradingEngineFrontend';
 
 export function TermSummaryScreen() {
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
   const [sectionId, setSectionId] = useState<string>("");
   const [roster, setRoster] = useState<StudentEnrollment[]>([]);
   const [gradebooks, setGradebooks] = useState<Record<string, Gradebook>>({});
-  
-  const activeTerms = ["T1", "T2", "T3", "T4"];
+
+  const activeTerms = ["T1", "T2", "T3"];
 
   useEffect(() => {
     academicApi.getMyAssignments('AY2025').then(res => {
@@ -42,52 +48,58 @@ export function TermSummaryScreen() {
     }
   }, [sectionId, assignments]);
 
-  const psFor = (studentEnrollmentId: string, gb: Gradebook | undefined, type: string) => {
-    if (!gb) return 0;
-    const items = gb.columns?.filter(c => c.type === type) || [];
-    let sumS = 0;
-    let sumM = 0;
-    items.forEach(it => {
-      const e = gb.entries?.find(e => e.student_enrollment_id === studentEnrollmentId && e.column_id === it.id && !e.is_superseded);
-      if (e) sumS += e.score;
-      sumM += it.max_score;
-    });
-    return sumM > 0 ? Math.round((sumS / sumM) * 1000) / 10 : 0;
-  };
+  const selectedAssignment = assignments.find(a => a.section_id === sectionId);
+  const selectedSubject = selectedAssignment?.subject?.name || "";
+  const isTechnical = /tle|tech|tve|vocational|ict/i.test(selectedSubject);
+  const subjectType: 'CORE' | 'TECHNICAL' = isTechnical ? 'TECHNICAL' : 'CORE';
 
-  const termGradeFor = (studentEnrollmentId: string, termKey: string) => {
+  const termGradeFor = (studentEnrollmentId: string, termKey: string): number => {
     const gb = gradebooks[termKey];
     if (!gb) return 0;
-    const weights = { ww: 25, pt: 50, qa: 25 }; // Mock weights
-    const wwPS = psFor(studentEnrollmentId, gb, 'WW');
-    const ptPS = psFor(studentEnrollmentId, gb, 'PT');
-    
-    let qaPS = 0;
-    const qaItem = gb.columns?.find(c => c.type === 'QA');
-    if (qaItem) {
-      const e = gb.entries?.find(e => e.student_enrollment_id === studentEnrollmentId && e.column_id === qaItem.id && !e.is_superseded);
-      if (e) qaPS = Math.round((e.score / qaItem.max_score) * 1000) / 10;
-    }
-    
-    return Math.round((wwPS * (weights.ww / 100) + ptPS * (weights.pt / 100) + qaPS * (weights.qa / 100)) * 10) / 10;
+
+    const wwCols = gb.columns?.filter(c => c.type === 'WW') || [];
+    const ptCols = gb.columns?.filter(c => c.type === 'PT') || [];
+    const st1Col = gb.columns?.find(c => c.type === 'ST1' || c.label?.toLowerCase().includes('short test 1') || c.label?.toLowerCase().includes('st 1') || c.label?.toLowerCase().includes('st1'));
+    const st2Col = gb.columns?.find(c => c.type === 'ST2' || c.label?.toLowerCase().includes('short test 2') || c.label?.toLowerCase().includes('st 2') || c.label?.toLowerCase().includes('st2'));
+    const teCol = gb.columns?.find(c => c.type === 'TE' || c.type === 'QA' || c.label?.toLowerCase().includes('term exam') || c.label?.toLowerCase().includes('quarterly'));
+
+    const studentScores: Record<string, string> = {};
+    gb.entries?.forEach(e => {
+      if (e.student_enrollment_id === studentEnrollmentId && !e.is_superseded) {
+        studentScores[e.column_id] = e.score.toString();
+        if (st1Col && e.column_id === st1Col.id) studentScores['st1'] = e.score.toString();
+        if (st2Col && e.column_id === st2Col.id) studentScores['st2'] = e.score.toString();
+        if (teCol && e.column_id === teCol.id) {
+          studentScores['te'] = e.score.toString();
+          studentScores['qa'] = e.score.toString();
+        }
+      }
+    });
+
+    const wwItems = wwCols.map(c => ({ id: c.id, label: c.label, max: c.max_score }));
+    const ptItems = ptCols.map(c => ({ id: c.id, label: c.label, max: c.max_score }));
+    const st1Max = st1Col?.max_score ?? 25;
+    const st2Max = st2Col?.max_score ?? 25;
+    const teMax = teCol?.max_score ?? 50;
+
+    const calc = calculateStudentGrade(studentScores, wwItems, ptItems, st1Max, st2Max, teMax, subjectType);
+    if (calc.termGrade !== null) return calc.termGrade;
+    if (calc.initialGrade !== null && calc.initialGrade > 0) return transmuteInitialGrade(calc.initialGrade) ?? 0;
+    return 0;
   };
 
   function getTermAccent(t: string) { return C.m700; }
 
   const finals = roster.map(s => {
     const grades = activeTerms.map(t => termGradeFor(s.id, t));
-    if (grades.some(g => g <= 0)) return 0;
-    const sum = grades.reduce((a, b) => a + b, 0);
-    return Math.round((sum / grades.length) * 10) / 10;
-  }).filter(g => g > 0);
-  
-  const passing = finals.filter(g => g >= 75).length;
-  const failing = finals.filter(g => g > 0 && g < 75).length;
-  const classAvg = finals.filter(g => g > 0).length
-    ? (finals.filter(g => g > 0).reduce((a, b) => a + b, 0) / finals.filter(g => g > 0).length).toFixed(1)
-    : "-";
+    return calculateAnnualFinalGrade(grades[0], grades[1], grades[2]).finalGrade;
+  }).filter((g): g is number => g !== null && g > 0);
 
-  const selectedAssignment = assignments.find(a => a.section_id === sectionId);
+  const passing = finals.filter(g => g >= 75).length;
+  const failing = finals.filter(g => g < 75).length;
+  const classAvg = finals.length
+    ? Math.round(finals.reduce((a, b) => a + b, 0) / finals.length).toString()
+    : "-";
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "transparent" }}>
@@ -114,7 +126,7 @@ export function TermSummaryScreen() {
       <div style={{ background: C.m50, borderBottom: `1px solid ${C.borderMed}`, padding: "7px 20px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <FileText size={13} color={C.m700} />
         <span style={{ fontSize: 11, color: C.t2 }}>
-          Read-only summary for <strong>Form 138 (Report Card)</strong>. To edit scores, go to <strong>Gradebook</strong>.
+          Authoritative 3-Term Summary for <strong>Form 138 (Report Card)</strong>. All final ratings are whole integers.
         </span>
       </div>
 
@@ -124,7 +136,8 @@ export function TermSummaryScreen() {
             <col style={{ width: 36 }} />
             <col style={{ width: 200 }} />
             {activeTerms.map(t => <col key={t} style={{ width: 100 }} />)}
-            <col style={{ width: 120 }} />
+            <col style={{ width: 110 }} />
+            <col style={{ width: 110 }} />
             <col style={{ width: 90 }} />
           </colgroup>
           <thead>
@@ -136,7 +149,8 @@ export function TermSummaryScreen() {
                   {t}
                 </th>
               ))}
-              <th style={{ border: `1px solid rgba(255,255,255,0.15)`, background: C.gold, color: C.m900, fontSize: 11, fontWeight: 800, padding: "7px 4px", textAlign: "center", position: "sticky", top: 0, zIndex: 4 }}>FINAL AVG</th>
+              <th style={{ border: `1px solid rgba(255,255,255,0.15)`, background: C.gold, color: C.m900, fontSize: 11, fontWeight: 800, padding: "7px 4px", textAlign: "center", position: "sticky", top: 0, zIndex: 4 }}>FINAL RATING</th>
+              <th style={{ border: `1px solid rgba(255,255,255,0.15)`, background: C.m800, color: "#fff", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", position: "sticky", top: 0, zIndex: 4 }}>DESCRIPTOR</th>
               <th style={{ border: `1px solid rgba(255,255,255,0.15)`, background: C.m700, color: "#fff", fontSize: 10, fontWeight: 700, padding: "7px 4px", textAlign: "center", position: "sticky", top: 0, zIndex: 4 }}>STATUS</th>
             </tr>
             <tr>
@@ -146,16 +160,18 @@ export function TermSummaryScreen() {
                 </th>
               ))}
               <th style={{ border: `0.5px solid ${C.border}`, background: C.goldLight, padding: "4px", textAlign: "center", position: "sticky", top: 34, zIndex: 3 }}>
-                <span style={{ fontSize: 9, color: C.gold, fontWeight: 600 }}>Avg of 4</span>
+                <span style={{ fontSize: 9, color: C.gold, fontWeight: 600 }}>Avg of 3</span>
               </th>
+              <th style={{ border: `0.5px solid ${C.border}`, background: C.m50, padding: "4px", textAlign: "center", position: "sticky", top: 34, zIndex: 3 }} />
               <th style={{ border: `0.5px solid ${C.border}`, background: C.m50, padding: "4px", textAlign: "center", position: "sticky", top: 34, zIndex: 3 }} />
             </tr>
           </thead>
           <tbody>
             {roster.map((student, idx) => {
               const grades = activeTerms.map(t => termGradeFor(student.id, t));
-              const fa = grades.some(g => g <= 0) ? 0 : grades.reduce((a, b) => a + b, 0) / grades.length;
-              const passed = fa >= 75;
+              const finalObj = calculateAnnualFinalGrade(grades[0], grades[1], grades[2]);
+              const fa = finalObj.finalGrade;
+              const passed = fa !== null && fa >= 75;
               const rowBg = idx % 2 === 0 ? "#fff" : C.paper;
 
               function gradeCell(g: number) {
@@ -163,7 +179,7 @@ export function TermSummaryScreen() {
                 return (
                   <td style={{ border: `0.5px solid ${C.border}`, padding: "9px 6px", textAlign: "center", background: fail ? C.redBg : rowBg }}>
                     <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", color: g <= 0 ? "#ccc" : fail ? C.red : high ? C.green : C.t1 }}>
-                      {g > 0 ? g.toFixed(1) : "-"}
+                      {g > 0 ? g : "-"}
                     </span>
                   </td>
                 );
@@ -176,13 +192,18 @@ export function TermSummaryScreen() {
                     {student.student.user.last_name}, {student.student.user.first_name}
                   </td>
                   {activeTerms.map((t, i) => <React.Fragment key={t}>{gradeCell(grades[i])}</React.Fragment>)}
-                  <td style={{ border: `1px solid ${C.borderMed}`, padding: "9px 6px", textAlign: "center", background: fa > 0 && fa < 75 ? C.redBg : C.goldLight }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: fa <= 0 ? "#ccc" : fa < 75 ? C.red : fa >= 90 ? C.green : C.t1 }}>
-                      {fa > 0 ? fa.toFixed(1) : "-"}
+                  <td style={{ border: `1px solid ${C.borderMed}`, padding: "9px 6px", textAlign: "center", background: fa !== null && fa < 75 ? C.redBg : C.goldLight }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", color: fa === null ? "#ccc" : fa < 75 ? C.red : fa >= 90 ? C.green : C.t1 }}>
+                      {fa !== null ? fa : "-"}
                     </span>
                   </td>
                   <td style={{ border: `0.5px solid ${C.border}`, padding: "9px 6px", textAlign: "center", background: rowBg }}>
-                    {fa > 0 && <Stamp label={passed ? "PASSED" : "FAILED"} color={passed ? "#fff" : C.red} bg={passed ? C.green : C.redBg} />}
+                    <span style={{ fontSize: 11, fontWeight: 700, color: C.t2 }}>
+                      {finalObj.descriptor || "-"}
+                    </span>
+                  </td>
+                  <td style={{ border: `0.5px solid ${C.border}`, padding: "9px 6px", textAlign: "center", background: rowBg }}>
+                    {fa !== null && <Stamp label={passed ? "PASSED" : "FAILED"} color={passed ? "#fff" : C.red} bg={passed ? C.green : C.redBg} />}
                   </td>
                 </tr>
               );
@@ -201,7 +222,7 @@ export function TermSummaryScreen() {
             </div>
           ))}
         <div style={{ marginLeft: "auto", fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
-          <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{selectedAssignment?.subject.name || "Subject"} · Gr. {selectedAssignment?.section.grade_level} {selectedAssignment?.section.name} · SY 2025–2026</span>
+          <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>{selectedAssignment?.subject.name || "Subject"} · Gr. {selectedAssignment?.section.grade_level} {selectedAssignment?.section.name} · SY 2026–2027</span>
         </div>
       </div>
     </div>

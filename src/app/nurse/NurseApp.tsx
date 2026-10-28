@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { C } from '../shared/constants/tokens';
 import { ClinicVisit, ClinicStudent } from '../shared/types';
 import { X, Plus, User, Stethoscope, Search, Pill, Activity, FileText, ChevronRight, LogOut, HeartPulse, Bell, AlertCircle } from 'lucide-react';
-import { AIAssistantWidget } from '../shared/components/AIAssistantWidget';
+import { PrincipalAIAssistant } from '../principal/ai/PrincipalAIAssistant';
 import { NotificationDropdown } from '../shared/components/NotificationDropdown';
 import { NSidebar, NScreen } from './shared/NSidebar';
 import { useLayout } from '../App';
@@ -798,6 +798,8 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
       
       {/* Hidden printable report component */}
       <PrintableClinicReport student={selectedReportStudent} visits={selectedReportStudent ? apiVisits.filter(v => v.studentId === selectedReportStudent.id) : []} />
+
+      <PrincipalAIAssistant portal="Nurse" role="School Nurse" />
     </div>
   );
 }

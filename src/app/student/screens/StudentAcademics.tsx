@@ -7,6 +7,7 @@ import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Be
   Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope } from 'lucide-react';
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
+import { apiClient } from '../../../api/client';
 import { studentApi } from '../../../api/student.api';
 import { useEffect } from 'react';
 
@@ -15,26 +16,64 @@ import { Form138PDFDocument } from '../components/Form138PDFDocument';
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import { getStudentRankAndStanding, getStudentRecentQuizzes, getStudentSubjectGrades } from '../../shared/utils/gradesService';
 import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
+import { useAppContext } from '../../shared/AppContext';
 
 
 export function StudentAcademics({ setTab, currentUser }: any) {
   const { settings } = useSchoolSettings();
-  const studentId = currentUser?.id;
+  const { currentUser: appUser } = useAppContext();
+  const effectiveUser = currentUser || appUser;
+  const studentId = effectiveUser?.studentProfile?.id || effectiveUser?.id;
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [pdfToast, setPdfToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [reportCardData, setReportCardData] = useState<any>(null);
+  const [isLoadingGrades, setIsLoadingGrades] = useState(true);
+
+  useEffect(() => {
+    if (!studentId) return;
+    setIsLoadingGrades(true);
+    apiClient.get(`/academic/report-card/${studentId}`)
+      .then((res: any) => {
+        if (res) setReportCardData(res);
+      })
+      .catch((err) => {
+        console.warn('Could not fetch official report card from backend:', err);
+      })
+      .finally(() => setIsLoadingGrades(false));
+  }, [studentId]);
 
   const realSubjectGrades = useMemo(() => {
+    if (reportCardData?.scholastic?.subjects && reportCardData.scholastic.subjects.length > 0) {
+      return reportCardData.scholastic.subjects.map((s: any) => ({
+        name: s.name,
+        short: s.name.length > 12 ? s.name.substring(0, 10) + '..' : s.name,
+        classId: s.id,
+        term1: s.T1 ?? 0,
+        term2: s.T2 ?? 0,
+        term3: s.T3 ?? 0,
+        term4: s.T4 ?? undefined
+      }));
+    }
     if (!studentId) return [];
     return getStudentSubjectGrades(studentId, {});
-  }, [studentId]);
+  }, [reportCardData, studentId]);
 
   const realRecentQuizzes = useMemo(() => getStudentRecentQuizzes(studentId, {}), [studentId]);
 
   const currentGrade10Avg = useMemo(() => {
+    if (reportCardData?.scholastic?.generalAverage) {
+      return reportCardData.scholastic.generalAverage;
+    }
     if (realSubjectGrades.length === 0) return 0;
-    const total = realSubjectGrades.reduce((sum, s) => sum + (s.term1 + s.term2 + s.term3) / 3, 0);
-    return Math.round((total / realSubjectGrades.length) * 10) / 10;
-  }, [realSubjectGrades]);
+    const graded = realSubjectGrades.filter(s => s.term1 > 0 || s.term2 > 0 || s.term3 > 0);
+    if (graded.length === 0) return 0;
+    const total = graded.reduce((sum, s) => {
+      const activeTerms = [s.term1, s.term2, s.term3].filter(t => t > 0);
+      const termAvg = activeTerms.length > 0 ? activeTerms.reduce((a, b) => a + b, 0) / activeTerms.length : 0;
+      return sum + termAvg;
+    }, 0);
+    return Math.round((total / graded.length) * 10) / 10;
+  }, [reportCardData, realSubjectGrades]);
 
   const standingInfo = useMemo(() => getStudentRankAndStanding(currentGrade10Avg), [currentGrade10Avg]);
 
@@ -42,7 +81,16 @@ export function StudentAcademics({ setTab, currentUser }: any) {
     setIsExportingPDF(true);
     setPdfToast(null);
     try {
-      const blob = await pdf(<Form138PDFDocument student={currentUser} subjects={realSubjectGrades} schoolName={settings.schoolName} />).toBlob();
+      const studentForPdf = reportCardData?.student ? {
+        name: reportCardData.student.name,
+        lrn: reportCardData.student.lrn,
+        grade: reportCardData.enrollment?.gradeLevel || currentUser?.grade || 10,
+        section: reportCardData.enrollment?.section || currentUser?.section || 'Rizal',
+        adviser: reportCardData.adviser || 'Adviser',
+        gender: reportCardData.student.gender || 'Unknown'
+      } : currentUser;
+
+      const blob = await pdf(<Form138PDFDocument student={studentForPdf} subjects={realSubjectGrades} schoolName={settings.schoolName} />).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -59,11 +107,16 @@ export function StudentAcademics({ setTab, currentUser }: any) {
     }
   }
 
-  const realGradeTrendData = [
-    { label: "Term 1", val: 88 },
-    { label: "Term 2", val: 90 },
-    { label: "Term 3", val: 92 },
-  ];
+  const realGradeTrendData = useMemo(() => {
+    const t1s = realSubjectGrades.map(s => s.term1).filter(t => t > 0);
+    const t2s = realSubjectGrades.map(s => s.term2).filter(t => t > 0);
+    const t3s = realSubjectGrades.map(s => s.term3).filter(t => t > 0);
+    return [
+      { name: "Term 1", avg: t1s.length > 0 ? Math.round(t1s.reduce((a,b)=>a+b,0)/t1s.length) : (currentGrade10Avg || 88) },
+      { name: "Term 2", avg: t2s.length > 0 ? Math.round(t2s.reduce((a,b)=>a+b,0)/t2s.length) : (currentGrade10Avg || 90) },
+      { name: "Term 3", avg: t3s.length > 0 ? Math.round(t3s.reduce((a,b)=>a+b,0)/t3s.length) : (currentGrade10Avg || 92) },
+    ];
+  }, [realSubjectGrades, currentGrade10Avg]);
 
   
   return (
@@ -182,7 +235,16 @@ export function StudentAcademics({ setTab, currentUser }: any) {
               <div id="form138-print-root" className="printable-report-card-area" style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${C.borderMed}`, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
                 <div id="printable-report-card">
                   <StudentReportCard 
-                    student={currentUser} 
+                    student={reportCardData?.student ? {
+                      surname: reportCardData.student.name.split(',')[0],
+                      first: reportCardData.student.name.split(',')[1]?.trim() || '',
+                      lrn: reportCardData.student.lrn,
+                      grade: reportCardData.enrollment?.gradeLevel ?? currentUser?.grade ?? 10,
+                      section: reportCardData.enrollment?.section ?? currentUser?.section ?? 'Rizal',
+                      adviser: reportCardData.adviser ?? 'Adviser',
+                      gender: reportCardData.student.gender ?? 'Unknown',
+                      avg: currentGrade10Avg
+                    } : currentUser} 
                     subjects={realSubjectGrades}
                   />
                 </div>

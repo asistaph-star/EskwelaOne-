@@ -19,8 +19,8 @@ interface PrincipalAssistantDrawerProps {
   onClearSession: () => void;
   onNavigate?: (screen: PScreen | any) => void;
   onRetryLastMessage?: () => void;
-  portal?: 'Principal' | 'Teacher';
-  role?: 'Principal' | 'Teacher';
+  portal?: string;
+  role?: string;
 }
 
 export function PrincipalAssistantDrawer({
