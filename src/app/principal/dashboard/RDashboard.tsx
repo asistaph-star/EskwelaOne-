@@ -7,6 +7,8 @@ import { DocumentRequest } from '../../shared/types';
 
 export function RDashboard() {
   const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<{
     totalEnrolled: number;
     targetEnrollment: number | null;
@@ -14,28 +16,45 @@ export function RDashboard() {
     missingDocuments: number;
   } | null>(null);
 
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [statsRes, docReqsRes] = await Promise.all([
+        apiClient.get<any>('/admin/enrollment-stats').catch(err => {
+          console.error("Failed to load enrollment stats", err);
+          return null;
+        }),
+        documentsApi.getAllRequests().catch(err => {
+          console.error("Failed to load doc requests", err);
+          return [];
+        })
+      ]);
+
+      if (statsRes) {
+        setStats(statsRes);
+      } else {
+        // Fallback default state with 0s if stats could not be computed
+        setStats({
+          totalEnrolled: 0,
+          targetEnrollment: null,
+          pendingAdmissions: 0,
+          missingDocuments: 0
+        });
+      }
+      setDocumentRequests(docReqsRes || []);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    async function loadStats() {
-      try {
-        const res: any = await apiClient.get('/admin/enrollment-stats');
-        setStats(res);
-      } catch (err) {
-        console.error("Failed to load enrollment stats", err);
-      }
-    }
-    async function fetchDocRequests() {
-      try {
-        const data = await documentsApi.getAllRequests();
-        setDocumentRequests(data);
-      } catch (err) {
-        console.error("Failed to load doc requests", err);
-      }
-    }
-    loadStats();
-    fetchDocRequests();
+    loadData();
   }, []);
 
-  const pendingDocs = documentRequests.filter(r => r.status === "Submitted" || r.status === "Teacher Approved").length;
+  const pendingDocs = documentRequests.filter(r => r.status === "Submitted" || r.status === "Teacher Approved" || r.status === "Principal Approved").length;
 
   return (
     <div style={{ padding: "32px 40px", overflowY: "auto", flex: 1, minHeight: 0, paddingBottom: 100 }}>
@@ -43,16 +62,32 @@ export function RDashboard() {
         
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Registrar Overview</h1>
-          <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Monitor student enrollment, admissions, and academic record requests.</div>
+          <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Monitor student enrollment, admissions, and academic record requests for Calulut Integrated School.</div>
         </div>
 
-        {/* KPIs */}
-        {!stats ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 24, background: '#fff', borderRadius: 12, border: `1px solid ${C.borderMed}` }}>
-            <Loader size={18} className="spin" color={C.m500} />
-            <span style={{ fontSize: 13, color: C.t2 }}>Loading dashboard statistics...</span>
+        {/* Error State */}
+        {error && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: C.redBg, borderRadius: 10, border: `1px solid ${C.red}30` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <AlertTriangle size={18} color={C.red} />
+              <span style={{ fontSize: 13, color: C.red, fontWeight: 600 }}>{error}</span>
+            </div>
+            <button 
+              onClick={loadData}
+              style={{ padding: '6px 14px', background: '#fff', border: `1px solid ${C.red}50`, borderRadius: 6, fontSize: 12, fontWeight: 700, color: C.red, cursor: 'pointer' }}
+            >
+              Retry
+            </button>
           </div>
-        ) : (
+        )}
+
+        {/* Loading State */}
+        {loading && !stats ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 24, background: '#fff', borderRadius: 12, border: `1px solid ${C.borderMed}` }}>
+            <Loader size={18} className="spin" color={C.m500} />
+            <span style={{ fontSize: 13, color: C.t2, fontWeight: 500 }}>Loading live registrar statistics from database...</span>
+          </div>
+        ) : stats ? (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
               {[
@@ -97,7 +132,7 @@ export function RDashboard() {
               </div>
             ) : null}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

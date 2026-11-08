@@ -344,8 +344,8 @@ export function InventoryManagement() {
           [currentAccountableUnits.toString(), "Current Accountable Units", C.t1],
           [repairUnits.toString(), "Units Under Repair", C.amber],
           [borrowedUnits.toString(), "Units Borrowed", C.blue],
-          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red],
-          [retiredDisposedUnits.toString(), "Retired / Disposed", C.purple],
+          [lostDamagedUnits.toString(), "Lost or Damaged", C.red],
+          [retiredDisposedUnits.toString(), "Retired or Disposed", C.purple],
         ].map(([val, label, col], idx) => (
           <div
             key={label}
@@ -1035,7 +1035,7 @@ export function InventoryManagement() {
 
               <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>
-                  Supplier / Vendor
+                  Supplier
                 </label>
                 <input
                   type="text"
@@ -1048,7 +1048,7 @@ export function InventoryManagement() {
 
               <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>
-                  Purchase / Acquisition Date
+                  Purchase Date
                 </label>
                 <input
                   type="date"
@@ -1060,7 +1060,7 @@ export function InventoryManagement() {
 
               <div>
                 <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>
-                  Description / Remarks
+                  Description
                 </label>
                 <textarea
                   rows={3}

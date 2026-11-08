@@ -18,11 +18,16 @@ export default prisma;
  * If any operation fails, the entire transaction is rolled back.
  */
 export async function withTransaction<T>(
-  fn: (tx: any) => Promise<T>
+  fn: (tx: any) => Promise<T>,
+  options?: {
+    isolationLevel?: 'ReadCommitted' | 'Serializable' | 'RepeatableRead';
+    maxWait?: number;
+    timeout?: number;
+  }
 ): Promise<T> {
   return prisma.$transaction(fn, {
-    maxWait: 5000,
-    timeout: 10000,
-    isolationLevel: 'Serializable',
+    maxWait: options?.maxWait ?? 5000,
+    timeout: options?.timeout ?? 10000,
+    isolationLevel: options?.isolationLevel ?? 'Serializable',
   });
 }

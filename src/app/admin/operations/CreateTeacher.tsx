@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { UserPlus, Save, Building, CheckCircle, Copy, AlertCircle, ShieldAlert, GraduationCap, Shield } from "lucide-react";
+import { UserPlus, Save, Building, CheckCircle, Copy, AlertCircle, ShieldAlert, GraduationCap, Shield, KeyRound } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { apiClient } from "../../../api/client";
 import { useAppContext } from "../../shared/AppContext";
 
-export function CreateAccount() {
+export function CreateAccount({ onNavigate }: { onNavigate?: (s: any, state?: any) => void }) {
   const { currentUser } = useAppContext();
   const isITAdmin = currentUser?.rawRoles?.includes('ITAdmin') || currentUser?.role === 'ITAdmin';
 
@@ -159,7 +159,7 @@ export function CreateAccount() {
   };
 
   const creatableRoles = [
-    { id: "Student", label: "Student", desc: "Enrolled learner with academic & attendance tracking" },
+    { id: "Student", label: "Student", desc: "Create portal login credentials for a registered student" },
     { id: "Teacher", label: "Teacher", desc: "Faculty member with gradebook & classroom tools" },
     { id: "Principal", label: "Principal", desc: "School head with institutional oversight & analytics" },
     { id: "Registrar", label: "Registrar", desc: "Enrollment & official academic document officer" },
@@ -178,10 +178,10 @@ export function CreateAccount() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, marginBottom: 6, fontFamily: "'Fraunces', serif" }}>
-            Provision Account
+            Create Account
           </h1>
           <p style={{ fontSize: 13, color: C.t3, margin: 0 }}>
-            Create and provision new DigiSkwela system credentials with role-aware profile linkage.
+            Create portal accounts for school administrators, faculty, staff, and registered students.
           </p>
         </div>
       </div>
@@ -194,17 +194,17 @@ export function CreateAccount() {
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
                 <h3 style={{ margin: 0, color: "#065f46", fontSize: 16, fontWeight: 800 }}>
-                  Account Provisioned Successfully!
+                  Account Created Successfully
                 </h3>
                 {provisionedData.isStudent && (
                   <span style={{ background: "#dbeafe", color: "#1e40af", padding: "4px 10px", borderRadius: 16, fontSize: 11, fontWeight: 700, border: "1px solid #bfdbfe" }}>
-                    Account Created — Not Yet Enrolled
+                    Account Created (Pending Section Enrollment)
                   </span>
                 )}
               </div>
               
               <p style={{ margin: "6px 0 12px", color: "#047857", fontSize: 13 }}>
-                Provisioned user: <strong>{provisionedData.name}</strong> as <strong>{provisionedData.role}</strong>.
+                Created account for: <strong>{provisionedData.name}</strong> as <strong>{provisionedData.role}</strong>.
               </p>
 
               <div style={{ background: "#fff", border: `1px solid ${C.green}40`, padding: "10px 14px", borderRadius: 8, marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
@@ -214,7 +214,7 @@ export function CreateAccount() {
 
               {provisionedData.isStudent && (
                 <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", padding: "10px 14px", borderRadius: 8, marginBottom: 12, fontSize: 12, color: "#1e3a8a", lineHeight: 1.5 }}>
-                  <strong>Next Step:</strong> The student account has been created, but they are not yet assigned to an academic section. Section enrollment is processed via the Registrar portal.
+                  <strong>Next Step:</strong> The student portal account has been provisioned. Note: Learner records and section enrollments are officially registered by Class Advisers via Classroom Hub. If an existing student record with matching LRN exists, it has been linked. Section enrollment is verified via the Advisory or Registrar portal.
                 </div>
               )}
 
@@ -275,6 +275,7 @@ export function CreateAccount() {
               {creatableRoles.map(r => (
                 <div
                   key={r.id}
+                  id={`role-option-${r.id}`}
                   onClick={() => handleRoleChange(r.id)}
                   style={{
                     padding: "12px 14px",
@@ -300,7 +301,29 @@ export function CreateAccount() {
             </div>
           </div>
 
-          {/* Personal Information */}
+          {role === "Student" ? (
+            <div style={{ padding: 36, background: "#f8fafc", border: `1.5px solid ${C.borderMed}`, borderRadius: 12, textAlign: "center", marginBottom: 28, boxShadow: "0 2px 12px rgba(0,0,0,0.02)" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 28, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <KeyRound size={28} color="#059669" />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: C.t1, margin: "0 0 8px", fontFamily: "'Fraunces', serif" }}>
+                Dedicated Student Portal Provisioning
+              </h3>
+              <p style={{ fontSize: 13, color: C.t2, maxWidth: 540, margin: "0 auto 20px", lineHeight: 1.6 }}>
+                Under DigiSkwela architecture, learners are first officially registered and enrolled into their advisory sections by Class Advisers. Student Portal credentials are provisioned from the verified unprovisioned learner queue in <strong>Account Management</strong> to ensure one authoritative Student identity.
+              </p>
+              <button
+                type="button"
+                id="btn-goto-student-provisioning"
+                onClick={() => onNavigate?.("accounts", { tab: "unprovisioned" })}
+                style={{ padding: "10px 22px", background: "#059669", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 2px 8px rgba(5,150,105,0.2)" }}
+              >
+                <KeyRound size={15} /> Open Student Portal Provisioning Queue
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Personal Information */}
           <div style={{ marginBottom: 28 }}>
             <h3 style={{ fontSize: 12, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
               <UserPlus size={15} /> Personal & Account Information
@@ -346,12 +369,12 @@ export function CreateAccount() {
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Student ID *</label>
                   <input required type="text" placeholder="e.g. 2026-00123" value={form.studentId} onChange={e => setForm({...form, studentId: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }} />
-                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Student ID — used to sign in to DigiSkwela</div>
+                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Used to sign in to DigiSkwela</div>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>DepEd LRN (Learner Reference Number) *</label>
                   <input required type="text" placeholder="12-digit LRN" value={form.lrn} onChange={e => setForm({...form, lrn: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }} />
-                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>LRN — official learner record identifier</div>
+                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>12-digit DepEd Learner Reference Number</div>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -391,7 +414,7 @@ export function CreateAccount() {
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Employee ID *</label>
                   <input required type="text" placeholder="e.g. EMP-00101" value={form.employeeId} onChange={e => setForm({...form, employeeId: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }} />
-                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Employee ID — used as School ID to sign in to DigiSkwela</div>
+                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Used as School ID to sign in to DigiSkwela</div>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Academic Department</label>
@@ -433,12 +456,12 @@ export function CreateAccount() {
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Staff / Employee ID *</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Employee ID *</label>
                   <input required type="text" placeholder="e.g. EMP-00001" value={form.employeeId} onChange={e => setForm({...form, employeeId: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }} />
-                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Employee ID — used as School ID to sign in to DigiSkwela</div>
+                  <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Used as School ID to sign in to DigiSkwela</div>
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Department / Unit</label>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 6 }}>Department</label>
                   <input type="text" value={form.department} onChange={e => setForm({...form, department: e.target.value})} style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }} />
                 </div>
                 <div>
@@ -464,7 +487,7 @@ export function CreateAccount() {
                   onChange={e => setForm({...form, schoolId: e.target.value})}
                   style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, background: "#fff" }}
                 />
-                <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>School / Staff ID — used to sign in to DigiSkwela</div>
+                <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4 }}>Used to sign in to DigiSkwela</div>
               </div>
               {role === "GateOperator" && (
                 <div style={{ fontSize: 12, color: C.t2, lineHeight: 1.4 }}>
@@ -500,9 +523,11 @@ export function CreateAccount() {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
               }}
             >
-              <Save size={16} /> {loading ? "Provisioning..." : `Provision ${role} Account`}
+              <Save size={16} /> {loading ? "Creating..." : `Create ${role} Account`}
             </button>
           </div>
+            </>
+          )}
 
         </form>
       </div>

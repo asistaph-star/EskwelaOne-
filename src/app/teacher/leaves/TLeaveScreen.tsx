@@ -11,7 +11,7 @@ function Stamp({ label, color, bg }: { label: string; color: string; bg: string 
   );
 }
 
-import { apiClient } from '../../../api/client';
+import { apiClient, resolveBackendUrl } from '../../../api/client';
 
 const LEAVE_TYPES = ['Sick Leave', 'Vacation Leave', 'Emergency Leave', 'Maternity / Paternity Leave', 'Service Incentive Leave'];
 
@@ -44,7 +44,7 @@ export function TLeaveScreen() {
   const [modal, setModal] = useState(false);
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All');
   const [detail, setDetail] = useState<any | null>(null);
-  
+
   const [leaves, setLeaves] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export function TLeaveScreen() {
       if (fFile) {
         formData.append('attachment', fFile);
       }
-      
+
       await apiClient.postFormData('/admin/leaves', formData);
       setFType(LEAVE_TYPES[0]); setFStart(''); setFEnd(''); setFReason(''); setFFile(null);
       setModal(false);
@@ -121,7 +121,7 @@ export function TLeaveScreen() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>My Leave Requests</h2>
-          <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Submit and track your leave of absence requests · SY 2025–2026</div>
+          <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>Submit and track your leave of absence requests.</div>
         </div>
         <button onClick={() => setModal(true)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.m700, color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: `0 2px 8px ${C.m700}40` }}>
@@ -257,7 +257,7 @@ export function TLeaveScreen() {
                 </div>
               )}
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Reason / Remarks</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.t3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Reason</label>
                 <textarea rows={3} value={fReason} onChange={e => setFReason(e.target.value)} placeholder="Brief description of your leave reason..."
                   style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit' }} />
               </div>
@@ -314,7 +314,18 @@ export function TLeaveScreen() {
               {detail.attachment_url && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: 10 }}>
                   <span style={{ fontSize: 11, color: C.t3, fontWeight: 600 }}>Attachment</span>
-                  <a href={`http://localhost:4000${detail.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.m700, fontWeight: 600, textDecoration: 'underline' }}>View Document</a>
+                  <a
+                    href={resolveBackendUrl(
+                      String(detail.attachment_url).startsWith('/api/')
+                        ? detail.attachment_url
+                        : `/api/admin/leaves/${detail.id}/attachment`
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: C.m700, fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    View Document
+                  </a>
                 </div>
               )}
               {detail.approver_note && (

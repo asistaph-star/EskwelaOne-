@@ -97,7 +97,7 @@ function InventoryForm({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Supplier / Source</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Supplier</label>
               <input name="supplier" value={formData.supplier} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none" }} />
             </div>
 
@@ -118,7 +118,7 @@ function InventoryForm({
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Description / Notes</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Description</label>
               <textarea name="description" value={formData.description} onChange={handleChange} rows={3} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none", resize: "vertical" }} />
             </div>
 
@@ -322,8 +322,8 @@ export function PInventory() {
     <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent", padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>Inventory Management</h2>
-          <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Executive asset oversight and property lifecycle tracking</p>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: C.t1, margin: 0, fontFamily: "'Fraunces',serif" }}>School Inventory</h2>
+          <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Review school assets, equipment conditions, and property records.</p>
         </div>
         {canWrite && (
           <button onClick={() => setIsAddFormOpen(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 4, background: C.m700, color: "#fff", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
@@ -337,8 +337,8 @@ export function PInventory() {
           [currentAccountableUnits.toString(), "Current Accountable Units", C.t1],
           [repairUnits.toString(), "Units Under Repair", C.amber],
           [borrowedUnits.toString(), "Units Borrowed", C.blue],
-          [lostDamagedUnits.toString(), "Units Lost / Damaged", C.red],
-          [retiredDisposedUnits.toString(), "Retired / Disposed", C.purple]
+          [lostDamagedUnits.toString(), "Lost or Damaged", C.red],
+          [retiredDisposedUnits.toString(), "Retired or Disposed", C.purple]
         ].map(([v, l, c], i) => (
           <div key={l} style={{ flex: 1, padding: "16px 18px", borderRight: i < 4 ? `1px solid ${C.borderMed}` : "none", background: i === 0 ? C.m50 : "#fff" }}>
             <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8, fontWeight: 700 }}>{l}</div>

@@ -201,7 +201,7 @@ export function ClinicInventory() {
                     </td>
                     <td style={{ padding: "14px 20px" }}>
                       <div style={{ display: "flex", gap: 8 }}>
-                         <button onClick={() => { setSelectedItem(item); setIsEditModalOpen(true); }} style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, color: C.m700, background: C.m100, border: "none", borderRadius: 4, cursor: "pointer" }}>Use / Consume</button>
+                         <button onClick={() => { setSelectedItem(item); setIsEditModalOpen(true); }} style={{ padding: "6px 12px", fontSize: 11, fontWeight: 600, color: C.m700, background: C.m100, border: "none", borderRadius: 4, cursor: "pointer" }}>Record Use</button>
                       </div>
                     </td>
                   </tr>
@@ -315,7 +315,7 @@ function ConsumeStockModal({ item, onClose, onSaved }: { item: InventoryItem; on
             <input type="number" name="quantity" defaultValue={1} required min={1} max={item.quantity} style={inputStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Reason / Details (e.g. Given to student)</label>
+            <label style={labelStyle}>Reason for Use (e.g., Administered to student)</label>
             <input name="reason" placeholder="Why is this being used?" required style={inputStyle} />
           </div>
           

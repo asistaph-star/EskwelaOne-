@@ -13,15 +13,19 @@ import { StudentAttendance } from './screens/StudentAttendance';
 import { StudentAssignments } from './screens/StudentAssignments';
 import { StudentClinic } from './screens/StudentClinic';
 import { StudentSettings } from './screens/StudentSettings';
+import { StudentProfileScreen } from './screens/StudentProfileScreen';
 import { StudentCalendar } from './screens/StudentCalendar';
 import { StudentAnnouncements } from './screens/StudentAnnouncements';
 import { StudentAppointments } from './screens/StudentAppointments';
 import { StudentDocRequests } from './screens/StudentDocRequests';
+import { StudentAcademicHistory } from './screens/StudentAcademicHistory';
 
 const STUDENT_TAB_METADATA: Record<string, { title: string; sub: string }> = {
   dashboard: { title: "Student Dashboard", sub: "Overview & Quick Actions" },
+  profile: { title: "Personal Records", sub: "Official DepEd SF1 Demographics & Identity" },
   academics: { title: "Grades & Performance", sub: "Scholastic History & Grades" },
   attendance: { title: "Gate Attendance", sub: "Daily Logs & excuse submissions" },
+  "academic-history": { title: "Academic History", sub: "Previous School Years & Official Records" },
   assignments: { title: "My Assignments", sub: "Tasks & Submissions" },
   announcements: { title: "Announcements", sub: "School Bulletin Board" },
   calendar: { title: "Calendar & Schedule", sub: "Academic Events & Classes" },
@@ -101,7 +105,12 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
                   <div style={{ fontSize:13, fontWeight:700, color:C.t1, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1.2 }}>
                     {currentUser?.name || "Student User"}
                   </div>
-                  <div style={{ marginTop:3 }}>
+                  <div style={{ marginTop:3, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+                    {currentUser?.studentProfile?.sectionName && (
+                      <span id="student-header-section-badge" style={{ fontSize:9, fontWeight:700, color: '#059669', background: '#ecfdf5', padding:"2px 8px", borderRadius:10, border:'1px solid #a7f3d0' }}>
+                        Grade {currentUser.studentProfile.gradeLevel} - {currentUser.studentProfile.sectionName}
+                      </span>
+                    )}
                     <span style={{ fontSize:9, fontWeight:700, color:C.m700, background:C.m50, padding:"2px 8px", borderRadius:10, border:`1px solid ${C.m100}`, letterSpacing:"0.05em", textTransform: "uppercase" }}>
                       {currentUser?.role || "Student"}
                     </span>
@@ -126,8 +135,10 @@ export function StudentPortal({ onLogout }: { onLogout: () => void }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
           <div style={{ flex: 1, overflowY: "auto", padding: "24px", WebkitOverflowScrolling: "touch" }}>
             {tab === "dashboard" && <StudentDashboard setTab={setTab} currentUser={currentUser} />}
+            {tab === "profile" && <StudentProfileScreen setTab={setTab} currentUser={currentUser} />}
             {tab === "academics" && <StudentAcademics setTab={setTab} currentUser={currentUser} />}
             {tab === "attendance" && <StudentAttendance setTab={setTab} currentUser={currentUser} />}
+            {tab === "academic-history" && <StudentAcademicHistory setTab={setTab} currentUser={currentUser} />}
             {tab === "assignments" && <StudentAssignments setTab={setTab} currentUser={currentUser} />}
             {tab === "announcements" && <StudentAnnouncements setTab={setTab} />}
             {tab === "calendar" && <StudentCalendar setTab={setTab} currentUser={currentUser} />}

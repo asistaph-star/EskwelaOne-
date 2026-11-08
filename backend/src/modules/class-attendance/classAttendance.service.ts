@@ -5,6 +5,20 @@ import { createAuditLog } from '../../audit/audit.service.js';
 
 export const classAttendanceService = {
   async getClassRecords(classId: string, actorId: string, authUser: any) {
+    if (classId.startsWith('adv-')) {
+      const sectionId = classId.replace(/^adv-/, '');
+      const isAdviser = await prisma.section.findFirst({
+        where: { id: sectionId, adviser_teacher: { user_id: actorId } }
+      });
+      if (!isAdviser && !authUser.permissions.includes('attendance:read_all')) {
+        throw new AppError(403, 'FORBIDDEN', 'You do not have permission to view attendance for this class.');
+      }
+      return prisma.classAttendance.findMany({
+        where: { enrollment: { section_id: sectionId } },
+        include: { enrollment: { include: { student: true } } }
+      });
+    }
+
     const assignment = await prisma.teacherSubjectAssignment.findUnique({
       where: { id: classId },
       include: { teacher: true }
@@ -27,6 +41,53 @@ export const classAttendanceService = {
   },
 
   async getClassRoster(classId: string, actorId: string, authUser: any) {
+    if (classId.startsWith('adv-')) {
+      const sectionId = classId.replace(/^adv-/, '');
+      const isAdviser = await prisma.section.findFirst({
+        where: { id: sectionId, adviser_teacher: { user_id: actorId } }
+      });
+      if (!isAdviser && !authUser.permissions.includes('attendance:read_all')) {
+        throw new AppError(403, 'FORBIDDEN', 'You do not have permission to view the roster for this class.');
+      }
+
+      const enrollments = await prisma.enrollment.findMany({
+        where: { 
+          section_id: sectionId,
+          status: 'Enrolled'
+        },
+        include: { student: { include: { user: true } } },
+        orderBy: [
+          { student: { user: { last_name: 'asc' } } },
+          { student: { user: { first_name: 'asc' } } }
+        ]
+      });
+
+      return enrollments.map(e => ({
+        id: e.id,
+        student_id: e.student_id,
+        student: {
+          id: e.student.id,
+          lrn: e.student.lrn,
+          first_name: e.student.user?.first_name || e.student.first_name || '',
+          last_name: e.student.user?.last_name || e.student.last_name || '',
+          date_of_birth: e.student.date_of_birth,
+          gender: e.student.gender,
+          grade_level: e.student.grade_level,
+          street: e.student.street,
+          city: e.student.city,
+          state_province: e.student.state_province,
+          guardian_first_name: e.student.guardian_first_name,
+          guardian_last_name: e.student.guardian_last_name,
+          guardian_phone: e.student.guardian_phone,
+          guardian_email: e.student.guardian_email,
+          blood_type: e.student.blood_type,
+          allergies: e.student.allergies,
+          medical_conditions: e.student.medical_conditions,
+          student_number: e.student.student_number,
+        }
+      }));
+    }
+
     const assignment = await prisma.teacherSubjectAssignment.findUnique({
       where: { id: classId },
       include: { teacher: true }
@@ -61,8 +122,22 @@ export const classAttendanceService = {
       student: {
         id: e.student.id,
         lrn: e.student.lrn,
-        first_name: e.student.user.first_name,
-        last_name: e.student.user.last_name
+        first_name: e.student.user?.first_name || e.student.first_name || '',
+        last_name: e.student.user?.last_name || e.student.last_name || '',
+        date_of_birth: e.student.date_of_birth,
+        gender: e.student.gender,
+        grade_level: e.student.grade_level,
+        street: e.student.street,
+        city: e.student.city,
+        state_province: e.student.state_province,
+        guardian_first_name: e.student.guardian_first_name,
+        guardian_last_name: e.student.guardian_last_name,
+        guardian_phone: e.student.guardian_phone,
+        guardian_email: e.student.guardian_email,
+        blood_type: e.student.blood_type,
+        allergies: e.student.allergies,
+        medical_conditions: e.student.medical_conditions,
+        student_number: e.student.student_number,
       }
     }));
   },

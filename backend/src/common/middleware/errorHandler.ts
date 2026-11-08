@@ -9,6 +9,7 @@ export class AppError extends Error {
     public statusCode: number,
     public code: string,
     message: string,
+    public details?: any,
   ) {
     super(message);
     this.name = 'AppError';
@@ -47,6 +48,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
       error: {
         code: err.code,
         message: err.message,
+        ...(err.details !== undefined ? { details: err.details } : {}),
       },
       requestId: correlationId,
     });
@@ -62,6 +64,17 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
         error: {
           code: 'CONFLICT',
           message: 'A record with this value already exists.',
+        },
+        requestId: correlationId,
+      });
+      return;
+    }
+    if (prismaErr.code === 'P2034') {
+      res.status(409).json({
+        success: false,
+        error: {
+          code: 'TRANSACTION_CONFLICT',
+          message: 'A transaction conflict or deadlock occurred. Please retry your request.',
         },
         requestId: correlationId,
       });

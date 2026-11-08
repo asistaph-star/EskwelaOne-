@@ -21,11 +21,14 @@ export function StudentDataSearch() {
   }, []);
 
   const results = query.trim().length > 0 
-    ? students.filter(s => 
-        s.last_name.toLowerCase().includes(query.toLowerCase()) || 
-        s.first_name.toLowerCase().includes(query.toLowerCase()) ||
-        (s.student_profile?.lrn && s.student_profile.lrn.includes(query))
-      )
+    ? students.filter(s => {
+        const prof = s.student_profile || (s as any).student;
+        return (
+          s.last_name.toLowerCase().includes(query.toLowerCase()) || 
+          s.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          (prof?.lrn && prof.lrn.includes(query))
+        );
+      })
     : [];
 
   return (
@@ -60,60 +63,67 @@ export function StudentDataSearch() {
           
           {query.trim().length > 0 && results.length > 0 && !selectedStudent && (
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 8, background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.1)", zIndex: 10, overflow: "hidden" }}>
-              {results.map(s => (
-                <button 
-                  key={s.id}
-                  onClick={() => setSelectedStudent(s)}
-                  style={{ width: "100%", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "none", borderBottom: `1px solid ${C.borderLight}`, background: "#fff", cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => e.currentTarget.style.background = C.m50}
-                  onMouseLeave={e => e.currentTarget.style.background = "#fff"}
-                >
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{s.last_name}, {s.first_name}</div>
-                    <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>LRN: {s.student_profile?.lrn} &bull; Grade {s.student_profile?.grade_level}</div>
-                  </div>
-                </button>
-              ))}
+              {results.map(s => {
+                const prof = s.student_profile || (s as any).student;
+                return (
+                  <button 
+                    key={s.id}
+                    onClick={() => setSelectedStudent(s)}
+                    style={{ width: "100%", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "none", borderBottom: `1px solid ${C.borderLight}`, background: "#fff", cursor: "pointer", textAlign: "left" }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.m50}
+                    onMouseLeave={e => e.currentTarget.style.background = "#fff"}
+                  >
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{s.last_name}, {s.first_name}</div>
+                      <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>LRN: {prof?.lrn || 'N/A'} &bull; Grade {prof?.grade_level || 'N/A'}</div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {selectedStudent && (
-        <div>
-          <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-            <button 
-              onClick={() => setSelectedStudent(null)}
-              style={{ background: "transparent", border: "none", color: C.m700, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-            >
-              &larr; Back to search
-            </button>
-            <button 
-              onClick={() => window.print()}
-              style={{ background: C.m700, color: "#fff", border: "none", padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 6px rgba(185,28,28,0.2)" }}
-            >
-              <Printer size={16} /> Print Record
-            </button>
-          </div>
+      {selectedStudent && (() => {
+        const prof = selectedStudent.student_profile || (selectedStudent as any).student;
+        const normalizedGender = prof?.gender === 'Male' || prof?.gender === 'M' ? 'Male' : prof?.gender === 'Female' || prof?.gender === 'F' ? 'Female' : 'Not Specified';
 
-          {/* Printable Card */}
-          <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}>
-            
-            {/* Header */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 24, borderBottom: `2px solid ${C.m700}`, paddingBottom: 24, marginBottom: 32 }}>
-              <div style={{ width: 80, height: 80, borderRadius: 12, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${C.borderMed}` }}>
-                <User size={40} color={C.m700} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Learner Permanent Record</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>{selectedStudent.last_name}, {selectedStudent.first_name}</div>
-                <div style={{ display: "flex", gap: 24, marginTop: 12 }}>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>LRN:</strong> {selectedStudent.student_profile?.lrn}</div>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Gender:</strong> {selectedStudent.student_profile?.gender === 'M' ? 'Male' : selectedStudent.student_profile?.gender === 'F' ? 'Female' : 'Not Specified'}</div>
-                  <div style={{ fontSize: 13, color: C.t2 }}><strong>Current Grade:</strong> {selectedStudent.student_profile?.grade_level}</div>
+        return (
+          <div>
+            <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <button 
+                onClick={() => setSelectedStudent(null)}
+                style={{ background: "transparent", border: "none", color: C.m700, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                &larr; Back to search
+              </button>
+              <button 
+                onClick={() => window.print()}
+                style={{ background: C.m700, color: "#fff", border: "none", padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 6px rgba(185,28,28,0.2)" }}
+              >
+                <Printer size={16} /> Print Record
+              </button>
+            </div>
+
+            {/* Printable Card */}
+            <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: 40, boxShadow: "0 4px 20px rgba(0,0,0,0.05)" }}>
+              
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 24, borderBottom: `2px solid ${C.m700}`, paddingBottom: 24, marginBottom: 32 }}>
+                <div style={{ width: 80, height: 80, borderRadius: 12, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${C.borderMed}` }}>
+                  <User size={40} color={C.m700} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Learner Permanent Record</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif" }}>{selectedStudent.last_name}, {selectedStudent.first_name}</div>
+                  <div style={{ display: "flex", gap: 24, marginTop: 12 }}>
+                    <div style={{ fontSize: 13, color: C.t2 }}><strong>LRN:</strong> {prof?.lrn || 'N/A'}</div>
+                    <div style={{ fontSize: 13, color: C.t2 }}><strong>Gender:</strong> {normalizedGender}</div>
+                    <div style={{ fontSize: 13, color: C.t2 }}><strong>Current Grade:</strong> {prof?.grade_level || 'N/A'}</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Academic Status */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
@@ -145,7 +155,8 @@ export function StudentDataSearch() {
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
     </div>
   );
 }

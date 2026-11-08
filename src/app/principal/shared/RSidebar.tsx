@@ -1,7 +1,8 @@
 import React from 'react';
 import { RScreen } from '../../shared/types';
-import { LayoutDashboard, Users, FileText, FolderOpen, AlertTriangle, Search } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FolderOpen, AlertTriangle, Award, GraduationCap, CalendarDays, User } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
+import { useAppContext } from '../../shared/AppContext';
 
 const R_NAV_GROUPS: SidebarGroupConfig<RScreen>[] = [
   { category: "Overview", items: [
@@ -13,8 +14,15 @@ const R_NAV_GROUPS: SidebarGroupConfig<RScreen>[] = [
   { category: "Records Management", items: [
     { id: "r-doc-requests", label: "Document Requests", icon: FileText },
     { id: "r-records", label: "Academic Records (SF10)", icon: FolderOpen },
-    { id: "r-deficiency", label: "Document Deficiency", icon: AlertTriangle },
-    { id: "r-search", label: "Student Data Search", icon: Search },
+    { id: "r-report-cards", label: "Report Cards (SF9)", icon: Award },
+    { id: "r-deficiency", label: "Document Deficiencies", icon: AlertTriangle },
+  ]},
+  { category: "Academic Hub", items: [
+    { id: "r-sections", label: "Sections and Rosters", icon: GraduationCap },
+    { id: "r-school-years", label: "School Years", icon: CalendarDays },
+  ]},
+  { category: "Account", items: [
+    { id: "r-profile", label: "My Profile", icon: User },
   ]},
 ];
 
@@ -24,8 +32,18 @@ export function RSidebar({ active, onNav, onLogout, collapsed = false }: {
   onLogout: () => void;
   collapsed?: boolean;
 }) {
-  const user = { name: "Registrar Office", sub: "Admissions & Records" };
-  const initials = "RE";
+  const { currentUser } = useAppContext();
+  const fullName = currentUser?.firstName && currentUser?.lastName
+    ? `${currentUser.firstName} ${currentUser.lastName}`
+    : currentUser?.name;
+  const userName = fullName && !fullName.includes("undefined") ? fullName : "Registrar Office";
+  const userSubtitle = "Admissions and Records";
+  const nameParts = userName.trim().split(/\s+/);
+  const initials = currentUser?.firstName && currentUser?.lastName
+    ? `${currentUser.firstName[0]}${currentUser.lastName[0]}`
+    : nameParts.length >= 2
+      ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+      : "RE";
 
   return (
     <PortalSidebar
@@ -35,11 +53,11 @@ export function RSidebar({ active, onNav, onLogout, collapsed = false }: {
       collapsed={collapsed}
       brandSubtitle="Registrar"
       brandLogoSize={48}
-      userName={user.name}
-      userSubtitle={user.sub}
+      userName={userName}
+      userSubtitle={userSubtitle}
       userInitials={initials}
       onLogout={onLogout}
-      onProfileClick={() => onNav('r-settings' as RScreen)}
+      onProfileClick={() => onNav('r-profile')}
       theme="gold"
     />
   );

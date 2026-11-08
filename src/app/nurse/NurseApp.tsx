@@ -33,7 +33,7 @@ function MedicalHistoryDrawer({ student, apiVisits, onClose }: { student: Clinic
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ color: "#fff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", lineHeight: 1.2 }}>{student.name}</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 4 }}>Grade {student.grade} - {student.section}</div>
+            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 4 }}>Grade {student.grade}, Section {student.section}</div>
           </div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
             <X size={16} />
@@ -70,7 +70,7 @@ function MedicalHistoryDrawer({ student, apiVisits, onClose }: { student: Clinic
             
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {apiVisits.length === 0 ? (
-                <div style={{ fontSize: 13, color: C.t3, fontStyle: "italic" }}>No previous clinic apiVisits recorded.</div>
+                <div style={{ fontSize: 13, color: C.t3, fontStyle: "italic" }}>No previous clinic visits recorded.</div>
               ) : (
                 apiVisits.map((v, i) => (
                   <div key={v.id} style={{ borderLeft: `2px solid ${C.borderMed}`, paddingLeft: 16, position: "relative" }}>
@@ -84,7 +84,7 @@ function MedicalHistoryDrawer({ student, apiVisits, onClose }: { student: Clinic
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12 }}>
                         <Stethoscope size={14} color={C.m700} style={{ marginTop: 2 }} />
                         <div>
-                          <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", marginBottom: 2 }}>Diagnosis / Reason</div>
+                          <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", marginBottom: 2 }}>Diagnosis</div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{v.diagnoses}</div>
                         </div>
                       </div>
@@ -100,7 +100,7 @@ function MedicalHistoryDrawer({ student, apiVisits, onClose }: { student: Clinic
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 12 }}>
                         <Pill size={14} color={C.blue} style={{ marginTop: 2 }} />
                         <div>
-                          <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", marginBottom: 2 }}>Treatment & Meds</div>
+                          <div style={{ fontSize: 10, color: C.t3, textTransform: "uppercase", marginBottom: 2 }}>Treatment and Medications</div>
                           <div style={{ fontSize: 12, color: C.t2 }}>{v.treatments} {v.medications !== "None" && `(${v.medications})`}</div>
                         </div>
                       </div>
@@ -253,9 +253,9 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
             <div>
               <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: formError ? "#dc2626" : C.t2, marginBottom: 4, transition: "color 0.3s ease" }}>Select Student <span style={{ color: "#dc2626" }}>*</span></label>
               <select name="studentId" value={formData.studentId} onChange={handleChange} style={{ width: "100%", padding: "10px 12px", border: `1px solid ${formError ? "#fca5a5" : C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: formError ? "#fef2f2" : "#fff", transition: "all 0.3s ease", boxShadow: formError ? "0 0 0 3px rgba(220, 38, 38, 0.1)" : "none" }}>
-                <option value="">-- Choose Student --</option>
+                <option value="">Select a student</option>
                 {students.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} (Gr. {s.grade} - {s.section})</option>
+                  <option key={s.id} value={s.id}>{s.name} (Grade {s.grade}, Section {s.section})</option>
                 ))}
               </select>
             </div>
@@ -293,23 +293,23 @@ function RecordVisitDrawer({ students, onSave, onClose }: { students: ClinicStud
 
             {/* Symptoms & Diagnosis */}
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Chief Complaint / Symptoms</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Symptoms and Chief Complaint</label>
               <textarea name="symptoms" value={formData.symptoms} onChange={handleChange} rows={2} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none", resize: "vertical" }} placeholder="e.g. Headache, dizziness" />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Diagnosis / Assessment</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Diagnosis and Assessment</label>
               <input name="diagnoses" value={formData.diagnoses} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none" }} placeholder="e.g. Tension headache" />
             </div>
 
             {/* Treatment & Meds */}
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Treatments Provided</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Treatment Provided</label>
               <input name="treatments" value={formData.treatments} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none" }} placeholder="e.g. Rested for 30 mins, applied cold compress" />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Medications Administered/Prescribed</label>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: C.t2, marginBottom: 4 }}>Medications Administered</label>
               <input name="medications" value={formData.medications} onChange={handleChange} style={{ width: "100%", padding: "8px 12px", border: `1px solid ${C.borderMed}`, borderRadius: 4, fontSize: 13, outline: "none" }} placeholder="e.g. Paracetamol 500mg" />
             </div>
 
@@ -511,9 +511,9 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
             )}
             <div>
               <h1 style={{ fontSize: 15, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>
-                {screen === 'n-dashboard' ? "Dashboard Overview" : "Clinic Operations"}
+                {screen === 'n-dashboard' ? "School Health Clinic" : screen === 'n-inventory' ? "Clinic Inventory" : screen === 'n-reports' ? "Medical Reports" : "Clinic Analytics"}
               </h1>
-              <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>Tuesday, June 10, 2025</div>
+              <div style={{ fontSize: 9, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 2 }}>Calulut Integrated School</div>
             </div>
           </div>
           
@@ -603,8 +603,8 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
               {/* Quick Stats & Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Dashboard Overview</h2>
-            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Overview of clinic operations and recent student apiVisits.</p>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Clinic Overview</h2>
+            <p style={{ fontSize: 13, color: C.t3, margin: "4px 0 0 0" }}>Overview of clinic operations and recent student visits.</p>
           </div>
           <button onClick={() => setIsRecordOpen(true)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 6, background: C.m700, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 4px 12px rgba(153,27,27,0.2)" }}>
             <Plus size={16} /> Record New Visit
@@ -613,9 +613,9 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
 
         <div style={{ display: "flex", gap: 16 }}>
           {[
-            { label: "Total apiVisits (Today)", value: apiVisits.filter(v => v.date === new Date().toISOString().split('T')[0]).length, icon: Activity, color: C.m700 },
+            { label: "Visits Today", value: apiVisits.filter(v => v.date === new Date().toISOString().split('T')[0]).length, icon: Activity, color: C.m700 },
             { label: "Active Consultations", value: 0, icon: Stethoscope, color: C.amber },
-            { label: "Total Records", value: apiVisits.length, icon: FileText, color: C.blue }
+            { label: "Total Visit Records", value: apiVisits.length, icon: FileText, color: C.blue }
           ].map((s, i) => (
             <div key={i} style={{ flex: 1, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ width: 48, height: 48, borderRadius: 24, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -647,7 +647,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: C.m50, borderBottom: `1px solid ${C.borderMed}` }}>
-                  {["Date & Time", "Student", "Symptoms / Complaint", "Diagnosis", "Treatment / Meds", "Actions"].map(h => (
+                  {["Date and Time", "Student", "Symptoms", "Diagnosis", "Treatment", "Actions"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "12px 20px", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</th>
                   ))}
                 </tr>
@@ -674,7 +674,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                       </td>
                       <td style={{ padding: "14px 20px" }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{s.name}</div>
-                        <div style={{ fontSize: 10, color: C.t3 }}>Gr. {s.grade} - {s.section}</div>
+                        <div style={{ fontSize: 10, color: C.t3 }}>Grade {s.grade}, Section {s.section}</div>
                       </td>
                       <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.symptoms}</td>
                       <td style={{ padding: "14px 20px", fontSize: 12, fontWeight: 600, color: C.t1 }}>{v.diagnosis}</td>
@@ -748,7 +748,7 @@ export function NurseApp({ onLogout }: { onLogout: () => void }) {
                           <div style={{ width: 32, height: 32, borderRadius: 16, background: C.borderMed, display: "flex", alignItems: "center", justifyContent: "center" }}><User size={16} color={C.t3} /></div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{s.name}</div>
-                            <div style={{ fontSize: 11, color: C.t3 }}>Grade {s.grade} - {s.section}</div>
+                            <div style={{ fontSize: 11, color: C.t3 }}>Grade {s.grade}, Section {s.section}</div>
                           </div>
                         </div>
                         {selectedReportStudent?.id === s.id && <div style={{ fontSize: 11, fontWeight: 700, color: C.m700, background: C.m100, padding: "4px 8px", borderRadius: 4 }}>SELECTED</div>}

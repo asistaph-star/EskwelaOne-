@@ -20,15 +20,17 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
   const unreadCount = notifications.filter(n => n.recipientId === currentUser?.id && !n.isRead).length;
 
   const TITLES: Record<GScreen, { title: string; sub: string }> = {
-    "g-dashboard": { title: "Guidance Dashboard", sub: "Overview of student cases and counseling schedules" },
-    "g-records": { title: "Student Records", sub: "Search and review student guidance history and AI case insights" },
+    "g-dashboard": { title: "Guidance Overview", sub: "Overview of student cases and counseling schedules" },
+    "g-records": { title: "Student Records", sub: "Search and review student guidance records and case history" },
     "g-behavior": { title: "Behavioral Reports", sub: "Track and manage student disciplinary cases" },
     "g-counseling": { title: "Counseling Sessions", sub: "Manage student and parent appointments" },
     "g-settings": { title: "Settings", sub: "Guidance Office Preferences" },
-    "g-help": { title: "Help & Support", sub: "System assistance and documentation" }
+    "g-help": { title: "Help and Support", sub: "System assistance and documentation" }
   };
 
   const current = TITLES[screen];
+  const displayName = currentUser?.name?.trim() || "Guidance Counselor";
+  const initials = displayName.split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "GC";
 
   return (
     <div style={{ display: "flex", height: "100vh", width: "100vw", background: "#F7F9FC", fontFamily: "'Inter', sans-serif", overflow: "hidden" }}>
@@ -56,11 +58,11 @@ export function GuidanceApp({ onLogout }: { onLogout: () => void }) {
             <div style={{ width: 1, height: 24, background: C.borderMed }} />
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>Counselor Perez</div>
-                <div style={{ fontSize: 11, color: C.t3 }}>Guidance</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{displayName}</div>
+                <div style={{ fontSize: 11, color: C.t3 }}>Guidance Office</div>
               </div>
               <div style={{ width: 40, height: 40, borderRadius: 20, background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", color: C.m900, fontWeight: 800, fontSize: 14 }}>
-                GC
+                {initials}
               </div>
             </div>
           </div>

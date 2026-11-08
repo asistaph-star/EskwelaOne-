@@ -2,6 +2,9 @@
 @import './tailwind.css';
 @import './theme.css';
 
+html, body { height: 100%; margin: 0; }
+#root { height: 100%; }
+
 .hover-zoom {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

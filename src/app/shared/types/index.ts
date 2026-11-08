@@ -8,7 +8,7 @@ export type TScreen =
 
 export type PScreen =
   | "p-dashboard" | "p-monitoring"
-  | "p-analytics" | "p-teachers"
+  | "p-analytics" | "p-school-years" | "p-teachers" | "p-report-cards"
   | "p-inventory" | "p-doc-requests"
   | "p-events" | "p-faculty-attendance"
   | "p-settings" | "p-help" | "p-behavior" | "p-leaves" | "p-scanner" | "p-announcements";
@@ -17,7 +17,18 @@ export type GScreen =
   | "g-dashboard" | "g-behavior" | "g-counseling" | "g-records" | "g-settings" | "g-help";
 
 export type RScreen =
-  | "r-dashboard" | "r-enrollment" | "r-records" | "r-doc-requests" | "r-deficiency" | "r-search" | "r-settings" | "r-help";
+  | "r-dashboard"
+  | "r-enrollment"
+  | "r-records"
+  | "r-report-cards"
+  | "r-doc-requests"
+  | "r-deficiency"
+  | "r-search"
+  | "r-sections"
+  | "r-school-years"
+  | "r-profile"
+  | "r-settings"
+  | "r-help";
 
 export interface RCStudent {
   surname: string;

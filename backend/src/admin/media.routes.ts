@@ -7,10 +7,14 @@ import { createAuditLog } from '../audit/audit.service.js';
 import { AppError } from '../common/middleware/errorHandler.js';
 import multer from 'multer';
 import { fileTypeFromBuffer } from 'file-type';
-import path from 'path';
 import fs from 'fs';
 
 import { getMediaStoragePath } from '../config/storage.config.js';
+import {
+  resolveSafeStorageFilePath,
+  setPrivateDocumentResponseHeaders,
+  toPublicDocumentMetadata,
+} from '../documents/documentSecurity.service.js';
 
 const STORAGE_DIR = getMediaStoragePath();
 
@@ -21,6 +25,14 @@ const upload = multer({
 });
 
 const router = Router();
+
+function toSafeCampusMediaDto(media: any) {
+  if (!media) return media;
+  return {
+    ...media,
+    document: media.document ? toPublicDocumentMetadata(media.document) : undefined,
+  };
+}
 
 // ----- PUBLIC / GATE KIOSK ROUTES ----- //
 
@@ -67,7 +79,7 @@ router.get('/gate/serve/:documentId', authMiddleware, async (req: Request, res: 
   try {
     const documentId = String(req.params.documentId);
     const authUser = (req as any).user as AuthenticatedUser;
-    
+
     const hasAccess = authUser.roles.includes('GateOperator') || authUser.roles.includes('Admin') || authUser.roles.includes('ITAdmin') || authUser.permissions.includes('campus_media:read');
     if (!hasAccess) {
       throw new AppError(403, 'FORBIDDEN', 'You do not have permission to view campus media.');
@@ -82,13 +94,12 @@ router.get('/gate/serve/:documentId', authMiddleware, async (req: Request, res: 
       throw new AppError(404, 'NOT_FOUND', 'Media not found.');
     }
 
-    const filePath = path.join(STORAGE_DIR, media.document.storage_key);
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, media.document.storage_key);
     if (!fs.existsSync(filePath)) {
       throw new AppError(404, 'NOT_FOUND', 'File not found on disk.');
     }
 
-    res.setHeader('Content-Type', media.document.mime_type);
-    res.setHeader('Content-Disposition', `inline; filename="${media.document.filename}"`);
+    setPrivateDocumentResponseHeaders(res, media.document.mime_type, media.document.filename, 'inline');
     res.sendFile(filePath);
   } catch (err) {
     next(err);
@@ -105,13 +116,13 @@ adminRouter.use(requirePermissions('campus_media:manage'));
  * GET /api/media/admin
  * List all media (active and inactive) for the management UI.
  */
-adminRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+adminRouter.get('/', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const media = await prisma.campusMedia.findMany({
       orderBy: { sort_order: 'asc' },
       include: { document: true }
     });
-    res.json({ success: true, data: media });
+    res.json({ success: true, data: media.map(toSafeCampusMediaDto) });
   } catch (err) {
     next(err);
   }
@@ -136,7 +147,7 @@ adminRouter.post('/upload', upload.single('file'), async (req: Request, res: Res
     const fileType = await fileTypeFromBuffer(file.buffer);
     const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
     const allowedVideoTypes = ['video/mp4'];
-    
+
     if (!fileType || (!allowedImageTypes.includes(fileType.mime) && !allowedVideoTypes.includes(fileType.mime))) {
       throw new AppError(400, 'BAD_REQUEST', 'Invalid file type. Only JPEG, PNG, WebP, and MP4 are allowed.');
     }
@@ -144,7 +155,7 @@ adminRouter.post('/upload', upload.single('file'), async (req: Request, res: Res
     const mediaType = allowedVideoTypes.includes(fileType.mime) ? 'video' : 'image';
 
     const storageKey = `media_${generateId()}${fileType.ext ? '.' + fileType.ext : ''}`;
-    const filePath = path.join(STORAGE_DIR, storageKey);
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, storageKey);
     fs.writeFileSync(filePath, file.buffer);
 
     const campusMedia = await prisma.$transaction(async (tx) => {
@@ -188,7 +199,7 @@ adminRouter.post('/upload', upload.single('file'), async (req: Request, res: Res
       correlationId,
     });
 
-    res.status(201).json({ success: true, data: campusMedia });
+    res.status(201).json({ success: true, data: toSafeCampusMediaDto(campusMedia) });
   } catch (err) {
     next(err);
   }
@@ -330,7 +341,7 @@ adminRouter.delete('/:id', async (req: Request, res: Response, next: NextFunctio
       }
     });
 
-    const filePath = path.join(STORAGE_DIR, media.document.storage_key);
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, media.document.storage_key);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

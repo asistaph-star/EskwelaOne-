@@ -5,7 +5,6 @@ import { useLayout } from '../App';
 import { useHashRouter } from '../shared/utils/useHashRouter';
 import { PSidebar } from './shared/PSidebar';
 import { PHeaderBand } from './shared/PHeaderBand';
-import { ReadOnlyBanner } from '../shared/components/ReadOnlyBanner';
 import { PDashboard } from './dashboard/PDashboard';
 import { PAcademics } from './analytics/PAcademics';
 import { PTeachers } from './teachers/PTeachers';
@@ -22,6 +21,8 @@ import { PBehaviorScreen } from './behavior/PBehaviorScreen';
 import { PSettingsScreen } from './settings/PSettingsScreen';
 
 import { Toaster } from 'sonner';
+import { ReportCardReleaseConsole } from '../shared/components/ReportCardReleaseConsole';
+import { SchoolYearManagementScreen } from '../shared/components/SchoolYearManagementScreen';
 
 export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const [screen, setScreen] = useHashRouter<PScreen>("principal", "p-dashboard");
@@ -32,8 +33,10 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
   const TITLES: Record<PScreen,string> = {
     "p-dashboard": "Dashboard Overview", "p-monitoring":"Gate Attendance Monitoring",
     "p-analytics":"Academic Analytics",  "p-teachers":  "Teacher Management",
+    "p-report-cards": "Report Cards (SF9)",
+    "p-school-years": "School Years",
     "p-inventory": "Inventory",          "p-behavior":  "Behavioral Reports",
-    "p-settings": "Settings",            "p-help":      "Help & Feedback",
+    "p-settings": "Settings",            "p-help":      "Help and Feedback",
     "p-events":   "School Events",       "p-faculty-attendance": "Gate Attendance Monitoring",
     "p-doc-requests": "Document Requests",
     "p-leaves": "Leave Management",      "p-announcements": "Announcements",
@@ -57,7 +60,7 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           </button>
         </div>
       )}
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <PHeaderBand
           title={TITLES[screen]}
           sub={new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).toUpperCase()}
@@ -65,12 +68,13 @@ export function PrincipalApp({ onLogout }: { onLogout:()=>void }) {
           onLogout={onLogout}
           onSettings={() => setScreen("p-settings")}
         />
-        <ReadOnlyBanner />
-        <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", position: "relative" }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
           
           {screen==="p-dashboard"  && <PDashboard  onNav={setScreen} onShowGradeCard={showGradeCard} />}
           {screen==="p-analytics"  && <PAcademics  />}
           {screen==="p-teachers"   && <PTeachers   />}
+          {screen==="p-report-cards" && <ReportCardReleaseConsole portal="Principal" />}
+          {screen==="p-school-years" && <SchoolYearManagementScreen portal="Principal" />}
           {screen==="p-inventory"  && <PInventory   />}
           {screen==="p-events"     && <PEventsScreen />}
 

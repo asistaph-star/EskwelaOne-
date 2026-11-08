@@ -14,8 +14,15 @@ export type CalendarEvent = { id: string; title: string; date: string; time?: st
 
 export function StudentCalendar({ setTab }: any) {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [academicData, setAcademicData] = useState<any>(null);
+
   useEffect(() => {
     apiClient.get<CalendarEvent[]>('/admin/events').then(setEvents).catch(console.error);
+    import('../../../api/student.api').then(({ studentApi }) => {
+      studentApi.getMyClasses()
+        .then((res: any) => setAcademicData(res?.data || res))
+        .catch(console.error);
+    });
   }, []);
   const [calendarDate, setCalendarDate] = React.useState(new Date(2025, 5, 1));
   const formatTimeDisplay = (timeString: string) => {
@@ -25,16 +32,6 @@ export function StudentCalendar({ setTab }: any) {
     const ampm = h >= 12 ? 'PM' : 'AM';
     const hr = h % 12 || 12;
     return `${hr}:${minutes} ${ampm}`;
-  };
-  const CLASS_SCHEDULE: any = {
-    "Monday": [
-      { time: "08:00 AM - 09:30 AM", subject: "Mathematics", room: "Room 101" },
-      { time: "09:45 AM - 11:15 AM", subject: "Science", room: "Lab A" }
-    ],
-    "Tuesday": [
-      { time: "08:00 AM - 09:30 AM", subject: "English", room: "Room 102" },
-      { time: "09:45 AM - 11:15 AM", subject: "History", room: "Room 103" }
-    ]
   };
 
   const calYear = calendarDate.getFullYear();
@@ -143,61 +140,67 @@ export function StudentCalendar({ setTab }: any) {
                 </div>
               </div>
 
-              {/* Bottom Row: Weekly Timetable */}
-              <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
-                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
+              {/* Bottom Row: Weekly Timetable & Classes */}
+              <div id="student-calendar-timetable" style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
+                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", flexWrap: "wrap", gap: 10 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", display: "flex", alignItems: "center", gap: 8 }}>
-                    <Clock size={18} color={C.m700} /> Weekly Class Timetable (Grade 10 - Pilot)
+                    <Clock size={18} color={C.m700} />
+                    Weekly Class Timetable {academicData?.enrollment ? `(Grade ${academicData.enrollment.gradeLevel}, Section ${academicData.enrollment.sectionName})` : ''}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.m700, background: C.m50, padding: "4px 12px", borderRadius: 12 }}>Adviser: Ms. Soriano</span>
+                  {academicData?.enrollment?.adviser?.name && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: C.m700, background: C.m50, padding: "4px 12px", borderRadius: 12, border: `1px solid ${C.m700}20` }}>
+                      Class Adviser: {academicData.enrollment.adviser.name}
+                    </span>
+                  )}
                 </div>
-                <div style={{ padding: 20, overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: "0 8px", minWidth: 800 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left", padding: "0 12px 8px 12px", fontSize: 11, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", width: 120 }}>Time</th>
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => (
-                          <th key={day} style={{ textAlign: "left", padding: "0 12px 8px 12px", fontSize: 11, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{day}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...Array(7)].map((_, pIdx) => {
-                        const timeSlot = CLASS_SCHEDULE.Monday[pIdx]?.time || "";
-                        return (
-                          <tr key={pIdx}>
-                            <td style={{ padding: "0 12px", fontSize: 11.5, fontWeight: 700, color: C.t2, whiteSpace: "nowrap" }}>{timeSlot}</td>
-                            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(day => {
-                              const period = CLASS_SCHEDULE[day]?.[pIdx];
-                              if (!period) return <td key={day} style={{ padding: "0 6px" }} />;
-  return (
-                                <td key={day} style={{ padding: "0 6px" }}>
-                                  <div style={{ 
-                                    background: "#fff", 
-                                    border: `1px solid ${C.borderMed}`, 
-                                    borderLeft: `4px solid ${C.m700}`, 
-                                    padding: "10px 12px", 
-                                    borderRadius: 6, 
-                                    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                                    transition: "transform 0.15s, box-shadow 0.15s",
-                                    cursor: "default"
-                                  }}
-                                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = C.borderHeavy; }}
-                                    onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.02)"; e.currentTarget.style.borderColor = C.borderMed; }}
-                                  >
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>{period.subject}</div>
-                                    <div style={{ fontSize: 10, color: C.t2, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><School size={10} color={C.t3} /> {period.room}</div>
-                                    <div style={{ fontSize: 9, color: C.t3, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><User size={10} color={C.t3} /> {period.teacher}</div>
-                                  </div>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+
+                {academicData?.classes && academicData.classes.length > 0 ? (
+                  <div style={{ padding: 20, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+                    {academicData.classes.map((cls: any) => (
+                      <div key={cls.id} style={{
+                        background: "#fff",
+                        border: `1px solid ${C.borderMed}`,
+                        borderLeft: `4px solid ${C.m700}`,
+                        padding: "12px 14px",
+                        borderRadius: 6,
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>{cls.subjectName}</div>
+                          <span style={{ fontSize: 9.5, fontWeight: 700, color: C.m700, background: C.m50, padding: "2px 6px", borderRadius: 4 }}>
+                            {cls.subjectCode}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: C.t2, marginTop: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                          <User size={12} color={C.t3} /> Faculty: {cls.teacherName}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                          <School size={12} color={C.t3} /> Room: {cls.schedule?.room || 'Assigned Room'}
+                        </div>
+                        <div style={{ fontSize: 10.5, fontWeight: 600, color: cls.schedule?.startTime ? C.m700 : C.t3, marginTop: 4, display: "flex", alignItems: "center", gap: 5 }}>
+                          <Clock size={12} color={cls.schedule?.startTime ? C.m700 : C.t3} />
+                          {cls.schedule?.startTime && cls.schedule?.endTime
+                            ? `${cls.schedule.days ? `${cls.schedule.days}, ` : ''}${cls.schedule.startTime} - ${cls.schedule.endTime}`
+                            : 'Schedule to be announced by faculty'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : academicData?.enrollment ? (
+                  <div style={{ padding: "32px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                    <School size={28} color={C.m700} style={{ opacity: 0.7 }} />
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>
+                      Enrolled in Grade {academicData.enrollment.gradeLevel}, Section {academicData.enrollment.sectionName}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: C.t3, maxWidth: 440, lineHeight: 1.5 }}>
+                      Class Adviser: <strong>{academicData.enrollment.adviser?.name || 'Class Adviser'}</strong>. Detailed subject class schedules for this section are being finalized by school faculty for {academicData.enrollment.academicYear}.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ padding: 30, textAlign: "center", color: C.t3, fontSize: 12 }}>
+                    No active class schedule available.
+                  </div>
+                )}
               </div>
             </div>
             

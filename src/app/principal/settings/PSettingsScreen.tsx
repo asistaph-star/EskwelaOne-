@@ -358,7 +358,7 @@ export function PSettingsScreen() {
                   </div>
                   <div style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#065f46", fontSize: 12, fontWeight: 700 }}>
                     <span style={{ width: 6, height: 6, borderRadius: 3, background: "#10b981" }} />
-                    Active · Authorized
+                    Active
                   </div>
                   <div style={{ fontSize: 10, color: C.t3, marginTop: 2 }}>
                     {permissionsCount} system permissions assigned
@@ -417,10 +417,10 @@ export function PSettingsScreen() {
               </div>
               <div>
                 <h2 style={{ fontSize: 16, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Fraunces', serif" }}>
-                  Security & Authentication Oversight
+                  Security and Session Controls
                 </h2>
                 <p style={{ fontSize: 12, color: C.t3, margin: 0 }}>
-                  Cryptographic session controls and password governance standards.
+                  Session management and password security standards.
                 </p>
               </div>
             </div>
@@ -461,7 +461,7 @@ export function PSettingsScreen() {
                   Minimum 8-Character Password Requirement
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  Enforced on provisioned accounts (schema min 8 chars) & temporary credentials.
+                  Minimum of 8 characters required for all user accounts and temporary passwords.
                 </div>
               </div>
             </div>
@@ -538,10 +538,10 @@ export function PSettingsScreen() {
                   Grading Standard
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.t1 }}>
-                  Four-Term Cumulative Grading Standard
+                  {terms.length === 3 ? "Three-Term Cumulative Grading Standard" : `${terms.length}-Term Cumulative Grading Standard`}
                 </div>
                 <div style={{ fontSize: 11, color: C.t3, marginTop: 4 }}>
-                  Passing Threshold: 75.00% · Terms: T1, T2, T3, T4
+                  Passing Threshold: 75.00% · Terms: {terms.map(t => t.key).join(', ') || 'T1, T2, T3'}
                 </div>
               </div>
             </div>
@@ -568,7 +568,7 @@ export function PSettingsScreen() {
                       }}
                     >
                       <div style={{ fontSize: 11, fontWeight: 800, color: C.m700 }}>{t.key}</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginTop: 2 }}>{t.label || t.key}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.t1, marginTop: 2 }}>{t.name || t.label || t.key}</div>
                       <div style={{ fontSize: 10, color: C.t3, marginTop: 4 }}>
                         {t.start_date ? new Date(t.start_date).toLocaleDateString() : ""}
                       </div>
@@ -581,6 +581,47 @@ export function PSettingsScreen() {
             <div style={{ marginTop: 16, fontSize: 11, color: C.t3, display: "flex", alignItems: "center", gap: 5 }}>
               <Info size={13} />
               Academic year lifecycles and enrollment terms are maintained by the Registrar & System Administration (`academic:write`). The Principal retains read-only oversight (`academic:read`).
+            </div>
+
+            {/* Dedicated School-Year Management Navigation Callout */}
+            <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${C.borderLight}` }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 12,
+                padding: "16px 20px",
+                borderRadius: 8,
+                background: "#f8fafc",
+                border: `1px solid ${C.borderLight}`
+              }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>
+                    Dedicated School-Year Management
+                  </div>
+                  <div style={{ fontSize: 11, color: C.t3, marginTop: 2 }}>
+                    Comprehensive academic calendar oversight, grading framework schedules, and closure completion review are now housed under <strong>Administration → School Years</strong>.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="inspect-readiness-btn"
+                  onClick={() => { window.location.hash = "#/principal/p-school-years"; }}
+                  style={{
+                    background: '#0f172a',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open School Years
+                </button>
+              </div>
             </div>
           </div>
         </div>

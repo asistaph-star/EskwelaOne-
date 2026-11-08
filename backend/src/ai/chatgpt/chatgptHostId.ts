@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { getStorageRootPath } from '../../config/storage.config.js';
 
 export interface ChatGPTAgentHostInfo {
   hostId: string;
   createdAt: string;
 }
 
-const DEFAULT_STORAGE_PATH = path.resolve(process.cwd(), 'storage', 'chatgpt', 'host_id.json');
+const DEFAULT_STORAGE_PATH = path.join(getStorageRootPath(), 'chatgpt', 'host_id.json');
 
 /**
  * Retrieves or initializes a stable, opaque host identifier for the local DigiSkwela environment.

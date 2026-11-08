@@ -471,7 +471,7 @@ export function RolesPermissionsScreen() {
               <AlertTriangle size={12} />
               Conditional
             </span>
-            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Assigned section / own record only</span>
+            <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Assigned section or own record only</span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>

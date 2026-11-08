@@ -110,8 +110,13 @@ export async function getStudentEnrollmentHistory(studentId: string, academicYea
       status: 'asc',
     },
     include: {
+      academic_year: true,
       section: {
         include: {
+          academic_year: true,
+          adviser_teacher: {
+            include: { user: true }
+          },
           assignments: {
             include: {
               teacher: {

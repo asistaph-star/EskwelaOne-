@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle, CheckCircle2, Search, Plus, X, Pencil,
-  FileText, ChevronDown, ChevronUp, MessageSquare, ClipboardList
+  FileText, ChevronDown, ChevronUp, MessageSquare, ClipboardList, Loader2, RefreshCw, ShieldAlert
 } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
+import { apiClient } from "../../../api/client";
+import { Applicant } from "../../shared/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type DocStatus = "Missing" | "Submitted" | "Received" | "For Follow-up";
@@ -28,181 +30,140 @@ type StudentDeficiency = {
   overallNote?: string;
 };
 
-// ── Seed Data ───────────────────────────────────────────────────────────────
-const SEED_DEFICIENCIES: StudentDeficiency[] = [
-  {
-    id: "SD-001", name: "Reyes, Sofia", lrn: "102301180034", grade: "Grade 8", section: "Newton",
-    type: "Transferee", enrolledDate: "2026-06-22",
-    overallNote: "From Sta. Rita National High School. Registrar confirmed docs are being processed.",
-    requirements: [
-      { id: "r1", label: "Form 137 (Permanent Record)", status: "Missing", dueDate: "2026-07-15", note: "Awaiting transmittal from previous school (Sta. Rita NHS)." },
-      { id: "r2", label: "PSA Birth Certificate", status: "Submitted" },
-      { id: "r3", label: "Certificate of Good Moral Character", status: "Received" },
-      { id: "r4", label: "Medical / Health Certificate", status: "Missing", dueDate: "2026-07-10" },
-    ]
-  },
-  {
-    id: "SD-002", name: "Torres, Andrei", lrn: "102301180041", grade: "Grade 7", section: "Rizal",
-    type: "New Student", enrolledDate: "2026-06-18",
-    requirements: [
-      { id: "r5", label: "PSA Birth Certificate", status: "Submitted" },
-      { id: "r6", label: "Form 138 (Report Card – Grade 6)", status: "Missing", note: "Parents said they lost the original. Requested from Sto. Tomas Elementary." },
-      { id: "r7", label: "Certificate of Good Moral Character", status: "For Follow-up", note: "Submitted photocopy; original needed." },
-      { id: "r8", label: "Medical / Health Certificate", status: "Submitted" },
-    ]
-  },
-  {
-    id: "SD-003", name: "Manalo, Crisha Mae", lrn: "102301180058", grade: "Grade 9", section: "Curie",
-    type: "Returning", enrolledDate: "2026-06-20",
-    requirements: [
-      { id: "r9", label: "PSA Birth Certificate", status: "Received" },
-      { id: "r10", label: "Form 138 (Report Card – Grade 8)", status: "Missing", dueDate: "2026-07-30" },
-      { id: "r11", label: "Medical / Health Certificate", status: "Missing" },
-      { id: "r12", label: "Parent Consent Form", status: "Submitted" },
-    ]
-  },
-  // ── Complete students (all docs received/submitted) ──
-  {
-    id: "SD-004", name: "Dela Cruz, Mateo", lrn: "102301180022", grade: "Grade 7", section: "Bonifacio",
-    type: "New Student", enrolledDate: "2026-06-15",
-    overallNote: "All documents verified and on file.",
-    requirements: [
-      { id: "r13", label: "PSA Birth Certificate", status: "Received" },
-      { id: "r14", label: "Form 138 (Report Card – Grade 6)", status: "Received" },
-      { id: "r15", label: "Certificate of Good Moral Character", status: "Received" },
-      { id: "r16", label: "Medical / Health Certificate", status: "Submitted" },
-    ]
-  },
-  {
-    id: "SD-005", name: "Bautista, Liam", lrn: "102301180063", grade: "Grade 7", section: "Mabini",
-    type: "New Student", enrolledDate: "2026-06-16",
-    requirements: [
-      { id: "r17", label: "PSA Birth Certificate", status: "Received" },
-      { id: "r18", label: "Form 138 (Report Card – Grade 6)", status: "Received" },
-      { id: "r19", label: "Certificate of Good Moral Character", status: "Received" },
-      { id: "r20", label: "Medical / Health Certificate", status: "Received" },
-    ]
-  },
-  {
-    id: "SD-006", name: "Mendoza, Isabella", lrn: "102301180077", grade: "Grade 9", section: "Darwin",
-    type: "Returning", enrolledDate: "2026-06-17",
-    requirements: [
-      { id: "r21", label: "PSA Birth Certificate", status: "Submitted" },
-      { id: "r22", label: "Form 138 (Report Card – Grade 8)", status: "Submitted" },
-      { id: "r23", label: "Medical / Health Certificate", status: "Received" },
-      { id: "r24", label: "Parent Consent Form", status: "Received" },
-    ]
-  },
-  {
-    id: "SD-007", name: "Garcia, Jolo Marcus", lrn: "102301180089", grade: "Grade 8", section: "Einstein",
-    type: "Transferee", enrolledDate: "2026-06-19",
-    overallNote: "Transferred from Mabalacat City NHS. All docs transmitted electronically.",
-    requirements: [
-      { id: "r25", label: "Form 137 (Permanent Record)", status: "Received", note: "Electronically transmitted." },
-      { id: "r26", label: "PSA Birth Certificate", status: "Received" },
-      { id: "r27", label: "Certificate of Good Moral Character", status: "Received" },
-      { id: "r28", label: "Medical / Health Certificate", status: "Submitted" },
-    ]
-  },
-];
-
-const ALL_POSSIBLE_DOCS = [
-  "Form 137 (Permanent Record)",
-  "Form 138 (Report Card)",
-  "PSA Birth Certificate",
-  "Certificate of Good Moral Character",
-  "Medical / Health Certificate",
-  "Parent Consent Form",
-  "Baptismal Certificate",
-  "Certificate of Completion (Elem)",
-  "Transferee Clearance Form",
-];
-
-// ── Status helpers ──────────────────────────────────────────────────────────
-function statusColor(s: DocStatus): string {
-  if (s === "Received") return C.green;
-  if (s === "Submitted") return "#2563eb";
-  if (s === "For Follow-up") return "#d97706";
-  return C.red;
-}
-function statusBg(s: DocStatus): string {
-  if (s === "Received") return C.greenBg;
-  if (s === "Submitted") return "#eff6ff";
-  if (s === "For Follow-up") return "#fef3c7";
-  return C.redBg;
-}
-
-// ── Main Component ──────────────────────────────────────────────────────────
 export function RDocDeficiencyScreen() {
-  const [students, setStudents] = useState<StudentDeficiency[]>(SEED_DEFICIENCIES);
+  const [students, setStudents] = useState<StudentDeficiency[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"All" | "Incomplete" | "Complete">("All");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState<{ studentId: string; reqId?: string; text: string } | null>(null);
-  const [addDocModal, setAddDocModal] = useState<string | null>(null); // student id
-  const [newDocLabel, setNewDocLabel] = useState("");
-  const [newDocDue, setNewDocDue] = useState("");
+  const [filterGrade, setFilterGrade] = useState("All");
   const [toast, setToast] = useState<string | null>(null);
 
-  // ── Filtering ────────────────────────────────────────────────────────────
-  const filtered = students.filter(s => {
-    const query = searchQuery.toLowerCase();
-    const matchSearch = s.name.toLowerCase().includes(query) || s.lrn.includes(query) || s.section.toLowerCase().includes(query);
-    const hasMissing = s.requirements.some(r => r.status === "Missing" || r.status === "For Follow-up");
-    const matchFilter = filterStatus === "All" || (filterStatus === "Incomplete" && hasMissing) || (filterStatus === "Complete" && !hasMissing);
-    return matchSearch && matchFilter;
-  });
+  const fetchDeficiencies = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiClient.get<Applicant[]>('/admin/enrollment-applications');
+      const apps = Array.isArray(res) ? res : [];
+      
+      const mapped: StudentDeficiency[] = apps.map(app => {
+        const reqs: DocumentRequirement[] = [
+          { id: 'birth_cert', label: 'PSA Birth Certificate', status: app.documents?.birthCert ? 'Received' : 'Missing' },
+          { id: 'form138', label: 'Form 138 (Report Card)', status: app.documents?.form138 ? 'Received' : 'Missing' },
+          { id: 'good_moral', label: 'Certificate of Good Moral Character', status: app.documents?.goodMoral ? 'Received' : 'Missing' },
+          { id: 'medical', label: 'Medical Certificate', status: app.documents?.medical ? 'Received' : 'Missing' },
+        ];
+        return {
+          id: app.id,
+          name: app.name,
+          lrn: app.id,
+          grade: app.gradeLevel,
+          section: 'Admissions Pool',
+          type: (app.type as any) || 'New Student',
+          enrolledDate: app.dateApplied,
+          requirements: reqs,
+          overallNote: `Application status: ${app.status}`
+        };
+      });
 
+      setStudents(mapped);
+    } catch (err: any) {
+      console.error("Failed to load applicants for deficiency tracker", err);
+      setError("Failed to load applicant records from database.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeficiencies();
+  }, []);
   // ── Actions ──────────────────────────────────────────────────────────────
-  function cycleStatus(studentId: string, reqId: string) {
-    const cycle: DocStatus[] = ["Missing", "For Follow-up", "Submitted", "Received"];
-    setStudents(prev => prev.map(s => {
-      if (s.id !== studentId) return s;
-      return {
-        ...s, requirements: s.requirements.map(r => {
-          if (r.id !== reqId) return r;
-          const idx = cycle.indexOf(r.status);
-          return { ...r, status: cycle[(idx + 1) % cycle.length] };
-        })
-      };
-    }));
-  }
+  const toggleDocumentStatus = async (studentId: string, reqId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
 
-  function saveNote(studentId: string, reqId: string | undefined, text: string) {
-    setStudents(prev => prev.map(s => {
-      if (s.id !== studentId) return s;
-      if (!reqId) return { ...s, overallNote: text };
-      return { ...s, requirements: s.requirements.map(r => r.id === reqId ? { ...r, note: text } : r) };
-    }));
-    setEditingNote(null);
-    showToast("Note saved successfully.");
-  }
+    const currentReq = student.requirements.find(r => r.id === reqId);
+    const newStatus: DocStatus = currentReq?.status === "Received" ? "Missing" : "Received";
+    const isNowReceived = newStatus === "Received";
 
-  function addDocument(studentId: string) {
-    if (!newDocLabel.trim()) return;
-    const newReq: DocumentRequirement = {
-      id: `req-${Date.now()}`, label: newDocLabel, status: "Missing", dueDate: newDocDue || undefined
+    const updatedRequirements = student.requirements.map(r => 
+      r.id === reqId ? { ...r, status: newStatus } : r
+    );
+
+    const docPayload: any = {
+      birthCert: updatedRequirements.find(r => r.id === 'birth_cert')?.status === 'Received',
+      form138: updatedRequirements.find(r => r.id === 'form138')?.status === 'Received',
+      goodMoral: updatedRequirements.find(r => r.id === 'good_moral')?.status === 'Received',
+      medical: updatedRequirements.find(r => r.id === 'medical')?.status === 'Received',
     };
-    setStudents(prev => prev.map(s => s.id !== studentId ? s : { ...s, requirements: [...s.requirements, newReq] }));
-    setNewDocLabel(""); setNewDocDue(""); setAddDocModal(null);
-    showToast("Document requirement added.");
-  }
 
-  function removeRequirement(studentId: string, reqId: string) {
-    setStudents(prev => prev.map(s => s.id !== studentId ? s : { ...s, requirements: s.requirements.filter(r => r.id !== reqId) }));
-  }
+    const allReceived = Object.values(docPayload).every(Boolean);
+    const newAppStatus = allReceived ? 'Pending Review' : 'Missing Documents';
+
+    try {
+      await apiClient.patch(`/admin/enrollment-applications/${studentId}`, {
+        documents: docPayload,
+        status: newAppStatus
+      });
+
+      setStudents(prev => prev.map(s => {
+        if (s.id !== studentId) return s;
+        return {
+          ...s,
+          requirements: updatedRequirements,
+          overallNote: `Application status: ${newAppStatus}`
+        };
+      }));
+
+      showToast(`Updated ${currentReq?.label}: ${newStatus}`);
+    } catch (err: any) {
+      console.error(err);
+      showToast(`Failed to update requirement: ${err?.message || 'Server error'}`);
+    }
+  };
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   }
 
+  const statusColor = (status: DocStatus) => {
+    switch (status) {
+      case "Received": return C.green;
+      case "Missing": return C.red;
+      case "Submitted": return C.blue;
+      case "For Follow-up": return "#d97706";
+      default: return C.t2;
+    }
+  };
+
+  const statusBg = (status: DocStatus) => {
+    switch (status) {
+      case "Received": return C.greenBg;
+      case "Missing": return C.redBg;
+      case "Submitted": return C.blueBg;
+      case "For Follow-up": return "#fef3c7";
+      default: return C.paper;
+    }
+  };
+
+  // ── Filtering ────────────────────────────────────────────────────────────
+  const filtered = students.filter(s => {
+    const query = searchQuery.toLowerCase();
+    const matchSearch = s.name.toLowerCase().includes(query) || s.lrn.toLowerCase().includes(query);
+    const hasMissing = s.requirements.some(r => r.status === "Missing" || r.status === "For Follow-up");
+    const matchFilter = filterStatus === "All" || (filterStatus === "Incomplete" && hasMissing) || (filterStatus === "Complete" && !hasMissing);
+    return matchSearch && matchFilter;
+  });
+
   // ── Summary counts ────────────────────────────────────────────────────────
   const totalMissing = students.reduce((sum, s) => sum + s.requirements.filter(r => r.status === "Missing").length, 0);
-  const totalFollowUp = students.reduce((sum, s) => sum + s.requirements.filter(r => r.status === "For Follow-up").length, 0);
+  const totalReceived = students.reduce((sum, s) => sum + s.requirements.filter(r => r.status === "Received").length, 0);
   const studentsWithIssues = students.filter(s => s.requirements.some(r => r.status === "Missing" || r.status === "For Follow-up")).length;
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px", paddingBottom: 100, fontFamily: "'Inter', sans-serif" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 28 }}>
@@ -210,19 +171,35 @@ export function RDocDeficiencyScreen() {
         {/* Header */}
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>
-            Document Deficiency Tracker
+            Document Deficiencies
           </h1>
           <p style={{ fontSize: 13, color: C.t3, margin: "6px 0 0", lineHeight: 1.5 }}>
-            Track enrolled students with missing or incomplete school documents (Form 137, PSA, etc.). Flag, annotate, and update statuses as documents are received.
+            Review and track missing DepEd enrollment requirements (PSA Birth Certificate, Form 138, Good Moral Certificate, Medical Certificate).
           </p>
         </div>
+
+        {/* Informative DepEd Scope Notice */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
+          <ShieldAlert size={20} color="#1d4ed8" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 12, color: '#1e40af', lineHeight: 1.5 }}>
+            <strong>Authoritative DepEd Admission Deficiencies:</strong> Actively auditing documentary requirements for enrollment applicants. Post-enrollment annual credential audits for already-enrolled students are governed under SF10 permanent records.
+          </div>
+        </div>
+
+        {/* Loading Indicator */}
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 20, background: '#fff', borderRadius: 10, border: `1px solid ${C.borderMed}` }}>
+            <Loader2 size={18} className="spin" color={C.m500} />
+            <span style={{ fontSize: 13, color: C.t2 }}>Loading live applicant documentary records from database...</span>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {[
-            { label: "Students with Issues", value: studentsWithIssues, color: C.red, bg: C.redBg, icon: AlertTriangle },
-            { label: "Missing Documents", value: totalMissing, color: "#d97706", bg: "#fef3c7", icon: FileText },
-            { label: "For Follow-up", value: totalFollowUp, color: "#2563eb", bg: "#eff6ff", icon: ClipboardList },
+            { label: "Applicants with Deficiencies", value: studentsWithIssues, color: C.red, bg: C.redBg, icon: AlertTriangle },
+            { label: "Total Missing Documents", value: totalMissing, color: "#d97706", bg: "#fef3c7", icon: FileText },
+            { label: "Verified Documents", value: totalReceived, color: C.green, bg: C.greenBg, icon: CheckCircle2 },
           ].map(({ label, value, color, bg, icon: Icon }) => (
             <div key={label} style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -294,7 +271,7 @@ export function RDocDeficiencyScreen() {
                       <div style={{ fontSize: 11, color: C.t3, marginTop: 2, display: "flex", gap: 8 }}>
                         <span>LRN: {student.lrn}</span>
                         <span>•</span>
-                        <span>{student.grade} – {student.section}</span>
+                        <span>{student.grade}, {student.section}</span>
                         <span>•</span>
                         <span>{student.type}</span>
                         <span>•</span>
@@ -328,26 +305,18 @@ export function RDocDeficiencyScreen() {
 
                     {/* Overall Note */}
                     <div style={{ background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 10, padding: "14px 18px" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6 }}>
-                          <MessageSquare size={12} /> Registrar Notes (General)
-                        </div>
-                        <button
-                          onClick={() => setEditingNote({ studentId: student.id, reqId: undefined, text: student.overallNote || "" })}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: C.m700, display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600 }}
-                        >
-                          <Pencil size={11} /> Edit
-                        </button>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                        <MessageSquare size={12} /> Enrollment Application Status
                       </div>
-                      <div style={{ fontSize: 12.5, color: student.overallNote ? C.t1 : C.t3, lineHeight: 1.6, fontStyle: student.overallNote ? "normal" : "italic" }}>
-                        {student.overallNote || "No general notes yet. Click Edit to add."}
+                      <div style={{ fontSize: 12.5, color: student.overallNote ? C.t1 : C.t3, lineHeight: 1.6 }}>
+                        {student.overallNote || "Application status: Pending Review"}
                       </div>
                     </div>
 
                     {/* Documents List */}
                     <div>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
-                        Document Requirements ({student.requirements.length})
+                        Official DepEd Document Requirements ({student.requirements.length})
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {student.requirements.map(req => (
@@ -356,68 +325,31 @@ export function RDocDeficiencyScreen() {
                             border: `1px solid ${statusColor(req.status)}30`,
                             borderRadius: 8, padding: "12px 16px"
                           }}>
-                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: req.note ? 6 : 0 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <span style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{req.label}</span>
-                                  {req.dueDate && (
-                                    <span style={{ fontSize: 10, color: C.t3, fontStyle: "italic" }}>Due: {req.dueDate}</span>
-                                  )}
                                 </div>
-                                {req.note && (
-                                  <div style={{ fontSize: 11.5, color: C.t2, lineHeight: 1.5, fontStyle: "italic" }}>
-                                    📝 {req.note}
-                                  </div>
-                                )}
                               </div>
                               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                                 {/* Status Toggle Button */}
                                 <button
-                                  onClick={() => cycleStatus(student.id, req.id)}
-                                  title="Click to cycle status"
+                                  onClick={() => toggleDocumentStatus(student.id, req.id)}
+                                  title="Click to toggle Received / Missing status (persists to PostgreSQL)"
                                   style={{
-                                    padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                    padding: "5px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer",
                                     background: "#fff", color: statusColor(req.status),
                                     border: `1px solid ${statusColor(req.status)}`,
                                     transition: "all 0.15s"
                                   }}
                                 >
-                                  {req.status}
-                                </button>
-                                <button
-                                  onClick={() => setEditingNote({ studentId: student.id, reqId: req.id, text: req.note || "" })}
-                                  style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.borderMed}`, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.t3 }}
-                                  title="Add/edit note"
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                                <button
-                                  onClick={() => removeRequirement(student.id, req.id)}
-                                  style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.borderMed}`, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: C.red }}
-                                  title="Remove requirement"
-                                >
-                                  <X size={12} />
+                                  {req.status} (Click to toggle)
                                 </button>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
-
-                      {/* Add Document Button */}
-                      <button
-                        onClick={() => setAddDocModal(student.id)}
-                        style={{
-                          marginTop: 10, padding: "9px 18px", background: "none", border: `1px dashed ${C.borderMed}`,
-                          borderRadius: 8, fontSize: 12, fontWeight: 600, color: C.t3, cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "center",
-                          transition: "all 0.2s"
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = C.m500; e.currentTarget.style.color = C.m700; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderMed; e.currentTarget.style.color = C.t3; }}
-                      >
-                        <Plus size={14} /> Add Missing Document
-                      </button>
                     </div>
                   </div>
                 )}
@@ -426,85 +358,6 @@ export function RDocDeficiencyScreen() {
           })}
         </div>
       </div>
-
-      {/* Note Edit Modal */}
-      {editingNote && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: 28, width: 440, maxWidth: "90%", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <MessageSquare size={18} color={C.m700} />
-              {editingNote.reqId ? "Edit Document Note" : "Edit General Note"}
-            </div>
-            <textarea
-              autoFocus
-              value={editingNote.text}
-              onChange={e => setEditingNote({ ...editingNote, text: e.target.value })}
-              rows={4}
-              placeholder="e.g. Awaiting transmittal from Sta. Rita NHS. Contact: 0917-xxx-xxxx"
-              style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, resize: "none", boxSizing: "border-box", fontFamily: "'Inter', sans-serif", lineHeight: 1.6 }}
-            />
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
-              <button onClick={() => setEditingNote(null)} style={{ padding: "9px 16px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.t2, cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => saveNote(editingNote.studentId, editingNote.reqId, editingNote.text)}
-                style={{ padding: "9px 18px", background: C.m800, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-              >
-                Save Note
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Document Modal */}
-      {addDocModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: 28, width: 440, maxWidth: "90%", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
-              <Plus size={18} color={C.m700} /> Add Missing Document Requirement
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: C.t2, display: "block", marginBottom: 6 }}>Document Name *</label>
-                <input
-                  list="doc-suggestions"
-                  type="text"
-                  placeholder="e.g. Form 137 (Permanent Record)"
-                  value={newDocLabel}
-                  onChange={e => setNewDocLabel(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, boxSizing: "border-box" }}
-                />
-                <datalist id="doc-suggestions">
-                  {ALL_POSSIBLE_DOCS.map(d => <option key={d} value={d} />)}
-                </datalist>
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: C.t2, display: "block", marginBottom: 6 }}>Deadline / Due Date (Optional)</label>
-                <input
-                  type="date"
-                  value={newDocDue}
-                  onChange={e => setNewDocDue(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.borderMed}`, outline: "none", fontSize: 13, boxSizing: "border-box" }}
-                />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20 }}>
-              <button onClick={() => { setAddDocModal(null); setNewDocLabel(""); setNewDocDue(""); }} style={{ padding: "9px 16px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.t2, cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => addDocument(addDocModal)}
-                disabled={!newDocLabel.trim()}
-                style={{ padding: "9px 18px", background: newDocLabel.trim() ? C.m800 : C.borderMed, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: newDocLabel.trim() ? "pointer" : "not-allowed" }}
-              >
-                Add Requirement
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast */}
       {toast && (

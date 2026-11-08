@@ -192,7 +192,7 @@ export function GateTerminalsManagement() {
             Gate Terminals
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Centrally configure physical gate terminal assignments (Student / Faculty) and persistent identities.
+            Configure campus gate terminals for student and faculty attendance monitoring.
           </p>
         </div>
 
@@ -574,7 +574,7 @@ export function GateTerminalsManagement() {
             <form onSubmit={handleCreateTerminal} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Terminal Name / Description
+                  Terminal Name
                 </label>
                 <input
                   type="text"
@@ -647,7 +647,7 @@ export function GateTerminalsManagement() {
             <div>
               <h3 className="text-sm font-bold text-slate-900">Student Test QR (Juan Dela Cruz)</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                LRN payload: <code className="font-mono text-slate-700 font-semibold">123456789012</code>
+                LRN payload: <code className="font-mono text-slate-700 font-semibold">999026000001</code>
               </p>
             </div>
           </div>

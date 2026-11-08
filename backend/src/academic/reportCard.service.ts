@@ -1,5 +1,8 @@
 import prisma from '../config/database.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { classifyAcademicYearLifecycle } from '../common/utils/calendarValidation.js';
+import { getStudentIdentity } from '../common/utils/studentIdentity.js';
+import { resolveSubjectGradeLevel } from './academic.service.js';
 
 export interface ReportCardSubject {
   id: string;
@@ -10,6 +13,17 @@ export interface ReportCardSubject {
   T4: number | null;
   finalRating: number | null;
   remarks: 'PASSED' | 'FAILED' | null;
+}
+
+export interface ReportCardDiagnostic {
+  excludedContradictorySubjects?: Array<{
+    subjectId: string;
+    subjectName: string;
+    subjectCode?: string | null;
+    subjectGradeLevel: number | null;
+    enrollmentGradeLevel: number;
+    reason: string;
+  }>;
 }
 
 export interface ReportCardDTO {
@@ -23,6 +37,10 @@ export interface ReportCardDTO {
   school: {
     name: string;
     academicYear: string;
+    isCurrent?: boolean;
+    isHistorical?: boolean;
+    isUpcoming?: boolean;
+    lifecycle?: string;
   };
   enrollment: {
     gradeLevel: number;
@@ -31,13 +49,27 @@ export interface ReportCardDTO {
   scholastic: {
     subjects: ReportCardSubject[];
     generalAverage: number | null;
+    configuredTerms: ('T1' | 'T2' | 'T3' | 'T4')[];
+    termCount: number;
   };
   attendance: null; // explicitly missing due to lack of a calendar model
   adviser: string | null;
   principal: string | null;
+  promotionApproval?: {
+    isApproved: boolean;
+    approvedOutcome: 'PROMOTED' | 'REMEDIAL' | 'RETAINED' | 'COMPLETED' | null;
+    targetGradeLevel?: number | null;
+    approvedAt?: string | null;
+    approvedByName?: string | null;
+    approvedByRole?: string | null;
+    isStale?: boolean;
+    staleReason?: string | null;
+    remarks?: string | null;
+  } | null;
+  diagnostics?: ReportCardDiagnostic;
 }
 
-export async function getReportCardData(studentId: string, actorId: string): Promise<ReportCardDTO> {
+export async function getReportCardData(studentId: string, actorId: string, requestedAcademicYearId?: string): Promise<ReportCardDTO> {
   // 1. Resolve student and current enrollment/section (supports both student.id and student.user_id)
   const student = await prisma.student.findFirst({
     where: {
@@ -51,6 +83,9 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
       current_section: {
         include: {
           academic_year: true,
+          adviser_teacher: {
+            include: { user: true }
+          },
           assignments: {
             include: { teacher: true, subject: true }
           }
@@ -63,13 +98,85 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     throw new AppError(404, 'NOT_FOUND', 'Student not found');
   }
 
-  if (!student.current_section) {
+  // Determine target section & academic year (current or historical)
+  let activeSection = student.current_section;
+  let activeAcademicYear = student.current_section?.academic_year;
+
+  if (requestedAcademicYearId) {
+    if (student.current_section && student.current_section.academic_year_id === requestedAcademicYearId) {
+      activeSection = student.current_section;
+      activeAcademicYear = student.current_section.academic_year;
+    } else {
+      const historicalEnrollment = await prisma.enrollment.findFirst({
+        where: {
+          student_id: student.id,
+          academic_year_id: requestedAcademicYearId,
+        },
+        include: {
+          academic_year: true,
+          section: {
+            include: {
+              academic_year: true,
+              adviser_teacher: {
+                include: { user: true }
+              },
+              assignments: {
+                include: { teacher: true, subject: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (!historicalEnrollment) {
+        throw new AppError(404, 'NOT_FOUND', 'Student has no enrollment for the requested academic year');
+      }
+
+      activeSection = historicalEnrollment.section as any;
+      activeAcademicYear = historicalEnrollment.academic_year;
+    }
+  } else {
+    // If no specific year requested, prioritize enrollment in the active current academic year
+    const currentAy = await prisma.academicYear.findFirst({
+      where: { is_current: true }
+    });
+    if (currentAy) {
+      const activeCurrentEnrollment = await prisma.enrollment.findFirst({
+        where: {
+          student_id: student.id,
+          academic_year_id: currentAy.id,
+          status: 'Enrolled'
+        },
+        include: {
+          academic_year: true,
+          section: {
+            include: {
+              academic_year: true,
+              adviser_teacher: {
+                include: { user: true }
+              },
+              assignments: {
+                include: { teacher: true, subject: true }
+              }
+            }
+          }
+        }
+      });
+      if (activeCurrentEnrollment?.section) {
+        activeSection = activeCurrentEnrollment.section as any;
+        activeAcademicYear = activeCurrentEnrollment.academic_year;
+      }
+    }
+  }
+
+  if (!activeSection) {
     throw new AppError(422, 'UNPROCESSABLE_ENTITY', 'Student has no active section/enrollment');
   }
 
   // 2. Authorization: Student viewing their own card OR teacher assigned to this section OR Admin/Principal/Registrar
   const isStudentSelf = student.user_id === actorId || student.id === actorId;
-  const isAuthorizedTeacher = student.current_section.assignments.some(a => a.teacher.user_id === actorId);
+  const isClassAdviser = (activeSection as any).adviser_teacher?.user_id === actorId;
+  const isAuthorizedTeacher = isClassAdviser || activeSection.assignments.some(a => a.teacher.user_id === actorId);
 
   if (!isStudentSelf && !isAuthorizedTeacher) {
     const actorUser = await prisma.user.findUnique({ where: { id: actorId }, include: { user_roles: { include: { role: true } } } });
@@ -79,24 +186,65 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     }
   }
 
-  const academicYearId = student.current_section.academic_year_id;
+  const academicYearId = activeSection.academic_year_id;
 
-  // 3. Fetch Grades
+  // 3. Fetch Grades with published_gradebook
   const grades = await prisma.grade.findMany({
     where: {
       student_id: student.id,
       academic_year_id: academicYearId
     },
     include: {
-      subject: true
+      subject: true,
+      published_gradebook: true
     }
   });
 
+  // Fetch section gradebooks to verify official publication status
+  const sectionGradebooks = await prisma.gradebooks.findMany({
+    where: {
+      assignment: { section_id: activeSection.id },
+      term: { academic_year_id: academicYearId }
+    },
+    include: {
+      term: true,
+      assignment: true
+    }
+  });
+
+  const isTermPublished = (subjectId: string, termKey: string, gradeRow?: any): boolean => {
+    if (gradeRow?.published_term_grade !== null && gradeRow?.published_term_grade !== undefined) {
+      return true;
+    }
+    if (gradeRow?.published_gradebook?.status === 'Published') {
+      return true;
+    }
+    return sectionGradebooks.some(
+      gb => gb.assignment?.subject_id === subjectId && gb.term?.key === termKey && gb.status === 'Published'
+    );
+  };
+
   // 4. Transform into Subjects
-  // We determine enrolled subjects from the section assignments.
-  const enrolledSubjectsMap = new Map<string, string>(); // subject_id -> subject_name
-  for (const assignment of student.current_section.assignments) {
-    enrolledSubjectsMap.set(assignment.subject_id, assignment.subject.name);
+  // We determine enrolled subjects from the section assignments and filter strictly by enrollment grade level.
+  const enrollmentGradeLevel = activeSection.grade_level;
+  const excludedContradictorySubjects: NonNullable<ReportCardDiagnostic['excludedContradictorySubjects']> = [];
+
+  const enrolledSubjectsMap = new Map<string, { id: string; name: string; code?: string | null }>(); // subject_id -> subject details
+  for (const assignment of activeSection.assignments) {
+    const subj = assignment.subject;
+    const subGradeLevel = resolveSubjectGradeLevel(subj);
+    if (subGradeLevel !== null && subGradeLevel !== enrollmentGradeLevel) {
+      excludedContradictorySubjects.push({
+        subjectId: subj.id,
+        subjectName: subj.name,
+        subjectCode: subj.code || null,
+        subjectGradeLevel: subGradeLevel,
+        enrollmentGradeLevel,
+        reason: `Subject curriculum grade level (${subGradeLevel}) contradicts enrollment grade level (${enrollmentGradeLevel})`
+      });
+      continue;
+    }
+    enrolledSubjectsMap.set(subj.id, { id: subj.id, name: subj.name, code: subj.code });
   }
 
   // Group grades by subject_id
@@ -107,37 +255,88 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
   }
 
   for (const g of grades) {
-    // Even if they have grades for a subject they aren't currently enrolled in, include it?
-    // According to rule: "Subjects must come from the student's actual academic/enrollment/assignment data"
-    // We'll trust the grades table, but prefer enrolled subjects first.
+    const subj = g.subject;
+    const subGradeLevel = resolveSubjectGradeLevel(subj);
+    if (subGradeLevel !== null && subGradeLevel !== enrollmentGradeLevel) {
+      if (!excludedContradictorySubjects.some(e => e.subjectId === subj.id)) {
+        excludedContradictorySubjects.push({
+          subjectId: subj.id,
+          subjectName: subj.name,
+          subjectCode: subj.code || null,
+          subjectGradeLevel: subGradeLevel,
+          enrollmentGradeLevel,
+          reason: `Grade record belongs to curriculum grade level (${subGradeLevel}) which contradicts enrollment grade level (${enrollmentGradeLevel})`
+        });
+      }
+      continue;
+    }
+
     if (!gradeBySubject.has(g.subject_id)) {
       gradeBySubject.set(g.subject_id, { T1: null, T2: null, T3: null, T4: null });
-      enrolledSubjectsMap.set(g.subject_id, g.subject.name);
+      enrolledSubjectsMap.set(g.subject_id, { id: subj.id, name: subj.name, code: subj.code });
     }
     
     const subjectGrades = gradeBySubject.get(g.subject_id)!;
-    subjectGrades[g.term as 'T1'|'T2'|'T3'|'T4'] = g.term_grade;
+    const published = isTermPublished(g.subject_id, g.term, g);
+
+    // Rule: Prevent unpublished draft grades from appearing in cross-subject or student-facing reporting.
+    // Only the officially assigned subject teacher who authored the grade may view their own private draft.
+    const isSubjectAuthor = activeSection.assignments.some(
+      (a: any) => a.subject_id === g.subject_id && a.teacher?.user_id === actorId
+    );
+
+    if (!published && !isSubjectAuthor) {
+      subjectGrades[g.term as 'T1'|'T2'|'T3'|'T4'] = null;
+    } else {
+      const termGradeVal = published
+        ? (g.published_term_grade ?? (g.term_grade !== null ? Math.round(g.term_grade) : null))
+        : (isSubjectAuthor && g.term_grade !== null ? Math.round(g.term_grade) : null);
+      subjectGrades[g.term as 'T1'|'T2'|'T3'|'T4'] = termGradeVal;
+    }
   }
+
+  // Detect Music & Arts and PE & Health for official MAPEH consolidation
+  let musicSubjectId: string | null = null;
+  let peSubjectId: string | null = null;
+  for (const [subjectId, subj] of enrolledSubjectsMap.entries()) {
+    const name = subj.name;
+    const code = subj.code || '';
+    if (/music/i.test(name) || /^(?:MA)(?:1[0-2]|[1-9])?$/i.test(code)) {
+      musicSubjectId = subjectId;
+    } else if (/physical education|\bpe\b/i.test(name) || /^(?:PEH|PE)(?:1[0-2]|[1-9])?$/i.test(code)) {
+      peSubjectId = subjectId;
+    }
+  }
+
+  // Query active terms configured for this academic year
+  const configuredTerms = await prisma.term.findMany({
+    where: { academic_year_id: academicYearId },
+    orderBy: { key: 'asc' }
+  });
+  const configuredTermKeys = (configuredTerms.length > 0
+    ? configuredTerms.map(t => t.key)
+    : ['T1', 'T2', 'T3']) as ('T1' | 'T2' | 'T3' | 'T4')[];
 
   const subjects: ReportCardSubject[] = [];
   let totalFinalRating = 0;
   let finalRatingCount = 0;
 
-  for (const [subjectId, name] of enrolledSubjectsMap.entries()) {
+  // Process core non-MAPEH learning areas
+  for (const [subjectId, subj] of enrolledSubjectsMap.entries()) {
+    if (subjectId === musicSubjectId || subjectId === peSubjectId) {
+      continue;
+    }
+    const name = subj.name;
     const sg = gradeBySubject.get(subjectId)!;
     let finalRating: number | null = null;
     let remarks: 'PASSED' | 'FAILED' | null = null;
 
-    // In Calulut Integrated School, the academic year consists of 3 terms: T1, T2, T3
-    // Verified Excel formula (AGONCILLO ECR - SEPT4 FINAL GRADES / SF9):
-    // =IF(COUNT(T1, T2, T3) < 3, "", ROUND(AVERAGE(T1, T2, T3), 0))
-    if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null) {
-      finalRating = Math.round((sg.T1 + sg.T2 + sg.T3) / 3);
-      remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
-      totalFinalRating += finalRating;
-      finalRatingCount++;
-    } else if (sg.T1 !== null && sg.T2 !== null && sg.T3 !== null && sg.T4 !== null) {
-      finalRating = Math.round((sg.T1 + sg.T2 + sg.T3 + sg.T4) / 4);
+    const hasAllConfiguredTerms = configuredTermKeys.length > 0 &&
+      configuredTermKeys.every(k => sg[k] !== null);
+
+    if (hasAllConfiguredTerms) {
+      const sum = configuredTermKeys.reduce((acc, k) => acc + sg[k]!, 0);
+      finalRating = Math.round(sum / configuredTermKeys.length);
       remarks = finalRating >= 75 ? 'PASSED' : 'FAILED';
       totalFinalRating += finalRating;
       finalRatingCount++;
@@ -155,11 +354,59 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     });
   }
 
-  // 5. Compute General Average
-  // "General Average = sum of all subject Final Ratings / number of learning areas with valid final ratings
-  // BUT only produce a General Average when the report contains the required complete set of final ratings"
+  // Official DepEd MAPEH Consolidation (Music & Arts + PE & Health -> MAPEH)
+  if (musicSubjectId && peSubjectId) {
+    const musicSg = gradeBySubject.get(musicSubjectId)!;
+    const peSg = gradeBySubject.get(peSubjectId)!;
+
+    const computeMapehTerm = (t: 'T1' | 'T2' | 'T3' | 'T4'): number | null => {
+      if (musicSg[t] !== null && peSg[t] !== null) {
+        return Math.round((musicSg[t]! + peSg[t]!) / 2);
+      }
+      return null;
+    };
+
+    const mapehTerms: Record<'T1'|'T2'|'T3'|'T4', number | null> = {
+      T1: computeMapehTerm('T1'),
+      T2: computeMapehTerm('T2'),
+      T3: computeMapehTerm('T3'),
+      T4: computeMapehTerm('T4'),
+    };
+
+    let mapehFinal: number | null = null;
+    let mapehRemarks: 'PASSED' | 'FAILED' | null = null;
+    const hasAllMapehTerms = configuredTermKeys.length > 0 &&
+      configuredTermKeys.every(k => mapehTerms[k] !== null);
+
+    if (hasAllMapehTerms) {
+      const sum = configuredTermKeys.reduce((acc, k) => acc + mapehTerms[k]!, 0);
+      mapehFinal = Math.round(sum / configuredTermKeys.length);
+      mapehRemarks = mapehFinal >= 75 ? 'PASSED' : 'FAILED';
+      totalFinalRating += mapehFinal;
+      finalRatingCount++;
+    }
+
+    subjects.push({
+      id: 'mapeh-composite',
+      name: 'MAPEH',
+      T1: mapehTerms.T1,
+      T2: mapehTerms.T2,
+      T3: mapehTerms.T3,
+      T4: mapehTerms.T4,
+      finalRating: mapehFinal,
+      remarks: mapehRemarks
+    });
+  }
+
+  // 5. Compute General Average across official 8 learning areas
+  // Under DepEd Order No. 8, s. 2015, an official General Average in Junior High School (Grades 7–10)
+  // must be computed across all required core learning areas (minimum 8: Filipino, English, Math, Science, AP, EsP, TLE, MAPEH).
+  // A partial subset of subjects cannot be certified or misrepresented as an official General Average.
   let generalAverage: number | null = null;
-  if (subjects.length > 0 && finalRatingCount === subjects.length) {
+  const isJHS = activeSection?.grade_level && activeSection.grade_level >= 7 && activeSection.grade_level <= 10;
+  const minimumExpectedSubjects = isJHS ? 8 : 1;
+
+  if (subjects.length >= minimumExpectedSubjects && finalRatingCount === subjects.length) {
     generalAverage = Math.round(totalFinalRating / subjects.length);
   }
 
@@ -172,10 +419,15 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
     age = Math.abs(ageDate.getUTCFullYear() - 1970);
   }
 
-  // Find Adviser (using the first assigned teacher to the section as fallback if no advisory role exists)
+  // Find Adviser (using designated adviser_teacher first, then assignments as fallback)
   let adviserName: string | null = null;
-  if (student.current_section.assignments.length > 0) {
-    const adviserTeacher = student.current_section.assignments[0].teacher;
+  if ((activeSection as any).adviser_teacher?.user) {
+    const au = (activeSection as any).adviser_teacher.user;
+    adviserName = `${au.first_name} ${au.last_name}`;
+  } else if ((activeSection as any).adviser_name_snapshot) {
+    adviserName = (activeSection as any).adviser_name_snapshot;
+  } else if (activeSection.assignments.length > 0) {
+    const adviserTeacher = activeSection.assignments[0].teacher;
     const adviserUser = await prisma.user.findUnique({ where: { id: adviserTeacher.user_id } });
     if (adviserUser) {
       adviserName = `${adviserUser.first_name} ${adviserUser.last_name}`;
@@ -184,37 +436,107 @@ export async function getReportCardData(studentId: string, actorId: string): Pro
 
   // Find Principal
   let principalName: string | null = null;
-  const principalRoleUser = await prisma.userRole.findFirst({
-    where: { role: { name: 'Principal' } },
-    include: { user: true }
-  });
-  if (principalRoleUser) {
-    const pu = principalRoleUser.user;
-    principalName = `${pu.first_name} ${pu.last_name}`;
+  if ((activeAcademicYear as any)?.school_head_name_snapshot) {
+    principalName = (activeAcademicYear as any).school_head_name_snapshot;
+  } else {
+    const principalRoleUser = await prisma.userRole.findFirst({
+      where: { role: { name: 'Principal' } },
+      include: { user: true }
+    });
+    if (principalRoleUser) {
+      const pu = principalRoleUser.user;
+      principalName = `${pu.first_name} ${pu.last_name}`;
+    }
+  }
+
+  // Authoritative School Settings & Principal Signatory (G-11)
+  const schoolSettings = await prisma.schoolSettings.findFirst();
+  const schoolName = schoolSettings?.school_name?.trim() || 'Calulut Integrated School';
+  if (!principalName && schoolSettings?.school_head_name) {
+    principalName = schoolSettings.school_head_name.trim();
+  }
+
+  // 6. Resolve Principal Promotion Approval & Outcome (Phase 2C Final Integration)
+  let promotionApproval: ReportCardDTO['promotionApproval'] = null;
+  const targetAyId = activeAcademicYear?.id || (activeSection as any)?.academic_year_id;
+  if (targetAyId) {
+    const promotionAuditLog = await prisma.auditLog.findFirst({
+      where: {
+        action: 'STUDENT_PROMOTION_APPROVED',
+        category: 'academic_promotion',
+        resource_id: student.id
+      },
+      include: {
+        actor: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
+
+    if (promotionAuditLog) {
+      const newState = (promotionAuditLog.new_state as any) || {};
+      if (newState.academicYearId === targetAyId) {
+        const outcome = (newState.approvedOutcome as 'PROMOTED' | 'REMEDIAL' | 'RETAINED' | 'COMPLETED') || 'PROMOTED';
+        // Validate academic integrity against live scholastic ratings
+        const hasIncompleteSubjects = subjects.some(s => s.finalRating === null);
+        const failingSubjects = subjects.filter(s => s.finalRating !== null && s.finalRating < 75);
+        const hasFailing = failingSubjects.length > 0;
+
+        // An approval for PROMOTED or COMPLETED becomes stale if subjects are now failing or incomplete
+        const isStale = (outcome === 'PROMOTED' || outcome === 'COMPLETED') && (hasIncompleteSubjects || hasFailing);
+
+        promotionApproval = {
+          isApproved: !isStale,
+          approvedOutcome: outcome,
+          targetGradeLevel: typeof newState.targetGradeLevel === 'number' ? newState.targetGradeLevel : null,
+          approvedAt: promotionAuditLog.created_at.toISOString(),
+          approvedByName: promotionAuditLog.actor
+            ? `${promotionAuditLog.actor.first_name || ''} ${promotionAuditLog.actor.last_name || ''}`.trim()
+            : promotionAuditLog.actor_school_id || 'Authorized Approver',
+          approvedByRole: 'Principal',
+          isStale,
+          staleReason: isStale
+            ? (hasIncompleteSubjects
+                ? 'Academic records became incomplete following subsequent grade updates.'
+                : `Learner has ${failingSubjects.length} failing learning area(s) following subsequent grade updates.`)
+            : null,
+          remarks: newState.remarks || null
+        };
+      }
+    }
   }
 
   return {
     student: {
       id: student.id,
-      name: `${student.user.last_name}, ${student.user.first_name}${student.user.middle_name ? ` ${student.user.middle_name}` : ''}`,
+      name: getStudentIdentity(student).formalName,
       lrn: student.lrn || 'UNAVAILABLE',
       age,
       gender: student.gender || 'Unknown'
     },
     school: {
-      name: 'DigiSkwela Integrated School', // or fetch from global config if exists, but we are instructed to use available data
-      academicYear: student.current_section.academic_year.name
+      name: schoolName,
+      academicYear: activeAcademicYear?.name || (activeSection as any).academic_year?.name || 'Academic Year',
+      isCurrent: activeAcademicYear ? activeAcademicYear.is_current : true,
+      isHistorical: activeAcademicYear ? classifyAcademicYearLifecycle(activeAcademicYear) === 'HISTORICAL' : false,
+      isUpcoming: activeAcademicYear ? classifyAcademicYearLifecycle(activeAcademicYear) === 'UPCOMING' : false,
+      lifecycle: activeAcademicYear ? classifyAcademicYearLifecycle(activeAcademicYear) : 'CURRENT',
     },
     enrollment: {
-      gradeLevel: student.current_section.grade_level,
-      section: student.current_section.name
+      gradeLevel: activeSection.grade_level,
+      section: activeSection.name
     },
     scholastic: {
       subjects,
-      generalAverage
+      generalAverage,
+      configuredTerms: configuredTermKeys,
+      termCount: configuredTermKeys.length
     },
     attendance: null,
     adviser: adviserName,
-    principal: principalName
+    principal: principalName,
+    promotionApproval,
+    diagnostics: {
+      excludedContradictorySubjects
+    }
   };
 }

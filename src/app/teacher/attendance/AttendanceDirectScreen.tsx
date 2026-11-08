@@ -7,11 +7,27 @@ import { EmptyState } from '../../shared/components/EmptyState';
 
 export function AttendanceDirectScreen() {
   const { myClasses: classes, isLoading } = useMyClasses();
-  const [activeClassId, setActiveClassId] = useState<string>('');
+  const [activeClassId, setActiveClassId] = useState<string>(() => {
+    try {
+      return localStorage.getItem('digiskwela_teacher_active_class_id') || '';
+    } catch {
+      return '';
+    }
+  });
 
   useEffect(() => {
-    if (classes && classes.length > 0 && !activeClassId) {
-      setActiveClassId(classes[0].id);
+    if (classes && classes.length > 0) {
+      const exists = classes.some(c => c.id === activeClassId);
+      if (!exists) {
+        const preferred =
+          classes.find(c => c.adviser && c.students > 0) ||
+          classes.find(c => c.students > 0) ||
+          classes.find(c => c.adviser) ||
+          classes[0];
+        if (preferred) {
+          setActiveClassId(preferred.id);
+        }
+      }
     }
   }, [classes, activeClassId]);
 

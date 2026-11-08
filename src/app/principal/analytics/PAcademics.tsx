@@ -147,10 +147,10 @@ export function PAcademics() {
         <div style={{ padding:"10px 16px 2px", fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Term Performance Trends</div>
         <div style={{ padding:"2px 16px 10px", borderBottom:`0.5px solid ${C.border}`, fontSize:10, color:C.t3 }}>Averages available submitted term grades independently per period.</div>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><PTableHeader cols={["Grade Level","T1","T2","T3","T4","Trend"]} /></thead>
+          <thead><PTableHeader cols={["Grade Level","Term 1","Term 2","Term 3","Trend"]} /></thead>
           <tbody>
             {trendAverages.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No trend data available.</td></tr>
+              <tr><td colSpan={5} style={{ padding: 20, textAlign: "center", fontSize: 12, color: C.t3 }}>No trend data available.</td></tr>
             ) : trendAverages.map((t) => (
               <tr key={t.gradeLevel} style={{ borderBottom:`0.5px solid ${C.border}` }}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -159,7 +159,6 @@ export function PAcademics() {
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t1 || '-'}</td>
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t2 || '-'}</td>
                 <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{t.t3 || '-'}</td>
-                <td style={{ padding:"10px 16px", fontSize:13, fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:C.t2 }}>{(t as any).t4 || '-'}</td>
                 <td style={{ padding:"10px 16px" }}><Stamp label={t.trend} color={t.trend.includes("↑") ? C.green : t.trend.includes("↓") ? C.red : C.t3} bg={t.trend.includes("↑") ? C.greenBg : t.trend.includes("↓") ? C.redBg : C.m100} /></td>
               </tr>
             ))}
@@ -193,7 +192,7 @@ export function PAcademics() {
         {/* Passing/failing per grade */}
         <div style={{ background:"#fff", border:`1px solid ${C.borderMed}`, overflow:"hidden" }}>
           <div style={{ padding:"10px 16px 2px", fontSize:11, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>Passing vs Failing</div>
-          <div style={{ padding:"2px 16px 10px", borderBottom:`0.5px solid ${C.border}`, fontSize:10, color:C.t3 }}>Includes only students with complete T1-T4 Final Ratings.</div>
+          <div style={{ padding:"2px 16px 10px", borderBottom:`0.5px solid ${C.border}`, fontSize:10, color:C.t3 }}>Includes students with complete Term 1 to Term 3 Final Ratings.</div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><PTableHeader cols={["Grade","Passing","Failing","Rate"]} /></thead>
             <tbody>

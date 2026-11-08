@@ -114,7 +114,7 @@ export function StudentAppointments({ setTab, currentUser }: any) {
                   }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {/* Parent Email */}
                     <div>
-                      <label style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Parent / Guardian Email</label>
+                      <label style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Parent or Guardian Email</label>
                       <input
                         type="email"
                         value={apptParentEmail || currentUser?.parentEmail || ""}
@@ -137,7 +137,7 @@ export function StudentAppointments({ setTab, currentUser }: any) {
                         onChange={e => setApptTeacher(e.target.value)}
                         style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 8, background: "#f9fafb", color: C.t1, outline: "none", boxSizing: "border-box" }}
                       >
-                        <option value="">ΓÇö Choose a teacher or staff ΓÇö</option>
+                        <option value="">Select a teacher or counselor</option>
                         <optgroup label="Subject Teachers">
                           {teachers.filter(t => t.type === 'subject').map(t => (
                             <option key={t.id} value={t.id}>{t.name}</option>
@@ -167,7 +167,7 @@ export function StudentAppointments({ setTab, currentUser }: any) {
 
                     {/* Purpose */}
                     <div>
-                      <label style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose / Agenda</label>
+                      <label style={{ display: "block", fontSize: 10.5, fontWeight: 700, color: C.t2, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose of Meeting</label>
                       <textarea
                         value={apptPurpose}
                         onChange={e => setApptPurpose(e.target.value)}
@@ -176,7 +176,7 @@ export function StudentAppointments({ setTab, currentUser }: any) {
                         maxLength={300}
                         style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 8, resize: "none", background: "#f9fafb", boxSizing: "border-box", outline: "none", fontFamily: "'Inter', sans-serif" }}
                       />
-                      <div style={{ textAlign: "right", fontSize: 10, color: C.t3, marginTop: 4 }}>{apptPurpose.length} / 300</div>
+                      <div style={{ textAlign: "right", fontSize: 10, color: C.t3, marginTop: 4 }}>{apptPurpose.length} of 300 characters</div>
                     </div>
 
                     {/* Submit */}
@@ -227,7 +227,7 @@ export function StudentAppointments({ setTab, currentUser }: any) {
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 700, color: C.t1, lineHeight: 1.3 }}>{appt.teacherName}</div>
                               <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                                {appt.direction === "parent-to-teacher" ? "You ΓåÆ Teacher" : "Teacher ΓåÆ Parent"}
+                                {appt.direction === "parent-to-teacher" ? "Requested by Student" : "Requested by Teacher"}
                               </div>
                             </div>
                           </div>

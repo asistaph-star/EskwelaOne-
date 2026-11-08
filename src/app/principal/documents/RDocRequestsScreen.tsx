@@ -107,7 +107,7 @@ export function RDocRequestsScreen() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: C.paper, borderBottom: `2px solid ${C.border}` }}>
-                {["Student", "Document Details", "Approvals", "Ready/Pickup Date", "Status", "Action"].map(h => (
+                {["Student", "Document Details", "Approvals", "Pickup Date", "Status", "Action"].map(h => (
                   <th key={h} style={{ textAlign: "left", padding: "14px 20px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
                 ))}
               </tr>

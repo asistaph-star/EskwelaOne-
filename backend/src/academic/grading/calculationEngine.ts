@@ -352,7 +352,10 @@ export function calculateStudentTermGrade(
 
   let exResult: ExamComponentResult;
   if (input.dynamicExams && input.dynamicExams.length > 0) {
-    const totalWeight = input.dynamicExams.reduce((s, it) => s + (it.weight || 0), 0) || 100;
+    const hasExplicitWeights = input.dynamicExams.some((it) => typeof it.weight === 'number' && it.weight > 0);
+    const totalWeight = hasExplicitWeights
+      ? (input.dynamicExams.reduce((s, it) => s + (it.weight || 0), 0) || 100)
+      : input.dynamicExams.length;
     let allPresent = true;
     let examPS = 0;
     for (const it of input.dynamicExams) {
@@ -361,7 +364,8 @@ export function calculateStudentTermGrade(
         break;
       }
       const itemPS = (it.score / it.maxScore) * 100;
-      examPS += itemPS * ((it.weight || 0) / totalWeight);
+      const itemWeight = hasExplicitWeights ? (it.weight || 0) : 1;
+      examPS += itemPS * (itemWeight / totalWeight);
     }
 
     const examPercentageScore = allPresent ? examPS : null;

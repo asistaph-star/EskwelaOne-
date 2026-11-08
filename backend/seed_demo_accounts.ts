@@ -2,12 +2,21 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
-if ((process.env.NODE_ENV || '').trim() === 'test' || process.env.TARGET_DB === 'test') {
-  const testEnvPath = path.resolve(process.cwd(), '.env.test');
-  if (fs.existsSync(testEnvPath)) {
-    dotenv.config({ path: testEnvPath, override: true });
-  }
+// STRICT DATABASE PROTECTION:
+// Synthetic demo account seeding is strictly forbidden from executing against 'digiskwela' or any production database.
+// It is exclusively restricted to the isolated 'digiskwela_test' database.
+const targetDb = (process.env.TARGET_DB || '').trim();
+if (targetDb !== 'test') {
+  console.error("[FATAL] Demo seed script execution blocked: TARGET_DB=test is required. Refusing to run against non-test database.");
+  process.exit(1);
 }
+
+const testEnvPath = path.resolve(process.cwd(), '.env.test');
+if (!fs.existsSync(testEnvPath)) {
+  console.error(`[FATAL] Demo seed script execution blocked: Isolated test environment file .env.test not found at ${testEnvPath}.`);
+  process.exit(1);
+}
+dotenv.config({ path: testEnvPath, override: true });
 
 import './src/config/env.js';
 import prisma from './src/config/database.js';
@@ -15,7 +24,15 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
 async function main() {
-  console.log('Seeding demo accounts and relational data...');
+  // Query PostgreSQL directly to verify the resolved database identity before any writes occur
+  const [dbRow] = await prisma.$queryRaw<[{ current_database: string }]>`SELECT current_database()`;
+  const currentDb = dbRow?.current_database;
+  if (currentDb !== 'digiskwela_test') {
+    console.error(`[FATAL] Demo seed script execution blocked: Target database must be 'digiskwela_test', but connected to '${currentDb}'. Execution halted immediately.`);
+    process.exit(1);
+  }
+
+  console.log(`[SAFEGUARD PASSED] Target database verified as '${currentDb}'. Seeding test demo fixtures...`);
   const passwordHash = await bcrypt.hash('password123', 10);
 
   // Helper to ensure role exists
@@ -270,7 +287,7 @@ async function main() {
     where: { student_id_date: { student_id: studentUser.id, date: today } },
     update: {},
     create: {
-      id: 'demo-gate-att-1',
+      id: uuidv4(),
       student_id: studentUser.id,
       date: today,
       time_in: new Date(),

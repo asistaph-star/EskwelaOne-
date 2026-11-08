@@ -168,3 +168,114 @@ export async function verifyDatabaseIdentity(
     verified: true,
   };
 }
+
+/**
+ * Validates whether the given environment is configured safely for QA Acceptance operations.
+ * Acceptance operations MUST NOT target production or development databases.
+ */
+export function validateAcceptanceDatabaseEnvironment(
+  env: Record<string, string | undefined> = process.env
+): DatabaseSafetyResult {
+  const dbUrl = env.ACCEPTANCE_DATABASE_URL?.trim() || env.DATABASE_URL?.trim();
+  if (!dbUrl) {
+    return {
+      safe: false,
+      reason: 'Acceptance database URL is missing or empty.',
+    };
+  }
+
+  for (const pattern of PRODUCTION_HOST_PATTERNS) {
+    if (pattern.test(dbUrl)) {
+      return {
+        safe: false,
+        reason: `Acceptance database URL matches protected cloud/production host pattern: ${pattern.source}`,
+        sanitizedUrl: sanitizeDatabaseUrl(dbUrl),
+      };
+    }
+  }
+
+  for (const keyword of PRODUCTION_KEYWORDS) {
+    if (dbUrl.toLowerCase().includes(keyword)) {
+      return {
+        safe: false,
+        reason: `Acceptance database URL contains prohibited production identifier: "${keyword}"`,
+        sanitizedUrl: sanitizeDatabaseUrl(dbUrl),
+      };
+    }
+  }
+
+  try {
+    const parsed = new URL(dbUrl);
+    const dbName = parsed.pathname.replace(/^\//, '').toLowerCase();
+
+    if (dbName === 'digiskwela') {
+      return {
+        safe: false,
+        reason: 'Database URL targets development database "digiskwela". QA Acceptance must target "digiskwela_acceptance".',
+        sanitizedUrl: sanitizeDatabaseUrl(dbUrl),
+      };
+    }
+
+    if (dbName !== 'digiskwela_acceptance') {
+      return {
+        safe: false,
+        reason: `Database URL targets "${dbName}". QA Acceptance must target "digiskwela_acceptance".`,
+        sanitizedUrl: sanitizeDatabaseUrl(dbUrl),
+      };
+    }
+  } catch (err: any) {
+    return {
+      safe: false,
+      reason: `Failed to parse database URL: ${err.message}`,
+    };
+  }
+
+  return {
+    safe: true,
+    sanitizedUrl: sanitizeDatabaseUrl(dbUrl),
+  };
+}
+
+/**
+ * Queries PostgreSQL directly to verify the connected database identity for QA Acceptance.
+ * Strictly asserts via SELECT current_database() that the connected database is `digiskwela_acceptance`
+ * and NEVER `digiskwela`, `digiskwela_test`, or production.
+ */
+export async function verifyAcceptanceDatabaseIdentity(
+  prismaClient: any
+): Promise<{ database: string; user: string; verified: boolean }> {
+  const queryResult: any = await prismaClient.$queryRawUnsafe(
+    'SELECT current_database() as db_name, current_user as user_name;'
+  );
+
+  const connectedDb = queryResult?.[0]?.db_name || '';
+  const connectedUser = queryResult?.[0]?.user_name || '';
+
+  if (!connectedDb) {
+    throw new Error('[DATABASE_IDENTITY_VERIFICATION_FAILED] Unable to resolve current_database().');
+  }
+
+  if (connectedDb === 'digiskwela') {
+    throw new Error(
+      '[UNSAFE_DATABASE_TARGET] Fatal database isolation violation: Connected database is development database "digiskwela". QA Acceptance operations must strictly connect to "digiskwela_acceptance".'
+    );
+  }
+
+  if (connectedDb === 'digiskwela_test') {
+    throw new Error(
+      '[UNSAFE_DATABASE_TARGET] Fatal database isolation violation: Connected database is automated test database "digiskwela_test". QA Acceptance operations must strictly connect to "digiskwela_acceptance".'
+    );
+  }
+
+  if (connectedDb !== 'digiskwela_acceptance') {
+    throw new Error(
+      `[UNSAFE_DATABASE_TARGET] Connected database "${connectedDb}" is not the approved QA acceptance database "digiskwela_acceptance".`
+    );
+  }
+
+  return {
+    database: connectedDb,
+    user: connectedUser,
+    verified: true,
+  };
+}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Search, Bell, BookMarked } from "lucide-react";
+import { X, Search, Bell, BookMarked, Users } from "lucide-react";
 import { TScreen, GradeCardInfo } from "../shared/types";
 import { C } from "../shared/constants/tokens";
 
@@ -35,7 +35,22 @@ import { TAnnouncements } from "./announcements/TAnnouncements";
 
 export function TeacherApp({ onLogout }: { onLogout: () => void }) {
   const [screen, setScreen] = useHashRouter<TScreen>("teacher", "dashboard");
-  const [classId, setClassId] = useState<string | null>(null);
+  const [classId, setClassId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('digiskwela_teacher_active_class_id') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSetClassId = (id: string | null) => {
+    setClassId(id);
+    try {
+      if (id) {
+        localStorage.setItem('digiskwela_teacher_active_class_id', id);
+      }
+    } catch {}
+  };
   const [gradeCard, setGradeCard] = useState<GradeCardInfo | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -51,30 +66,30 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
   const showGradeCard = (info: GradeCardInfo) => setGradeCard(info);
 
   const topbars: Record<TScreen, { title: string, sub?: string }> = {
-    dashboard: { title: "Teacher Dashboard", sub: "Overview & Quick Actions" },
-    classroom: { title: "Classroom Hub", sub: "Manage sections & grades" },
+    dashboard: { title: "Teacher Dashboard", sub: "Overview and Quick Actions" },
+    classroom: { title: "Classroom Hub", sub: "Manage sections and grades" },
     gradebook: { title: "Gradebook Entry", sub: "Class activity records" },
-    "quarterly-summary": { title: "Quarterly Summary", sub: "Periodic ratings overview" },
-    "term-summary": { title: "Term Summary", sub: "Final ratings overview" },
-    "grades-direct": { title: "Gradebooks Quick Access" },
-    "attendance-direct": { title: "Attendance Quick Access" },
-    "clinic-visits": { title: "Student Clinic Logs", sub: " Health Unit" },
+    "quarterly-summary": { title: "Term Summary", sub: "Trimester ratings overview" },
+    "term-summary": { title: "Term Summary", sub: "Trimester ratings overview" },
+    "grades-direct": { title: "Gradebooks" },
+    "attendance-direct": { title: "Attendance" },
+    "clinic-visits": { title: "Student Clinic Logs", sub: "School Health Clinic" },
     "behavior": { title: "Behavioral Reports", sub: "Track student behavior" },
-    "ai-tools": { title: "Student Support Insights", sub: "Factual classroom attendance, grades, and gradebook records" },
-    "pro-dev": { title: "Professional Development", sub: "LAC sessions & Certificate vault" },
-    "t-ranking": { title: "Career Progression", sub: "Teacher Ranking & Comparative Assessment" },
-    calendar: { title: "Calendar & Schedule" },
-    templates: { title: "Forms & Records", sub: "School Document Templates" },
-    "leave-requests": { title: "My Leave Requests", sub: "Track absences & approvals" },
-    tutorials: { title: "System Tutorials", sub: "Self-paced training & user guides" },
-    tools: { title: "System Utilities", sub: "Calculators & formatting tools" },
-    help: { title: "Help & Feedback", sub: "Contact IT operations support" },
-    settings: { title: "My Profile", sub: "Personal Data Sheet & Tracking" },
-    appointments: { title: "Appointments", sub: "Parent-Teacher Meeting Requests" },
+    "ai-tools": { title: "Student Support Insights", sub: "Classroom attendance, grades, and academic records" },
+    "pro-dev": { title: "Professional Development", sub: "LAC sessions and certificates" },
+    "t-ranking": { title: "Career Progression", sub: "Teacher Ranking and Assessment" },
+    calendar: { title: "Calendar and Schedule" },
+    templates: { title: "Forms and Records", sub: "School Document Templates" },
+    "leave-requests": { title: "My Leave Requests", sub: "Track leave applications and approvals" },
+    tutorials: { title: "System Tutorials", sub: "Training and user guides" },
+    tools: { title: "System Utilities", sub: "Calculators and formatting tools" },
+    help: { title: "Help and Feedback", sub: "Contact IT support" },
+    settings: { title: "My Profile", sub: "Personal Data Sheet and Account Settings" },
+    appointments: { title: "Appointments", sub: "Parent and Teacher Meeting Requests" },
     "doc-requests": { title: "Document Requests", sub: "Student Certificate Approvals" },
-    announcements: { title: "School Announcements", sub: "Broadcast Messages" },
+    announcements: { title: "School Announcements", sub: "Campus Broadcasts" },
     "scanner": { title: "Document Scanner", sub: "Scan and digitize documents" },
-    "student-create": { title: "Student Account Creator", sub: "Register a new student and provision system access" },
+    "student-create": { title: "Student Registration", sub: "Register and enroll students in your advisory section" },
   };
 
   const bar = topbars[screen] || { title: "Teacher Portal" };
@@ -96,8 +111,8 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      <div className="watermark-bg" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "relative", zIndex: 100 }}>
+      <div className="watermark-bg" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ background: "#fff", borderBottom: `2px solid ${C.m700}`, padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, position: "relative", zIndex: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             {isMobile && (
               <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", cursor: "pointer", color: C.m700 }}>
@@ -155,16 +170,16 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 1 }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
           
           {screen === "dashboard" && <DashboardScreen 
             onNav={nav} 
-            onGradebookClick={(id) => { setClassId(id); setScreen("gradebook"); }} 
-            onHubClick={(id) => { setClassId(id); setScreen("classroom"); }} 
+            onGradebookClick={(id) => { handleSetClassId(id); setScreen("gradebook"); }} 
+            onHubClick={(id) => { handleSetClassId(id); setScreen("classroom"); }} 
             onShowGradeCard={showGradeCard} 
           />}
-          {screen === "classroom" && <ClassroomHub classId={classId || "1"} onBack={() => setScreen("dashboard")} onShowGradeCard={showGradeCard} />}
-          {screen === "gradebook" && <GradebookFullScreen classId={classId || "1"} onBack={() => setScreen("dashboard")} />}
+          {screen === "classroom" && <ClassroomHub classId={classId} onBack={() => setScreen("dashboard")} onShowGradeCard={showGradeCard} onSelectClass={handleSetClassId} />}
+          {screen === "gradebook" && <GradebookFullScreen classId={classId || undefined} onBack={() => setScreen("dashboard")} />}
           {screen === "term-summary" && <TermSummaryScreen />}
           {screen === "grades-direct" && <GradesDirectScreen />}
           {screen === "attendance-direct" && <AttendanceDirectScreen />}
@@ -180,7 +195,26 @@ export function TeacherApp({ onLogout }: { onLogout: () => void }) {
           {screen === "settings" && <TProfileScreen />}
           {screen === "appointments" && <AppointmentsScreen />}
           {screen === "doc-requests" && <DocRequestsScreen />}
-          {screen === "student-create" && <CreateStudent />}
+          {screen === "student-create" && (
+            <div style={{ padding: 40, maxWidth: 640, margin: "40px auto", background: "#fff", borderRadius: 12, border: `1px solid ${C.borderMed}`, textAlign: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 28, background: C.m100, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <Users size={28} color={C.m700} />
+              </div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: C.t1, marginBottom: 8, fontFamily: "'Fraunces', serif" }}>
+                Class Adviser Learner Registration
+              </h2>
+              <p style={{ fontSize: 13, color: C.t2, lineHeight: 1.6, marginBottom: 24 }}>
+                Under DepEd Order No. 017, s. 2025, learner registration and section enrollment are handled directly within your assigned <strong>Advisory Section</strong> in Classroom Hub. Standalone credential generation without section advisory assignment has been retired.
+              </p>
+              <button
+                id="btn-go-to-classroom-advisory"
+                onClick={() => nav("classroom")}
+                style={{ padding: "10px 24px", background: C.m700, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              >
+                Go to Advisory Section (Classroom Hub)
+              </button>
+            </div>
+          )}
           {screen === "announcements" && <TAnnouncements />}
           {(screen === "tutorials" || screen === "tools" || screen === "help") && (
             <StubScreen icon={BookMarked} label={bar.title} desc="This module will be expanded with full school interactive resources." />

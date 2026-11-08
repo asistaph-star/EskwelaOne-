@@ -15,7 +15,7 @@ export function GateHeader({ terminalType, terminalName, terminalId, onOpenAdmin
   const lastTapTimeRef = useRef(0);
   const { settings } = useSchoolSettings();
 
-  const schoolLogo = settings.logoUrl;
+  const schoolLogo = settings.logoUrl || '/school_seal.png';
   const schoolNameUpper = (settings.schoolName || 'DigiSkwela Campus Gate').toUpperCase();
 
   // Industry-standard kiosk secret gesture: 5 taps on school seal opens admin maintenance

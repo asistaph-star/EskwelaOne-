@@ -1,3 +1,12 @@
+/**
+ * DEPRECATED MOCK COMPONENT (Phase 3 Audit)
+ * -----------------------------------------
+ * Student registration and section enrollment are handled exclusively by Class Advisers
+ * within their assigned section in Classroom Hub (AdviserAddLearnerModal.tsx) under
+ * DepEd Order No. 017, s. 2025.
+ * Student Portal logins are provisioned by ITAdmin in Account Management.
+ * This mock screen has been retired and removed from active Teacher navigation.
+ */
 import React, { useState } from "react";
 import { GraduationCap, Save, User, Mail, Phone, MapPin, Calendar, Users, BookOpen, Lock, CheckCircle, Hash, Heart } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
@@ -121,10 +130,10 @@ export function CreateStudent() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, marginBottom: 6, fontFamily: "'Fraunces', serif", margin: 0 }}>
-            Student Account Creator
+            Student Registration
           </h1>
           <p style={{ fontSize: 13, color: C.t3, margin: "6px 0 0" }}>
-            Register a new student, capture parent/guardian details, and provision their system login credentials.
+            Register a new student, record parent or guardian details, and create their portal account.
           </p>
         </div>
         <button

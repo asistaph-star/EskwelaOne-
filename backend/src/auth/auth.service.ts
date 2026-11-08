@@ -46,12 +46,21 @@ export async function login(
 
   const trimmedSchoolId = input.schoolId.trim();
 
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: {
-      school_id: {
-        equals: trimmedSchoolId,
-        mode: 'insensitive',
-      },
+      OR: [
+        {
+          school_id: {
+            equals: trimmedSchoolId,
+            mode: 'insensitive',
+          },
+        },
+        {
+          student: {
+            lrn: trimmedSchoolId,
+          },
+        },
+      ],
     },
     include: {
       user_roles: {
@@ -65,11 +74,134 @@ export async function login(
           },
         },
       },
-      student: true,
+      student: {
+        include: {
+          current_section: {
+            include: {
+              academic_year: true,
+              adviser_teacher: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      school_id: true,
+                      first_name: true,
+                      last_name: true,
+                      middle_name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          enrollments: {
+            where: { status: 'Enrolled' },
+            include: {
+              section: {
+                include: {
+                  academic_year: true,
+                  adviser_teacher: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          school_id: true,
+                          first_name: true,
+                          last_name: true,
+                          middle_name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              academic_year: true,
+            },
+            orderBy: { created_at: 'desc' },
+          },
+        },
+      },
       teacher: true,
       staff: true,
     },
   });
+
+  if (!user && trimmedSchoolId.length >= 10 && /^\d+$/.test(trimmedSchoolId)) {
+    try {
+      const rawMatches = await prisma.$queryRaw<Array<{ user_id: string }>>`
+        SELECT user_id FROM students WHERE lrn = ${trimmedSchoolId} LIMIT 1
+      `;
+      if (rawMatches && rawMatches.length > 0 && rawMatches[0]?.user_id) {
+        user = await prisma.user.findFirst({
+          where: { id: rawMatches[0].user_id },
+          include: {
+            user_roles: {
+              include: {
+                role: {
+                  include: {
+                    role_permissions: {
+                      include: { permission: true },
+                    },
+                  },
+                },
+              },
+            },
+            student: {
+              include: {
+                current_section: {
+                  include: {
+                    academic_year: true,
+                    adviser_teacher: {
+                      include: {
+                        user: {
+                          select: {
+                            id: true,
+                            school_id: true,
+                            first_name: true,
+                            last_name: true,
+                            middle_name: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                enrollments: {
+                  where: { status: 'Enrolled' },
+                  include: {
+                    section: {
+                      include: {
+                        academic_year: true,
+                        adviser_teacher: {
+                          include: {
+                            user: {
+                              select: {
+                                id: true,
+                                school_id: true,
+                                first_name: true,
+                                last_name: true,
+                                middle_name: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    academic_year: true,
+                  },
+                  orderBy: { created_at: 'desc' },
+                },
+              },
+            },
+            teacher: true,
+            staff: true,
+          },
+        });
+      }
+    } catch {
+      // Ignore raw query failure and proceed
+    }
+  }
 
   if (!user) {
     await createAuditLog({
@@ -167,12 +299,7 @@ export async function login(
       roles,
       permissions: Array.from(permissions),
       mustChangePassword: user.must_change_password,
-      studentProfile: user.student ? {
-        id: user.student.id,
-        studentNumber: user.student.student_number,
-        lrn: user.student.lrn,
-        gradeLevel: user.student.grade_level,
-      } : null,
+      studentProfile: mapStudentProfile(user.student),
       teacherProfile: user.teacher ? {
         id: user.teacher.id,
         employeeId: user.teacher.employee_id,
@@ -190,6 +317,44 @@ export async function login(
 /**
  * Hash a password for storage.
  */
+function mapStudentProfile(student: any) {
+  if (!student) return null;
+  const activeEnrollment = student.enrollments?.find((e: any) => e.academic_year?.is_current) || student.enrollments?.[0];
+  const section = activeEnrollment?.section || student.current_section;
+  const adviserUser = section?.adviser_teacher?.user;
+  const adviserName = adviserUser ? `${adviserUser.first_name} ${adviserUser.last_name}` : null;
+  const academicYear = activeEnrollment?.academic_year?.name || section?.academic_year?.name || null;
+  const academicYearId = activeEnrollment?.academic_year_id || section?.academic_year_id || null;
+
+  return {
+    id: student.id,
+    studentNumber: student.student_number,
+    lrn: student.lrn,
+    gradeLevel: section?.grade_level || student.grade_level,
+    gender: student.gender,
+    dateOfBirth: student.date_of_birth,
+    bloodType: student.blood_type,
+    blood_type: student.blood_type,
+    allergies: student.allergies,
+    medicalConditions: student.medical_conditions,
+    medical_conditions: student.medical_conditions,
+    guardianFirstName: student.guardian_first_name,
+    guardianLastName: student.guardian_last_name,
+    guardianPhone: student.guardian_phone,
+    guardianEmail: student.guardian_email,
+    street: student.street,
+    city: student.city,
+    stateProvince: student.state_province,
+    zipCode: student.zip_code,
+    sectionId: section?.id || null,
+    sectionName: section?.name || null,
+    adviserName,
+    academicYear,
+    academicYearId,
+    enrollmentStatus: activeEnrollment?.status || (student.current_section_id ? 'Enrolled' : 'Not Enrolled'),
+  };
+}
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
@@ -212,7 +377,53 @@ export async function getMe(userId: string) {
           },
         },
       },
-      student: true,
+      student: {
+        include: {
+          current_section: {
+            include: {
+              academic_year: true,
+              adviser_teacher: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      school_id: true,
+                      first_name: true,
+                      last_name: true,
+                      middle_name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          enrollments: {
+            where: { status: 'Enrolled' },
+            include: {
+              section: {
+                include: {
+                  academic_year: true,
+                  adviser_teacher: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          school_id: true,
+                          first_name: true,
+                          last_name: true,
+                          middle_name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              academic_year: true,
+            },
+            orderBy: { created_at: 'desc' },
+          },
+        },
+      },
       teacher: true,
       staff: true,
     },
@@ -242,13 +453,7 @@ export async function getMe(userId: string) {
     roles,
     permissions: Array.from(permissions),
     mustChangePassword: user.must_change_password,
-    studentProfile: user.student ? {
-      id: user.student.id,
-      studentNumber: user.student.student_number,
-      lrn: user.student.lrn,
-      gradeLevel: user.student.grade_level,
-      gender: user.student.gender,
-    } : null,
+    studentProfile: mapStudentProfile(user.student),
     teacherProfile: user.teacher ? {
       id: user.teacher.id,
       employeeId: user.teacher.employee_id,

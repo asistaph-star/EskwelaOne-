@@ -9,6 +9,17 @@ export interface ComponentHealth {
   message: string;
   latencyMs?: number;
   details?: string;
+  authStatus?: 'AUTHORIZED' | 'REAUTHORIZATION_REQUIRED' | 'NOT_CONNECTED' | 'NOT_CONFIGURED' | 'UNKNOWN';
+  authAccount?: string | null;
+  authDetails?: {
+    connected: boolean;
+    statusMessage: string;
+    userEmail: string | null;
+    hasDirectTokenScope: boolean;
+    isExpired: boolean;
+    expiresInSeconds: number;
+    usageGuidance?: string;
+  };
 }
 
 export interface SystemHealthData {

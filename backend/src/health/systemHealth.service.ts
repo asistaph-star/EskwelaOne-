@@ -2,6 +2,8 @@ import fs from 'fs';
 import prisma from '../config/database.js';
 import { getMediaStoragePath } from '../config/storage.config.js';
 import { aiConfig } from '../config/ai.config.js';
+import { checkSf9RendererHealth } from '../academic/grading/calulutSf9PdfRenderer.js';
+import { chatGPTTokenStorage } from '../ai/chatgpt/chatgptTokenStorage.js';
 
 export type HealthStatus = 'OPERATIONAL' | 'DEGRADED' | 'UNAVAILABLE' | 'NOT_CONFIGURED' | 'NOT_MONITORED';
 
@@ -12,6 +14,17 @@ export interface ComponentHealth {
   message: string;
   latencyMs?: number;
   details?: string;
+  authStatus?: 'AUTHORIZED' | 'REAUTHORIZATION_REQUIRED' | 'NOT_CONNECTED' | 'NOT_CONFIGURED' | 'UNKNOWN';
+  authAccount?: string | null;
+  authDetails?: {
+    connected: boolean;
+    statusMessage: string;
+    userEmail: string | null;
+    hasDirectTokenScope: boolean;
+    isExpired: boolean;
+    expiresInSeconds: number;
+    usageGuidance?: string;
+  };
 }
 
 export interface SystemHealthResponse {
@@ -31,6 +44,7 @@ export interface SystemHealthResponse {
     gateEventService: ComponentHealth;
     aiService: ComponentHealth;
     emailService: ComponentHealth;
+    sf9Renderer: ComponentHealth;
   };
 }
 
@@ -104,15 +118,102 @@ function checkGateEventServiceHealth(): { status: HealthStatus; message: string 
 }
 
 /**
- * Evaluates AI Service configuration status without making external paid API requests.
+ * Evaluates AI Service configuration and authorization status without making external paid API requests.
  */
-function checkAIServiceHealth(): { status: HealthStatus; message: string } {
+/**
+ * Masks an email address for privacy (e.g. ian.cabigao@gmail.com -> ia***ao@gmail.com).
+ */
+export function maskEmail(email: string | null | undefined): string | null {
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return email || null;
+  }
+  const [localPart, domain] = email.split('@');
+  if (localPart.length <= 2) {
+    return `${localPart[0]}***@${domain}`;
+  }
+  if (localPart.length <= 4) {
+    return `${localPart[0]}***${localPart.slice(-1)}@${domain}`;
+  }
+  return `${localPart.slice(0, 2)}***${localPart.slice(-2)}@${domain}`;
+}
+
+function checkAIServiceHealth(): {
+  status: HealthStatus;
+  message: string;
+  details?: string;
+  authStatus?: 'AUTHORIZED' | 'REAUTHORIZATION_REQUIRED' | 'NOT_CONNECTED' | 'NOT_CONFIGURED' | 'UNKNOWN';
+  authAccount?: string | null;
+  authDetails?: {
+    connected: boolean;
+    statusMessage: string;
+    userEmail: string | null;
+    hasDirectTokenScope: boolean;
+    isExpired: boolean;
+    expiresInSeconds: number;
+    usageGuidance?: string;
+  };
+} {
   if (aiConfig.providerMode === 'disabled') {
     return {
       status: 'NOT_CONFIGURED',
       message: 'AI Service is explicitly disabled in server configuration.',
+      authStatus: 'NOT_CONFIGURED',
     };
   }
+
+  if (aiConfig.providerMode === 'chatgpt_plan') {
+    let authStatus: 'AUTHORIZED' | 'REAUTHORIZATION_REQUIRED' | 'NOT_CONNECTED' | 'NOT_CONFIGURED' | 'UNKNOWN' = 'UNKNOWN';
+    let authAccount: string | null = null;
+    let authDetails: any = null;
+    let authMessageSegment = '';
+
+    try {
+      if (!aiConfig.chatgptPlan?.enabled) {
+        authStatus = 'NOT_CONFIGURED';
+        authMessageSegment = 'ChatGPT Plan delegation is disabled (CHATGPT_PLAN_ENABLED=false).';
+      } else {
+        const summary = chatGPTTokenStorage.getStatusSummary();
+        const maskedEmail = maskEmail(summary.userEmail);
+        authAccount = maskedEmail;
+        authDetails = {
+          connected: summary.connected,
+          statusMessage: summary.statusMessage,
+          userEmail: maskedEmail,
+          hasDirectTokenScope: summary.hasDirectTokenScope,
+          isExpired: summary.isExpired,
+          expiresInSeconds: summary.expiresInSeconds,
+          usageGuidance: summary.usageGuidance,
+        };
+
+        if (summary.connected && summary.hasDirectTokenScope && !summary.isExpired) {
+          authStatus = 'AUTHORIZED';
+          authMessageSegment = `ChatGPT authorization verified for account: ${maskedEmail || 'delegated user'}.`;
+        } else if (summary.isExpired) {
+          authStatus = 'REAUTHORIZATION_REQUIRED';
+          authMessageSegment = `ChatGPT authorization for ${maskedEmail || 'delegated user'} has expired (reauthorization required).`;
+        } else if (!summary.hasDirectTokenScope && summary.userEmail) {
+          authStatus = 'REAUTHORIZATION_REQUIRED';
+          authMessageSegment = `ChatGPT identity connected for ${maskedEmail}, but plan inference scope is missing (reauthorization required).`;
+        } else {
+          authStatus = 'NOT_CONNECTED';
+          authMessageSegment = 'No active ChatGPT authorization found (not connected).';
+        }
+      }
+    } catch {
+      authStatus = 'UNKNOWN';
+      authMessageSegment = 'Unable to establish ChatGPT authorization status.';
+    }
+
+    return {
+      status: 'NOT_MONITORED',
+      message: `Provider mode 'chatgpt_plan' configured. ${authMessageSegment} Live API calls are not executed during health checks to avoid billing.`,
+      details: authMessageSegment,
+      authStatus,
+      authAccount,
+      authDetails,
+    };
+  }
+
   return {
     status: 'NOT_MONITORED',
     message: `Provider mode '${aiConfig.providerMode}' configured. Live API calls are not executed during health checks to avoid billing.`,
@@ -162,6 +263,7 @@ export async function getSystemHealth(isITAdmin: boolean): Promise<SystemHealthR
   const gateHealth = checkGateEventServiceHealth();
   const aiHealth = checkAIServiceHealth();
   const emailHealth = checkEmailServiceHealth();
+  const sf9Health = checkSf9RendererHealth();
 
   // 2. Derive overall system health deterministically
   const overallStatus = deriveOverallStatus(dbHealth.status, storageHealth.status, gateHealth.status);
@@ -202,6 +304,10 @@ export async function getSystemHealth(isITAdmin: boolean): Promise<SystemHealthR
     status: aiHealth.status,
     lastChecked: timestamp,
     message: aiHealth.message,
+    ...(aiHealth.details ? { details: aiHealth.details } : {}),
+    ...(aiHealth.authStatus ? { authStatus: aiHealth.authStatus } : {}),
+    ...(aiHealth.authAccount ? { authAccount: aiHealth.authAccount } : {}),
+    ...(aiHealth.authDetails ? { authDetails: aiHealth.authDetails } : {}),
   };
 
   const emailComponent: ComponentHealth = {
@@ -209,6 +315,14 @@ export async function getSystemHealth(isITAdmin: boolean): Promise<SystemHealthR
     status: emailHealth.status,
     lastChecked: timestamp,
     message: emailHealth.message,
+  };
+
+  const sf9RendererComponent: ComponentHealth = {
+    name: 'Calulut SF9 Document Renderer',
+    status: sf9Health.status,
+    lastChecked: timestamp,
+    message: sf9Health.message,
+    ...(isITAdmin && typeof sf9Health.latencyMs === 'number' ? { latencyMs: sf9Health.latencyMs } : {}),
   };
 
   // Safe normalized environment
@@ -232,6 +346,7 @@ export async function getSystemHealth(isITAdmin: boolean): Promise<SystemHealthR
       gateEventService: gateComponent,
       aiService: aiComponent,
       emailService: emailComponent,
+      sf9Renderer: sf9RendererComponent,
     },
   };
 }

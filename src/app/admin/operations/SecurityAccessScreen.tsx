@@ -21,7 +21,7 @@ import { securityApi, SecurityOverviewData, SecurityTimeWindow } from "../../../
 import { AdminScreen } from "../AdminApp";
 
 interface SecurityAccessScreenProps {
-  onNavigate?: (screen: AdminScreen) => void;
+  onNavigate?: (screen: any) => void;
 }
 
 // Friendly display mapping for audit machine actions
@@ -44,7 +44,7 @@ function formatEventLabel(action: string): string {
     case "USER_PASSWORD_RESET":
       return "Password Reset by Admin";
     case "USER_CREATED":
-      return "Account Provisioned";
+      return "Account Created";
     case "USER_STATUS_CHANGED":
       return "Account Status Changed";
     case "USER_UPDATED":
@@ -463,7 +463,7 @@ export function SecurityAccessScreen({ onNavigate }: SecurityAccessScreenProps) 
                 {loading ? "..." : (data?.kpis.authDenials ?? 0)}
               </div>
               <div style={{ fontSize: 12, color: C.navyMuted }}>
-                403 / Access forbidden
+                Access denied (403)
               </div>
             </div>
             {onNavigate && (
@@ -836,7 +836,7 @@ export function SecurityAccessScreen({ onNavigate }: SecurityAccessScreenProps) 
                   <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Timestamp</th>
                   <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Event</th>
                   <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Actor</th>
-                  <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Target / Resource</th>
+                  <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Target</th>
                   <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Source IP</th>
                   <th style={{ padding: "12px 18px", color: C.navyMuted, fontWeight: 600 }}>Result</th>
                 </tr>
@@ -894,7 +894,7 @@ export function SecurityAccessScreen({ onNavigate }: SecurityAccessScreenProps) 
                             )}
                           </span>
                         ) : (
-                          <span style={{ color: "#94a3b8", fontStyle: "italic" }}>System / Anonymous</span>
+                          <span style={{ color: "#94a3b8", fontStyle: "italic" }}>System</span>
                         )}
                       </td>
 

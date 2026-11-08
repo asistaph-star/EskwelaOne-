@@ -1,24 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { CalendarEvent, EVENT_TYPE_CONFIG } from '../../shared/data/calendarData';
 import { useAppContext } from '../../shared/AppContext';
-import { Calendar, ChevronLeft, ChevronRight, Lock, Plus, X, Save, Trash2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Lock, Plus, X, Save, Trash2, Loader2, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../../api/client';
 import { CalendarGrid, formatTimeDisplay } from '../../shared/features/calendar/CalendarGrid';
+import { toast } from 'sonner';
+import { validateStrictCalendarDate } from '../../shared/utils/calendarValidation';
 
 export function CalendarScreen() {
-
-
   const { currentUser } = useAppContext();
-  const [backendEvents, setBackendEvents] = React.useState<any[]>([]);
+  const [backendEvents, setBackendEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<{ title: string, date: string, time: string, endTime: string, type: CalendarEvent["type"], audience: CalendarEvent["audience"] }>({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
+  const [form, setForm] = useState<{
+    title: string;
+    date: string;
+    time: string;
+    endTime: string;
+    type: CalendarEvent["type"];
+    audience: CalendarEvent["audience"];
+  }>({
+    title: "",
+    date: "",
+    time: "",
+    endTime: "",
+    type: "personal",
+    audience: "teachers"
+  });
+  const [formErrors, setFormErrors] = useState<{
+    title?: string;
+    date?: string;
+    time?: string;
+    endTime?: string;
+  }>({});
+  const [isSaving, setIsSaving] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  React.useEffect(() => {
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const endTimeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
     fetchEvents();
   }, []);
 
@@ -62,31 +87,69 @@ export function CalendarScreen() {
         audience: dbEv.audience
       } as CalendarEvent;
     });
+
   const handlePrevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
 
   async function handleAddPersonal() {
-    if (!form.title || !form.date) return;
-    
-    const dateTime = new Date(`${form.date}T${form.time || "00:00"}:00`);
-    const endDateTime = form.endTime ? new Date(`${form.date}T${form.endTime}:00`) : null;
-    
-    const payload = {
-      title: form.title,
-      type: form.type,
-      audience: form.audience,
-      date: dateTime.toISOString(),
-      end_date: endDateTime ? endDateTime.toISOString() : null,
-    };
-    
+    const errors: { title?: string; date?: string; time?: string; endTime?: string } = {};
+
+    if (!form.title || !form.title.trim()) {
+      errors.title = "Event title is required.";
+    }
+
+    if (!form.date || !form.date.trim()) {
+      errors.date = "Date is required.";
+    } else {
+      const dateCheck = validateStrictCalendarDate(form.date.trim());
+      if (!dateCheck.valid) {
+        errors.date = dateCheck.error || "Please enter a valid calendar date (YYYY-MM-DD).";
+      }
+    }
+
+    if (form.time && form.endTime && form.time >= form.endTime) {
+      errors.endTime = "End time must be after start time.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error("Please correct the highlighted form errors.");
+      if (errors.title) {
+        titleInputRef.current?.focus();
+      } else if (errors.date) {
+        dateInputRef.current?.focus();
+      } else if (errors.endTime) {
+        endTimeInputRef.current?.focus();
+      }
+      return;
+    }
+
+    setFormErrors({});
+    setIsSaving(true);
+
     try {
+      const dateTime = new Date(`${form.date}T${form.time || "00:00"}:00`);
+      const endDateTime = form.endTime ? new Date(`${form.date}T${form.endTime}:00`) : null;
+      
+      const payload = {
+        title: form.title.trim(),
+        type: form.type,
+        audience: form.audience,
+        date: dateTime.toISOString(),
+        end_date: endDateTime ? endDateTime.toISOString() : null,
+      };
+
       await apiClient.post('/admin/events', payload);
       await fetchEvents();
-      setForm({ title: "", date: "", time: "", endTime: "", type: "academic", audience: "students" });
+      toast.success("Personal event added successfully.");
+      setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" });
+      setFormErrors({});
       setShowForm(false);
     } catch(err: any) {
       console.error("EVENT SAVE ERROR:", err);
-      alert(`Error: ${err.message}`);
+      toast.error(err.message || "Failed to save event.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -95,9 +158,10 @@ export function CalendarScreen() {
     try {
       await apiClient.delete(`/admin/events/${id}`);
       setBackendEvents(prev => prev.filter(e => e.id !== id));
+      toast.success("Personal event deleted successfully.");
     } catch(err: any) {
       console.error(err);
-      alert(`Error deleting event: ${err.message}`);
+      toast.error(err.message || "Error deleting event.");
     }
   }
 
@@ -110,7 +174,12 @@ export function CalendarScreen() {
           <div style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Academic Calendar</div>
           <div style={{ fontSize: 12, color: C.t3, marginTop: 4 }}>School events (🔒) are set by admin. Your personal events are editable.</div>
         </div>
-        <button onClick={() => { setShowForm(true); setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" }); }}
+        <button
+          onClick={() => {
+            setFormErrors({});
+            setForm({ title: "", date: "", time: "", endTime: "", type: "personal", audience: "teachers" });
+            setShowForm(true);
+          }}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "background 0.2s" }}
           onMouseEnter={e => e.currentTarget.style.background = C.m800}
           onMouseLeave={e => e.currentTarget.style.background = C.m700}
@@ -118,7 +187,6 @@ export function CalendarScreen() {
           <Plus size={14} /> Add Personal Event
         </button>
       </div>
-
 
       {error && (
         <div style={{ background: '#fef2f2', color: '#ef4444', padding: 16, borderRadius: 8, marginBottom: 24, fontSize: 13, border: '1px solid #fecaca' }}>
@@ -134,7 +202,8 @@ export function CalendarScreen() {
         onPrevMonth={handlePrevMonth}
         onNextMonth={handleNextMonth}
         onDayClick={(dateStr) => {
-          setForm({ title: "", date: dateStr, time: "", endTime: "", type: "academic", audience: "students" });
+          setFormErrors({});
+          setForm({ title: "", date: dateStr, time: "", endTime: "", type: "personal", audience: "teachers" });
           setShowForm(true);
         }}
         onEventClick={(ev, e) => {
@@ -163,7 +232,7 @@ export function CalendarScreen() {
           <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>Upcoming Events</div>
         </div>
         {sorted.map(ev => {
-          const cfg = EVENT_TYPE_CONFIG[ev.type];
+          const cfg = EVENT_TYPE_CONFIG[ev.type] || { label: ev.type, color: "#0ea5e9" };
           return (
             <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: `1px solid ${C.border}` }}>
               <div style={{ width: 4, height: 36, borderRadius: 2, background: ev.color, flexShrink: 0 }} />
@@ -184,6 +253,7 @@ export function CalendarScreen() {
           );
         })}
       </div>
+
       {/* Form Modal */}
       {showForm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -196,39 +266,141 @@ export function CalendarScreen() {
           <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 480, boxShadow: "0 10px 40px rgba(0,0,0,0.2)", position: "relative", animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif" }}>New Personal Event</div>
-              <button onClick={() => setShowForm(false)} style={{ background: C.m50, border: "none", borderRadius: 16, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"} onMouseLeave={e=>e.currentTarget.style.background=C.m50}><X size={16} /></button>
+              <button
+                onClick={() => { setShowForm(false); setFormErrors({}); }}
+                style={{ background: C.m50, border: "none", borderRadius: 16, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.t2, transition: "background 0.2s" }}
+                onMouseEnter={e=>e.currentTarget.style.background="#e2e8f0"}
+                onMouseLeave={e=>e.currentTarget.style.background=C.m50}
+              >
+                <X size={16} />
+              </button>
             </div>
             
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Title</label>
-                <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Parent Conference"
-                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", transition: "border-color 0.2s" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: formErrors.title ? "#ef4444" : C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                  Title *
+                </label>
+                <input
+                  ref={titleInputRef}
+                  value={form.title}
+                  onChange={e => {
+                    setForm({ ...form, title: e.target.value });
+                    if (formErrors.title) setFormErrors(prev => ({ ...prev, title: undefined }));
+                  }}
+                  placeholder="e.g. Parent-Teacher Conference"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "10px 14px",
+                    border: formErrors.title ? "1.5px solid #ef4444" : `1.5px solid ${C.borderMed}`,
+                    background: formErrors.title ? "#fef2f2" : "#fff",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    outline: "none",
+                    transition: "border-color 0.2s"
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = formErrors.title ? "#ef4444" : C.m700}
+                  onBlur={e => e.currentTarget.style.borderColor = formErrors.title ? "#ef4444" : C.borderMed}
+                />
+                {formErrors.title && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: "#ef4444", fontSize: 11, fontWeight: 500 }}>
+                    <AlertCircle size={12} /> {formErrors.title}
+                  </div>
+                )}
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 16 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Date</label>
-                  <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: formErrors.date ? "#ef4444" : C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                    Date (YYYY-MM-DD) *
+                  </label>
+                  <input
+                    ref={dateInputRef}
+                    type="text"
+                    placeholder="YYYY-MM-DD"
+                    value={form.date}
+                    onChange={e => {
+                      setForm({ ...form, date: e.target.value });
+                      if (formErrors.date) setFormErrors(prev => ({ ...prev, date: undefined }));
+                    }}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 14px",
+                      border: formErrors.date ? "1.5px solid #ef4444" : `1.5px solid ${C.borderMed}`,
+                      background: formErrors.date ? "#fef2f2" : "#fff",
+                      borderRadius: 6,
+                      fontSize: 13,
+                      outline: "none",
+                      fontFamily: "inherit"
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = formErrors.date ? "#ef4444" : C.m700}
+                    onBlur={e => e.currentTarget.style.borderColor = formErrors.date ? "#ef4444" : C.borderMed}
+                  />
+                  {formErrors.date && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: "#ef4444", fontSize: 11, fontWeight: 500 }}>
+                      <AlertCircle size={12} /> {formErrors.date}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Start Time</label>
-                  <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={form.time}
+                    onChange={e => setForm({ ...form, time: e.target.value })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }}
+                    onFocus={e => e.currentTarget.style.borderColor = C.m700}
+                    onBlur={e => e.currentTarget.style.borderColor = C.borderMed}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>End Time</label>
-                  <input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed} />
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: formErrors.endTime ? "#ef4444" : C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                    End Time
+                  </label>
+                  <input
+                    ref={endTimeInputRef}
+                    type="time"
+                    value={form.endTime}
+                    onChange={e => {
+                      setForm({ ...form, endTime: e.target.value });
+                      if (formErrors.endTime) setFormErrors(prev => ({ ...prev, endTime: undefined }));
+                    }}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 14px",
+                      border: formErrors.endTime ? "1.5px solid #ef4444" : `1.5px solid ${C.borderMed}`,
+                      background: formErrors.endTime ? "#fef2f2" : "#fff",
+                      borderRadius: 6,
+                      fontSize: 13,
+                      outline: "none",
+                      fontFamily: "inherit"
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = formErrors.endTime ? "#ef4444" : C.m700}
+                    onBlur={e => e.currentTarget.style.borderColor = formErrors.endTime ? "#ef4444" : C.borderMed}
+                  />
+                  {formErrors.endTime && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4, color: "#ef4444", fontSize: 11, fontWeight: 500 }}>
+                      <AlertCircle size={12} /> {formErrors.endTime}
+                    </div>
+                  )}
                 </div>
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <div>
                   <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Type</label>
-                  <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
+                  <select
+                    value={form.type}
+                    onChange={e => setForm({ ...form, type: e.target.value as any })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }}
+                    onFocus={e => e.currentTarget.style.borderColor = C.m700}
+                    onBlur={e => e.currentTarget.style.borderColor = C.borderMed}
+                  >
                     <option value="academic">Academic</option>
                     <option value="meeting">Meeting</option>
                     <option value="holiday">Holiday</option>
@@ -238,8 +410,13 @@ export function CalendarScreen() {
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 10, fontWeight: 800, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Audience</label>
-                  <select value={form.audience} onChange={e => setForm({ ...form, audience: e.target.value as any })}
-                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }} onFocus={e=>e.currentTarget.style.borderColor=C.m700} onBlur={e=>e.currentTarget.style.borderColor=C.borderMed}>
+                  <select
+                    value={form.audience}
+                    onChange={e => setForm({ ...form, audience: e.target.value as any })}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", border: `1.5px solid ${C.borderMed}`, borderRadius: 6, fontSize: 13, outline: "none", background: "#fff", cursor: "pointer", fontFamily: "inherit" }}
+                    onFocus={e => e.currentTarget.style.borderColor = C.m700}
+                    onBlur={e => e.currentTarget.style.borderColor = C.borderMed}
+                  >
                     <option value="students">My Students Only</option>
                     <option value="teachers">Just Me (Personal)</option>
                   </select>
@@ -248,9 +425,36 @@ export function CalendarScreen() {
             </div>
             
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24, gap: 12 }}>
-              <button onClick={() => setShowForm(false)} style={{ padding: "10px 16px", background: "none", color: C.t2, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-              <button onClick={handleAddPersonal} style={{ padding: "10px 20px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }} onMouseEnter={e=>e.currentTarget.style.background=C.m800} onMouseLeave={e=>e.currentTarget.style.background=C.m700}>
-                <Save size={14} /> Save Event
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setFormErrors({}); }}
+                style={{ padding: "10px 16px", background: "none", color: C.t2, border: "none", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddPersonal}
+                disabled={isSaving}
+                style={{
+                  padding: "10px 20px",
+                  background: isSaving ? "#9ca3af" : C.m700,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: isSaving ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "background 0.2s"
+                }}
+                onMouseEnter={e => { if (!isSaving) e.currentTarget.style.background = C.m800; }}
+                onMouseLeave={e => { if (!isSaving) e.currentTarget.style.background = C.m700; }}
+              >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {isSaving ? "Saving..." : "Save Event"}
               </button>
             </div>
           </div>

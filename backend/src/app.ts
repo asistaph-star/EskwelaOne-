@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import { config } from './config/env.js';
 import { correlationIdMiddleware } from './common/middleware/correlationId.js';
 import { errorHandler } from './common/middleware/errorHandler.js';
@@ -24,7 +25,7 @@ import systemHealthRoutes from './health/systemHealth.routes.js';
 import rolesPermissionsRoutes from './security/rolesPermissions.routes.js';
 import backupStatusRoutes from './backup/backupStatus.routes.js';
 
-import { initMediaStorage } from './config/storage.config.js';
+import { initMediaStorage, getBrandingStoragePath } from './config/storage.config.js';
 import { securityHeaders } from './common/middleware/securityHeaders.js';
 
 // Initialize required directories
@@ -44,10 +45,105 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
 
-import path from 'path';
-app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
+// ─── Storage Access Boundary (Phase H.0 Hardening) ──────────
+// Only public school branding assets (/storage/branding/*) are publicly served.
+// Private storage directories (/storage/documents/*, /storage/leaves/*, /storage/chatgpt/*)
+// are strictly blocked from direct static access and must go through authenticated API routes.
+const PUBLIC_BRANDING_DIR = getBrandingStoragePath();
+app.use(
+  '/storage/branding',
+  (req, res, next) => {
+    let rawUrl = '';
+    try {
+      rawUrl = decodeURIComponent(req.url || '');
+    } catch {
+      res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+      res.status(400).json({
+        success: false,
+        error: { code: 'BAD_REQUEST', message: 'Malformed branding asset path.' },
+      });
+      return;
+    }
 
-// ─── Health Check ───────────────────────────────────────────
+    const segments = (req.path || '').split('/').filter(Boolean);
+    if (
+      rawUrl.includes('..') ||
+      rawUrl.includes('\\') ||
+      rawUrl.includes('\0') ||
+      segments.length !== 1 ||
+      segments[0].startsWith('.')
+    ) {
+      res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+      res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Invalid branding asset path.' },
+      });
+      return;
+    }
+    next();
+  },
+  express.static(PUBLIC_BRANDING_DIR, {
+    dotfiles: 'deny',
+    index: false,
+    fallthrough: true,
+  }),
+  (_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: { code: 'NOT_FOUND', message: 'Branding asset not found.' },
+    });
+  }
+);
+
+app.use('/storage', (_req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.status(403).json({
+    success: false,
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Direct access to private storage is forbidden.',
+    },
+  });
+});
+
+app.use('/backups', (_req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.status(403).json({
+    success: false,
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Direct access to server backup archives is forbidden.',
+    },
+  });
+});
+
+app.use('/quarantine', (_req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.status(403).json({
+    success: false,
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Direct access to server quarantine archives is forbidden.',
+    },
+  });
+});
+
+// ─── Health Check & Root Status ──────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'DigiSkwela Backend API is running.',
+    environment: config.nodeEnv,
+    health: '/api/health',
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({
     success: true,

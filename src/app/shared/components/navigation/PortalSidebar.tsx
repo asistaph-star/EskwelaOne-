@@ -44,7 +44,7 @@ export function PortalSidebar<T extends string>({
   onNavigate,
   collapsed = false,
   brandSubtitle = "Integrated School",
-  brandLogoSize = 52,
+  brandLogoSize = 44,
   userName,
   userSubtitle,
   userInitials,
@@ -67,16 +67,16 @@ export function PortalSidebar<T extends string>({
   const initialsBg = isGold ? C.gold : C.m700;
   const initialsColor = isGold ? C.m900 : "#fff";
 
-  const schoolLogo = settings.logoUrl;
+  const schoolLogo = settings.logoUrl || "/school_seal.png";
   const schoolDisplayName = settings.schoolShortName || settings.schoolName || "DigiSkwela";
   const sidebarBg = settings.primaryColor || C.m900;
 
   return (
-    <div style={{ width: collapsed ? 70 : 240, background: sidebarBg, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+    <div data-testid="portal-sidebar" style={{ width: collapsed ? 70 : 240, background: sidebarBg, borderRight: `1px solid ${C.borderHeavy}`, display: "flex", flexDirection: "column", color: "#fff", transition: "width 0.2s", position: "relative", overflow: "hidden", flexShrink: 0, boxSizing: "border-box" }}>
       {/* Brand */}
-      <div style={{ padding: collapsed ? "20px 0" : "22px 24px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 12, position: "relative", zIndex: 1 }}>
+      <div data-testid="sidebar-brand-container" style={{ padding: collapsed ? "18px 0" : "18px 16px", borderBottom: `1px solid ${C.borderHeavy}`, display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", gap: 10, position: "relative", zIndex: 1, boxSizing: "border-box" }}>
         {!collapsed && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
             {schoolLogo ? (
               <img src={schoolLogo} alt={`${schoolDisplayName} Logo`} style={{ width: brandLogoSize, height: brandLogoSize, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
             ) : (
@@ -84,11 +84,11 @@ export function PortalSidebar<T extends string>({
                 <GraduationCap size={Math.round(brandLogoSize * 0.7)} color={isGold ? C.gold : "#fff"} />
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", justifyContent: "center" }}>
-              <div style={{ color: "#ffffff", fontSize: 19, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+            <div data-testid="sidebar-brand-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center", flex: 1, minWidth: 0 }}>
+              <div data-testid="sidebar-brand-school-name" style={{ color: "#ffffff", fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", lineHeight: 1.1, whiteSpace: "normal", overflowWrap: "break-word" }}>
                 Calulut
               </div>
-              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 3, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", lineHeight: 1 }}>
+              <div data-testid="sidebar-brand-subtitle" style={{ color: "rgba(255,255,255,0.68)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 3, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "break-word" }}>
                 {brandSubtitle || "Integrated School"}
               </div>
             </div>

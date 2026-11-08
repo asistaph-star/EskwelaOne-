@@ -144,10 +144,15 @@ export function calculateStudentGrade(
   const ptWeight = (customWeights?.pt !== undefined ? customWeights.pt : (isTechnical ? 60 : 50)) / 100;
   const exWeight = (customWeights?.qa !== undefined ? customWeights.qa : (customWeights?.ex !== undefined ? customWeights.ex : (isTechnical ? 20 : 30))) / 100;
 
-  const parse = (v: any): number | null => {
+  const parse = (v: any, maxScore?: number): number | null => {
     if (v === null || v === undefined || v === '') return null;
-    const n = parseFloat(v);
-    return isNaN(n) ? null : n;
+    const s = String(v).trim();
+    if (s === '') return null;
+    if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(s)) return null;
+    const n = Number(s);
+    if (!Number.isFinite(n) || n < 0) return null;
+    if (maxScore !== undefined && maxScore > 0 && n > maxScore) return null;
+    return n;
   };
 
   // 1. Written Works
@@ -158,7 +163,7 @@ export function calculateStudentGrade(
 
   for (const it of wwItems) {
     wwMax += it.max;
-    const s = parse(studentScores[it.id]);
+    const s = parse(studentScores[it.id], it.max);
     if (s === null) {
       wwHasMissing = true;
     } else {
@@ -178,7 +183,7 @@ export function calculateStudentGrade(
 
   for (const it of ptItems) {
     ptMax += it.max;
-    const s = parse(studentScores[it.id]);
+    const s = parse(studentScores[it.id], it.max);
     if (s === null) {
       ptHasMissing = true;
     } else {
@@ -207,7 +212,7 @@ export function calculateStudentGrade(
     let accumulatedPS = 0;
 
     for (const it of examItems) {
-      const s = parse(studentScores[it.id]);
+      const s = parse(studentScores[it.id], it.max);
       if (it.id === 'st1') {
         st1Score = s;
         st1WS = (s !== null && it.max > 0) ? (s / it.max) * (it.weight || 30) : null;
@@ -232,9 +237,9 @@ export function calculateStudentGrade(
       exWS = roundHalfUp(exPS * exWeight, 2);
     }
   } else {
-    st1Score = parse(studentScores['st1']);
-    st2Score = parse(studentScores['st2']);
-    teScore  = parse(studentScores['te'] ?? studentScores['qa']);
+    st1Score = parse(studentScores['st1'], st1Max);
+    st2Score = parse(studentScores['st2'], st2Max);
+    teScore  = parse(studentScores['te'] ?? studentScores['qa'], teMax);
 
     st1WS = (st1Score !== null && st1Max > 0) ? (st1Score / st1Max) * 30 : null;
     st2WS = (st2Score !== null && st2Max > 0) ? (st2Score / st2Max) * 30 : null;
@@ -288,14 +293,35 @@ export function calculateStudentGrade(
 }
 
 /**
- * 3-Term Annual Final Grade calculation matching AGONCILLO ECR - SEPT4 & SF9:
- * =IF(COUNT(T1, T2, T3) < 3, "", ROUND(AVERAGE(T1, T2, T3), 0))
+ * Dynamic Annual Final Grade calculation matching DepEd arithmetic mean standards:
+ * 3-Term (SY 2026-2027): =IF(COUNT(T1, T2, T3) < 3, "", ROUND(AVERAGE(T1, T2, T3), 0))
+ * 4-Term (Historical/Future): =IF(COUNT(T1, T2, T3, T4) < 4, "", ROUND(AVERAGE(T1, T2, T3, T4), 0))
  */
 export function calculateAnnualFinalGrade(
   term1: number | null | undefined,
   term2: number | null | undefined,
-  term3: number | null | undefined
+  term3: number | null | undefined,
+  term4?: number | null | undefined,
+  termCount?: number
 ): { finalGrade: number | null; remark: string | null; descriptor: string | null } {
+  const count = termCount ?? ((term4 !== undefined && term4 !== null && term4 > 0) ? 4 : 3);
+
+  if (count === 4) {
+    if (
+      term1 === null || term1 === undefined || term1 <= 0 ||
+      term2 === null || term2 === undefined || term2 <= 0 ||
+      term3 === null || term3 === undefined || term3 <= 0 ||
+      term4 === null || term4 === undefined || term4 <= 0
+    ) {
+      return { finalGrade: null, remark: null, descriptor: null };
+    }
+    const finalGrade = Math.round((term1 + term2 + term3 + term4) / 4);
+    const remark = finalGrade >= 75 ? 'Passed' : 'Failed';
+    const descriptor = getPerformanceDescriptor(finalGrade);
+    return { finalGrade, remark, descriptor };
+  }
+
+  // 3-Term standard
   if (
     term1 === null || term1 === undefined || term1 <= 0 ||
     term2 === null || term2 === undefined || term2 <= 0 ||

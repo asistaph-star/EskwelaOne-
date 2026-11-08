@@ -144,8 +144,8 @@ export function StudentSettings({ setTab, currentUser, updateCurrentUser }: any)
                     </div>
                   </div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{currentUser?.name || "Student User"}</div>
-                  <div style={{ fontSize: 13, color: C.t2 }}>{currentUser?.section || "Grade 10 - Pilot Section"}</div>
-                  <div style={{ fontSize: 12, color: C.t3, marginTop: 4, fontWeight: 500 }}>Learner Reference Number: <span style={{ color: C.m700, fontWeight: 700 }}>100001</span></div>
+                  <div style={{ fontSize: 13, color: C.t2 }}>{currentUser?.studentProfile?.sectionName ? `Grade ${currentUser.studentProfile.gradeLevel}, Section ${currentUser.studentProfile.sectionName}` : (currentUser?.section || "Enrolled Student")}</div>
+                  <div style={{ fontSize: 12, color: C.t3, marginTop: 4, fontWeight: 500 }}>Learner Reference Number: <span style={{ color: C.m700, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>{currentUser?.lrn || currentUser?.schoolId || "100000000001"}</span></div>
                   
                   <div style={{ marginTop: 24, padding: "16px", background: C.paper, borderRadius: 12, border: `1px solid ${C.borderMed}`, textAlign: "left" }}>
                      <div style={{ fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Account Status</div>
@@ -185,6 +185,48 @@ export function StudentSettings({ setTab, currentUser, updateCurrentUser }: any)
               {/* Settings Forms Container */}
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 
+                {/* Verified DepEd School Identity (Read-Only) */}
+                <div style={{ 
+                  background: "#fff", borderRadius: 16, padding: 32,
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.03)",
+                  border: "1px solid rgba(0,0,0,0.04)"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(14, 165, 233, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#0284c7" }}>
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 800, color: C.t1, margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Verified DepEd Identity Records</h3>
+                      <p style={{ fontSize: 12, color: C.t3, margin: "4px 0 0 0" }}>Authoritative learner records under DepEd DO 011, s. 2018. Protected against independent modification.</p>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, background: C.paper, padding: 16, borderRadius: 12, border: `1px solid ${C.borderMed}` }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Learner Reference Number (LRN)</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.t1, fontFamily: "'JetBrains Mono', monospace", marginTop: 4 }}>
+                        {currentUser?.lrn || currentUser?.schoolId || "100000000001"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Current Enrollment</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.t1, marginTop: 4 }}>
+                        {currentUser?.studentProfile?.sectionName ? `Grade ${currentUser.studentProfile.gradeLevel}, Section ${currentUser.studentProfile.sectionName}` : (currentUser?.section || "Enrolled Student")}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Identity Verification</div>
+                      <div style={{ fontSize: 12, marginTop: 4 }}>
+                        <Stamp label="DepEd Verified" color="#059669" bg="#ecfdf5" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12, fontSize: 11, color: C.t3, lineHeight: 1.5 }}>
+                    <strong>Notice:</strong> To request corrections to your official name, birthdate, or LRN, please submit an official verification request to the <strong>Calulut Integrated School Registrar</strong>.
+                  </div>
+                </div>
+                
                 {/* Contact Email */}
                 <div style={{ 
                   background: "#fff", borderRadius: 16, padding: 32,
@@ -202,7 +244,7 @@ export function StudentSettings({ setTab, currentUser, updateCurrentUser }: any)
                   </div>
 
                   <form onSubmit={handleEmailSave} style={{ marginTop: 24 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Parent / Guardian Email</label>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Parent or Guardian Email</label>
                     <div style={{ display: "flex", gap: 12 }}>
                       <div style={{ flex: 1 }}>
                         <input 
@@ -259,7 +301,7 @@ export function StudentSettings({ setTab, currentUser, updateCurrentUser }: any)
                       <div>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>Current Password</label>
                         <input 
-                          type="password" disabled value="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó" placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó" 
+                          type="password" disabled value="••••••••" placeholder="••••••••" 
                           style={{ 
                             width: "100%", padding: "12px 16px", fontSize: 14, 
                             background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 8, 
@@ -270,7 +312,7 @@ export function StudentSettings({ setTab, currentUser, updateCurrentUser }: any)
                       <div>
                         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: C.t2, marginBottom: 8 }}>New Password</label>
                         <input 
-                          type="password" disabled value="" placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó" 
+                          type="password" disabled value="" placeholder="••••••••" 
                           style={{ 
                             width: "100%", padding: "12px 16px", fontSize: 14, 
                             background: C.paper, border: `1px solid ${C.borderMed}`, borderRadius: 8, 

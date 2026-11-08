@@ -50,6 +50,19 @@ export const updateSchoolSettingsSchema = z.object({
 
   footer_text: z.string().max(255).nullable().optional(),
   footerText: z.string().max(255).nullable().optional(),
+
+  school_id: z.string().max(20).nullable().optional(),
+  schoolId: z.string().max(20).nullable().optional(),
+
+  region: z.string().max(100).nullable().optional(),
+  division: z.string().max(150).nullable().optional(),
+  district: z.string().max(150).nullable().optional(),
+
+  school_head_name: z.string().max(150).nullable().optional(),
+  schoolHeadName: z.string().max(150).nullable().optional(),
+
+  school_head_title: z.string().max(100).nullable().optional(),
+  schoolHeadTitle: z.string().max(100).nullable().optional(),
 }).strict();
 
 export type UpdateSchoolSettingsInput = z.infer<typeof updateSchoolSettingsSchema>;

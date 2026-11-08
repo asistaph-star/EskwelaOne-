@@ -21,9 +21,9 @@ export function useLayout() {
 
 export const ROLE_USER = {
   Admin: { initials: "RS", name: "Dr. Roberto Santos", sub: "School Administrator" },
-  ITAdmin: { initials: "IT", name: "System Administrator", sub: "Admin / IT Operations" },
-  Teacher: { initials: "AS", name: "Ana R. Soriano", sub: "Adviser, Grade 10 - Pilot" },
-  Student: { initials: "JM", name: "Juan Miguel Santos", sub: "Grade 10 - Pilot (LRN 100001)" },
+  ITAdmin: { initials: "IT", name: "System Administrator", sub: "IT Administrator" },
+  Teacher: { initials: "AS", name: "Ana R. Soriano", sub: "Class Adviser, Grade 10, Section Pilot" },
+  Student: { initials: "JM", name: "Juan Miguel Santos", sub: "Grade 10, Section Pilot (LRN 100001)" },
   Parent: { initials: "PA", name: "Parent Portal", sub: "Student academic progress monitoring" },
   Registrar: { initials: "RE", name: "Registrar Office", sub: "Learner Permanent Records (SF10) Management" },
   Guidance: { initials: "GC", name: "Counselor Perez", sub: "School Guidance Counselor" },
@@ -127,6 +127,7 @@ import { TeacherApp } from "./teacher/TeacherApp";
 import { PrincipalApp } from "./principal/PrincipalApp";
 import { RegistrarApp } from "./principal/RegistrarApp";
 import { AdminApp } from "./admin/AdminApp";
+import { ITAdminApp } from "./admin/ITAdminApp";
 import { GuidanceApp } from "./guidance/GuidanceApp";
 import { GateTerminalApp } from "./gate/GateTerminalApp";
 import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
@@ -135,9 +136,31 @@ import { useAppContext } from "./shared/AppContext";
 
 export default function App() {
   const { currentUser, setCurrentUser } = useAppContext();
+  const isUat = import.meta.env.VITE_IS_UAT === 'true' || (typeof window !== 'undefined' && window.location.port === '5174');
+
+  const uatBanner = isUat ? (
+    <aside 
+      role="alert"
+      aria-label="Test Environment Notification"
+      className="bg-amber-500 text-amber-950 font-extrabold text-xs tracking-wider uppercase py-1.5 px-4 text-center border-b border-amber-600 shadow-xs flex items-center justify-center gap-2 z-50 shrink-0 select-none"
+    >
+      <span className="w-2 h-2 rounded-full bg-amber-950 animate-pulse" />
+      <span>TEST ENVIRONMENT: SCHOOL YEAR CLOSURE UAT</span>
+      <span className="text-[10px] bg-amber-600/30 text-amber-950 px-2 py-0.5 rounded font-mono font-bold tracking-normal normal-case hidden sm:inline">
+        ISOLATED FIXTURE: DO NOT USE FOR OFFICIAL CALULUT RECORDS
+      </span>
+    </aside>
+  ) : null;
 
   if (!currentUser) {
-    return <LoginScreen key="login-screen" />;
+    return (
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        {uatBanner}
+        <div className="flex-1 min-h-0 overflow-auto">
+          <LoginScreen key="login-screen" />
+        </div>
+      </div>
+    );
   }
 
   const handleLogout = async () => {
@@ -153,59 +176,78 @@ export default function App() {
   // Centralized Mandatory First-Login Password Change Guard
   if (currentUser.mustChangePassword) {
     return (
-      <ChangePasswordScreen
-        key="change-password-screen"
-        onLogout={handleLogout}
-        onSuccess={() => {
-          setCurrentUser({
-            ...currentUser,
-            mustChangePassword: false,
-          });
-        }}
-      />
+      <div className="flex flex-col h-screen w-screen overflow-hidden">
+        {uatBanner}
+        <div className="flex-1 min-h-0 overflow-auto">
+          <ChangePasswordScreen
+            key="change-password-screen"
+            onLogout={handleLogout}
+            onSuccess={() => {
+              setCurrentUser({
+                ...currentUser,
+                mustChangePassword: false,
+              });
+            }}
+          />
+        </div>
+      </div>
     );
   }
 
   const role = currentUser.role;
 
-  if (role === "GateOperator") {
-    return <GateTerminalApp key="gate-terminal-app" onLogout={handleLogout} />;
-  }
-  if (role === "Principal") {
-    return <PrincipalApp key="principal-app" onLogout={handleLogout} />;
-  }
-  if (role === "Admin" || role === "ITAdmin") {
-    return <AdminApp key="admin-app" onLogout={handleLogout} />;
-  }
-  if (role === "Registrar") {
-    return <RegistrarApp key="registrar-app" onLogout={handleLogout} />;
-  }
-  if (role === "Student") {
-    return <StudentPortal key="student-portal-app" onLogout={handleLogout} />;
-  }
-  if (role === "Parent") {
-    return <SimpleShell key="parent-portal-app" role={role as any} onLogout={handleLogout} />;
-  }
-  if (role === "Nurse") {
-    return <NurseApp key="nurse-app" onLogout={handleLogout} />;
-  }
-  if (role === "Guidance") {
-    return <GuidanceApp key="guidance-app" onLogout={handleLogout} />;
-  }
-  if (role === "Teacher") {
-    return <TeacherApp key="teacher-app" onLogout={handleLogout} />;
-  }
-  
+  const renderRoleApp = () => {
+    if (role === "GateOperator") {
+      return <GateTerminalApp key="gate-terminal-app" onLogout={handleLogout} />;
+    }
+    if (role === "Principal") {
+      return <PrincipalApp key="principal-app" onLogout={handleLogout} />;
+    }
+    if (role === "Admin") {
+      return <AdminApp key="admin-app" onLogout={handleLogout} />;
+    }
+    if (role === "ITAdmin") {
+      return <ITAdminApp key="it-admin-app" onLogout={handleLogout} />;
+    }
+    if (role === "Registrar") {
+      return <RegistrarApp key="registrar-app" onLogout={handleLogout} />;
+    }
+    if (role === "Student") {
+      return <StudentPortal key="student-portal-app" onLogout={handleLogout} />;
+    }
+    if (role === "Parent") {
+      return <SimpleShell key="parent-portal-app" role={role as any} onLogout={handleLogout} />;
+    }
+    if (role === "Nurse") {
+      return <NurseApp key="nurse-app" onLogout={handleLogout} />;
+    }
+    if (role === "Guidance") {
+      return <GuidanceApp key="guidance-app" onLogout={handleLogout} />;
+    }
+    if (role === "Teacher") {
+      return <TeacherApp key="teacher-app" onLogout={handleLogout} />;
+    }
+    
+    return (
+      <div key="access-denied-screen" style={{ display: 'flex', height: '100%', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
+        <h2 style={{ color: '#d97706', marginBottom: 8 }}>Access Denied</h2>
+        <p style={{ color: '#4b5563', marginBottom: 24 }}>Your account does not have a recognized portal role.</p>
+        <button 
+          onClick={handleLogout} 
+          style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600 }}
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  };
+
   return (
-    <div key="access-denied-screen" style={{ display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', fontFamily: "'Inter', sans-serif" }}>
-      <h2 style={{ color: '#d97706', marginBottom: 8 }}>Access Denied</h2>
-      <p style={{ color: '#4b5563', marginBottom: 24 }}>Your account does not have a recognized portal role.</p>
-      <button 
-        onClick={handleLogout} 
-        style={{ padding: '10px 20px', background: '#0f172a', color: '#fff', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600 }}
-      >
-        Return to Login
-      </button>
+    <div className="flex flex-col h-screen w-screen overflow-hidden">
+      {uatBanner}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {renderRoleApp()}
+      </div>
     </div>
   );
 }

@@ -10,10 +10,67 @@ import { getPhilippineCalendarDate } from '../common/utils/dateTime.js';
 import excuseLettersRouter from '../modules/excuse-letters/excuseLetters.routes.js';
 import classAttendanceRouter from '../modules/class-attendance/classAttendance.routes.js';
 import facultyAttendanceRouter from '../modules/faculty-attendance/facultyAttendance.routes.js';
+import officialDailyAttendanceRouter from './officialDailyAttendance.routes.js';
+import { config } from '../config/env.js';
+import { enqueueGateNotification } from '../notifications/gateNotificationQueue.service.js';
+import { evaluatePunctuality, formatPhilippineDate, formatPhilippineTime } from '../notifications/punctuality.service.js';
 
 const router = Router();
+
+/**
+ * POST /api/attendance/gate/email/webhook
+ * Authenticated Brevo Transactional Webhook for tracking real inbox delivery states.
+ * Authenticated via secret token rather than cookie session.
+ */
+router.post('/gate/email/webhook', async (req: Request, res: Response) => {
+  try {
+    const configuredSecret = config.email.webhookSecret;
+    if (configuredSecret) {
+      const authHeader = req.headers['authorization'];
+      const bearerToken = typeof authHeader === 'string' && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+      const headerSecret = req.headers['x-webhook-secret'];
+      const incomingSecret = bearerToken || headerSecret;
+
+      if (!incomingSecret || incomingSecret !== configuredSecret) {
+        return res.status(401).json({ success: false, error: 'Unauthorized webhook request' });
+      }
+    }
+
+    const event = req.body?.event;
+    const messageId = req.body?.['message-id'] || req.body?.messageId;
+
+    if (!messageId) {
+      return res.status(400).json({ success: false, error: 'Missing message-id in webhook payload' });
+    }
+
+    if (event === 'delivered') {
+      await prisma.gateAttendanceNotification.updateMany({
+        where: { brevo_message_id: String(messageId) },
+        data: {
+          status: 'DELIVERED',
+          delivered_at: new Date(),
+          error_message: null,
+        }
+      });
+    } else if (['soft_bounce', 'hard_bounce', 'blocked', 'invalid_email', 'error'].includes(event)) {
+      await prisma.gateAttendanceNotification.updateMany({
+        where: { brevo_message_id: String(messageId) },
+        data: {
+          status: 'FAILED',
+          error_message: `Brevo Delivery Failure: ${event}`,
+        }
+      });
+    }
+
+    return res.json({ success: true, event, messageId });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message || 'Webhook processing failure' });
+  }
+});
+
 router.use(authMiddleware);
 
+router.use('/sf2', officialDailyAttendanceRouter);
 router.use('/faculty', facultyAttendanceRouter);
 router.use('/excuses', excuseLettersRouter);
 router.use('/', classAttendanceRouter);
@@ -96,13 +153,28 @@ const scanAttendanceSchema = z.object({
 // ─── Resolver ─────────────────────────────────────────────────
 
 /**
- * Resolves a raw scanned barcode value to a student record.
- * Current implementation assumes the barcode is a DepEd LRN.
- * Future implementations may map this to a custom Student ID or NFC/RFID Card Token.
+ * Resolves a raw scanned barcode value to an authoritative student record.
+ * Sanitizes hardware scanner delimiters (CR, LF, tabs, whitespace) and extracts
+ * the registered 12-digit DepEd LRN. Unregistered or unknown identifiers are rejected.
  */
-async function resolveScannedStudent(barcode: string) {
+export async function resolveScannedStudent(barcode: string) {
+  if (!barcode || typeof barcode !== 'string') return null;
+
+  // 1. Sanitize hardware scanner burst: remove whitespace, CR, LF, tabs
+  const clean = barcode.trim().replace(/[\r\n\t]/g, '');
+
+  // 2. Extract 12-digit DepEd LRN (e.g. raw "999026000001" or prefixed "LRN: 999026000001")
+  const lrnMatch = clean.match(/\b(\d{12})\b/);
+  const targetLrn = lrnMatch ? lrnMatch[1] : clean;
+
+  // 3. Strictly require 12-digit DepEd LRN format
+  if (!/^\d{12}$/.test(targetLrn)) {
+    return null;
+  }
+
+  // 4. Authoritative Lookup: by registered 12-digit DepEd LRN (via encrypted lrn_hash index)
   return prisma.student.findUnique({
-    where: { lrn: barcode },
+    where: { lrn: targetLrn },
     include: {
       user: { select: { first_name: true, last_name: true } }
     }
@@ -173,8 +245,7 @@ router.post('/gate/student/scan', requireAnyPermission('attendance:write', 'atte
     }
 
     const now = new Date();
-    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    const today = new Date(todayStr); // 00:00:00Z for the Date field
+    const { dateObj: today } = getPhilippineCalendarDate(now);
 
     const existing = await prisma.gateAttendance.findUnique({
       where: {
@@ -186,37 +257,57 @@ router.post('/gate/student/scan', requireAnyPermission('attendance:write', 'atte
     });
 
     let action = '';
-    let resultEntry;
+    let punctualityStatus: 'On Time' | 'Late' | null = null;
+    const eventType = !existing ? 'TIME_IN' : 'TIME_OUT';
 
     if (!existing) {
-      resultEntry = await prisma.gateAttendance.create({
-        data: {
-          id: generateId(),
-          student_id: student.id,
-          date: today,
-          status: 'Present',
-          time_in: now,
-        }
-      });
       action = 'Time In';
+      punctualityStatus = evaluatePunctuality(now, config.email.lateCutoffTime);
     } else {
       if (existing.time_out) {
-        return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Student already timed out today.' } });
+        return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Student has already exited campus today.' } });
       }
 
       // Debounce logic (within 1 minute of previous action, don't allow time_out)
       if (existing.updated_at && (now.getTime() - existing.updated_at.getTime()) < 60000) {
         return res.status(422).json({ success: false, error: { code: 'UNPROCESSABLE_ENTITY', message: 'Scan ignored (duplicate scan within 1 minute).' } });
       }
-
-      resultEntry = await prisma.gateAttendance.update({
-        where: { id: existing.id },
-        data: {
-          time_out: now,
-        }
-      });
       action = 'Time Out';
     }
+
+    // Atomic transaction: persistence of gate attendance and transactional outbox notification
+    const resultEntry = await prisma.$transaction(async (tx) => {
+      let entry;
+      if (!existing) {
+        entry = await tx.gateAttendance.create({
+          data: {
+            id: generateId(),
+            student_id: student.id,
+            date: today,
+            status: 'Present',
+            time_in: now,
+          }
+        });
+      } else {
+        entry = await tx.gateAttendance.update({
+          where: { id: existing.id },
+          data: {
+            time_out: now,
+          }
+        });
+      }
+
+      await enqueueGateNotification({
+        attendanceId: entry.id,
+        studentId: student.id,
+        eventType,
+        punctualityStatus,
+        clientPrisma: tx,
+        recipientMode: config.email.recipientMode,
+      });
+
+      return entry;
+    });
 
     await createAuditLog({
       actorUserId: actorId,
@@ -230,22 +321,30 @@ router.post('/gate/student/scan', requireAnyPermission('attendance:write', 'atte
     // Notify all connected Principal Monitoring clients that student gate attendance has changed.
     emitGateAttendanceChanged();
 
+    const studentDisplayName = student.user
+      ? `${student.user.first_name} ${student.user.last_name}`
+      : `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Student';
+
     return res.json({
       success: true,
       data: {
         entityType: 'STUDENT',
-        studentName: student.user ? `${student.user.first_name} ${student.user.last_name}` : 'Unknown',
+        studentName: studentDisplayName,
         studentId: student.id,
         action: action,
         time: now.toISOString(),
+        formattedDate: formatPhilippineDate(today),
+        formattedTime: formatPhilippineTime(now),
+        punctualityStatus,
         record: {
           id: resultEntry.id,
           studentId: student.id,
-          studentName: student.user ? `${student.user.first_name} ${student.user.last_name}` : 'Unknown',
+          studentName: studentDisplayName,
           date: today.toISOString(),
           timeIn: resultEntry.time_in ? resultEntry.time_in.toISOString() : null,
           timeOut: resultEntry.time_out ? resultEntry.time_out.toISOString() : null,
-          status: resultEntry.status
+          status: resultEntry.status,
+          punctualityStatus,
         }
       }
     });
@@ -415,6 +514,17 @@ const updateTerminalSchema = z.object({
  */
 router.get('/gate/terminals', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const authUser = (req as any).user as AuthenticatedUser;
+    const isAuthorized =
+      authUser?.roles?.includes('ITAdmin') ||
+      authUser?.roles?.includes('Admin') ||
+      authUser?.roles?.includes('GateOperator');
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'FORBIDDEN', message: 'Insufficient permissions to inspect gate terminals.' },
+      });
+    }
     const terminals = await prisma.gateTerminal.findMany({
       orderBy: { terminal_name: 'asc' },
     });
@@ -673,8 +783,7 @@ router.post('/gate/terminal/reconfigure', async (req: Request, res: Response, ne
 router.get('/gate', requirePermissions('attendance:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const now = new Date();
-    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-    const today = new Date(todayStr); // 00:00:00Z for the Date field
+    const { dateObj: today } = getPhilippineCalendarDate(now);
 
     const records = await prisma.gateAttendance.findMany({
       where: {

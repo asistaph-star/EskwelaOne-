@@ -37,6 +37,12 @@ export function getAIProvider(overrideMode?: AIProviderMode): DigiSkwelaAIProvid
   }
 
   if (mode === 'chatgpt_plan') {
+    if (!aiConfig.chatgptPlan?.enabled) {
+      throw new AIProviderError(
+        'PROVIDER_UNAVAILABLE',
+        'ChatGPT Plan delegation is disabled unless explicitly authorized via CHATGPT_PLAN_ENABLED=true.'
+      );
+    }
     return new ChatGPTPlanAIProvider();
   }
 

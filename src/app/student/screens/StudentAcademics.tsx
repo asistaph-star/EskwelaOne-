@@ -1,22 +1,24 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { C } from '../../shared/constants/tokens';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Calendar, LayoutDashboard, ClipboardList, FileText, Heart, Activity, Bell, AlertCircle,
   QrCode, Shield, CheckCircle, Clock, FileSpreadsheet, User, UserCheck, Download,
   Settings, RefreshCw, Send, CheckSquare, Square, Upload, Paperclip, Search, Lock, ChevronLeft, ChevronRight,
-  Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope } from 'lucide-react';
+  Check, Menu, MessageSquare, FolderOpen, AlertTriangle, ChevronDown, Megaphone, School, X, Sparkles, CalendarCheck, Mail, Eye, XCircle, Stethoscope, ExternalLink, Printer, ShieldCheck, History, Award } from 'lucide-react';
 import { StatBox } from '../../shared/components/StatBox';
 import { Stamp } from '../../shared/components/Stamp';
-import { apiClient } from '../../../api/client';
+import { apiClient, API_BASE_URL } from '../../../api/client';
 import { studentApi } from '../../../api/student.api';
-import { useEffect } from 'react';
 
-import { StudentReportCard } from '../components/StudentReportCard';
+import { AuthenticCalulutSf9Viewer } from '../../shared/components/AuthenticCalulutSf9Viewer';
 import { Form138PDFDocument } from '../components/Form138PDFDocument';
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import { getStudentRankAndStanding, getStudentRecentQuizzes, getStudentSubjectGrades } from '../../shared/utils/gradesService';
 import { useSchoolSettings } from '../../shared/context/SchoolSettingsContext';
 import { useAppContext } from '../../shared/AppContext';
+import { SchoolYearSelector, AcademicYearOption } from '../../shared/components/SchoolYearSelector';
+import { ReadOnlyBanner } from '../../shared/components/ReadOnlyBanner';
 
 
 export function StudentAcademics({ setTab, currentUser }: any) {
@@ -28,11 +30,83 @@ export function StudentAcademics({ setTab, currentUser }: any) {
   const [pdfToast, setPdfToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [reportCardData, setReportCardData] = useState<any>(null);
   const [isLoadingGrades, setIsLoadingGrades] = useState(true);
+  const [releasedSf9, setReleasedSf9] = useState<{
+    released: boolean;
+    status: string;
+    message?: string;
+    academicYear?: string;
+    reportingPeriod?: string;
+    releaseDate?: string;
+    adviser?: string;
+    principal?: string;
+    pdfSha256?: string;
+    canDownload?: boolean;
+    targetTerm?: string;
+    version?: number;
+    history?: any[];
+  } | null>(null);
+  const [isLoadingRelease, setIsLoadingRelease] = useState(true);
+  const [showReleasedPdfModal, setShowReleasedPdfModal] = useState(false);
+  const [releasedPdfBlobUrl, setReleasedPdfBlobUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+
+  // Multi-Year Grades History State
+  const [academicYears, setAcademicYears] = useState<AcademicYearOption[]>([]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<string>('');
+  const [isLoadingYears, setIsLoadingYears] = useState(false);
+
+  // Load available academic years for the student
+  useEffect(() => {
+    if (!studentId) return;
+    setIsLoadingYears(true);
+    studentApi.getStudentAcademicYears(studentId)
+      .then((years: any) => {
+        if (Array.isArray(years) && years.length > 0) {
+          setAcademicYears(years);
+          const currentYear = years.find((y: any) => y.isCurrent) || years[0];
+          setSelectedAcademicYearId(currentYear.academicYearId);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not fetch student academic years:', err);
+      })
+      .finally(() => setIsLoadingYears(false));
+  }, [studentId]);
+
+  useEffect(() => {
+    return () => {
+      if (releasedPdfBlobUrl) {
+        URL.revokeObjectURL(releasedPdfBlobUrl);
+      }
+    };
+  }, [releasedPdfBlobUrl]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && showReleasedPdfModal) {
+        setShowReleasedPdfModal(false);
+        setPdfLoadError(null);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showReleasedPdfModal]);
+
+  function handlePrintPdf() {
+    if (!releasedPdfBlobUrl) return;
+    const printWindow = window.open(releasedPdfBlobUrl, '_blank');
+    if (printWindow) {
+      printWindow.focus();
+    }
+  }
 
   useEffect(() => {
     if (!studentId) return;
     setIsLoadingGrades(true);
-    apiClient.get(`/academic/report-card/${studentId}`)
+    const ayParam = selectedAcademicYearId ? `?academicYearId=${encodeURIComponent(selectedAcademicYearId)}` : '';
+
+    apiClient.get(`/academic/report-card/${studentId}${ayParam}`)
       .then((res: any) => {
         if (res) setReportCardData(res);
       })
@@ -40,7 +114,106 @@ export function StudentAcademics({ setTab, currentUser }: any) {
         console.warn('Could not fetch official report card from backend:', err);
       })
       .finally(() => setIsLoadingGrades(false));
-  }, [studentId]);
+
+    setIsLoadingRelease(true);
+    apiClient.get<any>(`/academic/report-card/student/released-sf9${ayParam}`)
+      .then((res: any) => {
+        const data = res?.data || res;
+        setReleasedSf9(data);
+      })
+      .catch((err) => {
+        console.warn('Could not fetch student released SF9 metadata:', err);
+        setReleasedSf9({
+          released: false,
+          status: 'PENDING_EVALUATION',
+          message: 'Official report card has not yet been released.',
+        });
+      })
+      .finally(() => setIsLoadingRelease(false));
+  }, [studentId, selectedAcademicYearId]);
+
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+
+  async function handleViewReleasedPdf(versionToLoad?: number) {
+    setIsLoadingPdf(true);
+    setPdfLoadError(null);
+    setShowReleasedPdfModal(true);
+    try {
+      const ver = typeof versionToLoad === 'number' ? versionToLoad : selectedVersion;
+      const params = new URLSearchParams();
+      if (ver) params.set('version', String(ver));
+      if (selectedAcademicYearId) params.set('academicYearId', selectedAcademicYearId);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const resp = await fetch(`${API_BASE_URL}/academic/report-card/student/released-sf9/pdf${queryString}`, {
+        credentials: 'include',
+        headers,
+      });
+      const contentType = resp.headers.get('content-type') || '';
+      if (!resp.ok || (!contentType.includes('pdf') && !contentType.includes('octet-stream'))) {
+        const errJson = await resp.json().catch(() => null);
+        throw new Error(errJson?.message || errJson?.error?.message || `Failed to load released report card (HTTP ${resp.status})`);
+      }
+      const rawBlob = await resp.blob();
+      const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([await rawBlob.arrayBuffer()], { type: 'application/pdf' });
+      if (releasedPdfBlobUrl) {
+        URL.revokeObjectURL(releasedPdfBlobUrl);
+      }
+      const url = URL.createObjectURL(pdfBlob);
+      setReleasedPdfBlobUrl(url);
+    } catch (err: any) {
+      console.error('Failed to view released SF9:', err);
+      setPdfLoadError(err.message || 'Failed to open released report card.');
+      setPdfToast({ message: err.message || 'Failed to open released report card.', type: 'error' });
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  }
+
+  async function handleDownloadReleasedPdf(versionToDownload?: number) {
+    setIsLoadingPdf(true);
+    try {
+      const ver = typeof versionToDownload === 'number' ? versionToDownload : selectedVersion;
+      const versionParam = ver ? `?version=${ver}` : '';
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const resp = await fetch(`${API_BASE_URL}/academic/report-card/student/released-sf9/pdf${versionParam}`, {
+        credentials: 'include',
+        headers,
+      });
+      const contentType = resp.headers.get('content-type') || '';
+      if (!resp.ok || (!contentType.includes('pdf') && !contentType.includes('octet-stream'))) {
+        const errJson = await resp.json().catch(() => null);
+        throw new Error(errJson?.message || errJson?.error?.message || `Failed to download report card (HTTP ${resp.status})`);
+      }
+      const rawBlob = await resp.blob();
+      const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([await rawBlob.arrayBuffer()], { type: 'application/pdf' });
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const termLabel = releasedSf9?.targetTerm || (releasedSf9 as any)?.reportingPeriod || 'Official';
+      const cleanTermLabel = String(termLabel).replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.download = `Calulut_SF9_${reportCardData?.student?.lrn || effectiveUser?.schoolId || 'Learner'}_${cleanTermLabel}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPdfToast({ message: 'Official SF9 PDF downloaded successfully.', type: 'success' });
+    } catch (err: any) {
+      console.error('Failed to download released SF9:', err);
+      setPdfToast({ message: err.message || 'Download failed.', type: 'error' });
+    } finally {
+      setIsLoadingPdf(false);
+    }
+  }
 
   const realSubjectGrades = useMemo(() => {
     if (reportCardData?.scholastic?.subjects && reportCardData.scholastic.subjects.length > 0) {
@@ -48,34 +221,26 @@ export function StudentAcademics({ setTab, currentUser }: any) {
         name: s.name,
         short: s.name.length > 12 ? s.name.substring(0, 10) + '..' : s.name,
         classId: s.id,
-        term1: s.T1 ?? 0,
-        term2: s.T2 ?? 0,
-        term3: s.T3 ?? 0,
-        term4: s.T4 ?? undefined
+        term1: s.T1 ?? null,
+        term2: s.T2 ?? null,
+        term3: s.T3 ?? null,
+        term4: s.T4 ?? null,
       }));
     }
-    if (!studentId) return [];
-    return getStudentSubjectGrades(studentId, {});
-  }, [reportCardData, studentId]);
+    return [];
+  }, [reportCardData]);
 
-  const realRecentQuizzes = useMemo(() => getStudentRecentQuizzes(studentId, {}), [studentId]);
+  const realRecentQuizzes: any[] = [];
 
-  const currentGrade10Avg = useMemo(() => {
-    if (reportCardData?.scholastic?.generalAverage) {
+  const currentGrade10Avg = useMemo<number | null>(() => {
+    // Strictly prefer authoritative backend General Average; never compute an unverified partial average
+    if (typeof reportCardData?.scholastic?.generalAverage === 'number') {
       return reportCardData.scholastic.generalAverage;
     }
-    if (realSubjectGrades.length === 0) return 0;
-    const graded = realSubjectGrades.filter(s => s.term1 > 0 || s.term2 > 0 || s.term3 > 0);
-    if (graded.length === 0) return 0;
-    const total = graded.reduce((sum, s) => {
-      const activeTerms = [s.term1, s.term2, s.term3].filter(t => t > 0);
-      const termAvg = activeTerms.length > 0 ? activeTerms.reduce((a, b) => a + b, 0) / activeTerms.length : 0;
-      return sum + termAvg;
-    }, 0);
-    return Math.round((total / graded.length) * 10) / 10;
-  }, [reportCardData, realSubjectGrades]);
+    return null;
+  }, [reportCardData]);
 
-  const standingInfo = useMemo(() => getStudentRankAndStanding(currentGrade10Avg), [currentGrade10Avg]);
+  const standingInfo = useMemo(() => getStudentRankAndStanding(currentGrade10Avg ?? 0), [currentGrade10Avg]);
 
   async function handleExportPDF() {
     setIsExportingPDF(true);
@@ -84,11 +249,11 @@ export function StudentAcademics({ setTab, currentUser }: any) {
       const studentForPdf = reportCardData?.student ? {
         name: reportCardData.student.name,
         lrn: reportCardData.student.lrn,
-        grade: reportCardData.enrollment?.gradeLevel || currentUser?.grade || 10,
-        section: reportCardData.enrollment?.section || currentUser?.section || 'Rizal',
-        adviser: reportCardData.adviser || 'Adviser',
+        grade: reportCardData.enrollment?.gradeLevel || effectiveUser?.grade || 10,
+        section: reportCardData.enrollment?.section || effectiveUser?.studentProfile?.sectionName || effectiveUser?.section || 'Advisory',
+        adviser: reportCardData.adviser || effectiveUser?.studentProfile?.adviserName || 'Class Adviser',
         gender: reportCardData.student.gender || 'Unknown'
-      } : currentUser;
+      } : effectiveUser;
 
       const blob = await pdf(<Form138PDFDocument student={studentForPdf} subjects={realSubjectGrades} schoolName={settings.schoolName} />).toBlob();
       const url = URL.createObjectURL(blob);
@@ -108,17 +273,24 @@ export function StudentAcademics({ setTab, currentUser }: any) {
   }
 
   const realGradeTrendData = useMemo(() => {
-    const t1s = realSubjectGrades.map(s => s.term1).filter(t => t > 0);
-    const t2s = realSubjectGrades.map(s => s.term2).filter(t => t > 0);
-    const t3s = realSubjectGrades.map(s => s.term3).filter(t => t > 0);
-    return [
-      { name: "Term 1", avg: t1s.length > 0 ? Math.round(t1s.reduce((a,b)=>a+b,0)/t1s.length) : (currentGrade10Avg || 88) },
-      { name: "Term 2", avg: t2s.length > 0 ? Math.round(t2s.reduce((a,b)=>a+b,0)/t2s.length) : (currentGrade10Avg || 90) },
-      { name: "Term 3", avg: t3s.length > 0 ? Math.round(t3s.reduce((a,b)=>a+b,0)/t3s.length) : (currentGrade10Avg || 92) },
-    ];
-  }, [realSubjectGrades, currentGrade10Avg]);
+    const configuredTerms: string[] = reportCardData?.scholastic?.configuredTerms || ['T1', 'T2', 'T3'];
+    return configuredTerms.map((termKey) => {
+      const field = termKey === 'T1' ? 'term1' : termKey === 'T2' ? 'term2' : termKey === 'T3' ? 'term3' : 'term4';
+      const termLabel = termKey === 'T1' ? 'Term 1' : termKey === 'T2' ? 'Term 2' : termKey === 'T3' ? 'Term 3' : 'Term 4';
+      const vals = realSubjectGrades
+        .map(s => (s as any)[field])
+        .filter((t): t is number => typeof t === 'number' && t > 0);
+      return {
+        name: termLabel,
+        avg: vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null,
+      };
+    });
+  }, [realSubjectGrades, reportCardData]);
 
-  
+  const selectedYearOption = academicYears.find(y => y.academicYearId === selectedAcademicYearId);
+  const currentYearOption = academicYears.find(y => y.isCurrent);
+  const isHistoricalYear = selectedYearOption ? !selectedYearOption.isCurrent : Boolean(reportCardData?.school?.isHistorical);
+
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: 24 }}>
               <style dangerouslySetInnerHTML={{ __html: `
@@ -190,12 +362,44 @@ export function StudentAcademics({ setTab, currentUser }: any) {
                 }
               ` }} />
 
-              <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
                 <div>
-                  <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Scholastic History & Grades</h1>
-                  <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Official report card records under Form 138 specification derived from active gradebooks.</div>
+                  <h1 style={{ fontSize: 20, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Grades and Report Card (SF9)</h1>
+                  <div style={{ fontSize: 11, color: C.t3, marginTop: 3 }}>Official DepEd scholastic records and SF9 (Form 138) progress reports for Calulut Integrated School.</div>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", background: "#f8fafc", borderRadius: 8, border: "1px solid #cbd5e1" }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Current SY:</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                      {currentYearOption?.academicYearName || reportCardData?.school?.academicYear || "SY 2026–2027"}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "1px 6px", borderRadius: 4, border: "1px solid #a7f3d0" }}>Active</span>
+                  </div>
+
+                  {setTab && (
+                    <button
+                      onClick={() => setTab("academic-history")}
+                      id="btn-goto-academic-history"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: C.navy,
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: 8,
+                        padding: "7px 12px",
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                      title="View previous school years, past grades, and historical attendance"
+                    >
+                      <History size={13} color={C.navy} />
+                      <span>Academic History</span>
+                    </button>
+                  )}
                   
                   {/* Toast Notification */}
                   {pdfToast && (
@@ -226,29 +430,427 @@ export function StudentAcademics({ setTab, currentUser }: any) {
                     }}
                   >
                     {isExportingPDF ? <RefreshCw size={13} className="animate-spin" /> : <Download size={13}/>}
-                    {isExportingPDF ? "Generating PDF..." : "Download PDF (SF9)"}
+                    {isExportingPDF ? "Generating..." : "Download Portal Summary (PDF)"}
                   </button>
                 </div>
               </div>
 
-              {/* Standard DepEd Report Card widget */}
-              <div id="form138-print-root" className="printable-report-card-area" style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${C.borderMed}`, boxShadow: "0 2px 6px rgba(0,0,0,0.02)" }}>
-                <div id="printable-report-card">
-                  <StudentReportCard 
-                    student={reportCardData?.student ? {
-                      surname: reportCardData.student.name.split(',')[0],
-                      first: reportCardData.student.name.split(',')[1]?.trim() || '',
-                      lrn: reportCardData.student.lrn,
-                      grade: reportCardData.enrollment?.gradeLevel ?? currentUser?.grade ?? 10,
-                      section: reportCardData.enrollment?.section ?? currentUser?.section ?? 'Rizal',
-                      adviser: reportCardData.adviser ?? 'Adviser',
-                      gender: reportCardData.student.gender ?? 'Unknown',
-                      avg: currentGrade10Avg
-                    } : currentUser} 
-                    subjects={realSubjectGrades}
-                  />
+              {/* Official DepEd Academic Outcome Banner (Principal Confirmed Promotion / JHS Completion) */}
+              {!isHistoricalYear && reportCardData?.promotionApproval?.isApproved && (
+                <div
+                  id="academic-outcome-banner"
+                  className="no-print"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    background: reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' ? "#eff6ff" : "#f0fdf4",
+                    border: `1px solid ${reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' ? "#bfdbfe" : "#bbf7d0"}`,
+                    borderRadius: 10,
+                    gap: 16,
+                    flexWrap: "wrap"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' ? "#dbeafe" : "#dcfce7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' ? "#1d4ed8" : "#15803d",
+                        flexShrink: 0
+                      }}
+                    >
+                      <Award size={18} />
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+                          {reportCardData.promotionApproval.approvedOutcome === 'COMPLETED'
+                            ? "Junior High School Completion Confirmed"
+                            : `Promotion to Grade ${reportCardData.promotionApproval.targetGradeLevel || ((reportCardData.enrollment?.gradeLevel || 7) + 1)} Approved`}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 9999,
+                            background: reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' ? "#1e40af" : "#166534",
+                            color: "#fff",
+                            letterSpacing: "0.02em"
+                          }}
+                        >
+                          {reportCardData.promotionApproval.approvedOutcome === 'COMPLETED'
+                            ? "JHS Completer"
+                            : "Promoted"}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
+                        Confirmed by School Principal: <strong style={{ color: "#1e293b" }}>{reportCardData.promotionApproval.approvedByName || "School Principal"}</strong>
+                        {reportCardData.promotionApproval.approvedAt && (
+                          <span> on {new Date(reportCardData.promotionApproval.approvedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        )}
+                        <span> &middot; DepEd Order No. 8, s. 2015</span>
+                      </div>
+                    </div>
+                  </div>
+                  {reportCardData.promotionApproval.approvedOutcome === 'COMPLETED' && (
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", background: "#dbeafe", padding: "4px 10px", borderRadius: 6, border: "1px solid #bfdbfe" }}>
+                      Calulut Integrated School &bull; Junior High School Completer
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Historical Year Read-Only Banner */}
+              {isHistoricalYear && (
+                <ReadOnlyBanner
+                  yearName={selectedYearOption?.academicYearName || reportCardData?.school?.academicYear}
+                  recordType="grades"
+                  onReturnToCurrent={currentYearOption ? () => setSelectedAcademicYearId(currentYearOption.academicYearId) : undefined}
+                />
+              )}
+
+              {/* Official Calulut DepEd SF9 Form 138 Release Card */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-amber-300 font-serif font-black text-lg">
+                      SF9
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold font-serif tracking-wide text-white flex items-center gap-2">
+                        Official DepEd Report Card (SF9 / Form 138)
+                      </h2>
+                      <p className="text-xs text-slate-300">
+                        Calulut Integrated School, Schools Division of City of San Fernando (Pampanga)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    {releasedSf9?.released ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <CheckCircle size={13} className="text-emerald-400" />
+                        OFFICIALLY RELEASED &amp; CERTIFIED
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <Clock size={13} className="text-amber-400" />
+                        PENDING OFFICIAL RELEASE
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {/* Metadata Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Academic Year</div>
+                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
+                        {releasedSf9?.academicYear || reportCardData?.school?.academicYear || 'SY 2026-2027'}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reporting Period</div>
+                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
+                        {releasedSf9?.reportingPeriod || 'Annual SF9 (Terms 1-3)'}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Release Date</div>
+                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
+                        {releasedSf9?.released && releasedSf9.releaseDate
+                          ? new Date(releasedSf9.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                          : 'Pending School Approval'}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class Adviser</div>
+                      <div className="text-sm font-semibold text-slate-800 mt-0.5 truncate">
+                        {releasedSf9?.adviser || reportCardData?.adviser || effectiveUser?.studentProfile?.adviserName || 'Class Adviser'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body Content: Released vs Pending */}
+                  {releasedSf9?.released ? (
+                    <div className="p-5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                          <CheckCircle size={18} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-emerald-950">
+                            Your official School Form 9 (Form 138) has been released!
+                          </div>
+                          <div className="text-xs text-emerald-800 mt-0.5">
+                            Signed and certified by School Principal ({releasedSf9.principal || 'Office of the Principal'}) and Class Adviser ({releasedSf9.adviser || effectiveUser?.studentProfile?.adviserName || 'Class Adviser'}).
+                          </div>
+                          {releasedSf9.pdfSha256 && (
+                            <div className="text-[10.5px] font-mono text-emerald-700 mt-1">
+                              SHA-256: {releasedSf9.pdfSha256.substring(0, 16)}...
+                            </div>
+                          )}
+
+                          {/* Historical Released Versions */}
+                          {releasedSf9?.history && releasedSf9.history.length > 1 && (
+                            <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-emerald-200/70">
+                              <span className="text-[11px] font-bold text-emerald-900">Released Versions:</span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {releasedSf9.history.map((h: any) => (
+                                  <button
+                                    key={h.issuanceId}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedVersion(h.version);
+                                      handleViewReleasedPdf(h.version);
+                                    }}
+                                    className={`px-2 py-0.5 rounded text-[10.5px] font-semibold transition-all border ${
+                                      (selectedVersion === h.version || (!selectedVersion && h.isCurrent))
+                                        ? 'bg-emerald-700 text-white border-emerald-800'
+                                        : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                    }`}
+                                  >
+                                    {h.reportingPeriod} (v{h.version})
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => handleViewReleasedPdf()}
+                          disabled={isLoadingPdf}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-indigo-700 hover:bg-indigo-800 text-white shadow-sm transition-all disabled:opacity-50"
+                        >
+                          {isLoadingPdf ? <RefreshCw size={13} className="animate-spin" /> : <Eye size={13} />}
+                          View Official SF9 (PDF)
+                        </button>
+
+                        <button
+                          onClick={() => handleDownloadReleasedPdf()}
+                          disabled={isLoadingPdf}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-sm transition-all disabled:opacity-50"
+                        >
+                          <Download size={13} />
+                          Download PDF
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start gap-3.5">
+                      <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                        <Clock size={18} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-amber-950">
+                          Official DepEd SF9 Report Card is Pending Release
+                        </div>
+                        <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                          In compliance with DepEd evaluation policies, official Form 138 report cards for Calulut Integrated School are released at the end of each completed term (Term 1, Term 2, or Annual Term 3) upon subject grade publication, verified SF2 daily attendance, and School Head certification.
+                        </p>
+                        <p className="text-xs text-amber-700 mt-1.5 font-medium">
+                          You may review your ongoing scholastic performance summaries in the analytics section below. Once officially approved, your signed PDF report card will be directly downloadable here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Modal for viewing released authentic PDF - Rendered via createPortal directly into document.body to prevent parent z-index clipping */}
+              {showReleasedPdfModal && typeof document !== 'undefined' && createPortal(
+                <div
+                  className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-2 sm:p-4 md:p-6 animate-in fade-in duration-200"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="sf9-modal-title"
+                >
+                  <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-7xl h-[94vh] flex flex-col overflow-hidden border border-slate-700/80 animate-in zoom-in-95 duration-200 ring-1 ring-white/10">
+                    {/* Primary Header */}
+                    <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 gap-4 flex-wrap sm:flex-nowrap">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-sm">
+                          <FileText size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span id="sf9-modal-title" className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                              Official SF9 Form 138 &middot; {reportCardData?.student?.name || effectiveUser?.name || 'Learner Progress Report Card'}
+                            </span>
+                            {(releasedSf9?.reportingPeriod || (releasedSf9 as any)?.targetTerm) && (
+                              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">
+                                {releasedSf9.reportingPeriod || (releasedSf9 as any).targetTerm}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span>Calulut Integrated School &middot; DepEd Region III</span>
+                            <span className="text-slate-600">&bull;</span>
+                            <span>LRN: <strong className="text-slate-300 font-mono">{reportCardData?.student?.lrn || effectiveUser?.schoolId || '999026000004'}</strong></span>
+                            <span className="text-slate-600">&bull;</span>
+                            <span>Section: <strong className="text-slate-300">{effectiveUser?.studentProfile?.sectionName || effectiveUser?.section || 'Grade 10, Section Rizal'}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Header Actions */}
+                      <div className="flex items-center gap-2 shrink-0 ml-auto">
+                        {releasedPdfBlobUrl && !isLoadingPdf && !pdfLoadError && (
+                          <>
+                            <a
+                              href={releasedPdfBlobUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all border border-slate-700 shadow-sm"
+                              title="Open PDF in new browser tab"
+                            >
+                              <ExternalLink size={13} />
+                              <span className="hidden md:inline">Open in Tab</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={handlePrintPdf}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all border border-slate-700 shadow-sm"
+                              title="Print Report Card"
+                            >
+                              <Printer size={13} />
+                              <span className="hidden md:inline">Print</span>
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadReleasedPdf()}
+                          disabled={isLoadingPdf || !releasedSf9?.released}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow transition-all disabled:opacity-50"
+                        >
+                          <Download size={13} />
+                          <span>Download PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReleasedPdfModal(false);
+                            setPdfLoadError(null);
+                          }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-all ml-1"
+                          aria-label="Close SF9 viewer"
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Secondary Verification Sub-bar */}
+                    <div className="px-5 py-2 bg-slate-950/70 border-b border-slate-800 text-[11px] text-slate-400 flex items-center justify-between gap-4 flex-wrap shrink-0">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                          <ShieldCheck size={14} />
+                          Authoritative DepEd Form 138
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span>Class Adviser: <strong className="text-slate-300 font-medium">{releasedSf9?.adviser || reportCardData?.adviser || 'Maria Corazon G. Alcantara'}</strong></span>
+                        <span className="text-slate-600">|</span>
+                        <span>School Head: <strong className="text-slate-300 font-medium">{releasedSf9?.principal || 'Dr. Eduardo M. Santos, Ed.D.'}</strong></span>
+                      </div>
+                      {releasedSf9?.pdfSha256 && (
+                        <div className="text-[10.5px] font-mono text-slate-400">
+                          Digital Seal: <span className="text-emerald-400">{releasedSf9.pdfSha256.substring(0, 18)}...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Document Stage Body */}
+                    <div className="flex-1 bg-[#3a3d40] p-1 sm:p-2 flex flex-col items-center justify-center overflow-hidden relative">
+                      {isLoadingPdf ? (
+                        <div className="flex flex-col items-center justify-center gap-3 p-8 text-white">
+                          <RefreshCw size={34} className="animate-spin text-indigo-400" />
+                          <p className="text-sm font-semibold tracking-wide">Retrieving Official Form 138...</p>
+                          <p className="text-xs text-slate-400">Verifying digital seal and cryptographic signature</p>
+                        </div>
+                      ) : pdfLoadError ? (
+                        <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center border border-slate-200">
+                          <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle size={24} />
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-base mb-1.5">Unable to Display Report Card</h4>
+                          <p className="text-xs text-slate-600 mb-5 leading-relaxed">{pdfLoadError}</p>
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={() => handleViewReleasedPdf()}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
+                            >
+                              Retry
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowReleasedPdfModal(false);
+                                setPdfLoadError(null);
+                              }}
+                              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all"
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+                      ) : releasedPdfBlobUrl ? (
+                        <object
+                          data={`${releasedPdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                          type="application/pdf"
+                          className="w-full h-full rounded-xl border border-slate-700/60 bg-[#525659] shadow-inner"
+                        >
+                          <iframe
+                            src={`${releasedPdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                            title="Authentic Calulut SF9 PDF"
+                            className="w-full h-full rounded-xl border border-slate-700/60 bg-[#525659]"
+                          >
+                            <div className="p-8 text-center text-white bg-slate-900 h-full flex flex-col items-center justify-center gap-3">
+                              <p className="text-sm font-medium">Your browser preview is not displaying the embedded PDF.</p>
+                              <a
+                                href={releasedPdfBlobUrl}
+                                download={`Calulut_SF9_${reportCardData?.student?.lrn || 'Learner'}.pdf`}
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold shadow-md hover:bg-indigo-700 transition-all inline-flex items-center gap-2"
+                              >
+                                <Download size={14} />
+                                Download SF9 Document
+                              </a>
+                            </div>
+                          </iframe>
+                        </object>
+                      ) : (
+                        <div className="text-slate-400 text-xs">No document loaded.</div>
+                      )}
+                    </div>
+
+                    {/* Footer Quick Status Bar */}
+                    <div className="px-5 py-2 bg-slate-900 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>DepEd Form 138 Official Release &middot; Learner Progress Report &amp; Attendance</span>
+                      </div>
+                      <div className="text-slate-500 text-[10.5px]">
+                        Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">Esc</kbd> to close
+                      </div>
+                    </div>
+                  </div>
+                </div>,
+                document.body
+              )}
 
               <div className="no-print grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {/* Visual Grade Trend line chart per year level */}
@@ -274,14 +876,14 @@ export function StudentAcademics({ setTab, currentUser }: any) {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Class Ranking</div>
-                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 2 }}>Out of {standingInfo.totalStudents} enrolled students in Section Pilot</div>
+                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 2 }}>Out of {standingInfo.totalStudents} enrolled students in Section {effectiveUser?.studentProfile?.sectionName || effectiveUser?.section || 'Advisory'}</div>
                       </div>
                       <Stamp label={`Rank ${standingInfo.rank}`} color={C.gold} bg={C.goldLight} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: C.t1 }}>Academic Track Recommendation</div>
-                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 2 }}>Suggested path for senior high enrolment (Current GPA: {currentGrade10Avg.toFixed(1)})</div>
+                        <div style={{ fontSize: 10.5, color: C.t3, marginTop: 2 }}>Suggested path for senior high enrolment (Current GPA: {currentGrade10Avg !== null ? currentGrade10Avg.toFixed(1) : 'Pending Year-End Completion'})</div>
                       </div>
                       <Stamp label={standingInfo.track} color={C.blue} bg={C.blueBg} />
                     </div>

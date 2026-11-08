@@ -11,14 +11,16 @@ import {
   getPublicSchoolSettings,
   updateSchoolSettings,
   resetSchoolSettings,
+  formatSchoolSettingsResponse,
 } from './settings.service.js';
 import { updateSchoolSettingsSchema } from './settings.schema.js';
 import { createAuditLog } from '../audit/audit.service.js';
+import { getBrandingStoragePath } from '../config/storage.config.js';
 
 const router = Router();
 
 // Ensure storage/branding directory exists
-const BRANDING_DIR = path.join(process.cwd(), 'storage', 'branding');
+const BRANDING_DIR = getBrandingStoragePath();
 if (!fs.existsSync(BRANDING_DIR)) {
   fs.mkdirSync(BRANDING_DIR, { recursive: true });
 }
@@ -64,7 +66,7 @@ router.get('/school', authMiddleware, async (req: Request, res: Response, next: 
     }
 
     const settings = await getOrCreateSchoolSettings();
-    res.json({ success: true, data: settings });
+    res.json({ success: true, data: formatSchoolSettingsResponse(settings) });
   } catch (err) {
     next(err);
   }

@@ -30,6 +30,7 @@ export function AssignmentReviewModal({ assignmentId, classStudents, onClose }: 
   const assignment = assignments.find(a => a.id === assignmentId);
   const [editingId, setEditingId] = useState<string|null>(null);
   const [gradeInput, setGradeInput] = useState<string>("");
+  const [errorMsg, setErrorMsg] = useState<string|null>(null);
 
   if (!assignment) return null;
 
@@ -47,14 +48,16 @@ export function AssignmentReviewModal({ assignmentId, classStudents, onClose }: 
 
   const handleGradeSubmit = async (subId: string, studentId: string) => {
     const num = parseFloat(gradeInput);
+    setErrorMsg(null);
     if (isNaN(num) || num < 0 || num > 100) {
-      alert("Invalid grade. Must be between 0 and 100.");
+      setErrorMsg("Invalid grade. Must be between 0 and 100.");
       return;
     }
     if (subId) {
       await updateAssignmentSubmission(subId, { grade: num, status: "Graded" });
     } else {
-      alert("Cannot grade a non-existent submission in this prototype. Student must submit first.");
+      setErrorMsg("Cannot grade a non-existent submission in this prototype. Student must submit first.");
+      return;
     }
     setEditingId(null);
   };
@@ -71,6 +74,11 @@ export function AssignmentReviewModal({ assignmentId, classStudents, onClose }: 
         </div>
         
         <div style={{ padding: 20 }}>
+          {errorMsg && (
+            <div style={{ marginBottom: 12, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, color: "#b91c1c", fontSize: 12, fontWeight: 600 }}>
+              {errorMsg}
+            </div>
+          )}
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ background:C.paper, borderBottom:`1px solid ${C.borderMed}` }}>

@@ -104,11 +104,13 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
                       guidance="Once an administrator assigns you to a section, your classes will appear here."
                     />
                   </div>
-                ) : myClasses.map(cls => (
+                ) : myClasses.map(cls => {
+                  const isAdvisoryOnly = cls.adviser && (cls.subject === 'Advisory Class' || String(cls.id).startsWith('adv-'));
+                  return (
                   <div key={cls.id} style={{ background:"#fff", border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden", display: "flex", flexDirection: "column", boxShadow: "0 6px 20px rgba(139,30,30,0.05)" }}>
                     
-                    {/* Main Card Body -> Routes to Gradebook */}
-                    <button className="hover-zoom" onClick={()=>onGradebookClick(cls.id)}
+                    {/* Main Card Body -> If advisory only, routes to Classroom Hub / Advisory Hub; if subject class, routes to Gradebook */}
+                    <button className="hover-zoom" onClick={()=> isAdvisoryOnly ? onHubClick(cls.id) : onGradebookClick(cls.id)}
                       style={{ padding: 18, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}
                       onMouseEnter={e=>{ (e.currentTarget.parentElement as HTMLElement).style.borderColor=C.m500; }}
                       onMouseLeave={e=>{ (e.currentTarget.parentElement as HTMLElement).style.borderColor=C.border; }}>
@@ -116,14 +118,20 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
                       {/* Header Section */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                         <div>
-                          <div style={{ fontSize:10, fontWeight:700, color:C.m700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>{cls.subject}</div>
+                          <div style={{ fontSize:10, fontWeight:700, color: isAdvisoryOnly ? "#059669" : C.m700, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 }}>
+                            {cls.subject}{isAdvisoryOnly ? ' ★ Class Adviser' : ''}
+                          </div>
                           <div style={{ color:C.t1, fontSize:20, fontWeight:800, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>{cls.section}</div>
                         </div>
                       </div>
                       
                       {/* Ledger fields (School Year, Grade, Section emphasize) */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, background: "#fafafa", padding: 10, borderRadius: 6, border: `1px solid ${C.border}`, boxShadow: "inset 0 1px 3px rgba(0,0,0,0.02)" }}>
-                        {[["School Year","SY 2025–2026"],["Grade Level",`Grade ${cls.grade}`],["Section",cls.section]].map(([l,v]) => (
+                        {[
+                          ["School Year", cls.semester ? (cls.semester.startsWith("SY") ? cls.semester : `SY ${cls.semester}`) : "Unavailable"],
+                          ["Grade Level", `Grade ${cls.grade}`],
+                          ["Section", cls.section]
+                        ].map(([l,v]) => (
                           <div key={l} style={{ display:"flex", justifyContent:"space-between", alignItems: "center" }}>
                             <span style={{ fontSize:9.5, color:C.t3, fontWeight:600 }}>{l}</span>
                             <span style={{ fontSize:10, color:C.t1, fontWeight:700 }}>{v}</span>
@@ -134,16 +142,29 @@ export function DashboardScreen({ onNav, onGradebookClick, onHubClick, onShowGra
 
                     {/* Secondary actions */}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: `1px solid ${C.border}` }}>
-                      <button onClick={()=>onGradebookClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", borderRight: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.m700, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
-                        <FileText size={12} /> Gradebook
-                      </button>
-                      <button onClick={()=>onHubClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.t2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
-                        <Users size={12} /> Open Hub
-                      </button>
+                      {isAdvisoryOnly ? (
+                        <>
+                          <button onClick={()=>onHubClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", borderRight: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: "#059669", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                            <Users size={12} /> Advisory Roster
+                          </button>
+                          <button onClick={()=>onHubClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.t2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                            <Users size={12} /> Open Hub
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={()=>onGradebookClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", borderRight: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.m700, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                            <FileText size={12} /> Gradebook
+                          </button>
+                          <button onClick={()=>onHubClick(cls.id)} style={{ padding: "8px", background: C.paper, border: "none", cursor: "pointer", fontSize: 10, fontWeight: 700, color: C.t2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, transition: "background 0.12s" }} onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background=C.m50} onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background=C.paper}>
+                            <Users size={12} /> Open Hub
+                          </button>
+                        </>
+                      )}
                     </div>
 
                   </div>
-                ))}
+                )})}
               </div>
             </div>
             

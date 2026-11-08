@@ -4,7 +4,7 @@ import { facultyAttendanceApi, FacultyAttendanceSummary } from '../../../api/fac
 import { useGateAttendanceSSE } from '../../shared/hooks/useGateAttendanceSSE';
 import { PScreen, GradeCardInfo } from '../../shared/types';
 import { C } from '../../shared/constants/tokens';
-import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight, RefreshCw } from 'lucide-react';
+import { Sparkles, Users, GraduationCap, BookMarked, AlertCircle, HeartHandshake, Calendar, CalendarCheck, ArrowRight, RefreshCw, Award } from 'lucide-react';
 import { ResponsiveContainer, BarChart as RBarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { executiveSummaryApi, ExecutiveSummaryResponse } from '../../../api/executiveSummary.api';
 import { useAppContext } from '../../shared/AppContext';
@@ -239,11 +239,11 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     },
     { v: loading ? "..." : `${teachers} Faculty`, l: "Total Teachers", sub: "Registered Profiles", subColor: C.t3, color: C.m700, bg: C.m100, icon: GraduationCap, dest: "p-teachers" },
     { 
-      v: loading ? "..." : `${facultyCheckedIn} / ${totalFaculty} Checked In`, 
+      v: loading ? "..." : `${facultyCheckedIn} of ${totalFaculty} Checked In`, 
       l: "Faculty Checked In Today", 
       sub: loading ? "Loading..." : facultyCompleted > 0
-        ? `${facultyCompleted} Timed Out · ${facultySummary?.timeOutPendingCount ?? 0} Time-Out Pending`
-        : `${facultySummary?.onLeaveCount ?? 0} On Leave · ${facultySummary?.pendingCheckInCount ?? 0} Pending Check-In${(facultySummary?.officialBusinessCount ?? 0) > 0 ? ` · ${facultySummary?.officialBusinessCount} Official Business` : ''}`, 
+        ? `${facultyCompleted} Timed Out, ${facultySummary?.timeOutPendingCount ?? 0} Time-Out Pending`
+        : `${facultySummary?.onLeaveCount ?? 0} On Leave, ${facultySummary?.pendingCheckInCount ?? 0} Pending Check-In${(facultySummary?.officialBusinessCount ?? 0) > 0 ? `, ${facultySummary?.officialBusinessCount} Official Business` : ''}`, 
       subColor: facultyCheckedIn > 0 ? C.green : C.t3, 
       color: facultyCheckedIn > 0 ? C.green : C.amber, 
       bg: facultyCheckedIn > 0 ? C.greenBg : C.amberBg, 
@@ -264,12 +264,22 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
     { 
       v: loading ? "..." : `${dashData?.pendingDisciplineCases ?? 0} Active`, 
       l: "Open Behavior Cases", 
-      sub: (dashData?.pendingDisciplineCases ?? 0) > 0 ? "Under Investigation / Notified" : "All cases resolved", 
+      sub: (dashData?.pendingDisciplineCases ?? 0) > 0 ? "Under Investigation or Parent Notified" : "All cases resolved", 
       subColor: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
       color: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amber : C.green, 
       bg: (dashData?.pendingDisciplineCases ?? 0) > 0 ? C.amberBg : C.greenBg, 
       icon: HeartHandshake, 
       dest: "p-behavior" 
+    },
+    { 
+      v: "Official Review", 
+      l: "Report Cards (SF9)", 
+      sub: "Seal & Release to Student Portal", 
+      subColor: "#0369a1", 
+      color: "#0369a1", 
+      bg: "#e0f2fe", 
+      icon: Award, 
+      dest: "p-report-cards" 
     }
   ];
 
@@ -419,7 +429,7 @@ export function PDashboard({ onNav, onShowGradeCard }: { onNav:(s:PScreen)=>void
             <div style={{ padding: "16px 14px" }}>
               {!academicData || (!academicData.schoolAverageByGradeLevel?.length && !academicData.passingVsFailingByGradeLevel?.length) ? (
                 <div style={{ fontSize: 12, color: C.t3, textAlign: "center", padding: "8px 0" }}>
-                  No quarterly grade records submitted for the active academic year.
+                  No trimester grade records submitted for the active school year.
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

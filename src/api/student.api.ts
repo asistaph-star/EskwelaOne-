@@ -1,6 +1,11 @@
 import { apiClient } from './client';
 
 export const studentApi = {
+  // Fetch active advisory enrollment, section, adviser, and subject classes
+  getMyClasses: async () => {
+    return await apiClient.get<any>('/academic/student/my-classes');
+  },
+
   // Fetch gate attendance records for the student
   getGateAttendance: async (studentId: string) => {
     return await apiClient.get(`/attendance/gate/${studentId}`);
@@ -14,6 +19,21 @@ export const studentApi = {
   // Fetch enrollment history to calculate grades
   getEnrollmentHistory: async (studentId: string, academicYearId: string) => {
     return await apiClient.get(`/enrollments/student/${studentId}/history/${academicYearId}`);
+  },
+
+  // Fetch academic years a student was enrolled in
+  getStudentAcademicYears: async (studentId: string) => {
+    const res = await apiClient.get<any>(`/enrollments/student/${studentId}/years`);
+    return (res as any)?.data || res;
+  },
+
+  // Fetch official DepEd SF2 attendance summary and daily records
+  getStudentOfficialSf2Attendance: async (studentId: string, academicYearId?: string) => {
+    const url = academicYearId
+      ? `/attendance/sf2/students/${studentId}?academicYearId=${encodeURIComponent(academicYearId)}`
+      : `/attendance/sf2/students/${studentId}`;
+    const res = await apiClient.get<any>(url);
+    return (res as any)?.data || res;
   },
 
   // Fetch guidance records

@@ -4,6 +4,7 @@ import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { requirePermissions } from '../common/middleware/auth.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { toPublicDocumentMetadata } from '../documents/documentSecurity.service.js';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ const updateRankingSchema = z.object({
 router.get('/', requirePermissions('academic:read'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { academic_year_id, status } = req.query;
-    
+
     const where: any = {};
     if (academic_year_id) where.academic_year_id = String(academic_year_id);
     if (status) where.status = String(status);
@@ -66,10 +67,15 @@ router.get('/', requirePermissions('academic:read'), async (req: Request, res: R
       },
       orderBy: { created_at: 'desc' }
     });
-    
-    // Map response for frontend format
+
+    // Map response for frontend format while stripping internal storage_key from document metadata
     const formattedRankings = rankings.map(r => ({
       ...r,
+      supporting_documents: r.supporting_documents.map(sd => ({
+        ranking_id: sd.ranking_id,
+        document_id: sd.document_id,
+        document: toPublicDocumentMetadata(sd.document),
+      })),
       teacherName: `${r.teacher.user.first_name} ${r.teacher.user.last_name}`,
       evaluationPeriod: r.academic_year.name,
       supportingDocuments: r.supporting_documents.map(sd => sd.document.filename),
@@ -88,11 +94,11 @@ router.get('/', requirePermissions('academic:read'), async (req: Request, res: R
 router.post('/', requirePermissions('academic:write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const input = createRankingSchema.parse(req.body);
-    
+
     // Validate relations
     const teacher = await prisma.teacher.findUnique({ where: { id: input.teacher_id } });
     if (!teacher) throw new AppError(404, 'NOT_FOUND', 'Teacher not found');
-    
+
     const academicYear = await prisma.academicYear.findUnique({ where: { id: input.academic_year_id } });
     if (!academicYear) throw new AppError(404, 'NOT_FOUND', 'Academic Year not found');
 
@@ -147,24 +153,24 @@ router.patch('/:id', requirePermissions('academic:write'), async (req: Request, 
     if (input.criteria_scores) {
       validatedCriteria = [];
       totalScore = 0;
-      
+
       for (const submitted of input.criteria_scores) {
         const authCriteria = TEACHER_EVALUATION_CRITERIA.find(c => c.name === submitted.criteriaName);
         if (!authCriteria) {
           throw new AppError(400, 'BAD_REQUEST', `Unknown criteria: ${submitted.criteriaName}`);
         }
-        
+
         if (submitted.score > authCriteria.maxScore) {
           throw new AppError(400, 'BAD_REQUEST', `Score for ${submitted.criteriaName} exceeds maximum of ${authCriteria.maxScore}`);
         }
-        
+
         validatedCriteria.push({
           criteriaName: authCriteria.name,
           score: submitted.score,
           maxScore: authCriteria.maxScore,
           remarks: submitted.remarks || ""
         });
-        
+
         totalScore += submitted.score;
       }
     }
@@ -174,16 +180,16 @@ router.patch('/:id', requirePermissions('academic:write'), async (req: Request, 
       if (input.document_ids) {
         // Find existing junction links
         await tx.teacherRankingDocument.deleteMany({ where: { ranking_id: id } });
-        
+
         for (const docId of input.document_ids) {
           const doc = await tx.document.findUnique({ where: { id: docId } });
           if (!doc) throw new AppError(404, 'NOT_FOUND', `Document ${docId} not found`);
-          
+
           // Verify authorization: document must have been uploaded by the teacher
           if (existing.teacher && doc.uploaded_by !== existing.teacher.user_id) {
             throw new AppError(403, 'FORBIDDEN', `Document ${docId} does not belong to this teacher`);
           }
-          
+
           await tx.teacherRankingDocument.create({
             data: { ranking_id: id, document_id: docId }
           });

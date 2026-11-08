@@ -3,6 +3,7 @@ import { generateId } from '../../common/utils/uuid.js';
 import { AppError } from '../../common/middleware/errorHandler.js';
 import { createAuditLog } from '../../audit/audit.service.js';
 import { AuthenticatedUser } from '../../common/middleware/auth.js';
+import { toPublicDocumentMetadata } from '../../documents/documentSecurity.service.js';
 
 export async function getDocumentRequestsByStudent(studentId: string, authUser: AuthenticatedUser) {
   let whereClause: any = { student_id: studentId };
@@ -16,16 +17,18 @@ export async function getDocumentRequestsByStudent(studentId: string, authUser: 
     const teacherProfile = await prisma.teacher.findUnique({ where: { user_id: authUser.id } });
     if (!teacherProfile) throw new AppError(403, 'FORBIDDEN', 'Teacher profile not found.');
     whereClause.teacher_id = teacherProfile.id;
-  } else if (!authUser.roles.some(r => ['Admin', 'Principal', 'Registrar'].includes(r))) {
+  } else if (!authUser.roles.some(r => ['Admin', 'ITAdmin', 'Principal', 'Registrar'].includes(r))) {
     throw new AppError(403, 'FORBIDDEN', 'Unauthorized role.');
   }
 
   const rawRecords = await prisma.documentRequest.findMany({
     where: whereClause,
-    include: { principal: true },
+    include: {
+      principal: { select: { id: true, first_name: true, last_name: true } },
+    },
     orderBy: { submitted_date: 'desc' }
   });
-  
+
   return rawRecords.map(r => ({
     ...r,
     principalName: r.principal ? `${r.principal.first_name} ${r.principal.last_name}` : r.principal_id
@@ -34,7 +37,7 @@ export async function getDocumentRequestsByStudent(studentId: string, authUser: 
 
 export async function listDocumentRequests(authUser: AuthenticatedUser) {
   let whereClause = {};
-  
+
   if (authUser.roles.includes('Student')) {
     const studentProfile = await prisma.student.findUnique({ where: { user_id: authUser.id } });
     if (!studentProfile) return [];
@@ -43,16 +46,25 @@ export async function listDocumentRequests(authUser: AuthenticatedUser) {
     const teacherProfile = await prisma.teacher.findUnique({ where: { user_id: authUser.id } });
     if (!teacherProfile) return [];
     whereClause = { teacher_id: teacherProfile.id };
-  } else if (!authUser.roles.some(r => ['Admin', 'Principal', 'Registrar'].includes(r))) {
+  } else if (!authUser.roles.some(r => ['Admin', 'ITAdmin', 'Principal', 'Registrar'].includes(r))) {
     return [];
   }
 
   const rawRecords = await prisma.documentRequest.findMany({
     where: whereClause,
     include: {
-      student: { include: { user: true, current_section: true } },
-      teacher: { include: { user: true } },
-      principal: true,
+      student: {
+        include: {
+          user: { select: { id: true, first_name: true, last_name: true } },
+          current_section: true,
+        },
+      },
+      teacher: {
+        include: {
+          user: { select: { id: true, first_name: true, last_name: true } },
+        },
+      },
+      principal: { select: { id: true, first_name: true, last_name: true } },
       attached_document: true,
     },
     orderBy: { created_at: 'desc' }
@@ -60,28 +72,30 @@ export async function listDocumentRequests(authUser: AuthenticatedUser) {
 
   return rawRecords.map(r => ({
     ...r,
+    attached_document: r.attached_document ? toPublicDocumentMetadata(r.attached_document) : null,
     id: r.id,
     studentId: r.student_id,
-    studentName: r.student ? `${r.student.user.first_name} ${r.student.user.last_name}` : 'Unknown',
+    studentName: r.student ? (r.student.user ? `${r.student.user.first_name} ${r.student.user.last_name}` : `${r.student.first_name || ''} ${r.student.last_name || ''}`.trim() || 'Unknown') : 'Unknown',
     section: r.student?.current_section ? r.student.current_section.name : 'Unknown',
     documentType: r.document_type,
     purpose: r.purpose,
     status: r.status,
     currentStage: r.current_stage,
     submittedDate: r.submitted_date.toISOString(),
-    
+
     teacherId: r.teacher_id,
     teacherName: r.teacher ? `${r.teacher.user.first_name} ${r.teacher.user.last_name}` : undefined,
     teacherApprovedDate: r.teacher_approved_date?.toISOString(),
     teacherRemarks: r.teacher_remarks,
-    
+
     principalId: r.principal_id,
     principalName: r.principal ? `${r.principal.first_name} ${r.principal.last_name}` : undefined,
     principalApprovedDate: r.principal_approved_date?.toISOString(),
     principalRemarks: r.principal_remarks,
-    
+
     readyDate: r.ready_date?.toISOString(),
-    attachedDocumentId: r.attached_document_id
+    attachedDocumentId: r.attached_document_id,
+    studentAttachmentName: r.attached_document?.filename,
   }));
 }
 
@@ -156,19 +170,19 @@ export async function updateDocumentRequest(id: string, input: any, actorId: str
     if (input.status === undefined || input.currentStage === undefined) {
       throw new AppError(422, 'UNPROCESSABLE_ENTITY', 'Both status and currentStage must be provided together.');
     }
-    
+
     const reqStatus = input.status;
     const reqStage = input.currentStage;
     const currentStatus = existing.status;
     const currentStage = existing.current_stage;
 
-    const isValidConsistency = 
+    const isValidConsistency =
       (reqStatus === 'Teacher Approved' && reqStage === 2) ||
       (reqStatus === 'Teacher Rejected' && reqStage === 1) ||
       (reqStatus === 'Principal Approved' && reqStage === 3) ||
       (reqStatus === 'Ready for Pickup' && reqStage === 4) ||
       (reqStatus === 'Completed' && reqStage === 4);
-      
+
     if (!isValidConsistency) {
        throw new AppError(422, 'UNPROCESSABLE_ENTITY', `Invalid status/stage combination: ${reqStatus} (stage ${reqStage})`);
     }
@@ -176,7 +190,7 @@ export async function updateDocumentRequest(id: string, input: any, actorId: str
     let isAllowed = false;
 
     if (isAdmin) {
-      const allValidTransitions = 
+      const allValidTransitions =
         (currentStatus === 'Submitted' && currentStage === 1 && (reqStatus === 'Teacher Approved' || reqStatus === 'Teacher Rejected' || reqStatus === 'Principal Approved' || reqStatus === 'Ready for Pickup')) ||
         (currentStatus === 'Teacher Approved' && currentStage === 2 && (reqStatus === 'Principal Approved' || reqStatus === 'Teacher Rejected')) ||
         (currentStatus === 'Principal Approved' && currentStage === 3 && (reqStatus === 'Ready for Pickup' || reqStatus === 'Completed')) ||
@@ -189,7 +203,7 @@ export async function updateDocumentRequest(id: string, input: any, actorId: str
       if (!teacherProfile || existing.teacher_id !== teacherProfile.id) {
         throw new AppError(403, 'FORBIDDEN', 'You are not assigned to this document request.');
       }
-      
+
       if (currentStatus === 'Submitted' && currentStage === 1) {
         if (reqStatus === 'Teacher Approved' || reqStatus === 'Teacher Rejected') {
           isAllowed = true;
@@ -205,13 +219,13 @@ export async function updateDocumentRequest(id: string, input: any, actorId: str
       }
       if (currentStatus === 'Submitted' && currentStage === 1) {
         if (reqStatus === 'Principal Approved' || reqStatus === 'Ready for Pickup') {
-          isAllowed = true; 
+          isAllowed = true;
         }
       }
-      if ((currentStatus === 'Principal Approved' && currentStage === 3) || 
+      if ((currentStatus === 'Principal Approved' && currentStage === 3) ||
           (currentStatus === 'Ready for Pickup' && currentStage === 4)) {
         if (reqStatus === 'Completed') {
-          isAllowed = true; 
+          isAllowed = true;
         }
       }
     }

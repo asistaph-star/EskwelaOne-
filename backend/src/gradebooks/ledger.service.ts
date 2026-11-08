@@ -2,6 +2,7 @@ import { z } from 'zod';
 import prisma, { withTransaction } from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { classifyAcademicYearLifecycle } from '../common/utils/calendarValidation.js';
 import { createAuditLog } from '../audit/audit.service.js';
 import {
   calculateStudentTermGrade,
@@ -17,17 +18,17 @@ export const ledgerTermSchema = z.object({
   wwItems: z.array(z.object({
     id: z.string().min(1),
     label: z.string().min(1),
-    max: z.number().positive().max(1000)
+    max: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.')
   })).optional().default([]),
   ptItems: z.array(z.object({
     id: z.string().min(1),
     label: z.string().min(1),
-    max: z.number().positive().max(1000)
+    max: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.')
   })).optional().default([]),
   examItems: z.array(z.object({
     id: z.string().min(1),
     label: z.string().min(1),
-    max: z.number().positive().max(1000),
+    max: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.'),
     weight: z.number().min(0).max(100).optional().default(30)
   })).optional(),
   customWeights: z.object({
@@ -36,10 +37,10 @@ export const ledgerTermSchema = z.object({
     qa: z.number().min(0).max(100).optional(),
     ex: z.number().min(0).max(100).optional(),
   }).optional(),
-  st1Max: z.number().positive().max(1000).optional(),
-  st2Max: z.number().positive().max(1000).optional(),
-  teMax: z.number().positive().max(1000).optional(),
-  qaMax: z.number().positive().max(1000).optional(),
+  st1Max: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.').optional(),
+  st2Max: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.').optional(),
+  teMax: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.').optional(),
+  qaMax: z.number().positive('Assessment maximum score must be a positive number.').max(1000, 'Assessment maximum score cannot exceed 1000.').optional(),
   grades: z.record(z.string(), z.record(z.string(), z.string())).optional().default({}),
   deletedColumnIds: z.array(z.string()).optional().default([]),
 });
@@ -74,13 +75,166 @@ export function resolveSubjectGroup(subjectCode?: string | null, subjectName?: s
   return 'CORE';
 }
 
-function parseScore(v: any): number | null {
+/**
+ * Strict regex for valid assessment score values:
+ * - Whole non-negative integers: "0", "5", "50", "100"
+ * - Non-negative decimals up to 2 decimal places: "24.5", "48.75", "0.5", ".5"
+ * - Disallows negative signs, scientific notation, letters, symbols, NaN, Infinity
+ */
+export const SCORE_FORMAT_REGEX = /^(\d+(\.\d{1,2})?|\.\d{1,2})$/;
+
+export interface ValidatedScore {
+  score: number | null; // null represents empty/cleared score (distinct from 0)
+}
+
+/**
+ * Authoritative backend validator for assessment scores:
+ * - Empty string, null, or undefined -> returns { score: null } (cleared score, distinct from 0)
+ * - Non-numeric strings or negative numbers -> throws AppError 422
+ * - Values exceeding maximum score -> throws AppError 422
+ * - Excess decimal precision (>2 decimal places) -> throws AppError 422
+ * - Valid numeric string -> returns { score: number }
+ */
+export function validateScoreInput(
+  rawVal: any,
+  maxScore: number,
+  colLabel: string,
+  studentLabel?: string
+): ValidatedScore {
+  if (rawVal === null || rawVal === undefined || rawVal === '') {
+    return { score: null };
+  }
+
+  const strVal = String(rawVal).trim();
+  if (strVal === '') {
+    return { score: null };
+  }
+
+  const sContext = studentLabel ? `for student ${studentLabel}` : '';
+
+  // 1. Check maxScore validity
+  if (!Number.isFinite(maxScore) || maxScore <= 0) {
+    throw new AppError(
+      422,
+      'INVALID_MAX_SCORE',
+      `Assessment column "${colLabel}" has invalid maximum score of ${maxScore}. Maximum score must be a positive finite number.`
+    );
+  }
+
+  // 2. Reject negative numbers explicitly
+  if (strVal.startsWith('-')) {
+    throw new AppError(
+      422,
+      'INVALID_SCORE_VALUE',
+      `Invalid score ${sContext}: score cannot be negative (got "${strVal}" for "${colLabel}").`
+    );
+  }
+
+  // 3. Check for excess decimal places (>2 d.p.)
+  if (/^\d+\.\d{3,}$/.test(strVal) || /^\.\d{3,}$/.test(strVal)) {
+    throw new AppError(
+      422,
+      'INVALID_SCORE_PRECISION',
+      `Invalid score ${sContext}: score "${strVal}" exceeds the permitted precision of 2 decimal places for "${colLabel}".`
+    );
+  }
+
+  // 4. Validate exact numeric pattern (disallows letters, e.g. "45abc", symbols, NaN, Infinity)
+  if (!SCORE_FORMAT_REGEX.test(strVal)) {
+    throw new AppError(
+      422,
+      'INVALID_SCORE_FORMAT',
+      `Invalid score ${sContext}: "${strVal}" is not a valid numeric score for "${colLabel}".`
+    );
+  }
+
+  const num = Number(strVal);
+  if (!Number.isFinite(num)) {
+    throw new AppError(
+      422,
+      'INVALID_SCORE_VALUE',
+      `Invalid score ${sContext}: score must be a finite number.`
+    );
+  }
+
+  if (num < 0) {
+    throw new AppError(
+      422,
+      'INVALID_SCORE_VALUE',
+      `Invalid score ${sContext}: score cannot be negative (got ${num} for "${colLabel}").`
+    );
+  }
+
+  if (num > maxScore) {
+    throw new AppError(
+      422,
+      'SCORE_EXCEEDS_MAX',
+      `Invalid score ${sContext}: score ${num} exceeds the maximum score of ${maxScore} for "${colLabel}".`
+    );
+  }
+
+  return { score: num };
+}
+
+export function parseScore(v: any, maxScore?: number): number | null {
   if (v === null || v === undefined || v === '') return null;
-  const n = parseFloat(v);
-  return isNaN(n) ? null : n;
+  const str = String(v).trim();
+  if (str === '') return null;
+  if (!SCORE_FORMAT_REGEX.test(str)) return null;
+  const n = Number(str);
+  if (!Number.isFinite(n) || n < 0) return null;
+  if (maxScore !== undefined && maxScore > 0 && n > maxScore) return null;
+  return n;
 }
 
 export async function getLedger(classId: string, actorId: string) {
+  // Support Class Adviser viewing their advisory section scholastic roster
+  if (classId.startsWith('adv-')) {
+    const sectionId = classId.replace(/^adv-/, '');
+    const section = await prisma.section.findFirst({
+      where: {
+        id: sectionId,
+        adviser_teacher: { user_id: actorId }
+      },
+      include: {
+        academic_year: true
+      }
+    });
+
+    if (!section) {
+      throw new AppError(404, 'NOT_FOUND', 'Advisory section not found or you are not its assigned Class Adviser.');
+    }
+
+    const enrollments = await prisma.enrollment.findMany({
+      where: { section_id: sectionId, status: 'Enrolled' },
+      include: { student: { include: { user: true } } },
+      orderBy: [
+        { student: { user: { last_name: 'asc' } } },
+        { student: { user: { first_name: 'asc' } } }
+      ]
+    });
+
+    const rosterData = enrollments.map(e => ({
+      id: e.id,
+      studentId: e.student_id,
+      surname: e.student?.last_name || e.student?.user?.last_name || '',
+      first: e.student?.first_name || e.student?.user?.first_name || '',
+      gender: e.student?.gender || 'Unknown',
+    }));
+
+    return {
+      terms: {
+        T1: { wwItems: [], ptItems: [], examItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} },
+        T2: { wwItems: [], ptItems: [], examItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} },
+        T3: { wwItems: [], ptItems: [], examItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} },
+        T4: { wwItems: [], ptItems: [], examItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} },
+      },
+      roster: rosterData,
+      weights: { ww: 20, pt: 50, qa: 30 },
+      isAdvisorySection: true
+    };
+  }
+
   // Fetch the assignment with relations
   const assignment = await prisma.teacherSubjectAssignment.findUnique({
     where: { id: classId },
@@ -113,9 +267,9 @@ export async function getLedger(classId: string, actorId: string) {
     rosterData = enrollments.map(e => ({
       id: e.id,
       studentId: e.student_id,
-      surname: e.student.user.last_name,
-      first: e.student.user.first_name,
-      gender: e.student.gender || 'Unknown',
+      surname: e.student?.last_name || e.student?.user?.last_name || '',
+      first: e.student?.first_name || e.student?.user?.first_name || '',
+      gender: e.student?.gender || 'Unknown',
     }));
   }
 
@@ -136,14 +290,22 @@ export async function getLedger(classId: string, actorId: string) {
     });
   }
 
+  const configuredTerms = await prisma.term.findMany({
+    where: { academic_year_id: assignment.academic_year_id },
+    orderBy: { key: 'asc' }
+  });
+
   const termsData: any = {};
   
-  for (const t of ['T1', 'T2', 'T3', 'T4']) {
+  for (const termRecord of configuredTerms) {
+    const t = termRecord.key;
     const gb = await prisma.gradebooks.findFirst({
-      where: { assignment_id: classId, term: { key: t as any } }
+      where: { assignment_id: classId, term_id: termRecord.id }
     });
     if (!gb) {
       termsData[t] = {
+        id: null,
+        status: 'Draft',
         version: 1,
         wwItems: [],
         ptItems: [],
@@ -226,27 +388,27 @@ export async function getLedger(classId: string, actorId: string) {
       const wwScores = wwItems.map(item => ({
         id: item.id,
         label: item.label,
-        score: parseScore(studentGrades[item.id]),
+        score: parseScore(studentGrades[item.id], item.max),
         maxScore: item.max,
       }));
       const ptScores = ptItems.map(item => ({
         id: item.id,
         label: item.label,
-        score: parseScore(studentGrades[item.id]),
+        score: parseScore(studentGrades[item.id], item.max),
         maxScore: item.max,
       }));
 
       const dynamicExams = fallbackExamItems.map(item => ({
         id: item.id,
         label: item.label,
-        score: parseScore(studentGrades[item.id]),
+        score: parseScore(studentGrades[item.id], item.max),
         maxScore: item.max,
         weight: item.weight,
       }));
 
-      const st1Score = parseScore(studentGrades['st1']);
-      const st2Score = parseScore(studentGrades['st2']);
-      const teScore  = parseScore(studentGrades['te'] ?? studentGrades['qa']);
+      const st1Score = parseScore(studentGrades['st1'], st1Max);
+      const st2Score = parseScore(studentGrades['st2'], st2Max);
+      const teScore  = parseScore(studentGrades['te'] ?? studentGrades['qa'], teMax);
 
       const input: StudentTermScoreInput = {
         enrollmentId: enr.id,
@@ -271,6 +433,8 @@ export async function getLedger(classId: string, actorId: string) {
     }
     
     termsData[t] = {
+      id: gb.id,
+      status: gb.status,
       version: gb.version,
       wwItems,
       ptItems,
@@ -303,6 +467,10 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
     throw new AppError(400, 'BAD_REQUEST', 'Missing or invalid terms');
   }
 
+  if (classId.startsWith('adv-')) {
+    throw new AppError(403, 'FORBIDDEN', 'Class advisers do not directly encode subject grading ledgers. Subject teachers retain exclusive grade encoding authority.');
+  }
+
   return withTransaction(async (tx) => {
     // Row-level authorization check & fetch details
     const assignment = await tx.teacherSubjectAssignment.findUnique({
@@ -321,6 +489,14 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
 
     if (assignment.teacher.user_id !== actorId) {
       throw new AppError(403, 'FORBIDDEN', 'You do not have access to modify this class gradebook');
+    }
+
+    const lifecycle = classifyAcademicYearLifecycle(assignment.academic_year);
+    if (lifecycle === 'HISTORICAL') {
+      throw new AppError(403, 'HISTORICAL_GRADEBOOK_READ_ONLY', 'Cannot modify grades for a historical academic year. Historical records are strictly read-only.');
+    }
+    if (lifecycle === 'UPCOMING') {
+      throw new AppError(403, 'UPCOMING_ACADEMIC_YEAR_INACTIVE', 'Cannot record or modify grades for an upcoming academic year that has not yet become active.');
     }
 
     // Resolve grading policy for calculation
@@ -342,6 +518,7 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
 
     const activeEnrollments = await tx.enrollment.findMany({
       where: { section_id: assignment.section_id, status: 'Enrolled' },
+      include: { student: true }
     });
 
     for (const t of ['T1', 'T2', 'T3', 'T4']) {
@@ -361,7 +538,7 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
       }
       
       let gb = await tx.gradebooks.findFirst({
-        where: { assignment_id: classId, term: { key: t as any } }
+        where: { assignment_id: classId, term: { key: t as any, academic_year_id: assignment.academic_year_id } }
       });
       
       if (!gb) {
@@ -381,6 +558,11 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
           }
         });
       } else {
+        // Locked against draft modifications if already published
+        if (gb.status === 'Published') {
+          throw new AppError(409, 'GRADEBOOK_LOCKED', `Gradebook for term ${t} is published and locked against draft modifications`);
+        }
+
         // Optimistic concurrency check: If version is provided, verify it matches
         if (termData.version !== undefined && gb.version !== termData.version) {
           throw new AppError(409, 'CONFLICT', `Gradebook version mismatch. Current version is ${gb.version}, but payload version was ${termData.version}.`);
@@ -417,7 +599,13 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
 
       let sort = 0;
       const colIdMap: Record<string, string> = {};
+      const colMetaMap: Record<string, { maxScore: number; label: string }> = {};
       const targetColIds = new Set<string>();
+
+      // Populate fallback metadata from existing columns
+      for (const ec of existingCols) {
+        colMetaMap[ec.id] = { maxScore: ec.max_score, label: ec.label };
+      }
 
       // 1. Process WW columns
       for (const item of termData.wwItems) {
@@ -452,6 +640,8 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
           });
         }
         colIdMap[item.id] = colId;
+        colMetaMap[item.id] = { maxScore: item.max, label: item.label };
+        colMetaMap[colId] = { maxScore: item.max, label: item.label };
         targetColIds.add(colId);
       }
 
@@ -488,6 +678,8 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
           });
         }
         colIdMap[item.id] = colId;
+        colMetaMap[item.id] = { maxScore: item.max, label: item.label };
+        colMetaMap[colId] = { maxScore: item.max, label: item.label };
         targetColIds.add(colId);
       }
 
@@ -547,9 +739,12 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
             });
           }
           colIdMap[item.id] = colId;
+          colMetaMap[item.id] = { maxScore: item.max, label: item.label };
+          colMetaMap[colId] = { maxScore: item.max, label: item.label };
           targetColIds.add(colId);
           if (item.id === 'te') {
             colIdMap['qa'] = colId;
+            colMetaMap['qa'] = { maxScore: item.max, label: item.label };
           }
         }
       } else if (hasExamBreakdown) {
@@ -582,6 +777,8 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
           });
         }
         colIdMap['st1'] = st1ColId;
+        colMetaMap['st1'] = { maxScore: st1Max, label: 'Short Test 1' };
+        colMetaMap[st1ColId] = { maxScore: st1Max, label: 'Short Test 1' };
         targetColIds.add(st1ColId);
 
         // 4. Process ST2 column
@@ -613,6 +810,8 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
           });
         }
         colIdMap['st2'] = st2ColId;
+        colMetaMap['st2'] = { maxScore: st2Max, label: 'Short Test 2' };
+        colMetaMap[st2ColId] = { maxScore: st2Max, label: 'Short Test 2' };
         targetColIds.add(st2ColId);
 
         // 5. Process TE column
@@ -646,6 +845,9 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
         }
         colIdMap['te'] = teColId;
         colIdMap['qa'] = teColId;
+        colMetaMap['te'] = { maxScore: teMax, label: 'Term Exam' };
+        colMetaMap['qa'] = { maxScore: teMax, label: 'Quarterly Assessment' };
+        colMetaMap[teColId] = { maxScore: teMax, label: 'Term Exam' };
         targetColIds.add(teColId);
       } else {
         // Legacy single assessment column (QA)
@@ -681,6 +883,9 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
         }
         colIdMap['qa'] = qaColId;
         colIdMap['te'] = qaColId;
+        colMetaMap['qa'] = { maxScore: qaMax, label: 'Quarterly Assessment' };
+        colMetaMap['te'] = { maxScore: qaMax, label: 'Quarterly Assessment' };
+        colMetaMap[qaColId] = { maxScore: qaMax, label: 'Quarterly Assessment' };
         targetColIds.add(qaColId);
       }
 
@@ -703,13 +908,33 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
         await tx.gradebook_columns.delete({ where: { id: col.id } });
       }
 
-      // 7. Upsert grade entries
+      // 7. Validate and Upsert grade entries
       if (termData.grades && typeof termData.grades === 'object') {
         const activeColIds = Array.from(targetColIds);
         const currentEntries = await tx.grade_entries.findMany({
           where: { column_id: { in: activeColIds }, is_superseded: false }
         });
 
+        // 7A. Pre-validate every single score entry across all students before making any database mutations.
+        // If ANY score is negative, exceeds maxScore, has invalid format (e.g. 45abc, NaN, Infinity),
+        // or has >2 decimal places, abort immediately and roll back the entire transaction.
+        for (const sid of Object.keys(termData.grades)) {
+          const studentGrades = termData.grades[sid];
+          if (!studentGrades || typeof studentGrades !== 'object') continue;
+
+          const enr = (activeEnrollments as any[]).find((e: any) => e.id === sid);
+          const studentLabel = enr?.student?.last_name && enr?.student?.first_name
+            ? `${enr.student.last_name}, ${enr.student.first_name}`
+            : sid;
+
+          for (const oldColId of Object.keys(studentGrades)) {
+            const rawVal = studentGrades[oldColId];
+            const meta = colMetaMap[oldColId] || colMetaMap[colIdMap[oldColId]] || { maxScore: 100, label: oldColId };
+            validateScoreInput(rawVal, meta.maxScore, meta.label, studentLabel);
+          }
+        }
+
+        // 7B. Persist validated entries
         for (const sid of Object.keys(termData.grades)) {
           const studentGrades = termData.grades[sid];
           if (!studentGrades || typeof studentGrades !== 'object') continue;
@@ -719,20 +944,22 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
             if (!mappedColId) continue;
 
             const rawVal = studentGrades[oldColId];
+            const meta = colMetaMap[oldColId] || colMetaMap[mappedColId] || { maxScore: 100, label: oldColId };
+            const validation = validateScoreInput(rawVal, meta.maxScore, meta.label);
+
             const existingEntry = currentEntries.find(
               (e: any) => e.column_id === mappedColId && e.enrollment_id === sid
             );
 
-            // Cleared/empty score cell
-            if (rawVal === null || rawVal === undefined || rawVal === '') {
+            // Cleared/empty score cell (validation.score === null, distinct from 0)
+            if (validation.score === null) {
               if (existingEntry) {
                 await tx.grade_entries.delete({ where: { id: existingEntry.id } });
               }
               continue;
             }
 
-            const score = parseFloat(rawVal);
-            if (isNaN(score)) continue;
+            const score = validation.score;
 
             if (existingEntry) {
               if (existingEntry.score !== score) {
@@ -766,26 +993,26 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
         const wwScores = termData.wwItems.map(item => ({
           id: item.id,
           label: item.label,
-          score: parseScore(studentGrades[item.id]),
+          score: parseScore(studentGrades[item.id], item.max),
           maxScore: item.max,
         }));
 
         const ptScores = termData.ptItems.map(item => ({
           id: item.id,
           label: item.label,
-          score: parseScore(studentGrades[item.id]),
+          score: parseScore(studentGrades[item.id], item.max),
           maxScore: item.max,
         }));
 
-        const st1Score = parseScore(studentGrades['st1']);
-        const st2Score = parseScore(studentGrades['st2']);
-        const teScore  = parseScore(studentGrades['te'] ?? studentGrades['qa']);
+        const st1Score = parseScore(studentGrades['st1'], st1Max);
+        const st2Score = parseScore(studentGrades['st2'], st2Max);
+        const teScore  = parseScore(studentGrades['te'] ?? studentGrades['qa'], teMax);
 
         const dynamicExams = (termData.examItems && termData.examItems.length > 0)
           ? termData.examItems.map(item => ({
               id: item.id,
               label: item.label,
-              score: parseScore(studentGrades[item.id]),
+              score: parseScore(studentGrades[item.id], item.max),
               maxScore: item.max,
               weight: item.weight,
             }))
@@ -832,6 +1059,8 @@ export async function saveLedger(classId: string, terms: any, actorId: string, c
         };
 
         if (existingGrade) {
+          // When gradebook is in Draft (either initial draft or reopened for authorized revision),
+          // draft score saves update only draft score columns without overwriting published snapshot fields.
           await tx.grade.update({
             where: { id: existingGrade.id },
             data: gradePayload,

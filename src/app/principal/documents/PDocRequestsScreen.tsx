@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { FileText, CheckCircle, XCircle, Clock, User, Filter, Calendar, Download } from 'lucide-react';
-import { apiClient } from '../../../api/client';
+import { apiClient, resolveBackendUrl } from '../../../api/client';
 import { documentsApi } from '../../../api/documents.api';
 import type { DocRequestStatus, DocumentRequest } from '../../shared/types';
 
@@ -84,10 +84,14 @@ export function PDocRequestsScreen() {
     }
   }
 
-  async function handleDownload(attachmentId: string, attachmentName: string) {
+  async function handleDownload(attachmentId: string, _attachmentName: string) {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      window.open(`${apiUrl}/documents/serve?id=${attachmentId}`, '_blank');
+      const presignRes: any = await documentsApi.getPresignedDownloadUrl(attachmentId);
+      const url = presignRes?.url || presignRes?.data?.url;
+      if (!url) {
+        throw new Error('Missing presigned download URL');
+      }
+      window.open(resolveBackendUrl(url), '_blank');
     } catch (err) {
       console.error("Failed to view attachment:", err);
       alert("Failed to retrieve the attachment. Please try again.");
@@ -136,7 +140,7 @@ export function PDocRequestsScreen() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {[
             { label: "Pending Final Approval", val: actualPending.length.toString(), icon: Clock, color: C.blue, bg: C.blueBg },
-            { label: "Ready / Completed", val: processedRequests.filter(r => r.status === "Principal Approved" || r.status === "Ready for Pickup" || r.status === "Completed").length.toString(), icon: CheckCircle, color: C.green, bg: C.greenBg },
+            { label: "Approved and Completed", val: processedRequests.filter(r => r.status === "Principal Approved" || r.status === "Ready for Pickup" || r.status === "Completed").length.toString(), icon: CheckCircle, color: C.green, bg: C.greenBg },
             { label: "Total Handled", val: (actualPending.length + processedRequests.length).toString(), icon: FileText, color: C.m700, bg: C.m50 },
           ].map((kpi, idx) => {
             const Icon = kpi.icon;
@@ -206,7 +210,7 @@ export function PDocRequestsScreen() {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: C.blueBg, padding: "4px 12px", borderRadius: 12, border: `1px solid ${C.blue}20` }}>
-                        {req.status === "Submitted" ? "Stage 1 · Initial Request" : "Stage 2 · Final Approval Required"}
+                        {req.status === "Submitted" ? "Stage 1: Initial Request" : "Stage 2: Final Approval Required"}
                       </span>
                     </div>
                   </div>
@@ -256,7 +260,7 @@ export function PDocRequestsScreen() {
                   <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                       <div>
-                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", marginBottom: 6, letterSpacing: "0.04em" }}>Pickup / Ready Date</label>
+                        <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.t2, textTransform: "uppercase", marginBottom: 6, letterSpacing: "0.04em" }}>Pickup Date</label>
                         <input
                           type="date"
                           value={pickupDates[req.id] || ""}

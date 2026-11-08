@@ -1,6 +1,6 @@
 import React from 'react';
 import { C } from '../../shared/constants/tokens';
-import { User, Award, BookOpen, AlertCircle, CheckCircle, Clock, X } from 'lucide-react';
+import { User, Award, BookOpen, AlertCircle, CheckCircle, Clock, X, Calendar } from 'lucide-react';
 
 export function TeacherProfileModal({ teacherUser, img, onClose }: { teacherUser: any, img?: string, onClose: () => void }) {
   // Map real data from User and Teacher profile
@@ -12,6 +12,8 @@ export function TeacherProfileModal({ teacherUser, img, onClose }: { teacherUser
     specialization: teacherUser.teacher?.specialization || "General Education",
     dateHired: teacherUser.teacher?.date_hired || new Date().toISOString(),
   };
+
+  const assignments = teacherUser.teacher?.assignments || [];
 
   const now = new Date();
   const promotedDate = new Date(teacher.dateHired);
@@ -66,7 +68,7 @@ export function TeacherProfileModal({ teacherUser, img, onClose }: { teacherUser
               <div style={{ fontSize: 28, fontWeight: 800, color: "#fff", fontFamily: "'Fraunces',serif" }}>{teacher.name}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ zIndex: 1, width: 32, height: 32, borderRadius: 6, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button id="btn-close-teacher-profile" onClick={onClose} style={{ zIndex: 1, width: 32, height: 32, borderRadius: 6, background: "rgba(255,255,255,0.1)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={18} />
           </button>
         </div>
@@ -100,6 +102,53 @@ export function TeacherProfileModal({ teacherUser, img, onClose }: { teacherUser
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>{teacher.specialization}</div>
                 </div>
               </div>
+            </div>
+
+            {/* Current Teaching Load */}
+            <div style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: C.m50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Calendar size={14} color={C.m700} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.t1 }}>Current Teaching Load</h3>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.m700, background: C.m50, padding: "2px 8px", borderRadius: 4 }}>
+                  {assignments.length} Subject{assignments.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {assignments.length === 0 ? (
+                <div style={{ padding: "16px", textAlign: "center", fontSize: 12, color: C.t3, background: C.paper, borderRadius: 6 }}>
+                  No teaching assignments assigned for the active school year.
+                </div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc", borderBottom: `1px solid ${C.borderMed}`, textAlign: "left" }}>
+                      <th style={{ padding: "6px 10px", fontWeight: 700, color: C.t3, textTransform: "uppercase", fontSize: 9 }}>Subject</th>
+                      <th style={{ padding: "6px 10px", fontWeight: 700, color: C.t3, textTransform: "uppercase", fontSize: 9 }}>Grade &amp; Section</th>
+                      <th style={{ padding: "6px 10px", fontWeight: 700, color: C.t3, textTransform: "uppercase", fontSize: 9 }}>Schedule</th>
+                      <th style={{ padding: "6px 10px", fontWeight: 700, color: C.t3, textTransform: "uppercase", fontSize: 9 }}>Room</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignments.map((a: any, idx: number) => {
+                      const scheduleStr = a.days
+                        ? `${a.days}${a.start_time && a.end_time ? ` · ${a.start_time}-${a.end_time}` : ''}`
+                        : '—';
+                      return (
+                        <tr key={a.id || idx} style={{ borderBottom: `0.5px solid ${C.border}` }}>
+                          <td style={{ padding: "8px 10px", fontWeight: 600, color: C.t1 }}>{a.subject?.name || '—'}</td>
+                          <td style={{ padding: "8px 10px", color: C.t2 }}>Grade {a.section?.grade_level} — {a.section?.name}</td>
+                          <td style={{ padding: "8px 10px", color: C.t2 }}>{scheduleStr}</td>
+                          <td style={{ padding: "8px 10px", color: C.t3 }}>{a.room || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             {/* Training & Seminars */}

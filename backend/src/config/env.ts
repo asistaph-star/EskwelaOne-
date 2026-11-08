@@ -17,6 +17,11 @@ if ((process.env.NODE_ENV || '').trim() === 'test') {
   if (fs.existsSync(testEnvPath)) {
     dotenv.config({ path: testEnvPath, override: true });
   }
+} else if ((process.env.APP_ENV || '').trim() === 'manual_uat') {
+  const uatEnvPath = path.resolve(baseDir, '.env.manual_uat');
+  if (fs.existsSync(uatEnvPath)) {
+    dotenv.config({ path: uatEnvPath, override: true });
+  }
 }
 
 export const KNOWN_INSECURE_SECRETS = new Set([
@@ -53,6 +58,13 @@ export function validateProductionConfig(
     errors.push('Insecure production configuration: JWT_SECRET must not use a known development fallback or placeholder value.');
   }
 
+  const rawOtpSecret = env.OTP_HMAC_SECRET?.trim();
+  if (!rawOtpSecret || rawOtpSecret.length < 32) {
+    errors.push('Missing required production configuration: OTP_HMAC_SECRET must be set with at least 32 characters of entropy.');
+  } else if (KNOWN_INSECURE_SECRETS.has(rawOtpSecret.toLowerCase())) {
+    errors.push('Insecure production configuration: OTP_HMAC_SECRET must not use a known development fallback or placeholder value.');
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -80,6 +92,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const rawSecret = process.env.JWT_SECRET?.trim();
 
 export const config = {
+  host: process.env.HOST?.trim() || (nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1'),
   port: parseInt(process.env.PORT || '4000', 10),
   nodeEnv,
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -99,6 +112,34 @@ export const config = {
     accessKey: process.env.S3_ACCESS_KEY || '',
     secretKey: process.env.S3_SECRET_KEY || '',
     presignedExpiry: parseInt(process.env.S3_PRESIGNED_EXPIRY_SECONDS || '300', 10),
+  },
+
+  sf9Renderer: {
+    libreOfficeBin: process.env.LIBREOFFICE_BIN?.trim() || '',
+    renderTimeoutMs: Math.max(
+      1000,
+      parseInt(process.env.SF9_RENDER_TIMEOUT_MS || '45000', 10) || 45000
+    ),
+    renderTmpDir: process.env.SF9_RENDER_TMP_DIR?.trim() || '',
+  },
+
+  email: {
+    provider: process.env.EMAIL_PROVIDER?.trim() || 'mock',
+    brevoApiKey: process.env.BREVO_API_KEY?.trim() || '',
+    senderEmail: process.env.BREVO_SENDER_EMAIL?.trim() || 'noreply.cisattendance@gmail.com',
+    senderName: process.env.BREVO_SENDER_NAME?.trim() || 'Calulut Integrated School Attendance',
+    replyToEmail: process.env.BREVO_REPLY_TO_EMAIL?.trim() || '',
+    gateEmailEnabled: process.env.GATE_EMAIL_ENABLED === 'true',
+    authorizationMode: (process.env.GATE_EMAIL_AUTHORIZATION_MODE?.trim() || 'PILOT_WHITELIST') as 'PILOT_WHITELIST' | 'SCHOOL_AUTHORIZED',
+    recipientMode: (process.env.GATE_EMAIL_RECIPIENT_MODE?.trim() || 'STUDENT_ONLY') as 'STUDENT_ONLY' | 'GUARDIAN_ONLY' | 'BOTH',
+    lateCutoffTime: process.env.GATE_ATTENDANCE_LATE_CUTOFF_TIME?.trim() || '',
+    authorizedRecipients: (process.env.AUTHORIZED_GATE_EMAIL_RECIPIENTS || '')
+      .split(',')
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean),
+    webhookSecret: process.env.BREVO_WEBHOOK_SECRET?.trim() || '',
+    dailyQuotaLimit: process.env.GATE_EMAIL_DAILY_QUOTA ? parseInt(process.env.GATE_EMAIL_DAILY_QUOTA, 10) : 300,
+    batchSize: process.env.GATE_EMAIL_BATCH_SIZE ? parseInt(process.env.GATE_EMAIL_BATCH_SIZE, 10) : 10,
   },
 } as const;
 

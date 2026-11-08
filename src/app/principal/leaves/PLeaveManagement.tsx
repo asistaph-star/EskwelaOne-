@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { CheckCircle, XCircle, Clock, Search, ChevronDown, X, MessageSquare, ClipboardList } from 'lucide-react';
+import { resolveBackendUrl } from '../../../api/client';
 
 /* ── Stamp ── */
 function Stamp({ label, color, bg }: { label: string; color: string; bg: string }) {
@@ -82,7 +83,7 @@ export function PLeaveManagement() {
       console.error('Failed to approve leave', err);
     }
   };
-  
+
   const reject = async (id: string, note: string) => {
     try {
       const { apiClient } = await import('../../../api/client');
@@ -123,7 +124,7 @@ export function PLeaveManagement() {
           <ClipboardList size={20} color={C.m700} />
           <h2 style={{ fontSize: 20, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces',serif", margin: 0 }}>Leave Management</h2>
         </div>
-        <div style={{ fontSize: 12, color: C.t3 }}>Review and act on teacher leave of absence requests · SY 2025–2026</div>
+        <div style={{ fontSize: 12, color: C.t3 }}>Review and act on faculty leave of absence requests.</div>
       </div>
 
       {/* ── Summary KPI Cards ── */}
@@ -305,7 +306,18 @@ export function PLeaveManagement() {
               {detail.attachment_url && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, paddingTop: 10 }}>
                   <span style={{ fontSize: 11, color: C.t3, fontWeight: 600 }}>Attachment</span>
-                  <a href={`http://localhost:4000${detail.attachment_url}`} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.m700, fontWeight: 700, textDecoration: 'underline' }}>View Document</a>
+                  <a
+                    href={resolveBackendUrl(
+                      String(detail.attachment_url).startsWith('/api/')
+                        ? detail.attachment_url
+                        : `/api/admin/leaves/${detail.id}/attachment`
+                    )}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 12, color: C.m700, fontWeight: 700, textDecoration: 'underline' }}
+                  >
+                    View Document
+                  </a>
                 </div>
               )}
               {(detail as any).approver_note && (

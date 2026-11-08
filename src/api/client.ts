@@ -4,7 +4,14 @@
  * Automatically attaches the authentication JWT to all requests.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__API_BASE_URL__) || import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
+
+export function resolveBackendUrl(urlOrPath: string): string {
+  if (!urlOrPath) return '';
+  if (/^https?:\/\//i.test(urlOrPath)) return urlOrPath;
+  return `${BACKEND_ORIGIN}${urlOrPath.startsWith('/') ? '' : '/'}${urlOrPath}`;
+}
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -17,7 +24,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
-  
+
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
@@ -50,17 +57,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     }
     throw new ApiError(
       response.status,
-      data?.error?.code || 'UNKNOWN_ERROR',
-      data?.error?.message || 'An unexpected error occurred.'
+      data?.error?.code || data?.code || 'UNKNOWN_ERROR',
+      data?.message || data?.error?.message || 'An unexpected error occurred.'
     );
   }
 
-  return data.data as T;
+  return (data?.data !== undefined ? data.data : data) as T;
 }
 
 export const apiClient = {
   get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
   post: <T>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }),
+  put: <T>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'PUT', body: body !== undefined ? JSON.stringify(body) : undefined }),
   patch: <T>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'PATCH', body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
   postFormData: <T>(endpoint: string, body: FormData) => request<T>(endpoint, { method: 'POST', body }),

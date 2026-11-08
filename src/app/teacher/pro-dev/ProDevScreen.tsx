@@ -46,7 +46,7 @@ export function ProDevScreen() {
         {activeTab==="certs" && (
           <div>
             <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ fontSize:12, color:C.t3 }}>{CERTS.length} certificates on record · {totalHours} training hours logged</div>
+              <div style={{ fontSize:12, color:C.t3 }}>{CERTS.length} certificates on record ({totalHours} training hours logged)</div>
               <button onClick={() => setUploadModal(true)} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700, color:"#fff", background:C.m700, border:"none", borderRadius:4, padding:"7px 12px", cursor:"pointer" }}>
                 <Upload size={12} /> Upload Certificate
               </button>
@@ -54,7 +54,7 @@ export function ProDevScreen() {
             <table style={{ width:"100%", borderCollapse:"collapse" }}>
               <thead>
                 <tr style={{ background:C.m50, borderBottom:`1px solid ${C.borderMed}` }}>
-                  {["Certificate / Training Title","Level","Hours","Date Completed","Points","Action"].map(h => (
+                  {["Training or Certificate Title","Level","Hours","Date Completed","Points","Action"].map(h => (
                     <th key={h} style={{ textAlign:"left", padding:"9px 14px", fontSize:9, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.09em" }}>{h}</th>
                   ))}
                 </tr>
@@ -161,7 +161,7 @@ export function ProDevScreen() {
             <div style={{ padding: 20 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Training / Seminar Title</label>
+                  <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Training or Seminar Title</label>
                   <input type="text" placeholder="Enter title" style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box" }} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>

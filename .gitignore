@@ -88,3 +88,16 @@ backend/storage/
 backend/backups/
 *.tar.gz
 
+
+# Self-hosted spreadsheet renderer (portable LibreOffice, unpacked locally) and render scratch
+backend/tools/
+backend/tmp/sf9-render/
+backend/quarantine/
+backend/src/generated/
+private_*
+*.private.*
+
+# Verification screenshots and scratch tests
+scratch/
+verification_screenshots/
+

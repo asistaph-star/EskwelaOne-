@@ -65,6 +65,9 @@ export interface GateScanPayload {
   position?: string;
   action: 'Time In' | 'Time Out';
   time: string;
+  formattedDate?: string;
+  formattedTime?: string;
+  punctualityStatus?: 'On Time' | 'Late' | null;
 }
 
 export interface ScannerState {

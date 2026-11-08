@@ -146,13 +146,23 @@ export async function computeFileHash(filePath: string): Promise<string> {
 }
 
 /**
- * Recursively collect all files inside a directory.
+ * Storage subdirectories containing server-side runtime credentials/OAuth tokens
+ * that must never be bundled into media backup archives.
+ */
+export const EXCLUDED_STORAGE_SUBDIRS = new Set(['chatgpt']);
+
+/**
+ * Recursively collect all files inside a directory, excluding sensitive runtime
+ * credential directories (e.g., storage/chatgpt/).
  */
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   if (!fs.existsSync(dirPath)) return arrayOfFiles;
   const files = fs.readdirSync(dirPath);
 
   for (const file of files) {
+    if (EXCLUDED_STORAGE_SUBDIRS.has(file.toLowerCase())) {
+      continue;
+    }
     const fullPath = path.join(dirPath, file);
     if (fs.statSync(fullPath).isDirectory()) {
       getAllFiles(fullPath, arrayOfFiles);
@@ -334,9 +344,21 @@ export async function extractStorageArchive(archiveTarGzPath: string, targetDir:
   const decompressed = zlib.gunzipSync(compressed).toString('utf-8');
   const records = JSON.parse(decompressed) as { path: string; data: string }[];
 
+  const resolvedTargetDir = path.resolve(targetDir);
   let extractedCount = 0;
   for (const item of records) {
-    const destPath = path.join(targetDir, item.path);
+    const normalizedRel = String(item.path || '').replace(/\\/g, '/').replace(/^\/+/, '');
+    const firstSegment = normalizedRel.split('/')[0]?.toLowerCase() || '';
+    if (!normalizedRel || normalizedRel.includes('..') || EXCLUDED_STORAGE_SUBDIRS.has(firstSegment)) {
+      continue;
+    }
+
+    const destPath = path.resolve(resolvedTargetDir, normalizedRel);
+    const relToTarget = path.relative(resolvedTargetDir, destPath);
+    if (relToTarget.startsWith('..') || path.isAbsolute(relToTarget)) {
+      continue;
+    }
+
     const destDir = path.dirname(destPath);
     if (!fs.existsSync(destDir)) {
       fs.mkdirSync(destDir, { recursive: true });

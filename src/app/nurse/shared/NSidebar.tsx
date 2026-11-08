@@ -4,6 +4,7 @@ import {
   Wrench, Sparkles
 } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
+import { useAppContext } from '../../shared/AppContext';
 
 export type NScreen =
   | "n-dashboard" | "n-messages"
@@ -12,13 +13,13 @@ export type NScreen =
 
 const N_NAV_GROUPS: SidebarGroupConfig<NScreen>[] = [
   { category: "Overview", items: [
-    { id: "n-dashboard",        label: "Clinic Dashboard",  icon: LayoutDashboard },
+    { id: "n-dashboard",        label: "Clinic Overview",   icon: LayoutDashboard },
   ]},
-  { category: "Health & Welfare", items: [
+  { category: "Health Services", items: [
     { id: "n-inventory",        label: "Clinic Inventory",  icon: BookMarked },
     { id: "n-reports",          label: "Medical Reports",   icon: FileText },
   ]},
-  { category: "Tools & Growth", items: [
+  { category: "Analytics and Tools", items: [
     { id: "n-ai",               label: "Clinic Analytics",  icon: Sparkles },
     { id: "n-tools",            label: "Health Tools",      icon: Wrench },
   ]},
@@ -30,8 +31,10 @@ export function NSidebar({ active, onNav, onLogout, collapsed=false }: {
   onLogout: () => void;
   collapsed?: boolean;
 }) {
-  const user = { name: "Maria Clara", sub: "School Nurse, Clinic Staff" };
-  const initials = "MC";
+  const { currentUser } = useAppContext();
+  const displayName = currentUser?.name?.trim() || "School Nurse";
+  const initials = displayName.split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "SN";
+  const user = { name: displayName, sub: "School Nurse" };
 
   return (
     <PortalSidebar

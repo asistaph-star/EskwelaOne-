@@ -2,33 +2,35 @@ import React from 'react';
 import { useAppContext } from '../../shared/AppContext';
 import {
   LayoutDashboard, Calendar, Stethoscope, FileText,
-  BookOpen, CheckSquare, User, Bell, BookMarked
+  BookOpen, CheckSquare, User, UserCheck, Bell, BookMarked, History
 } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
 
-export type SScreen = "dashboard" | "academics" | "attendance" | "assignments" | "clinic" | "settings" | "calendar" | "announcements" | "appointments" | "doc-requests";
+export type SScreen = "dashboard" | "profile" | "academics" | "attendance" | "academic-history" | "assignments" | "clinic" | "settings" | "calendar" | "announcements" | "appointments" | "doc-requests";
 
 const S_NAV_GROUPS: SidebarGroupConfig<SScreen>[] = [
   {
     category: "Overview",
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "profile", label: "Personal Records", icon: UserCheck },
       { id: "calendar", label: "Calendar", icon: Calendar }
     ]
   },
   {
     category: "Services",
     items: [
-      { id: "clinic", label: "Clinic & Health", icon: Stethoscope },
+      { id: "clinic", label: "Health Clinic", icon: Stethoscope },
       { id: "doc-requests", label: "Request Documents", icon: FileText }
     ]
   },
   {
     category: "Academics",
     items: [
-      { id: "academics", label: "Grades & Performance", icon: BookOpen },
-      { id: "assignments", label: "Assignments", icon: CheckSquare },
-      { id: "attendance", label: "Gate Attendance", icon: User }
+      { id: "academics", label: "Grades and Report Card", icon: BookOpen },
+      { id: "attendance", label: "Attendance", icon: User },
+      { id: "academic-history", label: "Academic History", icon: History },
+      { id: "assignments", label: "Assignments", icon: CheckSquare }
     ]
   },
   {
@@ -62,7 +64,7 @@ export function SSidebar({ active, onNav, onLogout, collapsed = false }: {
       userSubtitle={showSub}
       userInitials={initials}
       onLogout={onLogout}
-      onProfileClick={() => onNav('settings')}
+      onProfileClick={() => onNav('profile')}
     />
   );
 }

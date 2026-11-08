@@ -51,6 +51,13 @@ const FIXTURE_STUDENTS: FixtureStudentDef[] = [
 export async function seedFixture(): Promise<void> {
   console.log('[FIXTURE SEED] Starting synthetic Rizal section student fixture...');
 
+  // Strict Target Database Guard: Query PostgreSQL directly before any writes
+  const [dbRow] = await prisma.$queryRaw<[{ current_database: string }]>`SELECT current_database()`;
+  const currentDb = dbRow?.current_database;
+  if (currentDb !== 'digiskwela_test') {
+    throw new Error(`[FATAL] Fixture seeding blocked: Target database must be 'digiskwela_test', but connected to '${currentDb}'. Refusing to write synthetic fixture data to non-test database.`);
+  }
+
   // 1. Verify academic year and demo teacher exist
   const ay = await prisma.academicYear.findUnique({ where: { id: 'demo-ay-2026' } });
   if (!ay) throw new Error('Academic year demo-ay-2026 not found. Run base seed first.');

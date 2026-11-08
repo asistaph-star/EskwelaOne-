@@ -40,6 +40,7 @@ export interface AIConfig {
     providerTimeoutMs: number;
   };
   chatgptPlan?: {
+    enabled: boolean;
     model?: string;
     timeoutMs: number;
     callbackUrl: string;
@@ -85,6 +86,7 @@ export const aiConfig: AIConfig = {
     providerTimeoutMs: parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '10000', 10),
   },
   chatgptPlan: {
+    enabled: process.env.CHATGPT_PLAN_ENABLED === 'true',
     model: process.env.CHATGPT_PLAN_MODEL,
     timeoutMs: parseInt(process.env.CHATGPT_PLAN_TIMEOUT_MS || '30000', 10),
     callbackUrl: process.env.CHATGPT_PLAN_CALLBACK_URL || 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback',

@@ -106,7 +106,7 @@ export function StudentDocRequests({ setTab, currentUser }: any) {
                         disabled={docSubmitting}
                         style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 8, background: "#f9fafb", color: C.t1, outline: "none", boxSizing: "border-box", cursor: "pointer" }}
                       >
-                        <option value="">ΓÇö Select Document ΓÇö</option>
+                        <option value="">Select a document type</option>
                         <option value="Certificate of Good Moral">Certificate of Good Moral</option>
                         <option value="Certificate of Enrollment">Certificate of Enrollment</option>
                         <option value="Form 137 (Permanent Record)">Form 137 (Permanent Record)</option>
@@ -127,7 +127,7 @@ export function StudentDocRequests({ setTab, currentUser }: any) {
                         style={{ width: "100%", padding: "9px 12px", fontSize: 12, border: `1.5px solid ${C.borderMed}`, borderRadius: 8, resize: "none", boxSizing: "border-box", outline: "none", fontFamily: "'Inter', sans-serif", background: "#f9fafb" }}
                       />
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                        <div style={{ fontSize: 10, color: C.t3 }}>{docPurpose.length} / 300</div>
+                        <div style={{ fontSize: 10, color: C.t3 }}>{docPurpose.length} of 300 characters</div>
                       </div>
                     </div>
 
@@ -215,7 +215,7 @@ export function StudentDocRequests({ setTab, currentUser }: any) {
                             <div style={{ marginTop: 14 }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                 <span style={{ fontSize: 10, fontWeight: 500, color: C.t3 }}>Progress</span>
-                                <span style={{ fontSize: 10, fontWeight: 600, color: C.t2 }}>{doneCount}/4 steps</span>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: C.t2 }}>{doneCount} of 4 steps</span>
                               </div>
                               <div style={{ height: 5, background: "#f3f4f6", borderRadius: 3, overflow: "hidden" }}>
                                 <div style={{ height: "100%", width: `${progressPct}%`, background: statusColor, borderRadius: 3, transition: "width 0.5s ease" }} />

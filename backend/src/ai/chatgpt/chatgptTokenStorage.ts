@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { getStorageRootPath } from '../../config/storage.config.js';
 
 export type ChatGPTRegistrationStatus = 'ACTIVE' | 'WORKSPACE_ASSOCIATION_NOT_VERIFIED';
 
@@ -43,8 +44,8 @@ export interface ChatGPTPlanStatusSummary {
   accountId: string | null;
 }
 
-const DEFAULT_TOKENS_PATH = path.resolve(process.cwd(), 'storage', 'chatgpt', 'tokens.json');
-const DEFAULT_REGISTRATION_PATH = path.resolve(process.cwd(), 'storage', 'chatgpt', 'registration.json');
+const DEFAULT_TOKENS_PATH = path.join(getStorageRootPath(), 'chatgpt', 'tokens.json');
+const DEFAULT_REGISTRATION_PATH = path.join(getStorageRootPath(), 'chatgpt', 'registration.json');
 
 /**
  * ChatGPT Token & Registration Storage Utility

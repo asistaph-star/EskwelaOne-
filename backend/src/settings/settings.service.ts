@@ -2,9 +2,9 @@ import prisma from '../config/database.js';
 import { createAuditLog } from '../audit/audit.service.js';
 import { UpdateSchoolSettingsInput } from './settings.schema.js';
 
-export const DEFAULT_BRANDING_SETTINGS = {
-  logo_url: null as string | null,
-  favicon_url: null as string | null,
+export const AUTHORITATIVE_DEFAULT_BRANDING = {
+  logo_url: '/school_seal.png',
+  favicon_url: '/school_seal.png',
   login_background_url: null as string | null,
   primary_color: '#0A192F',
   secondary_color: '#1B3A6B',
@@ -13,16 +13,28 @@ export const DEFAULT_BRANDING_SETTINGS = {
   footer_text: 'DigiSkwela · School Management System',
 };
 
-export const DEFAULT_SCHOOL_SETTINGS = {
+export const DEFAULT_BRANDING_SETTINGS = {
+  ...AUTHORITATIVE_DEFAULT_BRANDING,
+};
+
+export const AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS = {
   id: 'default',
   school_name: 'Calulut Integrated School',
   school_short_name: 'CIS',
-  ...DEFAULT_BRANDING_SETTINGS,
-  logo_url: '/school_seal.png',
-  favicon_url: '/school_seal.png',
-  address: null as string | null,
-  contact_email: null as string | null,
-  contact_number: null as string | null,
+  ...AUTHORITATIVE_DEFAULT_BRANDING,
+  school_id: '500146',
+  region: 'Region III',
+  division: 'City of San Fernando (P)',
+  district: 'North District',
+  school_head_name: 'Jose Rizal',
+  school_head_title: 'Principal IV',
+  address: 'Calulut, City of San Fernando, Pampanga',
+  contact_email: 'calulut.is@deped.gov.ph',
+  contact_number: '(045) 455-1234',
+};
+
+export const DEFAULT_SCHOOL_SETTINGS = {
+  ...AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS,
 };
 
 export interface PublicSchoolSettings {
@@ -39,6 +51,36 @@ export interface PublicSchoolSettings {
   contactNumber: string | null;
   loginWelcomeText: string | null;
   footerText: string | null;
+}
+
+/**
+ * Formats a SchoolSettings Prisma record into a standardized response containing both
+ * snake_case and camelCase field aliases for full cross-compatibility.
+ */
+export function formatSchoolSettingsResponse(settings: any) {
+  if (!settings) return settings;
+  return {
+    ...settings,
+    schoolName: settings.school_name,
+    schoolShortName: settings.school_short_name,
+    schoolId: settings.school_id,
+    region: settings.region,
+    division: settings.division,
+    district: settings.district,
+    schoolHeadName: settings.school_head_name,
+    schoolHeadTitle: settings.school_head_title,
+    logoUrl: settings.logo_url,
+    faviconUrl: settings.favicon_url,
+    loginBackgroundUrl: settings.login_background_url,
+    primaryColor: settings.primary_color,
+    secondaryColor: settings.secondary_color,
+    accentColor: settings.accent_color,
+    address: settings.address,
+    contactEmail: settings.contact_email,
+    contactNumber: settings.contact_number,
+    loginWelcomeText: settings.login_welcome_text,
+    footerText: settings.footer_text,
+  };
 }
 
 /**
@@ -65,19 +107,19 @@ export async function getPublicSchoolSettings(): Promise<PublicSchoolSettings> {
   const settings = await getOrCreateSchoolSettings();
 
   return {
-    schoolName: settings.school_name,
-    schoolShortName: settings.school_short_name,
-    logoUrl: settings.logo_url,
-    faviconUrl: settings.favicon_url,
+    schoolName: settings.school_name || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_name,
+    schoolShortName: settings.school_short_name || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_short_name,
+    logoUrl: settings.logo_url || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.logo_url,
+    faviconUrl: settings.favicon_url || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.favicon_url,
     loginBackgroundUrl: settings.login_background_url,
-    primaryColor: settings.primary_color,
-    secondaryColor: settings.secondary_color,
-    accentColor: settings.accent_color,
+    primaryColor: settings.primary_color || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.primary_color,
+    secondaryColor: settings.secondary_color || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.secondary_color,
+    accentColor: settings.accent_color || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.accent_color,
     address: settings.address,
     contactEmail: settings.contact_email,
     contactNumber: settings.contact_number,
-    loginWelcomeText: settings.login_welcome_text,
-    footerText: settings.footer_text,
+    loginWelcomeText: settings.login_welcome_text || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.login_welcome_text,
+    footerText: settings.footer_text || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.footer_text,
   };
 }
 
@@ -138,6 +180,27 @@ export async function updateSchoolSettings(
     const footVal = input.footer_text ?? input.footerText;
     data.footer_text = footVal ? footVal.trim() : null;
   }
+  if (input.school_head_name !== undefined || input.schoolHeadName !== undefined) {
+    const headVal = input.school_head_name ?? input.schoolHeadName;
+    data.school_head_name = headVal ? headVal.trim() : null;
+  }
+  if (input.school_head_title !== undefined || input.schoolHeadTitle !== undefined) {
+    const titleVal = input.school_head_title ?? input.schoolHeadTitle;
+    data.school_head_title = titleVal ? titleVal.trim() : null;
+  }
+  if (input.school_id !== undefined || input.schoolId !== undefined) {
+    const sIdVal = input.school_id ?? input.schoolId;
+    data.school_id = sIdVal ? sIdVal.trim() : null;
+  }
+  if (input.region !== undefined) {
+    data.region = input.region ? input.region.trim() : null;
+  }
+  if (input.division !== undefined) {
+    data.division = input.division ? input.division.trim() : null;
+  }
+  if (input.district !== undefined) {
+    data.district = input.district ? input.district.trim() : null;
+  }
 
   data.updated_by_id = actorUserId;
 
@@ -171,13 +234,13 @@ export async function updateSchoolSettings(
     userAgent: clientMeta?.userAgent,
   });
 
-  return updated;
+  return formatSchoolSettingsResponse(updated);
 }
 
 /**
- * Resets visual branding & presentation settings to defaults.
- * White-label safe: Strictly preserves institutional identity
- * (school_name, school_short_name, address, contact_email, contact_number).
+ * Authoritatively restores all School Customization settings to canonical defaults
+ * (Calulut Integrated School, CIS, /school_seal.png, default theme colors, institutional texts & contact).
+ * Strictly preserves DepEd School ID (500146).
  */
 export async function resetSchoolSettings(
   actorUserId: string,
@@ -187,7 +250,25 @@ export async function resetSchoolSettings(
   const current = await getOrCreateSchoolSettings();
 
   const resetData = {
-    ...DEFAULT_BRANDING_SETTINGS,
+    school_name: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_name,
+    school_short_name: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_short_name,
+    logo_url: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.logo_url,
+    favicon_url: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.favicon_url,
+    login_background_url: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.login_background_url,
+    primary_color: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.primary_color,
+    secondary_color: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.secondary_color,
+    accent_color: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.accent_color,
+    login_welcome_text: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.login_welcome_text,
+    footer_text: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.footer_text,
+    address: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.address,
+    contact_email: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.contact_email,
+    contact_number: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.contact_number,
+    school_head_name: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_head_name,
+    school_head_title: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_head_title,
+    region: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.region,
+    division: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.division,
+    district: AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.district,
+    school_id: current.school_id || AUTHORITATIVE_DEFAULT_SCHOOL_SETTINGS.school_id,
     updated_by_id: actorUserId,
   };
 
@@ -204,15 +285,19 @@ export async function resetSchoolSettings(
     category: 'CONFIGURATION',
     resourceType: 'school_settings',
     resourceId: 'default',
-    targetLabel: 'School Visual Branding',
+    targetLabel: 'School Customization Defaults Restored',
     result: 'SUCCESS',
     previousState: {
+      school_name: current.school_name,
+      school_short_name: current.school_short_name,
       primary_color: current.primary_color,
       secondary_color: current.secondary_color,
       accent_color: current.accent_color,
       logo_url: current.logo_url,
     },
     newState: {
+      school_name: updated.school_name,
+      school_short_name: updated.school_short_name,
       primary_color: updated.primary_color,
       secondary_color: updated.secondary_color,
       accent_color: updated.accent_color,
@@ -223,5 +308,5 @@ export async function resetSchoolSettings(
     userAgent: clientMeta?.userAgent,
   });
 
-  return updated;
+  return formatSchoolSettingsResponse(updated);
 }

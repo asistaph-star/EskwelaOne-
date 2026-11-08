@@ -3,6 +3,7 @@ import { apiClient } from './client';
 
 export interface UserProfile {
   id: string;
+  school_id?: string;
   email: string;
   first_name: string;
   last_name: string;

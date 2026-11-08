@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import prisma from '../config/database.js';
 import { generateId } from '../common/utils/uuid.js';
 import { authMiddleware, requirePermissions, AuthenticatedUser } from '../common/middleware/auth.js';
@@ -8,14 +7,18 @@ import { AppError } from '../common/middleware/errorHandler.js';
 import { config } from '../config/env.js';
 import multer from 'multer';
 import { fileTypeFromBuffer } from 'file-type';
-import jwt from 'jsonwebtoken';
-import path from 'path';
 import fs from 'fs';
 import { createDocumentsDocRequest, updateDocumentRequest } from '../modules/document-requests/documentRequests.service.js';
 import { createDocumentsDocRequestSchema, updateDocumentRequestSchema } from '../modules/document-requests/documentRequests.schema.js';
-
-// Constants for local storage
 import { getMediaStoragePath } from '../config/storage.config.js';
+import {
+  authorizeDocumentAccess,
+  resolveSafeStorageFilePath,
+  setPrivateDocumentResponseHeaders,
+  signDocumentDownloadToken,
+  toPublicDocumentMetadata,
+  verifyDocumentDownloadToken,
+} from './documentSecurity.service.js';
 
 const STORAGE_DIR = getMediaStoragePath();
 
@@ -35,33 +38,19 @@ const router = Router();
 router.get('/serve', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.query.token as string;
-    if (!token) {
-      throw new AppError(401, 'UNAUTHORIZED', 'Missing download token.');
-    }
+    const { documentId } = verifyDocumentDownloadToken(token, config.jwt.secret);
 
-    // Verify token
-    const secret = config.jwt.secret;
-    let payload: any;
-    try {
-      payload = jwt.verify(token, secret);
-    } catch (err) {
-      throw new AppError(401, 'UNAUTHORIZED', 'Invalid or expired download token.');
-    }
-
-    const documentId = payload.documentId;
     const document = await prisma.document.findUnique({ where: { id: documentId } });
-    
     if (!document) {
       throw new AppError(404, 'NOT_FOUND', 'Document not found.');
     }
 
-    const filePath = path.join(STORAGE_DIR, document.storage_key);
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, document.storage_key);
     if (!fs.existsSync(filePath)) {
-      throw new AppError(404, 'NOT_FOUND', 'File not found on disk.');
+      throw new AppError(404, 'NOT_FOUND', 'Document file not found.');
     }
 
-    res.setHeader('Content-Type', document.mime_type);
-    res.setHeader('Content-Disposition', `inline; filename="${document.filename}"`);
+    setPrivateDocumentResponseHeaders(res, document.mime_type, document.filename, 'inline');
     res.sendFile(filePath);
   } catch (err) {
     next(err);
@@ -72,15 +61,25 @@ router.use(authMiddleware);
 
 /**
  * POST /api/documents/upload
- * Upload a document (e.g. for excuse letters or requests).
- * Restricts to Student, Teacher, Staff, or Admin.
+ * Upload a document (e.g. for excuse letters, ranking records,clinic attachments, or requests).
+ * Restricts to authenticated school roles.
  */
 router.post('/upload', upload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authUser = (req as any).user as AuthenticatedUser;
-    
+
     // 1. Role Check
-    const allowedRoles = ['Student', 'Teacher', 'Staff', 'Admin'];
+    const allowedRoles = [
+      'Student',
+      'Teacher',
+      'Staff',
+      'Nurse',
+      'Guidance',
+      'Registrar',
+      'Principal',
+      'Admin',
+      'ITAdmin',
+    ];
     const hasAccess = authUser.roles.some(r => allowedRoles.includes(r));
     if (!hasAccess) {
       throw new AppError(403, 'FORBIDDEN', 'Your role is not allowed to upload documents.');
@@ -97,25 +96,33 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
     const recentUploadCount = await prisma.document.count({
       where: {
         uploaded_by: authUser.id,
-        created_at: { gte: twentyFourHoursAgo }
-      }
+        created_at: { gte: twentyFourHoursAgo },
+      },
     });
 
     if (recentUploadCount >= 10) {
-      throw new AppError(429, 'TOO_MANY_REQUESTS', 'You have reached the maximum number of file uploads allowed per day.');
+      throw new AppError(
+        429,
+        'TOO_MANY_REQUESTS',
+        'You have reached the maximum number of file uploads allowed per day.'
+      );
     }
 
     // 4. Magic Bytes Validation
     const fileType = await fileTypeFromBuffer(file.buffer);
     const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    
+
     if (!fileType || !allowedMimeTypes.includes(fileType.mime)) {
-      throw new AppError(400, 'BAD_REQUEST', 'Invalid file type. Only PDF, JPEG, and PNG are allowed.');
+      throw new AppError(
+        400,
+        'BAD_REQUEST',
+        'Invalid file type. Only PDF, JPEG, and PNG are allowed.'
+      );
     }
 
-    // 5. Save to Disk
+    // 5. Save to Disk with Safe Path Containment
     const storageKey = `${generateId()}${fileType.ext ? '.' + fileType.ext : ''}`;
-    const filePath = path.join(STORAGE_DIR, storageKey);
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, storageKey);
     fs.writeFileSync(filePath, file.buffer);
 
     // 6. Create DB Record
@@ -127,7 +134,7 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
         mime_type: fileType.mime,
         size_bytes: file.size,
         uploaded_by: authUser.id,
-      }
+      },
     });
 
     // 7. Audit Log
@@ -137,11 +144,16 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
       action: 'DOCUMENT_UPLOADED',
       resourceType: 'document',
       resourceId: documentRecord.id,
-      newState: { filename: documentRecord.filename, mime_type: documentRecord.mime_type, size_bytes: documentRecord.size_bytes },
+      newState: {
+        filename: documentRecord.filename,
+        mime_type: documentRecord.mime_type,
+        size_bytes: documentRecord.size_bytes,
+      },
       correlationId,
     });
 
-    res.status(201).json({ success: true, data: documentRecord });
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.status(201).json({ success: true, data: toPublicDocumentMetadata(documentRecord) });
   } catch (err) {
     next(err);
   }
@@ -151,37 +163,62 @@ router.post('/upload', upload.single('file'), async (req: Request, res: Response
  * POST /api/documents/requests
  * Submit a new document request.
  */
-router.post('/requests', requirePermissions('document:request'), async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const input = createDocumentsDocRequestSchema.parse(req.body);
-    const correlationId = (req as any).correlationId;
-    const actorId = ((req as any).user as AuthenticatedUser).id;
+router.post(
+  '/requests',
+  requirePermissions('document:request'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const input = createDocumentsDocRequestSchema.parse(req.body);
+      const correlationId = (req as any).correlationId;
+      const actorId = ((req as any).user as AuthenticatedUser).id;
 
-    const request = await createDocumentsDocRequest(input, actorId, correlationId);
+      const request = await createDocumentsDocRequest(input, actorId, correlationId);
 
-    res.status(201).json({ success: true, data: request });
-  } catch (err) {
-    next(err);
+      res.status(201).json({ success: true, data: request });
+    } catch (err) {
+      next(err);
+    }
   }
-});
-
-
+);
 
 /**
  * PATCH /api/documents/requests/:id
  * Update a document request (e.g. approve, reject, mark ready).
  */
-router.patch('/requests/:id', requirePermissions('document:approve'), async (req: Request, res: Response, next: NextFunction) => {
+router.patch(
+  '/requests/:id',
+  requirePermissions('document:approve'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = String(req.params.id);
+      const input = updateDocumentRequestSchema.parse(req.body);
+      const actorId = ((req as any).user as AuthenticatedUser).id;
+      const correlationId = (req as any).correlationId;
+      const userRoles = ((req as any).user as AuthenticatedUser).roles;
+
+      const updated = await updateDocumentRequest(id, input, actorId, correlationId, userRoles);
+
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/documents/:id
+ * Retrieve public metadata for a specific document if and only if the caller is authorized.
+ * Never exposes internal storage_key or filesystem paths.
+ */
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const id = String(req.params.id);
-    const input = updateDocumentRequestSchema.parse(req.body);
-    const actorId = ((req as any).user as AuthenticatedUser).id;
-    const correlationId = (req as any).correlationId;
-    const userRoles = ((req as any).user as AuthenticatedUser).roles;
+    const documentId = String(req.params.id);
+    const authUser = (req as any).user as AuthenticatedUser;
 
-    const updated = await updateDocumentRequest(id, input, actorId, correlationId, userRoles);
+    const document = await authorizeDocumentAccess(prisma, documentId, authUser);
 
-    res.json({ success: true, data: updated });
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.json({ success: true, data: toPublicDocumentMetadata(document) });
   } catch (err) {
     next(err);
   }
@@ -190,54 +227,26 @@ router.patch('/requests/:id', requirePermissions('document:approve'), async (req
 /**
  * POST /api/documents/:id/presign-download
  * Generate a short-lived presigned URL for document download.
- * Requires proper authorization to view the document.
+ * Enforces strict per-document, relationship-aware authorization.
  */
-router.post('/:id/presign-download', requirePermissions('document:read'), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/:id/presign-download', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const documentId = req.params.id as string;
-    const actorId = ((req as any).user as AuthenticatedUser).id;
+    const documentId = String(req.params.id);
+    const authUser = (req as any).user as AuthenticatedUser;
+    const actorId = authUser.id;
     const correlationId = (req as any).correlationId;
 
-    const document = await prisma.document.findUnique({
-      where: { id: documentId }
-    });
+    const document = await authorizeDocumentAccess(prisma, documentId, authUser);
 
-    if (!document) {
-      throw new AppError(404, 'NOT_FOUND', 'Document not found.');
-    }
+    // Ensure the underlying storage_key is valid before issuing a download token
+    resolveSafeStorageFilePath(STORAGE_DIR, document.storage_key);
 
-    // Verify the user has the right to access THIS specific document
-    const authUser = (req as any).user as AuthenticatedUser;
-
-    if (authUser.roles.includes('Student')) {
-      const student = await prisma.student.findUnique({ where: { user_id: authUser.id } });
-      if (!student) {
-        throw new AppError(403, 'FORBIDDEN', 'Student profile not found.');
-      }
-      
-      const isUploader = document.uploaded_by === authUser.id;
-      
-      const docRequest = await prisma.documentRequest.findFirst({
-        where: { attached_document_id: document.id, student_id: student.id }
-      });
-      
-      const excuse = await prisma.excuseLetter.findFirst({
-        where: { document_id: document.id, student_id: student.id }
-      });
-
-      if (!isUploader && !docRequest && !excuse) {
-        throw new AppError(403, 'FORBIDDEN', 'You do not have access to this document.');
-      }
-    } else if (!authUser.permissions.includes('document:read')) {
-      if (document.uploaded_by !== authUser.id) {
-        throw new AppError(403, 'FORBIDDEN', 'You do not have permission to read this document.');
-      }
-    }
-
-    // Generate a temporary JWT-backed URL to serve the file
-    const secret = config.jwt.secret;
-    // Expire in 5 minutes (standard presigned URL expiry)
-    const token = jwt.sign({ documentId: document.id }, secret, { expiresIn: '5m' });
+    // Generate a temporary purpose-bound JWT-backed URL to serve the file (expires in 5 minutes)
+    const token = signDocumentDownloadToken(
+      { documentId: document.id, actorUserId: actorId },
+      config.jwt.secret,
+      300
+    );
     const localUrl = `/api/documents/serve?token=${token}`;
 
     await createAuditLog({
@@ -248,6 +257,7 @@ router.post('/:id/presign-download', requirePermissions('document:read'), async 
       correlationId,
     });
 
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
     res.json({ success: true, data: { url: localUrl, expires_in: 300 } });
   } catch (err) {
     next(err);

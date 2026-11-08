@@ -112,11 +112,11 @@ export function FacultyAttendanceTable() {
               Daily Faculty Attendance
             </h2>
             <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              PRIN-014 Read-Only
+              Read-Only
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            {settings.schoolName ? `${settings.schoolName} · ` : ''}Official Faculty Attendance Roster (Asia/Manila)
+            {settings.schoolName ? `${settings.schoolName}, ` : ''}Official Faculty Attendance Roster
           </p>
         </div>
 
@@ -250,7 +250,7 @@ export function FacultyAttendanceTable() {
               <th className="py-3 px-4">Teacher Name</th>
               <th className="py-3 px-4">Employee ID</th>
               <th className="py-3 px-4">Department</th>
-              <th className="py-3 px-4">Position / Rank</th>
+              <th className="py-3 px-4">Position</th>
               <th className="py-3 px-4">Time In</th>
               <th className="py-3 px-4">Time Out</th>
               <th className="py-3 px-4 text-center">Status</th>

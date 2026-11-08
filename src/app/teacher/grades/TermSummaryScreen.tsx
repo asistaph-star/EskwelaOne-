@@ -13,32 +13,46 @@ import {
 
 export function TermSummaryScreen() {
   const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
-  const [sectionId, setSectionId] = useState<string>("");
+  const [assignmentId, setAssignmentId] = useState<string>("");
   const [roster, setRoster] = useState<StudentEnrollment[]>([]);
   const [gradebooks, setGradebooks] = useState<Record<string, Gradebook>>({});
 
-  const activeTerms = ["T1", "T2", "T3"];
+  const [activeTerms, setActiveTerms] = useState<string[]>(["T1", "T2", "T3"]);
 
   useEffect(() => {
-    academicApi.getMyAssignments('AY2025').then(res => {
-      if (res && res.length > 0) {
-        setAssignments(res);
-        setSectionId(res[0].section_id);
+    academicApi.getYears().then(years => {
+      const activeYear = years?.find((y: any) => y.is_current) || years?.[0];
+      if (activeYear) {
+        academicApi.getTerms(activeYear.id).then(terms => {
+          if (terms && terms.length > 0) {
+            setActiveTerms(terms.map((t: any) => t.key));
+          }
+        }).catch(console.error);
+
+        academicApi.getMyAssignments(activeYear.id).then(res => {
+          if (res && res.length > 0) {
+            setAssignments(res);
+            setAssignmentId(res[0].id);
+          }
+        }).catch(console.error);
       }
     }).catch(console.error);
   }, []);
 
+  const selectedAssignment = assignments.find(a => a.id === assignmentId) || assignments[0];
+  const sectionId = selectedAssignment?.section_id;
+
   useEffect(() => {
-    if (!sectionId) return;
+    if (!selectedAssignment || !sectionId) return;
     academicApi.getSectionRoster(sectionId).then(res => {
       if (res) {
         setRoster(res);
       }
     }).catch(console.error);
 
-    const assignment = assignments.find(a => a.section_id === sectionId);
-    if (assignment && assignment.gradebooks) {
-      assignment.gradebooks.forEach((gb: any) => {
+    setGradebooks({});
+    if (selectedAssignment.gradebooks) {
+      selectedAssignment.gradebooks.forEach((gb: any) => {
         gradebookApi.getGradebook(gb.id).then(res => {
           if (res) {
             setGradebooks(prev => ({ ...prev, [gb.term.key]: res }));
@@ -46,9 +60,8 @@ export function TermSummaryScreen() {
         }).catch(console.error);
       });
     }
-  }, [sectionId, assignments]);
+  }, [assignmentId, selectedAssignment, sectionId]);
 
-  const selectedAssignment = assignments.find(a => a.section_id === sectionId);
   const selectedSubject = selectedAssignment?.subject?.name || "";
   const isTechnical = /tle|tech|tve|vocational|ict/i.test(selectedSubject);
   const subjectType: 'CORE' | 'TECHNICAL' = isTechnical ? 'TECHNICAL' : 'CORE';
@@ -92,7 +105,7 @@ export function TermSummaryScreen() {
 
   const finals = roster.map(s => {
     const grades = activeTerms.map(t => termGradeFor(s.id, t));
-    return calculateAnnualFinalGrade(grades[0], grades[1], grades[2]).finalGrade;
+    return calculateAnnualFinalGrade(grades[0], grades[1], grades[2], grades[3], activeTerms.length).finalGrade;
   }).filter((g): g is number => g !== null && g > 0);
 
   const passing = finals.filter(g => g >= 75).length;
@@ -105,12 +118,18 @@ export function TermSummaryScreen() {
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "transparent" }}>
       <div style={{ background: "#fff", borderBottom: `1px solid ${C.borderMed}`, padding: "9px 18px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 9, color: C.t3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em" }}>Section</span>
+          <span style={{ fontSize: 9, color: C.t3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em" }}>Teaching Class</span>
           <div style={{ position: "relative" }}>
-            <select value={sectionId} onChange={e => setSectionId(e.target.value)}
-              style={{ border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "4px 22px 4px 7px", fontSize: 12, color: C.t1, background: "#fff", outline: "none", appearance: "none", cursor: "pointer" }}>
+            <select
+              id="select-term-summary-assignment"
+              value={assignmentId}
+              onChange={e => setAssignmentId(e.target.value)}
+              style={{ border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "4px 22px 4px 7px", fontSize: 12, color: C.t1, background: "#fff", outline: "none", appearance: "none", cursor: "pointer" }}
+            >
               {assignments.map(a => (
-                <option key={a.section_id} value={a.section_id}>Gr. {a.section.grade_level} {a.section.name}</option>
+                <option key={a.id} value={a.id}>
+                  Grade {a.section?.grade_level} — {a.section?.name} : {a.subject?.name}
+                </option>
               ))}
             </select>
             <ChevronDown size={11} style={{ position: "absolute", right: 5, top: "50%", transform: "translateY(-50%)", color: C.t3, pointerEvents: "none" }} />
@@ -169,7 +188,7 @@ export function TermSummaryScreen() {
           <tbody>
             {roster.map((student, idx) => {
               const grades = activeTerms.map(t => termGradeFor(student.id, t));
-              const finalObj = calculateAnnualFinalGrade(grades[0], grades[1], grades[2]);
+              const finalObj = calculateAnnualFinalGrade(grades[0], grades[1], grades[2], grades[3], activeTerms.length);
               const fa = finalObj.finalGrade;
               const passed = fa !== null && fa >= 75;
               const rowBg = idx % 2 === 0 ? "#fff" : C.paper;

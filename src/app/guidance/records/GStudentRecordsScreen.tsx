@@ -117,7 +117,7 @@ export function GStudentRecordsScreen() {
           {/* Header */}
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Student Records</h1>
-            <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Search and review student guidance history, behavioral patterns, and AI-generated case insights.</div>
+            <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Search and review student guidance records, behavioral patterns, and case summaries.</div>
           </div>
 
           {/* Search Bar */}
@@ -193,7 +193,7 @@ export function GStudentRecordsScreen() {
                       <div style={{ fontSize: 12, color: C.t3, marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
                         <span>LRN: {student.lrn}</span>
                         <span>•</span>
-                        <span>{student.grade} – {student.section}</span>
+                        <span>{student.grade}, Section {student.section}</span>
                       </div>
                     </div>
 
@@ -257,7 +257,9 @@ export function GStudentRecordsScreen() {
             <div style={{ fontSize: 13, color: C.t3, marginTop: 4, display: "flex", gap: 16, flexWrap: "wrap" }}>
               <span><strong style={{ color: C.t2 }}>LRN:</strong> {selected.lrn}</span>
               <span>•</span>
-              <span><strong style={{ color: C.t2 }}>Grade & Section:</strong> {selected.grade} – {selected.section}</span>
+              <span><strong style={{ color: C.t2 }}>Grade Level:</strong> {selected.grade}</span>
+              <span>•</span>
+              <span><strong style={{ color: C.t2 }}>Section:</strong> {selected.section}</span>
             </div>
           </div>
           <span style={{
@@ -281,7 +283,7 @@ export function GStudentRecordsScreen() {
             <Users size={18} color={C.amber} />
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Parent / Guardian</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Parent or Guardian</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{selected.parentName}</div>
             <div style={{ display: "flex", gap: 20, marginTop: 6, flexWrap: "wrap" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: C.t2 }}>

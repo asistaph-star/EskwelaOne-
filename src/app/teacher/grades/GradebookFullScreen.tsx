@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { C } from '../../shared/constants/tokens';
 import { TermKey, TermData, GbItem, GbGrades, ExamItem } from '../../shared/types';
-import { ChevronDown, FileText, ChevronLeft, Plus, Download, Save, Trash2, Edit2, Settings } from 'lucide-react';
+import { ChevronDown, FileText, ChevronLeft, Plus, Download, Save, Trash2, Edit2, Settings, CheckCircle2, Lock, Unlock, Clock, AlertCircle, AlertTriangle, Award } from 'lucide-react';
 import { Stamp } from '../../shared/components/Stamp';
+import { ModernConfirmModal } from '../../shared/components/ModernConfirmModal';
+import { ModernToast, ToastMessage } from '../../shared/components/ModernToast';
+import { ReportCardReleaseConsole } from '../../shared/components/ReportCardReleaseConsole';
 import { useMyClasses } from '../shared/useMyClasses';
 import {
   calculateStudentGrade,
@@ -17,14 +20,15 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
   const [ROSTER, setRoster] = useState<any[]>([]);
   const [allData, setAllData] = useState<Record<TermKey, TermData>>({} as any);
   const [term, setTerm] = useState<TermKey>("T1");
-  const [view, setView] = useState<"ledger" | "summary">("ledger");
   const [tCount, setTCount] = useState<number>(3);
   const activeTerms = Array.from({ length: tCount }, (_, i) => `T${i + 1}`);
   const [isLoading, setIsLoading] = useState(true);
   const { myClasses, isLoading: isLoadingClasses } = useMyClasses();
 
   const cls = myClasses.find(c => c.id === classId) ?? myClasses[0];
-  const section = cls ? `Gr. ${cls.grade} ${cls.section}` : '';
+  const [view, setView] = useState<"ledger" | "summary">("ledger");
+
+  const section = cls ? `Grade ${cls.grade}, Section ${cls.section}` : '';
   const isTechnical = (cls?.subject && /tle|tech|tve|vocational|ict/i.test(cls.subject)) || false;
   const subjectType: 'CORE' | 'TECHNICAL' = isTechnical ? 'TECHNICAL' : 'CORE';
 
@@ -38,17 +42,27 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
     import('../../../api/client').then(({ apiClient }) => {
       apiClient.get(`/gradebooks/ledger?classId=${classId}`)
         .then((res: any) => {
-          if (res) {
-            setAllData(res.terms || {});
-            setRoster(res.roster || []);
-            if (res.terms?.[term]?.customWeights) {
-              setWeights(res.terms[term].customWeights);
-            } else if (res.weights) {
-              setWeights(res.weights);
+          const ledgerData = res?.data || res;
+          if (ledgerData) {
+            setAllData(ledgerData.terms || {});
+            setRoster(ledgerData.roster || []);
+            if (ledgerData.terms?.[term]?.customWeights) {
+              setWeights(ledgerData.terms[term].customWeights);
+            } else if (ledgerData.weights) {
+              setWeights(ledgerData.weights);
             }
-            const ts = Object.keys(res.terms || {}).filter(k => k.startsWith('T')).map(k => parseInt(k.substring(1))).filter(n => !isNaN(n));
-            if (ts.length > 0) setTCount(Math.max(...ts, 3));
+            const ts = Object.keys(ledgerData.terms || {}).filter(k => k.startsWith('T')).map(k => parseInt(k.substring(1))).filter(n => !isNaN(n));
+            if (ts.length > 0) {
+              setTCount(Math.max(...ts));
+              const validKeys = Object.keys(ledgerData.terms || {});
+              if (!validKeys.includes(term)) {
+                setTerm((validKeys[0] as TermKey) || 'T1');
+              }
+            }
           }
+        })
+        .catch((err) => {
+          console.warn('Could not load ledger for class:', err);
         })
         .finally(() => setIsLoading(false));
     });
@@ -64,6 +78,21 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
   const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
   const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
   const [isEditingExamCategoryWeight, setIsEditingExamCategoryWeight] = useState(false);
+
+  /* ── modern modal & notification states ── */
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+  const [reopenError, setReopenError] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [publishBlockingError, setPublishBlockingError] = useState<string | null>(null);
+  const [showSf9Console, setShowSf9Console] = useState(false);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ id: Date.now(), message, type });
+  };
 
   /* ── convenience accessors for the active term ── */
   const qd = allData[term] || { wwItems: [], ptItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} };
@@ -120,10 +149,18 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
   /* active term shortcuts */
   const getCalc = (sid: number | string) => studentCalcFor(sid, qd);
   const getQGrade = (sid: number | string) => tGradeFor(sid, qd);
+  const termDisplay = term === 'T1' ? 'Term 1' : term === 'T2' ? 'Term 2' : term === 'T3' ? 'Term 3' : term;
+  const totalEnrolled = ROSTER.length;
+  const incompleteStudents = ROSTER.filter(s => {
+    const g = getQGrade(s.id);
+    return typeof g !== 'number' || g < 60 || g > 100;
+  });
+  const incompleteCount = incompleteStudents.length;
+  const isGradeComplete = totalEnrolled > 0 && incompleteCount === 0;
 
   /* ── update cell value (writes into active term) ── */
   function setCell(sid: number | string, iid: string, val: string) {
-    const cleanVal = val.replace(/[^\d.]/g, "");
+    const cleanVal = val.trim();
     setAllData(prev => {
       const currentTerm = prev[term] || { wwItems: [], ptItems: [], st1Max: 25, st2Max: 25, teMax: 50, qaMax: 50, grades: {} };
       const currentStudentGrades = currentTerm.grades[sid] ?? {};
@@ -147,11 +184,13 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
   /* ── add activity columns (adds to active term only) ── */
   function addWW() {
     const n = wwItems.length + 1;
+    // Use timestamp-based unique IDs to avoid collisions with columns from other gradebooks.
+    const uniqueId = `ww_${Date.now()}`;
     setAllData(prev => ({
       ...prev,
       [term]: {
         ...(prev[term] || { wwItems: [], ptItems: [], grades: {} }),
-        wwItems: [...(prev[term]?.wwItems || []), { id: `ww${n}`, label: `WW ${n}`, max: 100 }]
+        wwItems: [...(prev[term]?.wwItems || []), { id: uniqueId, label: `WW ${n}`, max: 100 }]
       }
     }));
   }
@@ -169,11 +208,13 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
 
   function addPT() {
     const n = ptItems.length + 1;
+    // Use timestamp-based unique IDs to avoid collisions with columns from other gradebooks.
+    const uniqueId = `pt_${Date.now()}`;
     setAllData(prev => ({
       ...prev,
       [term]: {
         ...(prev[term] || { wwItems: [], ptItems: [], grades: {} }),
-        ptItems: [...(prev[term]?.ptItems || []), { id: `pt${n}`, label: `PT ${n}`, max: 100 }]
+        ptItems: [...(prev[term]?.ptItems || []), { id: uniqueId, label: `PT ${n}`, max: 100 }]
       }
     }));
   }
@@ -333,21 +374,44 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
     desc: 96
   };
 
+  
+  function getCellScoreError(val: string, max: number): string | null {
+  if (val === null || val === undefined || val === '') return null;
+  const str = String(val).trim();
+  if (str === '') return null;
+  if (str.startsWith('-')) return 'Score cannot be negative';
+  if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(str)) {
+    if (/^\d+\.\d{3,}$/.test(str) || /^\.\d{3,}$/.test(str)) return 'Max 2 decimal places allowed';
+    return 'Enter numeric score only';
+  }
+  const n = Number(str);
+  if (!Number.isFinite(n) || n < 0) return 'Invalid score';
+  if (max > 0 && n > max) return `Score exceeds max (${max})`;
+  return null;
+}
+
   /* ── editable data cell ── */
-  function Cell(sid: number | string, iid: string, max: number) {
+  function Cell(sid: number | string, iid: string, max: number, colLabel?: string) {
     const key = `${sid}:${iid}`;
     const val = grades[sid]?.[iid] ?? "";
     const isAct = activeCell === key;
+    const err = getCellScoreError(val, max);
+    const hasError = err !== null;
     const num = parseFloat(val);
-    const pct = (!isNaN(num) && max > 0 && val !== "") ? num / max * 100 : null;
+    const pct = (!isNaN(num) && max > 0 && val !== "" && !hasError) ? num / max * 100 : null;
     const fail = pct !== null && pct < 75;
-    const over = !isNaN(num) && num > max && val !== "";
     return (
       <td key={iid}
+        title={err ? `${colLabel || iid}: ${err}` : undefined}
         style={{
-          width: W.act, minWidth: W.act, maxWidth: W.act, border: `0.5px solid ${C.border}`, padding: 0,
-          background: isAct ? "#EFF6FF" : fail ? C.redBg : "#fff",
-          outline: isAct ? `2px solid #3B82F6` : "none", outlineOffset: -2, cursor: "cell"
+          width: W.act, minWidth: W.act, maxWidth: W.act,
+          border: hasError ? "1.5px solid #EF4444" : `0.5px solid ${C.border}`,
+          padding: 0,
+          background: hasError ? "#FEF2F2" : isAct ? "#EFF6FF" : fail ? C.redBg : "#fff",
+          outline: hasError ? "2px solid #EF4444" : isAct ? `2px solid #3B82F6` : "none",
+          outlineOffset: -2,
+          cursor: "cell",
+          position: "relative"
         }}
         onClick={() => { if (!isAct) setActiveCell(key); }}>
         {isAct
@@ -358,15 +422,22 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
               style={{
                 width: "100%", height: "100%", minHeight: 30, border: "none", outline: "none",
                 textAlign: "center", fontSize: 12, fontFamily: "'JetBrains Mono',monospace",
-                background: "transparent", padding: "4px", boxSizing: "border-box"
+                background: "transparent", padding: "4px", boxSizing: "border-box",
+                color: hasError ? "#DC2626" : "inherit"
               }} />
           : <div style={{
               padding: "7px 3px", textAlign: "center", fontSize: 12,
               fontFamily: "'JetBrains Mono',monospace",
-              color: over ? C.amber : fail ? C.red : C.t1,
+              color: hasError ? "#DC2626" : fail ? C.red : C.t1,
+              fontWeight: hasError ? 700 : 400,
               minHeight: 30, display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               {val}
+              {hasError && (
+                <span style={{
+                  position: "absolute", top: 1, right: 2, fontSize: 9, color: "#DC2626", fontWeight: 900
+                }}>!</span>
+              )}
             </div>}
       </td>
     );
@@ -478,6 +549,68 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
   );
 
   const activeAccent = getTAccent(term);
+  const currentTermData = (allData[term] || {}) as any;
+  const isCurrentTermPublished = currentTermData?.status === 'Published';
+
+  const handlePublishConfirm = async () => {
+    if (!currentTermData?.id) return;
+    setIsPublishing(true);
+    setPublishBlockingError(null);
+    try {
+      const { apiClient } = await import('../../../api/client');
+      await apiClient.patch(`/gradebooks/${currentTermData.id}/status`, {
+        status: 'Published'
+      });
+      showToast(`${termDisplay} grades published successfully.`, 'success');
+      setShowPublishModal(false);
+      const targetClassId = classId || cls?.id;
+      if (targetClassId) {
+        const res: any = await apiClient.get(`/gradebooks/ledger?classId=${targetClassId}`);
+        if (res) {
+          setAllData(res.terms || {});
+          setRoster(res.roster || []);
+        }
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.response?.data?.error?.message || err.message;
+      setPublishBlockingError(msg);
+      showToast(`Failed to publish ${termDisplay} grades: ${msg}`, 'error');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleReopenConfirm = async () => {
+    if (!reopenReason || reopenReason.trim().length < 5) {
+      setReopenError('A justification of at least 5 characters is required to reopen published grades.');
+      return;
+    }
+    setReopenError('');
+    setIsReopening(true);
+    try {
+      const { apiClient } = await import('../../../api/client');
+      await apiClient.patch(`/gradebooks/${currentTermData.id}/status`, {
+        status: 'Draft',
+        reason: reopenReason.trim()
+      });
+      showToast(`${term} gradebook successfully reopened as Draft.`, 'success');
+      setShowReopenModal(false);
+      setReopenReason('');
+      const targetClassId = classId || cls?.id;
+      if (targetClassId) {
+        const res: any = await apiClient.get(`/gradebooks/ledger?classId=${targetClassId}`);
+        if (res) {
+          setAllData(res.terms || {});
+          setRoster(res.roster || []);
+        }
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.response?.data?.error?.message || err.message;
+      showToast(`Failed to reopen gradebook: ${msg}`, 'error');
+    } finally {
+      setIsReopening(false);
+    }
+  };
 
   if (isLoadingClasses || !cls) {
     return (
@@ -487,8 +620,18 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
     );
   }
 
+  if (showSf9Console) {
+    return (
+      <ReportCardReleaseConsole
+        portal="Teacher"
+        initialSectionId={cls?.sectionId}
+        onBack={() => setShowSf9Console(false)}
+      />
+    );
+  }
+
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "transparent" }}>
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "transparent" }}>
       {isLoading && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ padding: "12px 24px", background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 8, fontSize: 14, fontWeight: 600, color: C.m700, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
@@ -502,7 +645,6 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
         background: "#fff", borderBottom: `1px solid ${C.borderMed}`, padding: "9px 18px",
         display: "flex", alignItems: "center", gap: 10, flexShrink: 0, flexWrap: "wrap"
       }}>
-
         {!hideBack && <>
           <button onClick={onBack} style={{
             display: "flex", alignItems: "center", gap: 4, fontSize: 11,
@@ -514,20 +656,28 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
           <div style={{ width: 1, height: 22, background: C.border }} />
         </>}
 
-        {/* View toggle: Grade entry / Termly summary */}
+        {/* View toggle */}
         <div style={{ display: "flex", gap: 1, background: C.m50, borderRadius: 5, padding: 2, border: `1px solid ${C.borderMed}` }}>
-          {(["ledger", "summary"] as const).map(v => (
-            <button key={v} onClick={() => setView(v)}
-              style={{
-                padding: "4px 12px", borderRadius: 3, border: "none", cursor: "pointer", fontSize: 11,
-                fontWeight: view === v ? 700 : 400,
-                background: view === v ? C.m700 : "transparent",
-                color: view === v ? "#fff" : C.t2,
-                transition: "all 0.12s"
-              }}>
-              {v === "ledger" ? "Grade entry" : "Termly summary"}
-            </button>
-          ))}
+          <button key="ledger" onClick={() => setView("ledger")}
+            style={{
+              padding: "4px 12px", borderRadius: 3, border: "none", cursor: "pointer", fontSize: 11,
+              fontWeight: view === "ledger" ? 700 : 400,
+              background: view === "ledger" ? C.m700 : "transparent",
+              color: view === "ledger" ? "#fff" : C.t2,
+              transition: "all 0.12s"
+            }}>
+            Grade entry
+          </button>
+          <button key="summary" onClick={() => setView("summary")}
+            style={{
+              padding: "4px 12px", borderRadius: 3, border: "none", cursor: "pointer", fontSize: 11,
+              fontWeight: view === "summary" ? 700 : 400,
+              background: view === "summary" ? C.m700 : "transparent",
+              color: view === "summary" ? "#fff" : C.t2,
+              transition: "all 0.12s"
+            }}>
+            Term summary
+          </button>
         </div>
 
         <div style={{ width: 1, height: 22, background: C.border }} />
@@ -568,6 +718,27 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
           })}
         </div>
 
+        {/* Term Publication Status Pill */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {isCurrentTermPublished ? (
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "4px 10px", borderRadius: 4, fontSize: 11, fontWeight: 700,
+              background: "#dcfce7", color: "#166534", border: "1px solid #bbf7d0"
+            }}>
+              <CheckCircle2 size={12} /> {term} PUBLISHED
+            </span>
+          ) : (
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "4px 10px", borderRadius: 4, fontSize: 11, fontWeight: 700,
+              background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a"
+            }}>
+              <Clock size={12} /> {term} DRAFT
+            </span>
+          )}
+        </div>
+
         <div style={{ width: 1, height: 22, background: C.border, flexShrink: 0 }} />
 
         {/* Weight inputs - authoritative weights */}
@@ -601,85 +772,191 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
           </div>
         )}
 
-        <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-          <button onClick={() => {
-            const targetClassId = classId || cls?.id;
-            if (!targetClassId) {
-              alert("No valid class assignment identified to save grades.");
-              return;
-            }
-            setIsLoading(true);
-            const termsPayload: Record<string, any> = {};
-            const termKeys = Array.from(new Set([...Object.keys(allData), term]));
-            for (const t of termKeys) {
-              const tData = allData[t as TermKey] || (t === term ? qd : { wwItems: [], ptItems: [], grades: {} });
-              const rawExams = (tData.examItems && tData.examItems.length > 0)
-                ? tData.examItems
-                : (t === term ? examItems : [
-                    { id: 'st1', label: 'ST 1', max: tData.st1Max ?? 25, weight: 30 },
-                    { id: 'st2', label: 'ST 2', max: tData.st2Max ?? 25, weight: 30 },
-                    { id: 'te',  label: 'TE',   max: tData.teMax ?? (tData.qaMax ?? 50), weight: 40 }
-                  ]);
-              const sanitizedExams = rawExams.map((ex: any) => ({
-                id: String(ex.id || 'exam'),
-                label: String(ex.label || 'Exam'),
-                max: Math.max(1, Number(ex.max) || 25),
-                weight: Math.max(0, Math.min(100, Number(ex.weight) || 0))
-              }));
-              const sanitizedWw = (tData.wwItems || []).map((it: any) => ({
-                id: String(it.id),
-                label: String(it.label || 'WW'),
-                max: Math.max(1, Number(it.max) || 100)
-              }));
-              const sanitizedPt = (tData.ptItems || []).map((it: any) => ({
-                id: String(it.id),
-                label: String(it.label || 'PT'),
-                max: Math.max(1, Number(it.max) || 100)
-              }));
-              termsPayload[t] = {
-                ...tData,
-                wwItems: sanitizedWw,
-                ptItems: sanitizedPt,
-                examItems: sanitizedExams,
-                customWeights: tData.customWeights || weights,
-                st1Max: Math.max(1, Number(tData.st1Max) || 25),
-                st2Max: Math.max(1, Number(tData.st2Max) || 25),
-                teMax: Math.max(1, Number(tData.teMax || tData.qaMax) || 50),
-                qaMax: Math.max(1, Number(tData.teMax || tData.qaMax) || 50),
-              };
-            }
-            import('../../../api/client').then(({ apiClient }) => {
-              apiClient.post('/gradebooks/ledger', { classId: targetClassId.toString(), terms: termsPayload })
-                .then(() => {
-                  alert("Grades saved and synchronized to official records successfully!");
-                  return apiClient.get(`/gradebooks/ledger?classId=${targetClassId}`);
-                })
-                .then((res: any) => {
-                  if (res) {
-                    setAllData(res.terms || {});
-                    setRoster(res.roster || []);
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Publish / Unpublish Term Action */}
+              {currentTermData?.id && (
+                isCurrentTermPublished ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReopenReason('');
+                      setReopenError('');
+                      setShowReopenModal(true);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                      background: "#fff", color: "#b91c1c", borderRadius: 4, border: "1px solid #f87171", cursor: "pointer",
+                      fontSize: 12, fontWeight: 700
+                    }}
+                    title="Reopen published gradebook for revisions"
+                  >
+                    <Unlock size={13} /> Reopen {termDisplay} Draft
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPublishBlockingError(null);
+                      setShowPublishModal(true);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                      background: "#15803d", color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
+                      fontSize: 12, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                    }}
+                    title={`Publish ${termDisplay} grades`}
+                  >
+                    <Lock size={13} /> Publish {termDisplay} Grades
+                  </button>
+                )
+              )}
+
+              {/* Class Adviser SF9 Readiness & Draft Review (Restricted to Designated Class Adviser) */}
+              {(cls?.adviser || cls?.subject === 'Advisory Class' || String(classId).startsWith('adv-')) && (
+                <button
+                  type="button"
+                  onClick={() => setShowSf9Console(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                    background: "#0284c7", color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
+                    fontSize: 12, fontWeight: 700, boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                  }}
+                  title="Review official Calulut SF9 readiness and draft report cards for your advisory section"
+                >
+                  <Award size={13} /> Advisory SF9 Review
+                </button>
+              )}
+
+              <button onClick={() => {
+                if (isCurrentTermPublished) {
+                  showToast(`${term} grades are PUBLISHED and sealed for SF9. To make modifications, click 'Reopen ${term} Draft' above.`, 'info');
+                  return;
+                }
+                const targetClassId = classId || cls?.id;
+                if (!targetClassId) {
+                  showToast("No valid class assignment identified to save grades.", 'error');
+                  return;
+                }
+
+                // Pre-save validation: Check for any invalid cells across active term
+                const activeTermData = allData[term] || qd;
+                const activeGrades = activeTermData.grades || {};
+                let firstInvalidError: string | null = null;
+                let firstInvalidKey: string | null = null;
+
+                const colMaxMap: Record<string, { max: number; label: string }> = {};
+                (activeTermData.wwItems || []).forEach((w: any) => { colMaxMap[w.id] = { max: Number(w.max) || 100, label: w.label || 'WW' }; });
+                (activeTermData.ptItems || []).forEach((p: any) => { colMaxMap[p.id] = { max: Number(p.max) || 100, label: p.label || 'PT' }; });
+                const exItems = (activeTermData.examItems && activeTermData.examItems.length > 0) ? activeTermData.examItems : [
+                  { id: 'st1', label: 'ST 1', max: activeTermData.st1Max ?? 25 },
+                  { id: 'st2', label: 'ST 2', max: activeTermData.st2Max ?? 25 },
+                  { id: 'te',  label: 'TE',   max: activeTermData.teMax ?? (activeTermData.qaMax ?? 50) }
+                ];
+                exItems.forEach((ex: any) => {
+                  colMaxMap[ex.id] = { max: Number(ex.max) || 25, label: ex.label || 'Exam' };
+                  if (ex.id === 'te') colMaxMap['qa'] = { max: Number(ex.max) || 50, label: 'QA' };
+                });
+
+                for (const sid of Object.keys(activeGrades)) {
+                  const row = activeGrades[sid] || {};
+                  for (const cid of Object.keys(row)) {
+                    const v = row[cid];
+                    const meta = colMaxMap[cid] || { max: 100, label: cid };
+                    const err = getCellScoreError(v, meta.max);
+                    if (err) {
+                      const student = ROSTER.find(r => String(r.id) === String(sid));
+                      const sName = student ? `${student.surname}, ${student.first}` : 'Student';
+                      firstInvalidError = `${sName} (${meta.label}): ${err}`;
+                      firstInvalidKey = `${sid}:${cid}`;
+                      break;
+                    }
                   }
-                })
-                .catch((err: any) => {
-                  const msg = err.response?.data?.message || err.response?.data?.error?.message || err.message || 'Unknown error';
-                  alert("Failed to save grades: " + msg);
-                })
-                .finally(() => setIsLoading(false));
-            });
-          }} style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
-            background: C.m600, color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 700
-          }}>
-            <Save size={13} /> Save to Official Records
-          </button>
-          <button style={{
-            display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
-            background: C.m700, color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 700
-          }}>
-            <Download size={13} /> Export Excel
-          </button>
+                  if (firstInvalidError) break;
+                }
+
+                if (firstInvalidError) {
+                  showToast(`Cannot save: ${firstInvalidError}`, 'error');
+                  if (firstInvalidKey) {
+                    setActiveCell(firstInvalidKey);
+                  }
+                  return;
+                }
+                if (String(targetClassId).startsWith('adv-') || cls?.subject === 'Advisory Class') {
+                  showToast("Class advisers do not directly encode subject grading ledgers. Subject teachers retain exclusive grade encoding authority.", 'info');
+                  return;
+                }
+                setIsLoading(true);
+                const termsPayload: Record<string, any> = {};
+                const termKeys = Array.from(new Set([...Object.keys(allData), term]));
+                for (const t of termKeys) {
+                  const tData = allData[t as TermKey] || (t === term ? qd : { wwItems: [], ptItems: [], grades: {} });
+                  const rawExams = (tData.examItems && tData.examItems.length > 0)
+                    ? tData.examItems
+                    : (t === term ? examItems : [
+                        { id: 'st1', label: 'ST 1', max: tData.st1Max ?? 25, weight: 30 },
+                        { id: 'st2', label: 'ST 2', max: tData.st2Max ?? 25, weight: 30 },
+                        { id: 'te',  label: 'TE',   max: tData.teMax ?? (tData.qaMax ?? 50), weight: 40 }
+                      ]);
+                  const sanitizedExams = rawExams.map((ex: any) => ({
+                    id: String(ex.id || 'exam'),
+                    label: String(ex.label || 'Exam'),
+                    max: Math.max(1, Number(ex.max) || 25),
+                    weight: Math.max(0, Math.min(100, Number(ex.weight) || 0))
+                  }));
+                  const sanitizedWw = (tData.wwItems || []).map((it: any) => ({
+                    id: String(it.id),
+                    label: String(it.label || 'WW'),
+                    max: Math.max(1, Number(it.max) || 100)
+                  }));
+                  const sanitizedPt = (tData.ptItems || []).map((it: any) => ({
+                    id: String(it.id),
+                    label: String(it.label || 'PT'),
+                    max: Math.max(1, Number(it.max) || 100)
+                  }));
+                  termsPayload[t] = {
+                    ...tData,
+                    wwItems: sanitizedWw,
+                    ptItems: sanitizedPt,
+                    examItems: sanitizedExams,
+                    customWeights: tData.customWeights || weights,
+                    st1Max: Math.max(1, Number(tData.st1Max) || 25),
+                    st2Max: Math.max(1, Number(tData.st2Max) || 25),
+                    teMax: Math.max(1, Number(tData.teMax || tData.qaMax) || 50),
+                    qaMax: Math.max(1, Number(tData.teMax || tData.qaMax) || 50),
+                  };
+                }
+                import('../../../api/client').then(({ apiClient }) => {
+                  apiClient.post('/gradebooks/ledger', { classId: targetClassId.toString(), terms: termsPayload })
+                    .then(() => {
+                      showToast("Grades saved and synchronized to official records successfully!", 'success');
+                      return apiClient.get(`/gradebooks/ledger?classId=${targetClassId}`);
+                    })
+                    .then((res: any) => {
+                      if (res) {
+                        setAllData(res.terms || {});
+                        setRoster(res.roster || []);
+                      }
+                    })
+                    .catch((err: any) => {
+                      const msg = err.response?.data?.message || err.response?.data?.error?.message || err.message || 'Unknown error';
+                      showToast("Failed to save grades: " + msg, 'error');
+                    })
+                    .finally(() => setIsLoading(false));
+                });
+              }} style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                background: C.m600, color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 700
+              }}>
+                <Save size={13} /> Save to Official Records
+              </button>
+              <button style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                background: C.m700, color: "#fff", borderRadius: 4, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 700
+              }}>
+                <Download size={13} /> Export Excel
+              </button>
         </div>
       </div>
 
@@ -779,8 +1056,8 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
 
             <tbody>
               {ROSTER.map((student, idx) => {
-                const tGrades = activeTerms.map(q => tGradeFor(student.id, allData[q]));
-                const finalObj = calculateAnnualFinalGrade(tGrades[0], tGrades[1], tGrades[2]);
+                const tGrades = activeTerms.map(q => tGradeFor(student.id, allData[q as TermKey]));
+                const finalObj = calculateAnnualFinalGrade(tGrades[0], tGrades[1], tGrades[2], tGrades[3], activeTerms.length);
                 const finalGrade = finalObj.finalGrade;
                 const passed = finalGrade !== null && finalGrade >= 75;
                 const rowBg = idx % 2 === 0 ? "#fff" : C.paper;
@@ -865,8 +1142,8 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
             </span>
             {(() => {
               const finals = ROSTER.map(s => {
-                const tGrades = activeTerms.map(q => tGradeFor(s.id, allData[q]));
-                return calculateAnnualFinalGrade(tGrades[0], tGrades[1], tGrades[2]).finalGrade;
+                const tGrades = activeTerms.map(q => tGradeFor(s.id, allData[q as TermKey]));
+                return calculateAnnualFinalGrade(tGrades[0], tGrades[1], tGrades[2], tGrades[3], activeTerms.length).finalGrade;
               }).filter((g): g is number => g !== null && g > 0);
               const pass = finals.filter(g => g >= 75).length;
               const fail = finals.filter(g => g < 75).length;
@@ -898,8 +1175,8 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
           GRADE ENTRY LEDGER VIEW (Verified Excel ECR Breakdown)
           ══════════════════════════════════════════════════════════ */}
       {view === "ledger" && (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ flex: 1, overflow: "auto", position: "relative" }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: "auto", position: "relative" }}>
             <table style={{ borderCollapse: "collapse", tableLayout: "fixed", fontSize: 12, minWidth: "max-content", width: "100%" }}>
               <colgroup>
                 <col style={{ width: W.num }} />
@@ -1282,7 +1559,7 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
                       </td>
 
                       {/* WW activity score cells */}
-                      {wwItems.map(it => Cell(student.id, it.id, it.max))}
+                      {wwItems.map(it => Cell(student.id, it.id, it.max, it.label))}
                       {/* WW + placeholder */}
                       <td style={{ border: `0.5px solid ${C.border}`, background: "#F9F5F4" }} />
                       {/* WW Total */}
@@ -1293,7 +1570,7 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
                       {ROCell(calc ? calc.wwWS : "-", { bold: true, color: C.m700, decimals: 2 })}
 
                       {/* PT activity score cells */}
-                      {ptItems.map(it => Cell(student.id, it.id, it.max))}
+                      {ptItems.map(it => Cell(student.id, it.id, it.max, it.label))}
                       {/* PT + placeholder */}
                       <td style={{ border: `0.5px solid ${C.border}`, background: "#F4F5F9" }} />
                       {/* PT Total */}
@@ -1304,7 +1581,7 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
                       {ROCell(calc ? calc.ptWS : "-", { bold: true, color: "hsl(220,50%,34%)", decimals: 2 })}
 
                       {/* EX score cells */}
-                      {examItems.map(it => Cell(student.id, it.id, it.max))}
+                      {examItems.map(it => Cell(student.id, it.id, it.max, it.label))}
                       {/* EX + placeholder */}
                       <td style={{ border: `0.5px solid ${C.border}`, background: "#FDF8F5" }} />
                       {/* EX PS */}
@@ -1368,6 +1645,80 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
           </div>
         </div>
       )}
+
+      {/* ── Modern Modal for Officially Publishing Term Grades ── */}
+      <ModernConfirmModal
+        isOpen={showPublishModal}
+        onClose={() => !isPublishing && setShowPublishModal(false)}
+        onConfirm={handlePublishConfirm}
+        title={`Publish ${termDisplay} Grades`}
+        subtitle={`${cls?.subject ? `${cls.subject} · ` : ''}${section || 'Class Gradebook'} · Calulut Integrated School`}
+        badge={{ text: 'Gradebook Publication', variant: 'info' }}
+        confirmVariant="success"
+        confirmLabel={`Publish ${termDisplay} Grades`}
+        confirmIcon={<Lock size={15} />}
+        isLoading={isPublishing}
+        loadingLabel="Publishing & Snapshotting..."
+        error={publishBlockingError}
+        checklist={[
+          {
+            title: 'Verify student grade completeness',
+            description: isGradeComplete
+              ? `All ${totalEnrolled} enrolled learners have complete recorded grades (60–100) for ${termDisplay}.`
+              : totalEnrolled === 0
+              ? 'Section has no active enrolled students.'
+              : `${incompleteCount} of ${totalEnrolled} student(s) have missing or incomplete grades. Gradebook publication will be blocked by the server.`,
+            status: isGradeComplete ? 'success' : 'warning',
+            icon: isGradeComplete ? (
+              <CheckCircle2 size={13} className="stroke-[2.5]" />
+            ) : (
+              <AlertTriangle size={13} className="stroke-[2.5]" />
+            ),
+          },
+          {
+            title: 'Calculate and save published term-grade snapshots',
+            description: 'Computes and securely stores immutable published grade records in the database for official historical auditing.',
+            status: 'success',
+          },
+          {
+            title: 'Lock the Gradebook after successful publication',
+            description: 'Locks raw score editing for this subject and term until an authorized administrative reopening.',
+            status: 'success',
+          },
+        ]}
+        note="Publishing grades finalizes this subject's term grades. It does not issue or release student report cards."
+      />
+
+      {/* ── Modern Modal for Reopening Published Term Grades ── */}
+      <ModernConfirmModal
+        isOpen={showReopenModal}
+        onClose={() => !isReopening && setShowReopenModal(false)}
+        onConfirm={handleReopenConfirm}
+        title={`Reopen Published ${term} Grades`}
+        subtitle={`${cls?.subject ? `${cls.subject} · ` : ''}${section || 'Class Gradebook'} · Authorized Academic Revision`}
+        badge={{ text: 'Audit Tracked', variant: 'danger' }}
+        confirmVariant="danger"
+        confirmLabel={`Reopen ${term} as Draft`}
+        confirmIcon={<Unlock size={15} />}
+        isLoading={isReopening}
+        loadingLabel="Reopening Gradebook..."
+        inputField={{
+          label: 'Administrative Justification / Reason',
+          placeholder: 'Provide the official academic reason for unlocking grades (e.g., Authorized special exam adjustment approved by School Head)...',
+          value: reopenReason,
+          onChange: (val: string) => {
+            setReopenReason(val);
+            if (reopenError && val.trim().length >= 5) setReopenError('');
+          },
+          minLength: 5,
+          required: true,
+          error: reopenError,
+        }}
+        note="Reopening published grades unlocks raw scores for editing and creates a permanent entry in the school audit log with your justification."
+      />
+
+      {/* ── Modern Floating Toast Notifications ── */}
+      <ModernToast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 }

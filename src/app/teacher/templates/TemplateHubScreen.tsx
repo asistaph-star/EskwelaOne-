@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { BookMarked, Eye, ChevronLeft, Printer, Download, ArrowRight, X, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
-import { Form138 } from '../../shared/components/Form138';
+import { BookMarked, Eye, ChevronLeft, ArrowRight, X, ChevronDown, Loader2, AlertCircle, FileSpreadsheet, ShieldCheck, Sparkles } from 'lucide-react';
+import { AuthenticCalulutSf9Viewer } from '../../shared/components/AuthenticCalulutSf9Viewer';
+import { ReportCardReleaseConsole } from '../../shared/components/ReportCardReleaseConsole';
 import { apiClient } from '../../../api/client';
 
 export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "registrar" }) {
-  const [modal, setModal] = useState<"rc"|null>(null);
+  const [modal, setModal] = useState<"rc" | null>(null);
   
   // Real workflow: fetch authorized students
   const [students, setStudents] = useState<any[]>([]);
@@ -15,15 +16,18 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
   // Report Card State
   const [rcData, setRcData] = useState<any>(null);
   const [loadingRc, setLoadingRc] = useState(false);
-  const [rcError, setRcError] = useState<string|null>(null);
+  const [rcError, setRcError] = useState<string | null>(null);
+  const [showConsole, setShowConsole] = useState<boolean>(false);
   
-  const [viewing, setViewing] = useState<"rc"|null>(null);
+  const [viewing, setViewing] = useState<"rc" | "qa-preview" | null>(null);
 
   const TEMPLATES = [
     {
-      id:"rc" as const, emoji:"📋",
-      title:"Report Card",
-      desc:"Form 138 - Complete academic history across Grade 7–10. Shows authorized grades from the backend database.",
+      id: "rc" as const,
+      emoji: "📋",
+      title: "Report Card (SF9 / Form 138)",
+      badge: "DepEd JHS Standard",
+      desc: "Authentic Calulut Integrated School SF9 (Form 138). Generates the official report card for authorized enrolled learners using the official school Excel format.",
     }
   ];
 
@@ -65,137 +69,209 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
     }
   }
 
-  if (viewing) {
+  if (showConsole) {
     return (
-      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"transparent" }}>
-        <style dangerouslySetInnerHTML={{ __html: `
-          @media print {
-            body * { visibility: hidden; }
-            .printable-doc-area, .printable-doc-area * { visibility: visible; }
-            .printable-doc-area {
-              position: absolute; left: 0; top: 0; width: 100% !important; height: auto !important;
-              overflow: visible !important; padding: 0 !important; margin: 0 !important; background: #fff !important;
-            }
-            .printable-doc-area > div { box-shadow: none !important; border: none !important; margin: 0 !important; max-width: 100% !important; }
-            .no-print { display: none !important; }
-          }
-        ` }} />
+      <ReportCardReleaseConsole
+        portal={role === "registrar" ? "Registrar" : "Teacher"}
+        onBack={() => setShowConsole(false)}
+      />
+    );
+  }
 
-        <div className="no-print" style={{ background:"#fff", borderBottom:`2px solid ${C.m700}`, padding:"0 20px", height:54, display:"flex", alignItems:"center", gap:14, flexShrink:0 }}>
-          <button onClick={()=>{ setViewing(null); setRcData(null); setRcError(null); }}
-            style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, color:C.m700, background:C.m100, border:`1px solid rgba(139,30,30,0.2)`, padding:"6px 12px", borderRadius:4, cursor:"pointer" }}>
-            <ChevronLeft size={13}/> Back to Forms and Records
-          </button>
-          <div style={{ width:1, height:22, background:C.borderMed }} />
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif" }}>
-              DigiSkwela SF9 / Form 138 Report Card
-            </div>
-            <div style={{ fontSize:10, color:C.t3 }}>
-              {rcData ? `${rcData.student.name} · ${rcData.school.academicYear}` : "Loading..."}
-            </div>
-          </div>
-          <button onClick={() => window.print()} disabled={!rcData} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, fontWeight:600, color:rcData ? C.t2 : C.borderMed, background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"6px 12px", cursor:rcData ? "pointer" : "default" }}>
-            <Printer size={13}/> Print
-          </button>
-        </div>
+  // Active Document Viewer View
+  if (viewing === "qa-preview") {
+    return (
+      <AuthenticCalulutSf9Viewer
+        mode="qa-preview"
+        onBack={() => setViewing(null)}
+      />
+    );
+  }
 
-        <div className="printable-doc-area" style={{ flex:1, minHeight: 0, overflowY:"auto", padding:24 }}>
-          {loadingRc && (
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:C.t3 }}>
-              <Loader2 className="animate-spin" size={24} style={{ marginBottom: 12 }} />
-              <div>Fetching authoritative scholastic records...</div>
-            </div>
-          )}
-          
-          {rcError && (
-            <div style={{ maxWidth: 500, margin: "40px auto", padding: 24, background: "#fff", border: `1px solid ${C.borderMed}`, borderTop: `4px solid ${C.red}`, borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10, color:C.red, fontWeight:700, fontSize:16, marginBottom: 8 }}>
-                <AlertCircle size={20} /> Authorization / Data Error
-              </div>
-              <div style={{ color: C.t2, fontSize: 14, lineHeight: 1.5 }}>
-                {rcError}
-              </div>
-            </div>
-          )}
-
-          {rcData && (
-            <Form138 data={rcData} />
-          )}
-        </div>
-      </div>
+  if (viewing === "rc") {
+    return (
+      <AuthenticCalulutSf9Viewer
+        mode="student"
+        studentData={rcData}
+        onBack={() => {
+          setViewing(null);
+          setRcData(null);
+          setRcError(null);
+        }}
+      />
     );
   }
 
   return (
-    <div style={{ flex:1, minHeight: 0, overflowY:"auto", background:"transparent" }}>
-      <div style={{ maxWidth:700, margin:"0 auto", padding:40 }}>
-        <div style={{ marginBottom:32 }}>
-          <div style={{ fontSize:20, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:6 }}>Forms and Records</div>
-          <div style={{ fontSize:13, color:C.t3 }}>Select a document template to view the official record for a student.</div>
-          <div style={{ marginTop:8, padding:"8px 12px", background:C.m50, borderRadius:4, border:`1px solid ${C.m200}`, fontSize:11, color:C.m700 }}>
-            <strong>Note:</strong> The DigiSkwela SF9 / Form 138 is a system-generated representation of scholastic records and does not replace official LIS-issued forms.
+    <div style={{ flex: 1, minHeight: 0, overflowY: "auto", background: "transparent" }}>
+      <div style={{ maxWidth: 840, margin: "0 auto", padding: 40 }}>
+        {/* Screen Header */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 6 }}>
+            Forms and Records
+          </div>
+          <div style={{ fontSize: 13, color: C.t3 }}>
+            Official school document templates and DepEd scholastic records for Calulut Integrated School.
+          </div>
+          
+          <div style={{ marginTop: 12, padding: "10px 14px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0", fontSize: 12, color: "#166534", display: "flex", alignItems: "center", gap: 10 }}>
+            <ShieldCheck size={18} color="#15803d" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>Authentic SF9 Master Template:</strong> Connected to <code>SF9 7-Agoncillo (SY 2026-2027).xlsx</code> (Sheet <code>SF9 - GRADE 4-10</code>). All generated reports use the authentic school format.
+            </span>
+          </div>
+
+          <div style={{ marginTop: 14, padding: "14px 18px", background: "#fff", borderRadius: 8, border: `1px solid ${C.borderMed}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.t1 }}>Section Report Cards &amp; Release Console</div>
+              <div style={{ fontSize: 11.5, color: C.t3, marginTop: 2 }}>Review published subject ratings, verify adviser remarks, issue sealed SF9s, and authorize release to the student portal.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowConsole(true)}
+              style={{ padding: "8px 16px", background: C.m700, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Open Section Console →
+            </button>
           </div>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))", gap:20 }}>
-          {TEMPLATES.map(t=>(
-            <button key={t.id} onClick={()=>setModal(t.id)}
-              style={{ background:"#fff", border:`1px solid ${C.borderMed}`, borderTop:`3px solid ${C.m700}`, borderRadius:4, padding:"24px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:12, transition:"box-shadow 0.15s" }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.boxShadow=`0 4px 20px rgba(139,30,30,0.14)`;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.boxShadow="none";}}>
-              <div style={{ fontSize:40, lineHeight:1 }}>{t.emoji}</div>
+        {/* Template Cards Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 28 }}>
+          {/* Card 1: Official Learner SF9 */}
+          {TEMPLATES.map(t => (
+            <div
+              key={t.id}
+              style={{ background: "#fff", border: `1px solid ${C.borderMed}`, borderTop: `3px solid ${C.m700}`, borderRadius: 6, padding: "24px", textAlign: "left", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 36, lineHeight: 1 }}>{t.emoji}</div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: C.m700, background: C.m100, padding: "3px 8px", borderRadius: 4, textTransform: "uppercase" }}>
+                  {t.badge}
+                </span>
+              </div>
               <div>
-                <div style={{ fontSize:16, fontWeight:700, color:C.t1, fontFamily:"'Fraunces',serif", marginBottom:8 }}>{t.title}</div>
-                <div style={{ fontSize:12, color:C.t3, lineHeight:1.6 }}>{t.desc}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 8 }}>
+                  {t.title}
+                </div>
+                <div style={{ fontSize: 12, color: C.t3, lineHeight: 1.6 }}>
+                  {t.desc}
+                </div>
               </div>
-              <div style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:4, background:C.m700, color:"#fff", fontSize:12, fontWeight:700 }}>
-                View {t.title} <ArrowRight size={13}/>
+              <div style={{ marginTop: "auto", display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => setModal(t.id)}
+                  style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 16px", borderRadius: 4, background: C.m700, color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
+                >
+                  <Eye size={14} /> View Learner Record <ArrowRight size={13} />
+                </button>
               </div>
-            </button>
+            </div>
           ))}
+
+          {/* Card 2: QA / Staff Verification Preview */}
+          <div
+            style={{ background: "#fff", border: "1px solid #bae6fd", borderTop: "3px solid #0284c7", borderRadius: 6, padding: "24px", textAlign: "left", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 36, lineHeight: 1 }}>📊</div>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "#0369a1", background: "#e0f2fe", padding: "3px 8px", borderRadius: 4, textTransform: "uppercase" }}>
+                Staff QA Preview
+              </span>
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 8 }}>
+                Authentic SF9 Template Inspection
+              </div>
+              <div style={{ fontSize: 12, color: C.t3, lineHeight: 1.6 }}>
+                View the authentic Calulut SF9 layout populated with the verified synthetic baseline (Juan Dela Cruz, Grade 7 Agoncillo). Preserves all 76 formulas, 3 terms, 11-month attendance, and school seals.
+              </div>
+            </div>
+            <div style={{ marginTop: "auto", display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setViewing("qa-preview")}
+                style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 16px", borderRadius: 4, background: "#0284c7", color: "#fff", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
+              >
+                <Sparkles size={14} /> Inspect Authentic Template <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Student Selection Modal */}
       {modal && (
-        <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(15,8,8,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
-          onClick={e=>{ if(e.target===e.currentTarget) setModal(null); }}>
-          <div style={{ background:"#fff", borderRadius:4, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 20px 60px rgba(74,10,16,0.4)" }}>
-            <div style={{ background:C.m800, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(15,8,8,0.6)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(null); }}
+        >
+          <div style={{ background: "#fff", borderRadius: 6, width: "100%", maxWidth: 440, overflow: "hidden", boxShadow: "0 20px 60px rgba(74,10,16,0.4)" }}>
+            <div style={{ background: C.m800, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:2 }}>Generate document</div>
-                <div style={{ fontSize:15, fontWeight:700, color:"#fff", fontFamily:"'Fraunces',serif" }}>Report Card</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Calulut Integrated School</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "'Fraunces',serif" }}>Select Learner for SF9 Report Card</div>
               </div>
-              <button onClick={()=>setModal(null)} style={{ width:28, height:28, borderRadius:4, background:"rgba(255,255,255,0.1)", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.7)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <X size={15}/>
+              <button onClick={() => setModal(null)} style={{ width: 28, height: 28, borderRadius: 4, background: "rgba(255,255,255,0.1)", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} />
               </button>
             </div>
 
-            <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
+            <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ display:"block", fontSize:10, fontWeight:700, color:C.t3, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:5 }}>Select Authorized Student</label>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+                  Select Enrolled Learner
+                </label>
                 {loadingStudents ? (
                   <div style={{ fontSize: 13, color: C.t3, padding: "9px 10px" }}>Loading students...</div>
                 ) : (
-                  <div style={{ position:"relative" }}>
-                    <select value={selectedStudentId} onChange={e=>setSelectedStudentId(e.target.value)}
-                      style={{ width:"100%", border:`1px solid ${C.borderMed}`, borderRadius:4, padding:"9px 28px 9px 10px", fontSize:13, color:C.t1, background:"#fff", outline:"none", appearance:"none", cursor:"pointer" }}>
-                      {students.map(s=>(
-                        <option key={s.id} value={s.id}>{s.user?.last_name}, {s.user?.first_name} ({s.current_section?.name})</option>
+                  <div style={{ position: "relative" }}>
+                    <select
+                      value={selectedStudentId}
+                      onChange={e => setSelectedStudentId(e.target.value)}
+                      style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "9px 28px 9px 10px", fontSize: 13, color: C.t1, background: "#fff", outline: "none", appearance: "none", cursor: "pointer" }}
+                    >
+                      {students.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.user?.last_name}, {s.user?.first_name} ({s.current_section?.name || 'Section'})
+                        </option>
                       ))}
                     </select>
-                    <ChevronDown size={12} style={{ position:"absolute", right:9, top:"50%", transform:"translateY(-50%)", color:C.t3, pointerEvents:"none" }}/>
+                    <ChevronDown size={14} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: C.t3, pointerEvents: "none" }} />
                   </div>
                 )}
               </div>
+
+              <div style={{ padding: "10px 12px", background: "#f8fafc", borderRadius: 4, border: "1px solid #e2e8f0", fontSize: 11, color: "#475569" }}>
+                <strong>Academic Gating:</strong> If trimester ratings are draft or incomplete, the official document will remain in protected pending status in accordance with DepEd policy.
+              </div>
+
+              <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModal(null);
+                    setViewing("qa-preview");
+                  }}
+                  style={{ fontSize: 11, color: "#0284c7", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                >
+                  ⚡ Open Synthetic QA Preview instead
+                </button>
+              </div>
             </div>
 
-            <div style={{ padding:"14px 20px", borderTop:`1px solid ${C.borderMed}`, display:"flex", gap:10, justifyContent:"flex-end" }}>
-              <button onClick={()=>setModal(null)} style={{ padding:"9px 18px", background:"#fff", border:`1px solid ${C.borderMed}`, borderRadius:4, cursor:"pointer", fontSize:13, fontWeight:500, color:C.t2 }}>
+            <div style={{ padding: "14px 20px", borderTop: `1px solid ${C.borderMed}`, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setModal(null)}
+                style={{ padding: "9px 18px", background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 4, cursor: "pointer", fontSize: 13, fontWeight: 500, color: C.t2 }}
+              >
                 Cancel
               </button>
-              <button onClick={handleView} disabled={!selectedStudentId} style={{ padding:"9px 22px", background: selectedStudentId ? C.m700 : C.borderMed, color:"#fff", border:"none", borderRadius:4, cursor:selectedStudentId ? "pointer" : "default", fontSize:13, fontWeight:700, display:"flex", alignItems:"center", gap:6 }}>
-                <Eye size={14}/> Generate Report Card
+              <button
+                onClick={handleView}
+                disabled={!selectedStudentId}
+                style={{ padding: "9px 22px", background: selectedStudentId ? C.m700 : C.borderMed, color: "#fff", border: "none", borderRadius: 4, cursor: selectedStudentId ? "pointer" : "default", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <Eye size={14} /> Open Learner SF9
               </button>
             </div>
           </div>

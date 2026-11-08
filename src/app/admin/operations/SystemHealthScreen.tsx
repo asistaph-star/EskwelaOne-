@@ -87,6 +87,14 @@ function getStatusBadgeConfig(status: HealthStatus) {
   }
 }
 
+function maskEmail(email?: string | null): string {
+  if (!email || !email.includes('@')) return email || '';
+  const [localPart, domain] = email.split('@');
+  if (localPart.length <= 2) return `${localPart[0]}***@${domain}`;
+  if (localPart.length <= 4) return `${localPart[0]}***${localPart.slice(-1)}@${domain}`;
+  return `${localPart.slice(0, 2)}***${localPart.slice(-2)}@${domain}`;
+}
+
 interface ComponentCardProps {
   icon: React.ElementType;
   title: string;
@@ -157,6 +165,66 @@ function ComponentCard({ icon: Icon, title, component, isITAdmin, extraMeta }: C
             {badge.label}
           </span>
         </div>
+
+        {/* ChatGPT Authorization Indicator if provided */}
+        {component.authStatus && (
+          <div
+            data-testid="ai-auth-status-panel"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "7px 11px",
+              borderRadius: 6,
+              marginBottom: 11,
+              fontSize: 11.5,
+              backgroundColor:
+                component.authStatus === "AUTHORIZED"
+                  ? "#f0fdf4"
+                  : component.authStatus === "REAUTHORIZATION_REQUIRED"
+                  ? "#fffbeb"
+                  : "#f8fafc",
+              border: `1px solid ${
+                component.authStatus === "AUTHORIZED"
+                  ? "#bbf7d0"
+                  : component.authStatus === "REAUTHORIZATION_REQUIRED"
+                  ? "#fde68a"
+                  : "#e2e8f0"
+              }`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontWeight: 600, color: "#334155" }}>ChatGPT Authorization:</span>
+              <span
+                data-testid="ai-auth-status-badge"
+                style={{
+                  fontWeight: 700,
+                  color:
+                    component.authStatus === "AUTHORIZED"
+                      ? "#15803d"
+                      : component.authStatus === "REAUTHORIZATION_REQUIRED"
+                      ? "#b45309"
+                      : "#64748b",
+                }}
+              >
+                {component.authStatus === "AUTHORIZED" && "Authorized"}
+                {component.authStatus === "REAUTHORIZATION_REQUIRED" && "Reauthorization Required"}
+                {component.authStatus === "NOT_CONNECTED" && "Not Connected"}
+                {component.authStatus === "NOT_CONFIGURED" && "Not Configured"}
+                {component.authStatus === "UNKNOWN" && "Unknown"}
+              </span>
+            </div>
+            {component.authAccount && (
+              <span
+                data-testid="ai-auth-account-label"
+                title="Account email masked for privacy"
+                style={{ color: "#64748b", fontSize: 11, fontFamily: "monospace" }}
+              >
+                {maskEmail(component.authAccount)}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Diagnostic Message */}
         <p style={{ fontSize: 12, color: "#475569", margin: "0 0 12px", lineHeight: 1.5 }}>
@@ -303,6 +371,13 @@ export function SystemHealthScreen() {
       setCurrentTime(new Date());
     }, 1000);
 
+    const handleWindowFocus = () => {
+      const elapsed = Date.now() - lastFetchTimeRef.current;
+      if (elapsed >= 3000) {
+        executeFetch(false);
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         scheduleNextRefresh();
@@ -333,6 +408,7 @@ export function SystemHealthScreen() {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
@@ -341,6 +417,7 @@ export function SystemHealthScreen() {
       if (autoRefreshTimerRef.current) clearInterval(autoRefreshTimerRef.current);
       clearInterval(clockInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -781,7 +858,7 @@ export function SystemHealthScreen() {
                   Disaster Recovery & Operational Backup Status
                 </h2>
                 <div style={{ fontSize: 12, color: C.navyMuted, marginTop: 1 }}>
-                  Calulut Integrated National High School — PostgreSQL 17 Native Archive & Media Volume
+                  Calulut Integrated School Database and Media Backups
                 </div>
               </div>
             </div>
@@ -885,7 +962,7 @@ export function SystemHealthScreen() {
               {backupStatus.operationalMessage}
             </div>
             <div style={{ fontSize: 11, color: "#15803d", fontStyle: "italic" }}>
-              Read-Only Status • Recovery restricted to authorized offline procedures
+              Read-only status. Recovery is restricted to authorized offline procedures.
             </div>
           </div>
         </div>

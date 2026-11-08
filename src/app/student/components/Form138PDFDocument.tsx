@@ -146,18 +146,28 @@ export function Form138PDFDocument({ student, subjects, attendance, schoolName }
     );
   }
 
-  // Calculate Subject Averages
-  function calcSubAvg(sg: any) {
-    const terms = [sg.term1, sg.term2, sg.term3].filter((t): t is number => typeof t === 'number' && t > 0);
-    if (terms.length === 0) return 0;
-    const sum = terms.reduce((a, b) => a + b, 0);
-    return Math.round((sum / terms.length) * 10) / 10;
+  // Calculate Subject Averages strictly requiring all configured terms
+  function calcSubAvg(sg: any): number | null {
+    if (typeof sg.term1 !== 'number' || sg.term1 <= 0 ||
+        typeof sg.term2 !== 'number' || sg.term2 <= 0 ||
+        typeof sg.term3 !== 'number' || sg.term3 <= 0) {
+      return null;
+    }
+    // If term4 was explicitly defined as null, this is an incomplete 4-term year
+    if (sg.term4 === null) {
+      return null;
+    }
+    if (typeof sg.term4 === 'number' && sg.term4 > 0) {
+      return Math.round(((sg.term1 + sg.term2 + sg.term3 + sg.term4) / 4) * 10) / 10;
+    }
+    return Math.round(((sg.term1 + sg.term2 + sg.term3) / 3) * 10) / 10;
   }
 
   // Calculate General Average
-  const allAvgs = subjects.map(s => calcSubAvg(s)).filter(a => a > 0);
-  const genAvg = allAvgs.length > 0 ? (Math.round((allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length) * 10) / 10).toFixed(1) : '0.0';
-  const isPassed = parseFloat(genAvg) >= 75;
+  const allAvgs = subjects.map(s => calcSubAvg(s));
+  const hasAllSubjects = subjects.length > 0 && allAvgs.every((a): a is number => a !== null && a > 0);
+  const genAvg = hasAllSubjects ? (Math.round(((allAvgs as number[]).reduce((a, b) => a + b, 0) / allAvgs.length) * 10) / 10).toFixed(1) : '-';
+  const isPassed = hasAllSubjects && parseFloat(genAvg) >= 75;
 
   return (
     <Document>
@@ -167,7 +177,7 @@ export function Form138PDFDocument({ student, subjects, attendance, schoolName }
           
           <PDFHeaderBar 
             title="Learner's Official Progress Report Card" 
-            subtitle="School Year 2025–2026"
+            subtitle="School Year 2026–2027"
             documentId="DepEd Form 138 / SF9-JHS"
             schoolName={schoolName}
           />
@@ -213,7 +223,7 @@ export function Form138PDFDocument({ student, subjects, attendance, schoolName }
             {/* Table Rows */}
             {subjects.map((subj, idx) => {
               const subjFinal = calcSubAvg(subj);
-              const hasFinal = subjFinal > 0;
+              const hasFinal = subjFinal !== null && subjFinal > 0;
               const passed = hasFinal && subjFinal >= 75;
               return (
                 <View key={subj.name} style={[styles.tableRow, idx % 2 !== 0 && styles.tableRowAlt]}>
@@ -224,7 +234,7 @@ export function Form138PDFDocument({ student, subjects, attendance, schoolName }
                   <View style={styles.cellTermBody}><Text style={getGradeColor(subj.term2)}>{subj.term2 || '-'}</Text></View>
                   <View style={styles.cellTermBody}><Text style={getGradeColor(subj.term3)}>{subj.term3 || '-'}</Text></View>
                   <View style={styles.cellFinalBody}>
-                    <Text style={getGradeColor(subjFinal)}>{hasFinal ? subjFinal.toFixed(1) : '-'}</Text>
+                    <Text style={getGradeColor(subjFinal || undefined)}>{hasFinal ? subjFinal.toFixed(1) : '-'}</Text>
                   </View>
                   <View style={styles.cellRemarks}>
                     {hasFinal ? (
@@ -246,7 +256,7 @@ export function Form138PDFDocument({ student, subjects, attendance, schoolName }
                 <Text style={styles.gwaValueText}>{genAvg}</Text>
               </View>
               <View style={styles.gwaRemarksCell}>
-                {allAvgs.length > 0 ? (
+                {hasAllSubjects ? (
                   <PDFStamp label={isPassed ? 'PROMOTED' : 'RETAINED'} gold />
                 ) : (
                   <Text style={styles.tdTextTermNormal}>-</Text>

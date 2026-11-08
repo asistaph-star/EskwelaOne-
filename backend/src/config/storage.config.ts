@@ -1,5 +1,20 @@
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const BACKEND_ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+export function getStorageRootPath(): string {
+  return path.join(BACKEND_ROOT_DIR, 'storage');
+}
+
+export function getBrandingStoragePath(): string {
+  return path.join(getStorageRootPath(), 'branding');
+}
+
+export function getLeavesStoragePath(): string {
+  return path.join(getStorageRootPath(), 'leaves');
+}
 
 export function getMediaStoragePath(): string {
   // Use explicit environment variable for production persistent storage mounts
@@ -7,8 +22,8 @@ export function getMediaStoragePath(): string {
     return process.env.MEDIA_STORAGE_PATH;
   }
   
-  // Safe local development fallback
-  return path.join(process.cwd(), 'storage', 'documents');
+  // Safe local development fallback anchored to the backend root directory
+  return path.join(getStorageRootPath(), 'documents');
 }
 
 export function initMediaStorage(): void {

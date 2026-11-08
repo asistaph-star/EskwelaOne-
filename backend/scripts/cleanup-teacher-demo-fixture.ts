@@ -10,6 +10,13 @@ if (process.env.NODE_ENV === 'production') {
 export async function cleanupFixture(): Promise<void> {
   console.log('[FIXTURE CLEANUP] Starting cleanup of synthetic fixture records...');
 
+  // Strict Target Database Guard: Query PostgreSQL directly before any operations
+  const [dbRow] = await prisma.$queryRaw<[{ current_database: string }]>`SELECT current_database()`;
+  const currentDb = dbRow?.current_database;
+  if (currentDb !== 'digiskwela_test') {
+    throw new Error(`[FATAL] Fixture cleanup blocked: Target database must be 'digiskwela_test', but connected to '${currentDb}'.`);
+  }
+
   // 1. Delete Grade Entries (depends on columns & enrollments)
   const gradeEntryRes = await prisma.grade_entries.deleteMany({
     where: {

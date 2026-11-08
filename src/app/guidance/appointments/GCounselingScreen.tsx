@@ -240,7 +240,7 @@ export function GCounselingScreen() {
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Purpose / Notes</label>
+                <label style={{ display: "block", fontSize: 10, fontWeight: 700, color: C.t3, textTransform: "uppercase", marginBottom: 6 }}>Purpose and Notes</label>
                 <textarea rows={3} value={form.purpose} onChange={e => setForm({ ...form, purpose: e.target.value })} placeholder="e.g. Discuss academic performance and social behavior..." style={{ width: "100%", border: `1px solid ${C.borderMed}`, borderRadius: 4, padding: "8px 10px", fontSize: 12, boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 }}>

@@ -5,10 +5,17 @@ import { requirePermissions, authMiddleware, AuthenticatedUser } from '../common
 import { AppError } from '../common/middleware/errorHandler.js';
 import { generateId } from '../common/utils/uuid.js';
 import multer from 'multer';
+import { fileTypeFromBuffer } from 'file-type';
 import path from 'path';
 import fs from 'fs';
+import {
+  authorizeLeaveAttachmentAccess,
+  resolveSafeStorageFilePath,
+  setPrivateDocumentResponseHeaders,
+} from '../documents/documentSecurity.service.js';
+import { getLeavesStoragePath } from '../config/storage.config.js';
 
-const STORAGE_DIR = path.join(process.cwd(), 'storage', 'leaves');
+const STORAGE_DIR = getLeavesStoragePath();
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
 }
@@ -19,6 +26,22 @@ const upload = multer({
 });
 
 const router = Router();
+
+function toLeaveRequestDto<T extends { id: string; attachment_url?: string | null }>(leave: T): T {
+  if (!leave) return leave;
+  return {
+    ...leave,
+    attachment_url: leave.attachment_url ? `/api/admin/leaves/${leave.id}/attachment` : null,
+  };
+}
+
+function inferMimeTypeFromExtension(filename: string): string {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.pdf') return 'application/pdf';
+  if (ext === '.png') return 'image/png';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  return 'application/octet-stream';
+}
 
 // Zod schemas for query params
 const listLeavesQuerySchema = z.object({
@@ -56,14 +79,23 @@ router.post('/', authMiddleware, upload.single('attachment'), async (req: Reques
   try {
     const input = createLeaveSchema.parse(req.body);
     const authUser = (req as any).user as AuthenticatedUser;
-    
-    let attachmentUrl = null;
+
+    let attachmentUrl: string | null = null;
     if (req.file) {
-      const ext = path.extname(req.file.originalname) || '.pdf';
-      const filename = `leave_${generateId()}${ext}`;
-      const filePath = path.join(STORAGE_DIR, filename);
+      const detected = await fileTypeFromBuffer(req.file.buffer);
+      const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (detected && !allowedMimeTypes.includes(detected.mime)) {
+        throw new AppError(400, 'BAD_REQUEST', 'Invalid attachment file type. Only PDF, JPEG, and PNG are allowed.');
+      }
+      const safeExt = detected?.ext
+        ? `.${detected.ext}`
+        : ['.pdf', '.jpg', '.jpeg', '.png'].includes(path.extname(req.file.originalname).toLowerCase())
+          ? path.extname(req.file.originalname).toLowerCase()
+          : '.pdf';
+      const filename = `leave_${generateId()}${safeExt}`;
+      const filePath = resolveSafeStorageFilePath(STORAGE_DIR, filename);
       fs.writeFileSync(filePath, req.file.buffer);
-      attachmentUrl = `/storage/leaves/${filename}`; // Or however you want to store it
+      attachmentUrl = `/storage/leaves/${filename}`;
     }
 
     const leaveRequest = await prisma.leaveRequest.create({
@@ -102,8 +134,8 @@ router.post('/', authMiddleware, upload.single('attachment'), async (req: Reques
         }))
       });
     }
-    
-    res.status(201).json({ success: true, data: leaveRequest });
+
+    res.status(201).json({ success: true, data: toLeaveRequestDto(leaveRequest) });
   } catch (err) {
     next(err);
   }
@@ -124,14 +156,46 @@ router.get('/me', authMiddleware, async (req: Request, res: Response, next: Next
         }
       }
     });
-    
+
     // UI expects flat object with approverName
-    const mapped = leaves.map(l => ({
-      ...l,
-      approverName: l.approver ? `${l.approver.first_name} ${l.approver.last_name}` : null
-    }));
+    const mapped = leaves.map(l =>
+      toLeaveRequestDto({
+        ...l,
+        approverName: l.approver ? `${l.approver.first_name} ${l.approver.last_name}` : null
+      })
+    );
 
     res.json({ success: true, data: mapped });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/admin/leaves/:id/attachment
+ * Authenticated endpoint to view a leave attachment.
+ * Restricted strictly to the leave requester or authorized leave approvers.
+ */
+router.get('/:id/attachment', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const leaveId = String(req.params.id);
+    const authUser = (req as any).user as AuthenticatedUser;
+
+    const leaveRequest = await authorizeLeaveAttachmentAccess(prisma, leaveId, authUser);
+
+    const rawUrl = String(leaveRequest.attachment_url || '');
+    const storageFilename = rawUrl.startsWith('/storage/leaves/')
+      ? rawUrl.slice('/storage/leaves/'.length)
+      : rawUrl;
+
+    const filePath = resolveSafeStorageFilePath(STORAGE_DIR, storageFilename);
+    if (!fs.existsSync(filePath)) {
+      throw new AppError(404, 'NOT_FOUND', 'Leave attachment file not found.');
+    }
+
+    const mimeType = inferMimeTypeFromExtension(storageFilename);
+    setPrivateDocumentResponseHeaders(res, mimeType, storageFilename, 'inline');
+    res.sendFile(filePath);
   } catch (err) {
     next(err);
   }
@@ -143,7 +207,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response, next: Next
 router.get('/', requirePermissions('leave:approve'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, status, academic_year_id } = listLeavesQuerySchema.parse(req.query);
-    
+
     const where: any = {};
     if (status) {
       where.status = status;
@@ -181,7 +245,7 @@ router.get('/', requirePermissions('leave:approve'), async (req: Request, res: R
 
     res.json({
       success: true,
-      data: leaves,
+      data: leaves.map(toLeaveRequestDto),
       meta: {
         total,
         page,
@@ -236,7 +300,7 @@ router.patch('/:id/status', requirePermissions('leave:approve'), async (req: Req
       }
     });
 
-    res.json({ success: true, data: updatedLeave });
+    res.json({ success: true, data: toLeaveRequestDto(updatedLeave) });
   } catch (err) {
     next(err);
   }

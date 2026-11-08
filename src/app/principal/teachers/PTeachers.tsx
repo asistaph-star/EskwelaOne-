@@ -14,6 +14,7 @@ export function PTeachers() {
   const [tab, setTab] = useState<"overview"|"ranking">("overview");
   const [createModal, setCreateModal] = useState(false);
   const [assignScheduleModal, setAssignScheduleModal] = useState(false);
+  const [manageTeacher, setManageTeacher] = useState<any | null>(null);
   const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
   const [rankings, setRankings] = useState<any[]>([]);
 
@@ -241,6 +242,7 @@ export function PTeachers() {
                   <div style={{ display:"flex", alignItems:"center", gap:6, background:"#f8fafc", border:`1px solid ${C.border}`, borderRadius:4, padding:"4px 8px", width:170 }}>
                     <Search size={12} style={{ color:C.t3 }} />
                     <input
+                      id="input-search-roster"
                       type="text"
                       placeholder="Search roster..."
                       value={rosterSearch}
@@ -360,7 +362,7 @@ export function PTeachers() {
                       Previous
                     </button>
                     <span style={{ fontSize: 10, fontWeight: 600, color: C.t2, minWidth: 28, textAlign: "center" }}>
-                      {rosterPage} / {rosterTotalPages}
+                      Page {rosterPage} of {rosterTotalPages}
                     </span>
                     <button
                       disabled={rosterPage >= rosterTotalPages}
@@ -395,6 +397,7 @@ export function PTeachers() {
                 <div style={{ display:"flex", alignItems:"center", gap:6, background:"#f8fafc", border:`1px solid ${C.border}`, borderRadius:4, padding:"4px 8px", width:170 }}>
                   <Search size={12} style={{ color:C.t3 }} />
                   <input
+                    id="input-search-loads"
                     type="text"
                     placeholder="Search loads..."
                     value={loadSearch}
@@ -438,7 +441,7 @@ export function PTeachers() {
               {/* Table Body */}
               <div style={{ flex: 1, overflowX: "auto" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse" }}>
-                  <thead><PTableHeader cols={["Teacher","Days","Sections","Subjects","Assignments"]} /></thead>
+                  <thead><PTableHeader cols={["Teacher","Rank","Current Load","Assigned Classes","Action"]} /></thead>
                   <tbody>
                     {pagedLoad.length === 0 ? (
                       <tr>
@@ -449,13 +452,8 @@ export function PTeachers() {
                     ) : (
                       pagedLoad.map((t: any, i)=>{
                         const assignments = t.teacher?.assignments || [];
-                        const sections = assignments.map((a: any) => a.section?.name).filter(Boolean).join(', ') || 'Unassigned';
-                        const subjects = Array.from(new Set(assignments.map((a: any) => a.subject?.name).filter(Boolean))).join(', ') || 'None';
-                        
-                        // Collect unique schedule days
-                        const days = Array.from(new Set(assignments.map((a: any) => a.days).filter(Boolean))).join(' / ') || '—';
-                        
                         const loadCount = assignments.length;
+                        const rankDisplay = t.teacher?.position || "Teacher I";
                         return (
                           <tr key={t.id} style={{ borderBottom: i < pagedLoad.length - 1 ? `0.5px solid ${C.border}` : "none" }}
                             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background=C.m50;}}
@@ -464,9 +462,7 @@ export function PTeachers() {
                               <div>{t.name}</div>
                               {t.email && <div style={{ fontSize: 9, color: C.t3, fontWeight: 400 }}>{t.email}</div>}
                             </td>
-                            <td style={{ padding:"8px 14px", fontSize:11, color: days === '—' ? C.t3 : C.t1 }}>{days}</td>
-                            <td style={{ padding:"8px 14px", fontSize:11, color: sections === 'Unassigned' ? C.t3 : C.t2, fontStyle: sections === 'Unassigned' ? 'italic' : 'normal' }}>{sections}</td>
-                            <td style={{ padding:"8px 14px", fontSize:11, color: subjects === 'None' ? C.t3 : C.t2, fontStyle: subjects === 'None' ? 'italic' : 'normal' }}>{subjects}</td>
+                            <td style={{ padding:"8px 14px", fontSize:10, color:C.t2 }}>{rankDisplay}</td>
                             <td style={{ padding:"8px 14px" }}>
                               {loadCount > 0 ? (
                                 <span style={{
@@ -484,13 +480,59 @@ export function PTeachers() {
                                 </span>
                               ) : (
                                 <span style={{
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   color: C.t3,
                                   fontFamily: "'JetBrains Mono',monospace"
                                 }}>
                                   0 subjects
                                 </span>
                               )}
+                            </td>
+                            <td style={{ padding:"8px 14px" }}>
+                              {loadCount === 0 ? (
+                                <span style={{ fontSize: 10.5, color: C.t3, fontStyle: "italic" }}>No subjects assigned</span>
+                              ) : (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                  {assignments.map((a: any, aIdx: number) => (
+                                    <span
+                                      key={a.id || aIdx}
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        padding: "2px 6px",
+                                        background: "#f1f5f9",
+                                        border: `1px solid ${C.border}`,
+                                        borderRadius: 4,
+                                        fontSize: 9.5,
+                                        color: C.t1,
+                                        fontWeight: 600,
+                                        whiteSpace: "nowrap"
+                                      }}
+                                    >
+                                      {a.subject?.code || a.subject?.name} ({a.section?.name || 'Section'})
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding:"8px 14px", textAlign: "right" }}>
+                              <button
+                                id={`btn-manage-assignments-${t.teacher?.id || t.id}`}
+                                onClick={() => { setManageTeacher(t); setAssignScheduleModal(true); }}
+                                style={{
+                                  padding: "3px 8px",
+                                  background: "#fff",
+                                  border: `1px solid ${C.borderMed}`,
+                                  borderRadius: 4,
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  color: C.m700,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap"
+                                }}
+                              >
+                                Manage Assignments
+                              </button>
                             </td>
                           </tr>
                         );
@@ -523,7 +565,7 @@ export function PTeachers() {
                     Previous
                   </button>
                   <span style={{ fontSize: 10, fontWeight: 600, color: C.t2, minWidth: 28, textAlign: "center" }}>
-                    {loadPage} / {loadTotalPages}
+                    Page {loadPage} of {loadTotalPages}
                   </span>
                   <button
                     disabled={loadPage >= loadTotalPages}
@@ -551,7 +593,13 @@ export function PTeachers() {
 
       {selectedProfile && <TeacherProfileModal teacherUser={selectedProfile} onClose={() => setSelectedProfile(null)} />}
       
-      {assignScheduleModal && <AssignScheduleModal onClose={() => setAssignScheduleModal(false)} onSuccess={() => { setAssignScheduleModal(false); window.location.reload(); }} />}
+      {assignScheduleModal && (
+        <AssignScheduleModal
+          initialTeacher={manageTeacher}
+          onClose={() => { setAssignScheduleModal(false); setManageTeacher(null); }}
+          onSuccess={() => { setAssignScheduleModal(false); setManageTeacher(null); }}
+        />
+      )}
       
       {tab === "ranking" && (
         <PRankingScreen inTab={true} />

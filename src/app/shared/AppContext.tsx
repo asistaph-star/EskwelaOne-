@@ -15,6 +15,11 @@ export interface CurrentUser {
   schoolId?: string;
   name: string;
   role: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string | null;
+  email?: string | null;
+  roles?: string[];
   section?: string;
   photoDocId?: string;
   parentEmail?: string;
@@ -57,6 +62,7 @@ type AppContextType = {
   // Teacher Leaves
   students: User[];
   teachers: User[];
+  refreshTeachers: () => Promise<void>;
   addTeacher: (t: Omit<User, 'id'>) => Promise<void>;
   addStudent: (s: Omit<User, 'id'>) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => Promise<void>;
@@ -100,21 +106,6 @@ type AppContextType = {
   // Teacher Ranking
   // Enrollments
 };
-
-// --- Seed Data --
-
-
-
-
-
-const SEED_SYSTEM_ACCOUNTS: SystemAccount[] = [
-  { id: "acc-1", name: "Ana R. Soriano", username: "ana.soriano@cis.edu.ph", role: "Teacher", status: "Active", lastLogin: "Today, 7:15 AM", departmentOrGrade: "Science" },
-  { id: "acc-2", name: "Carlo D. Reyes", username: "carlo.reyes@cis.edu.ph", role: "Teacher", status: "Active", lastLogin: "Yesterday, 3:30 PM", departmentOrGrade: "Mathematics" },
-  { id: "acc-3", name: "Maria Clara Santos", username: "maria.santos@cis.edu.ph", role: "Staff", status: "Locked", lastLogin: "July 15, 2026", departmentOrGrade: "Registrar" },
-  { id: "acc-4", name: "Juan Dela Cruz", username: "juan.delacruz@cis.edu.ph", role: "Student", status: "Active", lastLogin: "Today, 8:00 AM", departmentOrGrade: "Grade 10" },
-  { id: "acc-5", name: "Hannah Grace Espino", username: "hannah.espino@cis.edu.ph", role: "Student", status: "Pending", departmentOrGrade: "Grade 8" },
-  { id: "acc-6", name: "Ramon Jr. Bondoc", username: "ramon.bondoc@cis.edu.ph", role: "Student", status: "Active", lastLogin: "2 days ago", departmentOrGrade: "Grade 8" },
-];
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -189,7 +180,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           perms = meData.permissions || [];
           setCurrentUser({
             id: meData.id,
+            schoolId: meData.schoolId,
             name: `${meData.firstName} ${meData.lastName}`,
+            firstName: meData.firstName,
+            lastName: meData.lastName,
+            middleName: meData.middleName,
+            email: meData.email,
             role: meData.roles?.[0] || '',
             permissions: meData.permissions || [],
             rawRoles: meData.roles,
@@ -350,6 +346,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTeachers(prev => prev.map(u => u.id === id ? { ...u, ...updates } as any : u));
   };
 
+  const refreshTeachers = async () => {
+    try {
+      const dbUsers = await apiClient.get<any[]>('/users');
+      const users = (dbUsers || []).map((u: any) => ({ ...u, name: `${u.first_name} ${u.last_name}` }));
+      setTeachers(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Teacher')));
+      setStudents(users.filter(u => u.user_roles?.some((ur: any) => ur.role.name === 'Student')));
+    } catch (e) {
+      console.warn("Failed to refresh teachers:", e);
+    }
+  };
+
   const addAnnouncement = async (a: Announcement) => {
     const saved = await apiClient.post("/admin/announcements", a);
     setAnnouncements(prev => [saved as any, ...prev]);
@@ -379,7 +386,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AppContext.Provider value={{
-      students, teachers, addTeacher, addStudent, updateUser,
+      students, teachers, refreshTeachers, addTeacher, addStudent, updateUser,
       isAuthChecking, setIsAuthChecking,
       currentUser, setCurrentUser, updateCurrentUser,
       

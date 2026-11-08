@@ -5,16 +5,26 @@ import { useAppContext } from '../../shared/AppContext';
 import { EnrollmentStatus, Applicant } from '../../shared/types';
 import { apiClient } from '../../../api/client';
 import { useEffect } from 'react';
+import { academicApi } from '../../../api/academic.api';
+import { StudentPromotionWorkspace } from '../../shared/components/StudentPromotionWorkspace';
+import { GraduationCap } from 'lucide-react';
 
 export function REnrollmentScreen() {
-    const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [enrollmentMode, setEnrollmentMode] = useState<'applications' | 'promotion'>('applications');
+  const [activeAy, setActiveAy] = useState<{ id: string; name: string } | null>(null);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEnrollments() {
       try {
-        const res = await apiClient.get<Applicant[]>('/admin/enrollment-applications');
-        setApplicants(res);
+        const [res, years] = await Promise.all([
+          apiClient.get<Applicant[]>('/admin/enrollment-applications').catch(() => []),
+          academicApi.getYears().catch(() => [])
+        ]);
+        setApplicants(res || []);
+        const current = (years || []).find((y: any) => y.is_current) || (years || [])[0];
+        if (current) setActiveAy({ id: current.id, name: current.name });
       } catch (e) {
         setEnrollmentError("Failed to fetch enrollment applications. Please check the backend connection.");
       }
@@ -24,19 +34,23 @@ export function REnrollmentScreen() {
 
   const updateEnrollmentApplication = async (id: string, updates: Partial<Applicant>) => {
     try {
-      await apiClient.patch("/admin/enrollment-applications/" + id, updates);
-      setApplicants(prev => prev.map(a => a.id === id ? { ...a, ...updates } as any : a));
-    } catch (e) {
+      const res = await apiClient.patch<any>("/admin/enrollment-applications/" + id, updates);
+      const mapped = (res as any)?.data || res;
+      setApplicants(prev => prev.map(a => a.id === id ? { ...a, ...updates, ...mapped } as any : a));
+    } catch (e: any) {
       console.error(e);
+      setEnrollmentError("Failed to persist application update: " + (e?.message || ""));
     }
   };
 
   const addEnrollmentApplication = async (app: Applicant) => {
     try {
-      const saved = await apiClient.post("/admin/enrollment-applications", app);
-      setApplicants(prev => [saved as any, ...prev]);
-    } catch (e) {
+      const res = await apiClient.post<any>("/admin/enrollment-applications", app);
+      const mapped = (res as any)?.data || res;
+      setApplicants(prev => [mapped as any, ...prev]);
+    } catch (e: any) {
       console.error(e);
+      setEnrollmentError("Failed to save application to database: " + (e?.message || ""));
     }
   };
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,24 +122,76 @@ export function REnrollmentScreen() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Student Enrollment & Admissions</h1>
-            <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Process applications, track submitted forms, and finalize enrollments.</div>
+            <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Process admissions applications, manage DO 8 student promotion, and finalize next-year enrollments.</div>
           </div>
-          <button onClick={() => setIsModalOpen(true)} style={{
-            background: C.m700, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 6,
-            fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8
-          }}>
-            <UserPlus size={14} /> Add Manual Application
+          {enrollmentMode === 'applications' && (
+            <button onClick={() => setIsModalOpen(true)} style={{
+              background: C.m700, color: "#fff", border: "none", padding: "10px 20px", borderRadius: 6,
+              fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8
+            }}>
+              <UserPlus size={14} /> Add Manual Application
+            </button>
+          )}
+        </div>
+
+        {/* Mode Switcher Tabs */}
+        <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${C.borderMed}`, paddingBottom: 12 }}>
+          <button
+            onClick={() => setEnrollmentMode('applications')}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: enrollmentMode === 'applications' ? `1px solid ${C.m700}` : `1px solid ${C.borderMed}`,
+              background: enrollmentMode === 'applications' ? C.m700 : '#fff',
+              color: enrollmentMode === 'applications' ? '#fff' : C.t2,
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            <FileText size={14} /> New Admissions Applications
+          </button>
+          <button
+            onClick={() => setEnrollmentMode('promotion')}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: enrollmentMode === 'promotion' ? `1px solid ${C.m700}` : `1px solid ${C.borderMed}`,
+              background: enrollmentMode === 'promotion' ? C.m700 : '#fff',
+              color: enrollmentMode === 'promotion' ? '#fff' : C.t2,
+              display: "flex",
+              alignItems: "center",
+              gap: 6
+            }}
+          >
+            <GraduationCap size={14} /> Student Promotion & Next-Year Re-Enrollment (DO 8)
           </button>
         </div>
 
-        {enrollmentError && (
+        {enrollmentMode === 'promotion' && activeAy && (
+          <StudentPromotionWorkspace
+            academicYearId={activeAy.id}
+            academicYearName={activeAy.name}
+            portal="Registrar"
+          />
+        )}
+
+        {enrollmentMode === 'applications' && enrollmentError && (
           <div style={{ background: C.redBg, border: `1px solid ${C.red}`, borderRadius: 8, padding: "16px", display: "flex", gap: 12, alignItems: "center" }}>
             <AlertTriangle size={20} color={C.red} />
             <div style={{ color: C.red, fontSize: 13, fontWeight: 500 }}>{enrollmentError}</div>
           </div>
         )}
 
-        {/* Toolbar & Tabs */}
+        {enrollmentMode === 'applications' && (
+          <>
+            {/* Toolbar & Tabs */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 12, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
           <div style={{ display: "flex", gap: 16 }}>
             <div style={{ flex: 1, position: "relative" }}>
@@ -260,6 +326,8 @@ export function REnrollmentScreen() {
             ))
           )}
         </div>
+          </>
+        )}
 
       </div>
 

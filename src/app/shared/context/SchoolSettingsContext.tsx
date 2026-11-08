@@ -4,17 +4,17 @@ import { settingsApi, SchoolSettingsData } from '../../../api/settings.api';
 export const GENERIC_DEFAULT_SETTINGS: SchoolSettingsData = {
   schoolName: 'Calulut Integrated School',
   schoolShortName: 'CIS',
-  logoUrl: null,
-  faviconUrl: null,
+  logoUrl: '/school_seal.png',
+  faviconUrl: '/school_seal.png',
   loginBackgroundUrl: null,
   primaryColor: '#0A192F',
   secondaryColor: '#1B3A6B',
   accentColor: '#F5A623',
-  address: null,
-  contactEmail: null,
-  contactNumber: null,
+  address: 'Calulut, City of San Fernando, Pampanga',
+  contactEmail: 'calulut.is@deped.gov.ph',
+  contactNumber: '(045) 455-1234',
   loginWelcomeText: 'Education Shapes the Future',
-  footerText: 'DigiSkwela · School Management System',
+  footerText: 'Calulut Integrated School Management System',
 };
 
 interface SchoolSettingsContextType {
@@ -54,7 +54,7 @@ export function SchoolSettingsProvider({ children }: { children: React.ReactNode
 
     // 2. Dynamic document title (strictly white-label: uses configured name, never hardcoded fallback)
     const label = data.schoolShortName || data.schoolName;
-    document.title = label ? `DigiSkwela — ${label}` : 'DigiSkwela';
+    document.title = label ? `DigiSkwela | ${label}` : 'DigiSkwela';
 
     // 3. Dynamic favicon
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
@@ -77,6 +77,8 @@ export function SchoolSettingsProvider({ children }: { children: React.ReactNode
         const merged: SchoolSettingsData = {
           ...GENERIC_DEFAULT_SETTINGS,
           ...publicData,
+          logoUrl: publicData.logoUrl || '/school_seal.png',
+          faviconUrl: publicData.faviconUrl || '/school_seal.png',
         };
         setSettings(merged);
         applyDOMBranding(merged);
@@ -113,21 +115,26 @@ export function SchoolSettingsProvider({ children }: { children: React.ReactNode
 
   const resetSettings = async (): Promise<SchoolSettingsData> => {
     const reset = await settingsApi.resetSettings();
-    // White-label safe reset: Preserves current institutional identity, resets visual branding only
-    const merged: SchoolSettingsData = {
-      ...settings,
+    const restored: SchoolSettingsData = {
+      ...GENERIC_DEFAULT_SETTINGS,
       ...reset,
-      logoUrl: reset.logoUrl !== undefined ? reset.logoUrl : ((reset as any).logo_url ?? null),
-      faviconUrl: reset.faviconUrl !== undefined ? reset.faviconUrl : ((reset as any).favicon_url ?? null),
-      primaryColor: reset.primaryColor || (reset as any).primary_color || '#0A192F',
-      secondaryColor: reset.secondaryColor || (reset as any).secondary_color || '#1B3A6B',
-      accentColor: reset.accentColor || (reset as any).accent_color || '#F5A623',
-      loginWelcomeText: reset.loginWelcomeText || (reset as any).login_welcome_text || 'Education Shapes the Future',
-      footerText: reset.footerText || (reset as any).footer_text || 'DigiSkwela · School Management System',
+      schoolName: reset.schoolName || (reset as any).school_name || GENERIC_DEFAULT_SETTINGS.schoolName,
+      schoolShortName: reset.schoolShortName || (reset as any).school_short_name || GENERIC_DEFAULT_SETTINGS.schoolShortName,
+      logoUrl: reset.logoUrl || (reset as any).logo_url || GENERIC_DEFAULT_SETTINGS.logoUrl,
+      faviconUrl: reset.faviconUrl || (reset as any).favicon_url || GENERIC_DEFAULT_SETTINGS.faviconUrl,
+      loginBackgroundUrl: reset.loginBackgroundUrl !== undefined ? reset.loginBackgroundUrl : (reset as any).login_background_url ?? null,
+      primaryColor: reset.primaryColor || (reset as any).primary_color || GENERIC_DEFAULT_SETTINGS.primaryColor,
+      secondaryColor: reset.secondaryColor || (reset as any).secondary_color || GENERIC_DEFAULT_SETTINGS.secondaryColor,
+      accentColor: reset.accentColor || (reset as any).accent_color || GENERIC_DEFAULT_SETTINGS.accentColor,
+      loginWelcomeText: reset.loginWelcomeText || (reset as any).login_welcome_text || GENERIC_DEFAULT_SETTINGS.loginWelcomeText,
+      footerText: reset.footerText || (reset as any).footer_text || GENERIC_DEFAULT_SETTINGS.footerText,
+      address: reset.address || (reset as any).address || GENERIC_DEFAULT_SETTINGS.address,
+      contactEmail: reset.contactEmail || (reset as any).contact_email || GENERIC_DEFAULT_SETTINGS.contactEmail,
+      contactNumber: reset.contactNumber || (reset as any).contact_number || GENERIC_DEFAULT_SETTINGS.contactNumber,
     };
-    setSettings(merged);
-    applyDOMBranding(merged);
-    return merged;
+    setSettings(restored);
+    applyDOMBranding(restored);
+    return restored;
   };
 
 

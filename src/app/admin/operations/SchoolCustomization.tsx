@@ -44,6 +44,9 @@ export function SchoolCustomization() {
     setFormData(settings);
   }, [settings]);
 
+  const displayLogo = formData.logoUrl || "/school_seal.png";
+  const displayFavicon = formData.faviconUrl || "/school_seal.png";
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -100,7 +103,7 @@ export function SchoolCustomization() {
       const res = await resetSettings();
       setFormData(res);
       setResetModalOpen(false);
-      showToast("Default visual branding restored successfully.");
+      showToast("Authoritative school defaults restored successfully.");
     } catch (err: any) {
       showToast(err.message || "Failed to reset school settings.", "error");
     } finally {
@@ -281,7 +284,7 @@ export function SchoolCustomization() {
 
             <div>
               <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.m900, marginBottom: 6 }}>
-                School Short Name / Abbreviation *
+                School Short Name *
               </label>
               <input
                 type="text"
@@ -390,7 +393,7 @@ export function SchoolCustomization() {
             {/* School Logo */}
             <div>
               <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.m900, marginBottom: 8 }}>
-                School Logo / Seal
+                Official School Seal
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <div
@@ -407,8 +410,8 @@ export function SchoolCustomization() {
                     flexShrink: 0,
                   }}
                 >
-                  {formData.logoUrl ? (
-                    <img src={formData.logoUrl} alt="School Logo" style={{ width: "80%", height: "80%", objectFit: "contain" }} />
+                  {displayLogo ? (
+                    <img src={displayLogo} alt="School Logo" style={{ width: "80%", height: "80%", objectFit: "contain" }} />
                   ) : (
                     <ImageIcon size={24} color={C.t3} />
                   )}
@@ -472,8 +475,8 @@ export function SchoolCustomization() {
                     flexShrink: 0,
                   }}
                 >
-                  {formData.faviconUrl ? (
-                    <img src={formData.faviconUrl} alt="Favicon" style={{ width: 28, height: 28, objectFit: "contain" }} />
+                  {displayFavicon ? (
+                    <img src={displayFavicon} alt="Favicon" style={{ width: 28, height: 28, objectFit: "contain" }} />
                   ) : (
                     <ImageIcon size={18} color={C.t3} />
                   )}
@@ -642,7 +645,7 @@ export function SchoolCustomization() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div style={{ gridColumn: "span 2" }}>
               <label style={{ display: "block", fontSize: 12.5, fontWeight: 600, color: C.m900, marginBottom: 6 }}>
-                Login Screen Welcome Headline / Text
+                Login Welcome Heading
               </label>
               <input
                 type="text"
@@ -671,7 +674,7 @@ export function SchoolCustomization() {
                 value={formData.footerText || ""}
                 disabled={!isITAdmin}
                 onChange={(e) => handleInputChange("footerText", e.target.value)}
-                placeholder="e.g. DigiSkwela · School Management System"
+                placeholder="e.g. Calulut Integrated School Management System"
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -778,9 +781,9 @@ export function SchoolCustomization() {
                     boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
                   }}
                 >
-                  {formData.logoUrl ? (
+                  {displayLogo ? (
                     <img
-                      src={formData.logoUrl}
+                      src={displayLogo}
                       alt="Logo"
                       style={{ width: 44, height: 44, objectFit: "contain", flexShrink: 0 }}
                       onError={(e) => ((e.currentTarget as any).style.display = "none")}
@@ -795,7 +798,7 @@ export function SchoolCustomization() {
                       {formData.schoolShortName || "CIS"}
                     </div>
                     <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 9.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em", marginTop: 2 }}>
-                      Admin / IT Portal
+                      Administrator Portals
                     </div>
                   </div>
                 </div>
@@ -818,9 +821,9 @@ export function SchoolCustomization() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {formData.logoUrl ? (
+                    {displayLogo ? (
                       <img
-                        src={formData.logoUrl}
+                        src={displayLogo}
                         alt="Logo"
                         style={{ width: 42, height: 42, objectFit: "contain" }}
                         onError={(e) => ((e.currentTarget as any).style.display = "none")}
@@ -838,7 +841,7 @@ export function SchoolCustomization() {
                     {formData.loginWelcomeText || "Education Shapes the Future"}
                   </div>
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>
-                    {formData.footerText || "DigiSkwela · School Management System"}
+                    {formData.footerText || "Calulut Integrated School Management System"}
                   </div>
                 </div>
               </div>
@@ -896,14 +899,14 @@ export function SchoolCustomization() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#b91c1c", marginBottom: 12 }}>
               <AlertCircle size={22} />
               <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>
-                Restore Default Visual Branding?
+                Restore Authoritative School Defaults?
               </h3>
             </div>
 
             <p style={{ fontSize: 13, color: C.t2, lineHeight: 1.5, margin: "0 0 20px" }}>
-              This action will reset the visual identity (colors, logo, favicon, and login welcome text) back to
-              default presentation settings. Your institutional identity (School Name, Short Name, Address, and Contact details)
-              will <strong>NOT</strong> be affected.
+              This action will restore all school customization settings (School Name: <strong>Calulut Integrated School</strong>, Short Name: <strong>CIS</strong>, Official School Seal, Theme Colors, and Institutional Contact Details) back to official DepEd CIS defaults.
+              <br /><br />
+              DepEd School ID (500146), student records, sections, attendance, and grading data will <strong>NOT</strong> be affected.
             </p>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
@@ -939,7 +942,7 @@ export function SchoolCustomization() {
                   cursor: isSaving ? "not-allowed" : "pointer",
                 }}
               >
-                {isSaving ? "Restoring..." : "Restore Default Branding"}
+                {isSaving ? "Restoring..." : "Restore Defaults"}
               </button>
             </div>
           </div>

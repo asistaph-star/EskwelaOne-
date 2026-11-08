@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../../shared/constants/tokens';
-import { Search, FileText, Printer, ChevronRight, User, Loader2 } from 'lucide-react';
+import { Search, FileText, Printer, ChevronRight, User, Loader2, RefreshCw } from 'lucide-react';
 import { useAppContext } from '../../shared/AppContext';
 import { apiClient } from '../../../api/client';
+import { usersApi, UserProfile } from '../../../api/users.api';
 
 type StudentRecord = {
   id: string; // The User ID
@@ -46,7 +47,9 @@ type SF10Data = {
 };
 
 export function RAcademicRecordsScreen() {
-  const { students } = useAppContext();
+  const { students: contextStudents } = useAppContext();
+  const [dbStudents, setDbStudents] = useState<UserProfile[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
 
@@ -54,23 +57,58 @@ export function RAcademicRecordsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Map AppContext User to StudentRecord, providing fallbacks for missing fields
-  const mappedStudents: StudentRecord[] = students.map(s => {
-    const studentProf = (s as any).student;
-    const latestEnrollment = studentProf?.enrollments?.[0];
-    const sectionName = latestEnrollment?.section?.name || "Unassigned";
-    const gradeLevel = latestEnrollment?.section?.grade_level ? `Grade ${latestEnrollment.section.grade_level}` : "N/A";
-    
-    return {
-      id: s.id,
-      studentProfileId: studentProf?.id || s.id,
-      name: s.name,
-      gradeLevel,
-      section: sectionName,
-      lrn: studentProf?.lrn || s.id.replace(/\D/g, '').padEnd(12, '0').slice(0, 12),
-      status: "Active"
-    };
-  });
+  // Fetch live student accounts from /api/users?role=Student
+  useEffect(() => {
+    usersApi.getUsers({ role: 'Student' })
+      .then(res => {
+        if (Array.isArray(res)) setDbStudents(res);
+      })
+      .catch(err => {
+        console.error("Failed to load student profiles", err);
+      })
+      .finally(() => setLoadingStudents(false));
+  }, []);
+
+  // Map to unified StudentRecord format
+  const mappedStudents: StudentRecord[] = React.useMemo(() => {
+    if (dbStudents.length > 0) {
+      return dbStudents.map(u => {
+        const prof = u.student_profile || (u as any).student;
+        const latestEnrollment = prof?.enrollments?.[0];
+        const sectionName = latestEnrollment?.section?.name || (prof as any)?.section || "Unassigned";
+        const gradeLevel = prof?.grade_level ? `Grade ${prof.grade_level}` : (latestEnrollment?.section?.grade_level ? `Grade ${latestEnrollment.section.grade_level}` : "N/A");
+        const fullName = `${u.last_name}, ${u.first_name}${u.middle_name ? ' ' + u.middle_name[0] + '.' : ''}`;
+
+        return {
+          id: u.id,
+          studentProfileId: prof?.id || u.id,
+          name: fullName,
+          gradeLevel,
+          section: sectionName,
+          lrn: prof?.lrn || u.school_id || 'N/A',
+          status: "Active"
+        };
+      });
+    }
+
+    // Fallback to AppContext students
+    return contextStudents.map(s => {
+      const studentProf = (s as any).student;
+      const latestEnrollment = studentProf?.enrollments?.[0];
+      const sectionName = latestEnrollment?.section?.name || "Unassigned";
+      const gradeLevel = latestEnrollment?.section?.grade_level ? `Grade ${latestEnrollment.section.grade_level}` : "N/A";
+      
+      return {
+        id: s.id,
+        studentProfileId: studentProf?.id || s.id,
+        name: s.name,
+        gradeLevel,
+        section: sectionName,
+        lrn: studentProf?.lrn || s.id.replace(/\D/g, '').padEnd(12, '0').slice(0, 12),
+        status: "Active"
+      };
+    });
+  }, [dbStudents, contextStudents]);
 
   const filtered = mappedStudents.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -102,11 +140,20 @@ export function RAcademicRecordsScreen() {
 
   return (
     <div style={{ flex: 1, padding: "32px 40px", overflowY: "auto", paddingBottom: 100 }}>
+      {/* Print-only CSS */}
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { background: #fff !important; }
+          @page { margin: 0.5in; }
+        }
+      `}</style>
+
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
         
         <div className="no-print">
           <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>Academic Records (SF10)</h1>
-          <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Manage and generate permanent student records (Form 137).</div>
+          <div style={{ fontSize: 13, color: C.t3, marginTop: 4 }}>Search learners by Name or 12-digit DepEd LRN to inspect permanent academic records and official Form 137 transcripts.</div>
         </div>
 
         {selectedStudent ? (
@@ -165,7 +212,7 @@ export function RAcademicRecordsScreen() {
                         <div style={{ background: C.m50, padding: "12px 16px", borderBottom: `1px solid ${C.borderMed}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>{year.academicYearName}</span>
-                            <span style={{ fontSize: 13, color: C.t2 }}>{year.gradeLevel ? `Grade ${year.gradeLevel}` : "N/A"} • {year.section || "Unassigned"}</span>
+                            <span style={{ fontSize: 13, color: C.t2 }}>{year.gradeLevel ? `Grade ${year.gradeLevel}` : "N/A"}, Section {year.section || "Unassigned"}</span>
                           </div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: C.t1 }}>
                             Gen. Avg: <span style={{ color: year.generalAverage ? (year.generalAverage >= 75 ? C.green : C.red) : C.t3, marginLeft: 4 }}>
@@ -179,10 +226,9 @@ export function RAcademicRecordsScreen() {
                           <thead>
                             <tr style={{ background: "#fff", borderBottom: `2px solid ${C.border}` }}>
                               <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Learning Area</th>
-                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>T1</th>
-                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>T2</th>
-                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>T3</th>
-                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>T4</th>
+                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Term 1</th>
+                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Term 2</th>
+                              <th style={{ textAlign: "center", padding: "10px 12px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Term 3</th>
                               <th style={{ textAlign: "center", padding: "10px 16px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Final</th>
                               <th style={{ textAlign: "left", padding: "10px 16px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Remarks</th>
                             </tr>
@@ -194,7 +240,6 @@ export function RAcademicRecordsScreen() {
                                 <td style={{ padding: "10px 12px", textAlign: "center", fontSize: 13, color: subject.T1 !== null ? C.t1 : C.t3 }}>{subject.T1 ?? "-"}</td>
                                 <td style={{ padding: "10px 12px", textAlign: "center", fontSize: 13, color: subject.T2 !== null ? C.t1 : C.t3 }}>{subject.T2 ?? "-"}</td>
                                 <td style={{ padding: "10px 12px", textAlign: "center", fontSize: 13, color: subject.T3 !== null ? C.t1 : C.t3 }}>{subject.T3 ?? "-"}</td>
-                                <td style={{ padding: "10px 12px", textAlign: "center", fontSize: 13, color: subject.T4 !== null ? C.t1 : C.t3 }}>{subject.T4 ?? "-"}</td>
                                 <td style={{ padding: "10px 16px", textAlign: "center", fontSize: 13, fontWeight: 700, color: subject.finalRating !== null ? C.t1 : C.t3 }}>{subject.finalRating ?? "-"}</td>
                                 <td style={{ padding: "10px 16px", fontSize: 12, fontWeight: 600, color: subject.remarks === 'PASSED' ? C.green : (subject.remarks === 'FAILED' ? C.red : C.t3) }}>
                                   {subject.remarks ?? "-"}
@@ -203,7 +248,7 @@ export function RAcademicRecordsScreen() {
                             ))}
                             {year.subjects.length === 0 && (
                               <tr>
-                                <td colSpan={7} style={{ padding: 20, textAlign: "center", fontSize: 13, color: C.t3 }}>No grades recorded for this year.</td>
+                                <td colSpan={6} style={{ padding: 20, textAlign: "center", fontSize: 13, color: C.t3 }}>No grades recorded for this year.</td>
                               </tr>
                             )}
                           </tbody>
@@ -235,14 +280,14 @@ export function RAcademicRecordsScreen() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: C.paper, borderBottom: `2px solid ${C.border}` }}>
-                    {["LRN", "Student Name", "Grade & Section", "Status", ""].map(h => (
+                    {["LRN", "Student Name", "Grade Level", "Section", "Status", ""].map(h => (
                       <th key={h} style={{ textAlign: "left", padding: "14px 20px", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
-                    <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", fontSize: 13, color: C.t3 }}>No students found.</td></tr>
+                    <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", fontSize: 13, color: C.t3 }}>No students found.</td></tr>
                   ) : (
                     filtered.map(stu => (
                       <tr key={stu.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s", cursor: "pointer" }}
@@ -252,7 +297,8 @@ export function RAcademicRecordsScreen() {
                       >
                         <td style={{ padding: "16px 20px", fontSize: 12, color: C.t2, fontWeight: 600 }}>{stu.lrn}</td>
                         <td style={{ padding: "16px 20px", fontSize: 13, fontWeight: 700, color: C.t1 }}>{stu.name}</td>
-                        <td style={{ padding: "16px 20px", fontSize: 12, color: C.t2 }}>{stu.gradeLevel} - {stu.section}</td>
+                        <td style={{ padding: "16px 20px", fontSize: 12, color: C.t2 }}>{stu.gradeLevel}</td>
+                        <td style={{ padding: "16px 20px", fontSize: 12, color: C.t2 }}>{stu.section}</td>
                         <td style={{ padding: "16px 20px" }}>
                           <span style={{ 
                             fontSize: 10, fontWeight: 700, 

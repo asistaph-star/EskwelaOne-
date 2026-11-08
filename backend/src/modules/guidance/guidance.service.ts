@@ -13,7 +13,7 @@ export const GuidanceService = {
     return rawRecords.map(r => ({
       ...r,
       counselor_name: r.counselor ? `${r.counselor.first_name} ${r.counselor.last_name}` : r.counselor_id,
-      studentName: r.student ? `${r.student.user.first_name} ${r.student.user.last_name}` : r.student_id
+      studentName: r.student ? (r.student.user ? `${r.student.user.first_name} ${r.student.user.last_name}` : `${r.student.first_name || ''} ${r.student.last_name || ''}`.trim() || r.student_id) : r.student_id
     }));
   },
 

@@ -2,6 +2,7 @@ import prisma from '../../config/database.js';
 import { AppError } from '../../common/middleware/errorHandler.js';
 import { generateId } from '../../common/utils/uuid.js';
 import { createAuditLog } from '../../audit/audit.service.js';
+import { getStudentIdentity } from '../../common/utils/studentIdentity.js';
 
 export const BehaviorService = {
   async getBehaviorLogs() {
@@ -22,7 +23,7 @@ export const BehaviorService = {
     return rawRecords.map(r => ({
       ...r,
       reporter_name: r.reporter ? `${r.reporter.first_name} ${r.reporter.last_name}` : r.reported_by,
-      studentName: r.student ? `${r.student.user.first_name} ${r.student.user.last_name}` : r.student_id,
+      studentName: r.student ? getStudentIdentity(r.student).fullName : r.student_id,
       gradeLevel: r.student?.current_section?.grade_level ?? r.student?.grade_level ?? null,
       sectionName: r.student?.current_section?.name ?? null,
     }));

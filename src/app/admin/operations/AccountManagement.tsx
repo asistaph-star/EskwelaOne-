@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Users, Search, Trash2, KeyRound, ShieldAlert, CheckCircle2, Copy, AlertCircle, RefreshCw, UserX, UserCheck } from "lucide-react";
+import { Users, Search, Trash2, KeyRound, ShieldAlert, CheckCircle2, Copy, AlertCircle, RefreshCw, UserX, UserCheck, Eye, EyeOff } from "lucide-react";
 import { C } from "../../shared/constants/tokens";
 import { apiClient } from "../../../api/client";
 import { useAppContext } from "../../shared/AppContext";
@@ -19,7 +19,13 @@ interface ManagedUser {
   staff?: { employee_id?: string; department?: string; position?: string } | null;
 }
 
-export function AccountManagement() {
+export function AccountManagement({
+  initialTab = "accounts",
+  initialRoleFilter = "All",
+}: {
+  initialTab?: "accounts" | "unprovisioned";
+  initialRoleFilter?: string;
+}) {
   const { currentUser } = useAppContext();
   const isITAdmin = currentUser?.rawRoles?.includes('ITAdmin') || currentUser?.role === 'ITAdmin';
 
@@ -28,7 +34,73 @@ export function AccountManagement() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
+  const [roleFilter, setRoleFilter] = useState(initialRoleFilter);
+  const [activeTab, setActiveTab] = useState<"accounts" | "unprovisioned">(initialTab);
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+  useEffect(() => {
+    if (initialRoleFilter) {
+      setRoleFilter(initialRoleFilter);
+    }
+  }, [initialRoleFilter]);
+  const [unprovisionedLearners, setUnprovisionedLearners] = useState<any[]>([]);
+  const [loadingUnprovisioned, setLoadingUnprovisioned] = useState(false);
+  const [provisionModal, setProvisionModal] = useState<any | null>(null);
+  const [isProvisioning, setIsProvisioning] = useState(false);
+
+  const fetchUnprovisioned = useCallback(async () => {
+    setLoadingUnprovisioned(true);
+    try {
+      const res = await apiClient.get<any>('/academic/advisory/unprovisioned-learners');
+      const data = res?.data || res;
+      setUnprovisionedLearners(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.error('Failed to fetch unprovisioned learners:', err);
+    } finally {
+      setLoadingUnprovisioned(false);
+    }
+  }, []);
+
+  const handleProvisionSubmit = async () => {
+    if (!provisionModal) return;
+    setIsProvisioning(true);
+    try {
+      const res = await apiClient.post<any>('/users', {
+        schoolId: provisionModal.lrn,
+                firstName: provisionModal.firstName,
+        lastName: provisionModal.lastName,
+        middleName: provisionModal.middleName || undefined,
+        roles: ['Student'],
+        studentProfile: {
+          lrn: provisionModal.lrn,
+          gradeLevel: provisionModal.gradeLevel,
+          gender: provisionModal.gender,
+        }
+      });
+
+      const data = res?.data || res;
+      setPasswordRevealed(false);
+      setResetResult({
+        type: "provision",
+        userName: `${provisionModal.firstName} ${provisionModal.lastName}`,
+        schoolId: provisionModal.lrn,
+        email: null,
+        temporaryPassword: data.temporaryPassword,
+      });
+      showToast(`Portal account provisioned for ${provisionModal.firstName} ${provisionModal.lastName}.`);
+      setProvisionModal(null);
+      fetchUsers();
+      fetchUnprovisioned();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data?.error?.message || err.message;
+      alert(`Provisioning failed: ${msg}`);
+    } finally {
+      setIsProvisioning(false);
+    }
+  };
 
   const [confirmModal, setConfirmModal] = useState<{
     type: "status_toggle" | "reset";
@@ -36,12 +108,13 @@ export function AccountManagement() {
     targetStatus?: "active" | "inactive";
   } | null>(null);
 
-  const [resetResult, setResetResult] = useState<{
+  const [resetResult, setResetResult] = useState<{ type?: "provision" | "reset";
     userName: string;
     schoolId: string;
     email?: string | null;
     temporaryPassword: string;
   } | null>(null);
+  const [passwordRevealed, setPasswordRevealed] = useState(false);
 
   const [copied, setCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -62,7 +135,8 @@ export function AccountManagement() {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchUnprovisioned();
+  }, [fetchUsers, fetchUnprovisioned]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -82,7 +156,9 @@ export function AccountManagement() {
         const res = await apiClient.post<any>(`/users/${confirmModal.user.id}/reset-password`);
         const responseData = res?.data || res;
         const tempPass = responseData.temporaryPassword;
+        setPasswordRevealed(false);
         setResetResult({
+          type: "reset",
           userName: `${confirmModal.user.first_name} ${confirmModal.user.last_name}`,
           schoolId: confirmModal.user.school_id,
           email: confirmModal.user.email,
@@ -113,7 +189,9 @@ export function AccountManagement() {
     const matchesSearch = fullName.includes(query) || email.includes(query) || sid.includes(query);
 
     const roles = u.user_roles?.map(ur => ur.role.name) || [];
-    const matchesRole = roleFilter === "All" || roles.includes(roleFilter);
+    const matchesRole =
+      roleFilter === "All" ||
+      (roleFilter === "Unassigned" ? roles.length === 0 : roles.includes(roleFilter));
 
     return matchesSearch && matchesRole;
   });
@@ -157,8 +235,130 @@ export function AccountManagement() {
         </div>
       )}
 
+      {/* Tab Navigation */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20, borderBottom: `1px solid ${C.borderMed}`, paddingBottom: 12 }}>
+        <button
+          onClick={() => setActiveTab("accounts")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: "none",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            background: activeTab === "accounts" ? C.m800 : "transparent",
+            color: activeTab === "accounts" ? "#fff" : C.t2,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Users size={15} />
+          Portal Accounts ({filteredUsers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("unprovisioned")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: "none",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            background: activeTab === "unprovisioned" ? "#0284c7" : "transparent",
+            color: activeTab === "unprovisioned" ? "#fff" : C.t2,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <KeyRound size={15} />
+          Pending Student Accounts
+          {unprovisionedLearners.length > 0 && (
+            <span style={{
+              background: activeTab === "unprovisioned" ? "#fff" : "#0284c7",
+              color: activeTab === "unprovisioned" ? "#0284c7" : "#fff",
+              padding: "1px 7px",
+              borderRadius: 12,
+              fontSize: 11,
+              fontWeight: 800,
+            }}>
+              {unprovisionedLearners.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "unprovisioned" ? (
+        <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.02)", marginBottom: 24 }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.borderMed}`, background: "#f8fafc", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.t1 }}>Learners Registered by Class Advisers (Awaiting Portal Accounts)</div>
+              <div style={{ fontSize: 12, color: C.t3 }}>These students are enrolled in classes but cannot log in until an Admin provisions credentials.</div>
+            </div>
+            <button
+              onClick={fetchUnprovisioned}
+              disabled={loadingUnprovisioned}
+              style={{ padding: "6px 12px", fontSize: 12, fontWeight: 600, background: "#fff", border: `1px solid ${C.borderMed}`, borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <RefreshCw size={12} className={loadingUnprovisioned ? "animate-spin" : ""} /> Refresh List
+            </button>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: C.paper, borderBottom: `1px solid ${C.borderMed}` }}>
+                <th style={{ padding: "12px 20px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Learner</th>
+                <th style={{ padding: "12px 20px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>DepEd LRN</th>
+                <th style={{ padding: "12px 20px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Advisory Section</th>
+                <th style={{ padding: "12px 20px", textAlign: "left", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Status</th>
+                <th style={{ padding: "12px 20px", textAlign: "right", fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase" }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingUnprovisioned ? (
+                <tr><td colSpan={5} style={{ padding: "30px", textAlign: "center", color: C.t3, fontSize: 13 }}>Loading students without portal accounts...</td></tr>
+              ) : unprovisionedLearners.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: "30px", textAlign: "center", color: C.t3, fontSize: 13 }}>All registered students have active portal accounts.</td></tr>
+              ) : (
+                unprovisionedLearners.map(learner => (
+                  <tr key={learner.studentId} style={{ borderBottom: `1px solid ${C.borderLight}` }}>
+                    <td style={{ padding: "14px 20px" }}>
+                      <div style={{ fontWeight: 700, color: C.t1, fontSize: 13 }}>
+                        {learner.lastName}, {learner.firstName} {learner.middleName ? learner.middleName.charAt(0) + '.' : ''}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.t3 }}>ID: {learner.studentNumber || learner.studentId.substring(0, 8)}</div>
+                    </td>
+                    <td style={{ padding: "14px 20px", fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: C.t1 }}>
+                      {learner.lrn}
+                    </td>
+                    <td style={{ padding: "14px 20px", fontSize: 12, color: C.t2 }}>
+                      <span style={{ fontWeight: 600 }}>{learner.sectionName}</span>
+                      <span style={{ fontSize: 11, color: C.t3, display: "block" }}>Grade {learner.gradeLevel}</span>
+                    </td>
+                    <td style={{ padding: "14px 20px" }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: "#fef3c7", color: "#b45309" }}>
+                        Pending Account
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 20px", textAlign: "right" }}>
+                      <button
+                        onClick={() => setProvisionModal(learner)}
+                        style={{ padding: "6px 14px", background: "#059669", color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+                      >
+                        <KeyRound size={13} /> Create Student Account
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {/* Filters */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: activeTab === "accounts" ? "flex" : "none", gap: 16, marginBottom: 24 }}>
         <div style={{ position: "relative", flex: 1, maxWidth: 320 }}>
           <Search size={14} color={C.t3} style={{ position: "absolute", left: 14, top: 11 }} />
           <input 
@@ -184,10 +384,12 @@ export function AccountManagement() {
           <option value="GateOperator">Gate Operator</option>
           <option value="Admin">Admin</option>
           <option value="ITAdmin">ITAdmin</option>
+          <option value="Unassigned">No Assigned Role</option>
         </select>
       </div>
 
       {/* Table */}
+      {activeTab === "accounts" && (
       <div style={{ background: "#fff", border: `1px solid ${C.borderLight}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 16px rgba(0,0,0,0.02)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -313,6 +515,51 @@ export function AccountManagement() {
           </tbody>
         </table>
       </div>
+      )}
+
+      {/* Provision Portal Account Modal */}
+      {provisionModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1050 }}>
+          <div style={{ background: "#fff", padding: 28, borderRadius: 14, width: 440, maxWidth: "90%", boxShadow: "0 24px 48px rgba(0,0,0,0.25)" }}>
+            <div style={{ display: "flex", gap: 14, marginBottom: 18 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 22, background: "#ecfdf5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <KeyRound size={22} color="#059669" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: C.t1, margin: "0 0 6px" }}>Create Student Account</h3>
+                <p style={{ fontSize: 13, color: C.t2, margin: 0, lineHeight: 1.5 }}>
+                  Generate student portal credentials for <strong>{provisionModal.firstName} {provisionModal.lastName}</strong> (LRN: {provisionModal.lrn}).
+                  This links to the existing student record without duplicate registration.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ background: "#f8fafc", border: `1px solid ${C.borderMed}`, borderRadius: 8, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: C.t2 }}>
+              <div><strong>Student Login ID (LRN):</strong> {provisionModal.lrn}</div>
+              <div><strong>DepEd LRN:</strong> {provisionModal.lrn}</div>
+              <div><strong>Section:</strong> {provisionModal.sectionName} (Grade {provisionModal.gradeLevel})</div>
+              <div style={{ marginTop: 4, color: "#059669", fontWeight: 600 }}>✓ Authentication: 12-digit LRN + Temporary Password (No student email required)</div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => setProvisionModal(null)}
+                disabled={isProvisioning}
+                style={{ padding: "9px 15px", background: "none", border: `1px solid ${C.borderMed}`, borderRadius: 8, fontSize: 13, fontWeight: 600, color: C.t2, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleProvisionSubmit}
+                disabled={isProvisioning}
+                style={{ padding: "9px 18px", background: "#059669", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, color: "#fff", cursor: isProvisioning ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {isProvisioning ? "Generating..." : "Generate & Activate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {confirmModal && (
@@ -371,7 +618,9 @@ export function AccountManagement() {
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
               <CheckCircle2 color={C.green} size={28} />
               <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.t1 }}>Password Reset Successful</h3>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: C.t1 }}>
+                  {resetResult.type === "provision" ? "Student Portal Account Created" : "Password Reset Successful"}
+                </h3>
                 <p style={{ margin: "4px 0 0", fontSize: 12.5, color: C.t3 }}>
                   User: {resetResult.userName} • <strong>ID: {resetResult.schoolId}</strong>
                   {resetResult.email ? ` (${resetResult.email})` : ''}
@@ -380,41 +629,86 @@ export function AccountManagement() {
             </div>
 
             <div style={{ background: C.paper, border: `1.5px dashed ${C.green}`, padding: 18, borderRadius: 10, margin: "20px 0" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
-                New Temporary Password:
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.t3, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  One-Time Temporary Password:
+                </span>
+                <span style={{ fontSize: 11, color: C.t3 }}>
+                  Entropy: 96.36 bits (16 chars)
+                </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                <code style={{ fontSize: 20, fontWeight: 800, color: C.t1, letterSpacing: "0.15em", fontFamily: "'JetBrains Mono', monospace" }}>
-                  {resetResult.temporaryPassword}
-                </code>
-                <button
-                  onClick={handleCopyPassword}
+                <code
+                  id="temporary-password-display"
                   style={{
-                    background: copied ? C.green : "#fff",
-                    color: copied ? "#fff" : C.green,
-                    border: `1px solid ${C.green}`,
-                    borderRadius: 6,
-                    padding: "6px 12px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    fontWeight: 700
+                    fontSize: passwordRevealed ? 17 : 20,
+                    fontWeight: 800,
+                    color: C.t1,
+                    letterSpacing: passwordRevealed ? "0.1em" : "0.2em",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    userSelect: passwordRevealed ? "all" : "none",
                   }}
                 >
-                  <Copy size={13} /> {copied ? "Copied!" : "Copy"}
-                </button>
+                  {passwordRevealed ? resetResult.temporaryPassword : "••••••••••••••••"}
+                </code>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    id="btn-reveal-password"
+                    onClick={() => setPasswordRevealed(prev => !prev)}
+                    title={passwordRevealed ? "Mask password" : "Reveal temporary password"}
+                    style={{
+                      background: "#fff",
+                      color: C.t2,
+                      border: `1px solid ${C.borderMed}`,
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}
+                  >
+                    {passwordRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {passwordRevealed ? "Hide" : "Reveal"}
+                  </button>
+                  <button
+                    id="btn-copy-password"
+                    onClick={handleCopyPassword}
+                    style={{
+                      background: copied ? C.green : "#fff",
+                      color: copied ? "#fff" : C.green,
+                      border: `1px solid ${C.green}`,
+                      borderRadius: 6,
+                      padding: "6px 12px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      fontWeight: 700
+                    }}
+                  >
+                    <Copy size={13} /> {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <p style={{ fontSize: 12, fontWeight: 600, color: "#b45309", margin: "0 0 24px", lineHeight: 1.4 }}>
-              ⚠️ Copy this temporary password now. It will not be shown again. The user will be required to change it on their next login.
-            </p>
+            <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px", margin: "0 0 20px" }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "#92400e", margin: 0, lineHeight: 1.45 }}>
+                {resetResult.type === "provision"
+                  ? "📋 Student Credential Handoff: Hand this temporary credential slip in-person directly to the learner or their Class Adviser. Plaintext passwords are NEVER stored in the database and cannot be retrieved again once this window is closed."
+                  : "⚠️ One-Time Password Disclosure: Provide this temporary password to the user. The previous password has been invalidated immediately and the user will be forced to change this password on next login."
+                }
+              </p>
+            </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
-                onClick={() => setResetResult(null)}
+                id="btn-close-provision-modal"
+                onClick={() => { setResetResult(null); setPasswordRevealed(false); }}
                 style={{ padding: "10px 20px", background: C.m800, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
               >
                 Close & Return

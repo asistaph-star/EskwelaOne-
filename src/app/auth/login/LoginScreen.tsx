@@ -31,6 +31,10 @@ export function LoginScreen() {
         id: user.id,
         schoolId: user.schoolId,
         name: `${user.firstName} ${user.lastName}`,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        middleName: (user as any).middleName,
+        email: user.email,
         role: user.roles?.[0] || '',
         permissions: user.permissions || [],
         rawRoles: user.roles || [],
@@ -53,12 +57,6 @@ export function LoginScreen() {
     await handleDirectLogin(schoolId, pass);
   }
 
-  const handleDemoLogin = (demoSchoolId: string) => {
-    setSchoolId(demoSchoolId);
-    setPass("password123");
-    handleDirectLogin(demoSchoolId, "password123");
-  };
-
   return (
     <div style={{ minHeight: "100vh", width: "100vw", display: "flex", fontFamily: "'Inter',sans-serif", position: "relative", overflow: "hidden" }}>
 
@@ -77,13 +75,16 @@ export function LoginScreen() {
 
         {/* Top Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="School Logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
-          ) : (
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <GraduationCap size={26} color="#fff" />
-            </div>
-          )}
+          {(() => {
+            const logoSrc = settings.logoUrl || "/school_seal.png";
+            return logoSrc ? (
+              <img src={logoSrc} alt="School Logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} onError={(e) => (e.currentTarget.style.display = 'none')} />
+            ) : (
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <GraduationCap size={26} color="#fff" />
+              </div>
+            );
+          })()}
           <div style={{ display: "flex", alignItems: "center", overflow: "hidden", justifyContent: "center" }}>
             <div style={{ color: "#ffffff", fontSize: 22, fontWeight: 600, fontFamily: "'Fraunces', serif", letterSpacing: "-0.01em", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
               {settings.schoolName || "DigiSkwela"}
@@ -130,7 +131,7 @@ export function LoginScreen() {
           {/* Titles */}
           <div style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 24, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif", marginBottom: 6 }}>Sign in to your account</div>
-            <div style={{ fontSize: 11.5, color: C.t3, lineHeight: 1.4 }}>Access your university portal to continue managing academic and administrative tasks.</div>
+            <div style={{ fontSize: 11.5, color: C.t3, lineHeight: 1.4 }}>Sign in to your Calulut Integrated School portal to access academic and administrative services.</div>
           </div>
 
           {/* Divider */}
@@ -226,7 +227,7 @@ export function LoginScreen() {
             <Shield size={14} color={C.m700} style={{ flexShrink: 0, marginTop: 1 }} />
             <div>
               <div style={{ fontSize: 10.5, fontWeight: 700, color: C.t1 }}>Authorized Access Only</div>
-              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2, lineHeight: 1.4 }}>This system is for authorized university personnel and students only. All access is monitored and recorded.</div>
+              <div style={{ fontSize: 9.5, color: C.t3, marginTop: 2, lineHeight: 1.4 }}>This system is for authorized Calulut Integrated School personnel and students only. All access is monitored and recorded.</div>
             </div>
           </div>
         </div>

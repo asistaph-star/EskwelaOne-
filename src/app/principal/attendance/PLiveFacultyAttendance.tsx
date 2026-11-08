@@ -151,13 +151,15 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
   const leftScan = activeScans[0] || null;
   const rightScan = activeScans[1] || null;
 
+  const displayLogo = settings.logoUrl || '/school_seal.png';
+
   return (
     <div className="relative flex h-screen w-full flex-col bg-gradient-to-b from-slate-100 to-white font-sans text-slate-800 overflow-hidden">
       
       {/* Huge Background Watermark — Identical to Student Gate Monitor */}
-      {settings.logoUrl && (
+      {displayLogo && (
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center opacity-[0.06] overflow-hidden">
-          <img src={settings.logoUrl} alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
+          <img src={displayLogo} alt="Watermark" className="w-[250%] max-w-none md:w-[150%] lg:w-[130%] object-contain" />
         </div>
       )}
 
@@ -173,8 +175,8 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
             <span>Exit to Dashboard</span>
           </button>
 
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="School Logo" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
+          {displayLogo ? (
+            <img src={displayLogo} alt="School Logo" className="h-10 w-10 object-contain md:h-12 md:w-12 lg:h-14 lg:w-14" />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 md:h-12 md:w-12 lg:h-14 lg:w-14">
               <GraduationCap className="h-6 w-6 text-amber-400 md:h-7 md:w-7" />
@@ -185,7 +187,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
               {(settings.schoolName || 'DigiSkwela Gate Attendance').toUpperCase()}
             </h1>
             <div className="text-[10px] font-bold text-amber-400 tracking-wider uppercase">
-              {feedMode === 'faculty' ? 'GATE ATTENDANCE MONITORING — FACULTY (READ-ONLY)' : 'GATE ATTENDANCE MONITORING — STUDENTS (READ-ONLY)'}
+              {feedMode === 'faculty' ? 'FACULTY GATE ATTENDANCE (READ-ONLY)' : 'STUDENT GATE ATTENDANCE (READ-ONLY)'}
             </div>
           </div>
         </div>
@@ -266,8 +268,8 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
               const isFaculty = scan.entityType === 'FACULTY';
               const displayName = isFaculty ? (scan.teacherName || 'Faculty Member') : (scan.studentName || 'Student');
               const subTitle = isFaculty 
-                ? `${scan.employeeId || 'ID'} • ${scan.department || 'FACULTY'}${scan.position ? ` • ${scan.position}` : ''}`
-                : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel} • ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
+                ? `${scan.employeeId || 'ID'}, ${scan.department || 'FACULTY'}${scan.position ? `, ${scan.position}` : ''}`
+                : (scan.sectionName ? `GRADE ${scan.gradeLevel ? `${scan.gradeLevel}, SECTION ` : ''}${scan.sectionName.toUpperCase()}` : 'STUDENT');
               const photoSrc = isFaculty ? (settings.logoUrl || '/student_photo.png') : '/student_photo.png';
 
               return (
@@ -282,7 +284,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 leading-none">
                       <span className={scan.action === 'Time In' ? 'text-green-600' : 'text-blue-600'}>
-                        {scan.action === 'Time In' ? 'IN' : 'OUT'}
+                        {isFaculty ? (scan.action === 'Time In' ? 'IN' : 'OUT') : (scan.action === 'Time In' ? 'ENTRY' : 'EXIT')}
                       </span>
                       <span>{scan.timeFormatted}</span>
                     </div>
@@ -308,7 +310,7 @@ export function PLiveFacultyAttendance({ onExit, initialMode = 'student' }: PLiv
       {/* 4. Footer Section (Status Bar) — Read-Only Monitoring */}
       <footer className="relative z-10 flex shrink-0 items-center justify-between bg-slate-900 px-6 py-2.5 text-xs font-bold tracking-widest text-white shadow-inner">
         <div className="text-[10px] text-slate-400 tracking-wider">
-          GATE ATTENDANCE MONITORING • READ-ONLY SPECTATOR
+          CAMPUS GATE ATTENDANCE MONITOR (READ-ONLY)
         </div>
         <div className="flex items-center gap-6">
           <span className="text-xs text-slate-400 font-mono">{activeScans.length} Total Today</span>
@@ -343,12 +345,12 @@ function ProfileCard({ scan, logoUrl }: { scan: GateScanItem | null; logoUrl?: s
     <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
       
       {/* Top Status & Time Stamp */}
-      <div className="absolute left-5 top-4 z-10 flex flex-col items-center">
-        <span className={`text-4xl md:text-5xl lg:text-7xl font-black leading-none tracking-tighter ${isIn ? 'text-red-600' : 'text-emerald-600'}`}>
-          {isIn ? 'IN' : 'OUT'}
+      <div className="absolute left-5 top-4 z-10 flex flex-col items-center max-w-[42%]">
+        <span className={`${(!isFaculty && isIn) ? 'text-3xl md:text-4xl lg:text-5xl' : 'text-4xl md:text-5xl lg:text-7xl'} font-black leading-none tracking-tighter ${isIn ? 'text-emerald-600' : 'text-blue-600'} whitespace-nowrap`}>
+          {isFaculty ? (isIn ? 'IN' : 'OUT') : (isIn ? 'ENTRY' : 'EXIT')}
         </span>
-        <span className={`text-[10px] md:text-xs font-extrabold uppercase tracking-widest ${isIn ? 'text-red-700' : 'text-emerald-700'} -mt-1`}>
-          CHECKED
+        <span className={`text-[10px] md:text-xs font-extrabold uppercase tracking-widest ${isIn ? 'text-emerald-700' : 'text-blue-700'} ${(!isFaculty && isIn) ? 'mt-0.5' : '-mt-1'}`}>
+          {isFaculty ? 'CHECKED' : 'RECORDED'}
         </span>
       </div>
 

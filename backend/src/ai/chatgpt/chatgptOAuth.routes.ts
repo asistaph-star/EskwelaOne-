@@ -6,13 +6,46 @@ import { aiConfig } from '../../config/ai.config.js';
 
 const router = Router();
 
+function assertChatGPTAdminRole(req: Request, res: Response): boolean {
+  const authUser = (req as any).user as AuthenticatedUser | undefined;
+  const roles = authUser?.roles || [];
+  const isAuthorized =
+    roles.includes('Admin') || roles.includes('ITAdmin') || roles.includes('Principal');
+  if (!isAuthorized) {
+    res.status(403).json({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Only Principal, Admin, or ITAdmin may manage ChatGPT Plan integration.',
+      },
+    });
+    return false;
+  }
+  return true;
+}
+
 /**
  * GET /api/ai/chatgpt-plan/auth-url
  * Returns the authorization URL for initiating Sign in with ChatGPT.
- * Protected by DigiSkwela authentication (Principal / Admin).
+ * Protected by DigiSkwela authentication (Principal / Admin / ITAdmin) and CHATGPT_PLAN_ENABLED gate.
  */
 router.get('/auth-url', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!assertChatGPTAdminRole(req, res)) {
+      return;
+    }
+    if (!aiConfig.chatgptPlan?.enabled) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'CHATGPT_PLAN_DISABLED',
+          message:
+            'ChatGPT Plan delegation is currently disabled by policy. Explicit authorization (CHATGPT_PLAN_ENABLED=true) is required before initiating a new connection.',
+        },
+      });
+      return;
+    }
+
     const redirectUri = (req.query.redirectUri as string) || aiConfig.chatgptPlan?.callbackUrl || 'http://127.0.0.1:4000/api/ai/chatgpt-plan/callback';
     const forceNew = req.query.forceNew === 'true';
     const authData = chatGPTOAuthService.generateAuthorizationUrl({
@@ -39,6 +72,17 @@ router.get('/auth-url', authMiddleware, (req: Request, res: Response, next: Next
  */
 router.get('/callback', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!aiConfig.chatgptPlan?.enabled) {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'CHATGPT_PLAN_DISABLED',
+          message:
+            'ChatGPT Plan delegation is currently disabled by policy. Explicit authorization is required before connecting.',
+        },
+      });
+      return;
+    }
     const code = req.query.code as string;
     const state = req.query.state as string;
     const callbackClientId = (req.query.client_id as string) || undefined;
@@ -156,15 +200,21 @@ router.get('/status', authMiddleware, (_req: Request, res: Response, next: NextF
 
 /**
  * DELETE /api/ai/chatgpt-plan/credentials
- * Disconnects ChatGPT Plan integration by clearing stored runtime credentials.
- * Protected by DigiSkwela authentication.
+ * Disconnects ChatGPT Plan integration by clearing both stored OAuth tokens (tokens.json)
+ * and issued client registration (registration.json) while preserving the non-sensitive host_id.json.
+ * Protected by DigiSkwela authentication (Principal / Admin / ITAdmin).
  */
-router.delete('/credentials', authMiddleware, (_req: Request, res: Response, next: NextFunction) => {
+router.delete('/credentials', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
   try {
-    const cleared = chatGPTTokenStorage.clearCredentials();
+    if (!assertChatGPTAdminRole(req, res)) {
+      return;
+    }
+    const cleared = chatGPTTokenStorage.clearAll();
     res.json({
       success: true,
-      message: cleared ? 'ChatGPT Plan credentials cleared.' : 'No active credentials found.',
+      message: cleared
+        ? 'ChatGPT Plan credentials and registration cleared.'
+        : 'No active credentials or registration found.',
     });
   } catch (err) {
     next(err);

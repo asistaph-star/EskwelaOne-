@@ -48,7 +48,7 @@ function formatActionLabel(action: string): string {
     case "PASSWORD_CHANGE_FAILED":
       return "Password Change Failed";
     case "USER_CREATED":
-      return "Account Provisioned";
+      return "Account Created";
     case "USER_UPDATED":
       return "Account Updated";
     case "USER_STATUS_CHANGED":
@@ -1145,7 +1145,7 @@ export function AuditLogsScreen() {
 
                 {selectedLog.reason && (
                   <div style={{ gridColumn: "span 2" }}>
-                    <span style={{ color: C.t3, display: "block", marginBottom: 2 }}>Reason / Note:</span>
+                    <span style={{ color: C.t3, display: "block", marginBottom: 2 }}>Reason:</span>
                     <strong style={{ color: C.red }}>{selectedLog.reason}</strong>
                   </div>
                 )}
