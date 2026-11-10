@@ -17,6 +17,7 @@ import {
   Sparkles,
   Info,
   Calendar,
+  X,
 } from 'lucide-react';
 import { apiClient } from '../../../api/client';
 import { AuthenticCalulutSf9Viewer } from './AuthenticCalulutSf9Viewer';
@@ -43,7 +44,7 @@ export function ReportCardReleaseConsole({
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'unissued' | 'issued' | 'released'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'eligible' | 'incomplete' | 'unissued' | 'issued' | 'released'>('all');
 
   // Viewer state
   const [selectedStudentForViewer, setSelectedStudentForViewer] = useState<any | null>(null);
@@ -53,12 +54,62 @@ export function ReportCardReleaseConsole({
   const [showIssueModal, setShowIssueModal] = useState<boolean>(false);
   const [showReleaseModal, setShowReleaseModal] = useState<boolean>(false);
   const [showBatchReleaseModal, setShowBatchReleaseModal] = useState<boolean>(false);
+  const [showBatchIssueModal, setShowBatchIssueModal] = useState<boolean>(false);
+  const [batchProgress, setBatchProgress] = useState<any | null>(null);
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<'T1' | 'T2' | 'T3'>('T1');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ id: Date.now(), message, type });
+  };
+
+  const parseBlocker = (reason: string): { label: string; bg: string; color: string; border: string } => {
+    if (/incomplete_missing_attendance|attendance|month/i.test(reason)) {
+      const match = reason.match(/Month\s+([A-Za-z]+)/i);
+      const month = match ? match[1] : 'SF2';
+      return {
+        label: `Missing SF2: ${month}`,
+        bg: '#fef3c7',
+        color: '#92400e',
+        border: '#fde68a',
+      };
+    }
+    if (/adviser_comment/i.test(reason)) {
+      return {
+        label: 'Missing Adviser Comment (T1)',
+        bg: '#fef3c7',
+        color: '#92400e',
+        border: '#fde68a',
+      };
+    }
+    if (/hollow_gradebook/i.test(reason)) {
+      const parts = reason.split(':');
+      const subj = parts[1] ? parts[1].toUpperCase() : 'Subject';
+      return {
+        label: `Hollow Gradebook: ${subj}`,
+        bg: '#fee2e2',
+        color: '#991b1b',
+        border: '#fca5a5',
+      };
+    }
+    if (/missing_subject_grade|unauthorized_or_missing/i.test(reason)) {
+      const parts = reason.split(':');
+      const subj = parts[1] ? parts[1].toUpperCase() : 'Grade';
+      return {
+        label: `Missing Grade: ${subj}`,
+        bg: '#fee2e2',
+        color: '#991b1b',
+        border: '#fca5a5',
+      };
+    }
+    return {
+      label: reason.replace(/_/g, ' ').toLowerCase(),
+      bg: '#f1f5f9',
+      color: '#475569',
+      border: '#cbd5e1',
+    };
   };
 
   // 1. Fetch available sections
@@ -298,6 +349,68 @@ export function ReportCardReleaseConsole({
     }
   };
 
+  // 8. Principal Authorize Only Eligible Students
+  const handleAuthorizeEligible = async () => {
+    if (!selectedSectionId) return;
+    setIsProcessing(true);
+    try {
+      const res = await apiClient.post<any>(
+        `/academic/report-card/sections/${selectedSectionId}/authorize-eligible`,
+        { targetTerm: selectedTerm }
+      );
+      const data = res?.data || res;
+      showToast(
+        `Authorized ${data.authorizedCount} eligible learners in Section ${overview?.section?.name || ''}! (${data.excludedCount} incomplete learners safely bypassed)`,
+        'success'
+      );
+      await fetchOverview();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err.message;
+      showToast(`Principal authorization failed: ${msg}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 9. Asynchronous Batch SF9 Issuance
+  const handleStartBulkIssue = async () => {
+    if (!selectedSectionId) return;
+    setIsProcessing(true);
+    try {
+      const res = await apiClient.post<any>(
+        `/academic/report-card/sections/${selectedSectionId}/bulk-issue`,
+        { targetTerm: selectedTerm }
+      );
+      const data = res?.data || res;
+      const batchId = data.batchId;
+      setActiveBatchId(batchId);
+      setShowBatchIssueModal(true);
+      showToast(`Bulk SF9 issuance started for ${data.totalEnqueued} authorized learners.`, 'info');
+      pollBatchProgress(batchId);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err.message;
+      showToast(`Cannot start bulk issuance: ${msg}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const pollBatchProgress = (batchId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiClient.get<any>(`/academic/report-card/batches/${batchId}/progress`);
+        const p = res?.data || res;
+        setBatchProgress(p);
+        if (p.status === 'COMPLETED' || p.status === 'FAILED') {
+          clearInterval(interval);
+          fetchOverview();
+        }
+      } catch (e) {
+        console.error('Polling batch progress error', e);
+      }
+    }, 1500);
+  };
+
   // If viewing a single student's SF9, render the authentic Calulut viewer
   if (selectedStudentForViewer) {
     return (
@@ -332,6 +445,8 @@ export function ReportCardReleaseConsole({
 
     if (!matchesSearch) return false;
 
+    if (filterStatus === 'eligible') return l.eligibility?.isEligible;
+    if (filterStatus === 'incomplete') return !l.eligibility?.isEligible;
     if (filterStatus === 'unissued') return !l.issuance.isIssued;
     if (filterStatus === 'issued') return l.issuance.isIssued && !l.release.isReleased;
     if (filterStatus === 'released') return l.release.isReleased;
@@ -344,6 +459,9 @@ export function ReportCardReleaseConsole({
     publishedSubjectsCount: 0,
     issuedCount: 0,
     releasedCount: 0,
+    eligibleCount: 0,
+    incompleteCount: 0,
+    authorizedCount: 0,
   };
 
   const unreleasedIssuedCount = learners.filter(
@@ -503,63 +621,115 @@ export function ReportCardReleaseConsole({
           )}
 
           {portal === 'Principal' && (
-            <button
-              onClick={handleAuthorizeSection}
-              disabled={isProcessing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '7px 16px',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fff',
-                background: stats.isPrincipalAuthorized ? '#047857' : '#0284c7',
-                border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              }}
-              title="Formally review prerequisites and authorize official SF9 issuance for this section"
-            >
-              <ShieldCheck size={14} />
-              {stats.isPrincipalAuthorized ? 'Re-authorize Section (T1)' : 'Authorize Section (T1)'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={handleAuthorizeEligible}
+                disabled={isProcessing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 16px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#fff',
+                  background: '#047857',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  boxShadow: '0 1px 3px rgba(4,120,87,0.2)',
+                }}
+                title="Formally authorize official SF9 issuance for eligible learners with complete records"
+              >
+                <ShieldCheck size={14} />
+                Authorize Eligible ({stats.eligibleCount ?? 0})
+              </button>
+
+              <button
+                onClick={handleAuthorizeSection}
+                disabled={isProcessing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.t2,
+                  background: '#fff',
+                  border: `1px solid ${C.borderMed}`,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+                title="Strict authorization: Requires 100% of all section learners to be complete"
+              >
+                <ShieldCheck size={13} />
+                Authorize All Section
+              </button>
+            </div>
           )}
 
           {portal === 'Admin' && (
-            <button
-              onClick={() => setShowBatchReleaseModal(true)}
-              disabled={unreleasedIssuedCount === 0 || !stats.isPrincipalAuthorized || isProcessing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '7px 16px',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fff',
-                background:
-                  unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized ? '#15803d' : '#94a3b8',
-                border: 'none',
-                borderRadius: 6,
-                cursor:
-                  unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized ? 'pointer' : 'not-allowed',
-                boxShadow:
-                  unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized
-                    ? '0 1px 3px rgba(21,128,61,0.2)'
-                    : 'none',
-              }}
-              title={
-                !stats.isPrincipalAuthorized
-                  ? 'Batch release requires prior formal authorization by the School Principal.'
-                  : unreleasedIssuedCount === 0
-                  ? 'No unreleased issued report cards available for batch release.'
-                  : 'Release all sealed report cards in this section to the Student Portal'
-              }
-            >
-              <Send size={13} /> Batch Release Section ({unreleasedIssuedCount})
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={handleStartBulkIssue}
+                disabled={isProcessing || !stats.isPrincipalAuthorized}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 16px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#fff',
+                  background: stats.isPrincipalAuthorized ? '#0284c7' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: stats.isPrincipalAuthorized ? 'pointer' : 'not-allowed',
+                  boxShadow: stats.isPrincipalAuthorized ? '0 1px 3px rgba(2,132,199,0.2)' : 'none',
+                }}
+                title={
+                  !stats.isPrincipalAuthorized
+                    ? 'Bulk issuance requires prior formal authorization by the School Principal.'
+                    : 'Issue official SF9 report cards in the background with bounded concurrency'
+                }
+              >
+                <Sparkles size={13} /> Batch Issue SF9s
+              </button>
+
+              <button
+                onClick={() => setShowBatchReleaseModal(true)}
+                disabled={unreleasedIssuedCount === 0 || !stats.isPrincipalAuthorized || isProcessing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 16px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#fff',
+                  background:
+                    unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized ? '#15803d' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor:
+                    unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized ? 'pointer' : 'not-allowed',
+                  boxShadow:
+                    unreleasedIssuedCount > 0 && stats.isPrincipalAuthorized
+                      ? '0 1px 3px rgba(21,128,61,0.2)'
+                      : 'none',
+                }}
+                title={
+                  !stats.isPrincipalAuthorized
+                    ? 'Batch release requires prior formal authorization by the School Principal.'
+                    : unreleasedIssuedCount === 0
+                    ? 'No unreleased issued report cards available for batch release.'
+                    : 'Release all sealed report cards in this section to the Student Portal'
+                }
+              >
+                <Send size={13} /> Batch Release Section ({unreleasedIssuedCount})
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -680,7 +850,9 @@ export function ReportCardReleaseConsole({
           {/* Status Filter Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {[
-              { id: 'all', label: `All (${learners.length})` },
+              { id: 'all', label: `All Learners (${learners.length})` },
+              { id: 'eligible', label: `Eligible (${stats.eligibleCount ?? learners.filter((l) => l.eligibility?.isEligible).length})` },
+              { id: 'incomplete', label: `Incomplete (${stats.incompleteCount ?? learners.filter((l) => !l.eligibility?.isEligible).length})` },
               { id: 'unissued', label: `Unissued (${learners.filter((l) => !l.issuance.isIssued).length})` },
               { id: 'issued', label: `Ready for Release (${unreleasedIssuedCount})` },
               { id: 'released', label: `Released (${stats.releasedCount})` },
@@ -722,6 +894,7 @@ export function ReportCardReleaseConsole({
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: `1px solid ${C.borderMed}` }}>
                     <th style={{ padding: '10px 16px', fontWeight: 700, color: C.t2 }}>Learner Name &amp; LRN</th>
+                    <th style={{ padding: '10px 14px', fontWeight: 700, color: C.t2, textAlign: 'center' }}>SF9 Readiness</th>
                     <th style={{ padding: '10px 14px', fontWeight: 700, color: C.t2, textAlign: 'center' }}>Subject Grades</th>
                     <th style={{ padding: '10px 14px', fontWeight: 700, color: C.t2, textAlign: 'center' }}>Adviser Comments</th>
                     <th style={{ padding: '10px 14px', fontWeight: 700, color: C.t2, textAlign: 'center' }}>Principal Authorization</th>
@@ -749,6 +922,74 @@ export function ReportCardReleaseConsole({
                           <div style={{ fontSize: 11, color: C.t3, fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>
                             LRN: {learner.lrn} · {learner.gender === 'Male' || learner.gender === 'M' ? 'Male' : learner.gender === 'Female' || learner.gender === 'F' ? 'Female' : 'Unknown'}
                           </div>
+                        </td>
+
+                        {/* SF9 Readiness & Blockers */}
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          {learner.eligibility?.isEligible ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                background: '#dcfce7',
+                                color: '#166534',
+                                border: '1px solid #86efac',
+                              }}
+                            >
+                              <CheckCircle2 size={11} /> Eligible for SF9
+                            </span>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontSize: 10.5,
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: 4,
+                                  background: '#fee2e2',
+                                  color: '#991b1b',
+                                  border: '1px solid #fca5a5',
+                                }}
+                              >
+                                <AlertTriangle size={11} /> Incomplete ({learner.eligibility?.blockingReasons?.length || 1})
+                              </span>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', maxWidth: 220 }}>
+                                {(learner.eligibility?.blockingReasons || []).slice(0, 4).map((r: string, rIdx: number) => {
+                                  const chip = parseBlocker(r);
+                                  return (
+                                    <span
+                                      key={rIdx}
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: 600,
+                                        padding: '1px 5px',
+                                        borderRadius: 3,
+                                        background: chip.bg,
+                                        color: chip.color,
+                                        border: `1px solid ${chip.border}`,
+                                      }}
+                                      title={r}
+                                    >
+                                      {chip.label}
+                                    </span>
+                                  );
+                                })}
+                                {(learner.eligibility?.blockingReasons?.length || 0) > 4 && (
+                                  <span style={{ fontSize: 9, color: '#64748b', fontWeight: 600 }}>
+                                    +{(learner.eligibility?.blockingReasons?.length || 0) - 4} more
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </td>
 
                         {/* Subject Grades Status */}
@@ -1254,6 +1495,96 @@ export function ReportCardReleaseConsole({
         ]}
         note="Unissued learners will remain in pending state and will not receive premature or incomplete report cards."
       />
+
+      {/* ── Batch Issuance Progress Modal ── */}
+      {showBatchIssueModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 500, width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#0f172a' }}>Bulk SF9 Issuance Queue</h3>
+                  <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>Bounded background compilation with LibreOffice</p>
+                </div>
+              </div>
+              {batchProgress?.status !== 'PROCESSING' && (
+                <button
+                  onClick={() => {
+                    setShowBatchIssueModal(false);
+                    fetchOverview();
+                  }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 6 }}>
+                <span>Status: <strong style={{ color: batchProgress?.status === 'COMPLETED' ? '#16a34a' : '#0284c7' }}>{batchProgress?.status || 'INITIALIZING'}</strong></span>
+                <span>{batchProgress?.progressPercent ?? 0}%</span>
+              </div>
+              <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ width: `${batchProgress?.progressPercent ?? 0}%`, height: '100%', background: batchProgress?.status === 'COMPLETED' ? '#16a34a' : '#0284c7', transition: 'width 0.3s ease' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Completed</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#16a34a' }}>{batchProgress?.completedCount ?? 0}</div>
+              </div>
+              <div style={{ padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Skipped</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{batchProgress?.skippedCount ?? 0}</div>
+              </div>
+              <div style={{ padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>Total</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{batchProgress?.totalCount ?? 0}</div>
+              </div>
+            </div>
+
+            {batchProgress?.currentStudentName && batchProgress.status === 'PROCESSING' && (
+              <div style={{ fontSize: 11, color: '#64748b', textAlign: 'center', marginBottom: 16, background: '#f1f5f9', padding: '6px 10px', borderRadius: 6 }}>
+                Compiling: <strong style={{ color: '#0f172a' }}>{batchProgress.currentStudentName}</strong>
+              </div>
+            )}
+
+            {batchProgress?.status === 'COMPLETED' && (
+              <div style={{ fontSize: 12, color: '#166534', background: '#dcfce7', padding: '10px 14px', borderRadius: 6, border: '1px solid #86efac', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle2 size={16} />
+                <span>Batch processing complete! {batchProgress.completedCount} report cards issued.</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowBatchIssueModal(false);
+                  fetchOverview();
+                }}
+                disabled={batchProgress?.status === 'PROCESSING'}
+                style={{
+                  padding: '8px 18px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  borderRadius: 6,
+                  border: 'none',
+                  background: batchProgress?.status === 'PROCESSING' ? '#cbd5e1' : '#0284c7',
+                  color: '#fff',
+                  cursor: batchProgress?.status === 'PROCESSING' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {batchProgress?.status === 'PROCESSING' ? 'Processing in Background...' : 'Close & Refresh'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Toast Notifications ── */}
       <ModernToast toast={toast} onDismiss={() => setToast(null)} />

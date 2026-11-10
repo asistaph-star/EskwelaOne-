@@ -12,6 +12,7 @@ import { apiClient, API_BASE_URL } from '../../../api/client';
 import { studentApi } from '../../../api/student.api';
 
 import { AuthenticCalulutSf9Viewer } from '../../shared/components/AuthenticCalulutSf9Viewer';
+import { DigitalAuthenticSf9ProgressCard } from '../components/DigitalAuthenticSf9ProgressCard';
 import { Form138PDFDocument } from '../components/Form138PDFDocument';
 import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import { getStudentRankAndStanding, getStudentRecentQuizzes, getStudentSubjectGrades } from '../../shared/utils/gradesService';
@@ -517,160 +518,42 @@ export function StudentAcademics({ setTab, currentUser }: any) {
                 />
               )}
 
-              {/* Official Calulut DepEd SF9 Form 138 Release Card */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-indigo-950 text-white flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-amber-300 font-serif font-black text-lg">
-                      SF9
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold font-serif tracking-wide text-white flex items-center gap-2">
-                        Official DepEd Report Card (SF9 / Form 138)
-                      </h2>
-                      <p className="text-xs text-slate-300">
-                        Calulut Integrated School, Schools Division of City of San Fernando (Pampanga)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    {releasedSf9?.released ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        <CheckCircle size={13} className="text-emerald-400" />
-                        OFFICIALLY RELEASED &amp; CERTIFIED
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        <Clock size={13} className="text-amber-400" />
-                        PENDING OFFICIAL RELEASE
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  {/* Metadata Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Academic Year</div>
-                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
-                        {releasedSf9?.academicYear || reportCardData?.school?.academicYear || 'SY 2026-2027'}
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reporting Period</div>
-                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
-                        {releasedSf9?.reportingPeriod || 'Annual SF9 (Terms 1-3)'}
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Release Date</div>
-                      <div className="text-sm font-semibold text-slate-800 mt-0.5">
-                        {releasedSf9?.released && releasedSf9.releaseDate
-                          ? new Date(releasedSf9.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                          : 'Pending School Approval'}
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Class Adviser</div>
-                      <div className="text-sm font-semibold text-slate-800 mt-0.5 truncate">
-                        {releasedSf9?.adviser || reportCardData?.adviser || effectiveUser?.studentProfile?.adviserName || 'Class Adviser'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Body Content: Released vs Pending */}
-                  {releasedSf9?.released ? (
-                    <div className="p-5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
-                          <CheckCircle size={18} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-emerald-950">
-                            Your official School Form 9 (Form 138) has been released!
-                          </div>
-                          <div className="text-xs text-emerald-800 mt-0.5">
-                            Signed and certified by School Principal ({releasedSf9.principal || 'Office of the Principal'}) and Class Adviser ({releasedSf9.adviser || effectiveUser?.studentProfile?.adviserName || 'Class Adviser'}).
-                          </div>
-                          {releasedSf9.pdfSha256 && (
-                            <div className="text-[10.5px] font-mono text-emerald-700 mt-1">
-                              SHA-256: {releasedSf9.pdfSha256.substring(0, 16)}...
-                            </div>
-                          )}
-
-                          {/* Historical Released Versions */}
-                          {releasedSf9?.history && releasedSf9.history.length > 1 && (
-                            <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-emerald-200/70">
-                              <span className="text-[11px] font-bold text-emerald-900">Released Versions:</span>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {releasedSf9.history.map((h: any) => (
-                                  <button
-                                    key={h.issuanceId}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedVersion(h.version);
-                                      handleViewReleasedPdf(h.version);
-                                    }}
-                                    className={`px-2 py-0.5 rounded text-[10.5px] font-semibold transition-all border ${
-                                      (selectedVersion === h.version || (!selectedVersion && h.isCurrent))
-                                        ? 'bg-emerald-700 text-white border-emerald-800'
-                                        : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                                    }`}
-                                  >
-                                    {h.reportingPeriod} (v{h.version})
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <button
-                          onClick={() => handleViewReleasedPdf()}
-                          disabled={isLoadingPdf}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-indigo-700 hover:bg-indigo-800 text-white shadow-sm transition-all disabled:opacity-50"
-                        >
-                          {isLoadingPdf ? <RefreshCw size={13} className="animate-spin" /> : <Eye size={13} />}
-                          View Official SF9 (PDF)
-                        </button>
-
-                        <button
-                          onClick={() => handleDownloadReleasedPdf()}
-                          disabled={isLoadingPdf}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-sm transition-all disabled:opacity-50"
-                        >
-                          <Download size={13} />
-                          Download PDF
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-5 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start gap-3.5">
-                      <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-                        <Clock size={18} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-amber-950">
-                          Official DepEd SF9 Report Card is Pending Release
-                        </div>
-                        <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                          In compliance with DepEd evaluation policies, official Form 138 report cards for Calulut Integrated School are released at the end of each completed term (Term 1, Term 2, or Annual Term 3) upon subject grade publication, verified SF2 daily attendance, and School Head certification.
-                        </p>
-                        <p className="text-xs text-amber-700 mt-1.5 font-medium">
-                          You may review your ongoing scholastic performance summaries in the analytics section below. Once officially approved, your signed PDF report card will be directly downloadable here.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              {/* Digital Authentic Calulut SF9 Form 138 Progress Card */}
+              <div id="form138-print-root">
+                <DigitalAuthenticSf9ProgressCard
+                  reportCardData={reportCardData}
+                  releasedSf9={releasedSf9}
+                  onViewPdf={() => handleViewReleasedPdf()}
+                  onDownloadPdf={() => handleDownloadReleasedPdf()}
+                  isLoadingPdf={isLoadingPdf}
+                />
               </div>
+
+              {/* Historical Released Versions (when released) */}
+              {releasedSf9?.released && releasedSf9?.history && releasedSf9.history.length > 1 && (
+                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-slate-200">
+                  <span className="text-[11px] font-bold text-slate-700">Released Versions:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {releasedSf9.history.map((h: any) => (
+                      <button
+                        key={h.issuanceId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVersion(h.version);
+                          handleViewReleasedPdf(h.version);
+                        }}
+                        className={`px-2.5 py-1 rounded text-xs font-semibold transition-all border ${
+                          (selectedVersion === h.version || (!selectedVersion && h.isCurrent))
+                            ? 'bg-emerald-700 text-white border-emerald-800'
+                            : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {h.reportingPeriod} (v{h.version})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Modal for viewing released authentic PDF - Rendered via createPortal directly into document.body to prevent parent z-index clipping */}
               {showReleasedPdfModal && typeof document !== 'undefined' && createPortal(

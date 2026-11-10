@@ -8,6 +8,7 @@ import healthMetricRoutes from './health/healthMetric.routes.js';
 import { authMiddleware, requirePermissions, AuthenticatedUser } from '../common/middleware/auth.js';
 import prisma from '../config/database.js';
 import { AppError } from '../common/middleware/errorHandler.js';
+import { createAuditLog } from '../audit/audit.service.js';
 import {
   assignSectionClassAdviser,
   resolvePersistedSf9Signatories,
@@ -337,6 +338,70 @@ router.get('/years/:yearId/terms', async (req: Request, res: Response, next: Nex
       orderBy: { key: 'asc' }, // T1, T2, T3, T4
     });
     res.json({ success: true, data: terms });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/academic/terms/:termId/visibility
+ * Toggles whether published grades for this term are visible to students in the Student Portal.
+ * Authorized: Principal, Admin, ITAdmin.
+ */
+router.patch('/terms/:termId/visibility', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+    if (!actor || !actor.id) {
+      throw new AppError(401, 'UNAUTHORIZED', 'Authentication required.');
+    }
+    const userRoles = actor.roles || [];
+    const isAuthorized = userRoles.some((r: string) => ['Principal', 'Admin', 'ITAdmin'].includes(r));
+    if (!isAuthorized) {
+      throw new AppError(403, 'FORBIDDEN', 'Only Principal, Admin, and ITAdmin may manage term grade visibility.');
+    }
+
+    const termId = req.params.termId as string;
+    const rawVisible = req.body.isVisible ?? req.body.isGradesVisible ?? req.body.isGradesVisibleToStudents;
+    const isVisible = rawVisible !== undefined ? Boolean(rawVisible) : true;
+
+    await (prisma as any).$executeRawUnsafe(
+      `UPDATE terms SET is_grades_visible_to_students = $1, updated_at = NOW() WHERE id = $2`,
+      isVisible,
+      termId
+    );
+
+    const term = await (prisma as any).term.findUnique({
+      where: { id: termId },
+      include: { academic_year: true },
+    });
+
+    if (!term) throw new AppError(404, 'NOT_FOUND', `Term ${termId} not found`);
+
+    await createAuditLog({
+      actorUserId: actor.id,
+      action: 'TERM_GRADES_VISIBILITY_TOGGLED',
+      resourceType: 'term',
+      resourceId: termId,
+      result: 'SUCCESS',
+      newState: {
+        termId,
+        termKey: term.key,
+        academicYearId: term.academic_year_id,
+        isGradesVisible: isVisible,
+        toggledBy: actor.id,
+      },
+      correlationId: (req as any).correlationId,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: term.id,
+        key: term.key,
+        name: term.name,
+        isGradesVisible: isVisible,
+      },
+    });
   } catch (err) {
     next(err);
   }

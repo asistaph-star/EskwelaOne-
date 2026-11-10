@@ -28,6 +28,11 @@ import {
   getCachedDraftPdf,
   setCachedDraftPdf,
 } from './grading/index.js';
+import {
+  queueSectionBatchIssuance,
+  getBatchJob,
+  listRecentBatchJobs,
+} from './grading/sf9BatchQueue.service.js';
 
 const STORAGE_DIR = getMediaStoragePath();
 try {
@@ -428,7 +433,11 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
       throw new AppError(422, 'NO_ENROLLED_STUDENTS', `Section ${section.name} has no enrolled students.`);
     }
 
+    const mode = ((req.query?.mode as string) || (req.body?.mode as string) || '').toLowerCase();
+    const isEligibleOnly = mode === 'eligible_only';
+
     // Validate readiness for all enrolled students and compute cryptographic snapshots
+    const readyLearners: any[] = [];
     const unreadyLearners: any[] = [];
     const learnerStateHashes: Record<string, string> = {};
 
@@ -442,21 +451,31 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         mode: 'OFFICIAL',
       });
 
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
       if (!evalResult.readyForOfficialSf9) {
         unreadyLearners.push({
           studentId: enrollment.student_id,
-          name: `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim(),
+          enrollmentId: enrollment.id,
+          name: learnerName,
           blockingReasons: evalResult.blockingReasons || [],
         });
       } else {
-        learnerStateHashes[enrollment.student_id] = crypto
+        const stateHash = crypto
           .createHash('sha256')
           .update(JSON.stringify(evalResult.calculated || {}))
           .digest('hex');
+        learnerStateHashes[enrollment.student_id] = stateHash;
+        readyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          stateHash,
+        });
       }
     }
 
-    if (unreadyLearners.length > 0) {
+    if (!isEligibleOnly && unreadyLearners.length > 0) {
       throw new AppError(
         422,
         'CANNOT_AUTHORIZE_INCOMPLETE_ACADEMIC_RECORDS',
@@ -472,10 +491,40 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
       );
     }
 
+    if (readyLearners.length === 0) {
+      throw new AppError(
+        422,
+        'NO_ELIGIBLE_LEARNERS_FOR_AUTHORIZATION',
+        `No learners in Section ${section.name} are currently eligible for ${targetTerm} SF9 authorization.`
+      );
+    }
+
     const now = new Date();
     const authorizedByName =
       `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() ||
       'Dr. Eduardo M. Santos, Ed.D.';
+
+    // Record individual audit logs for each eligible learner
+    for (const learner of readyLearners) {
+      await createAuditLog({
+        actorUserId: actor.id,
+        action: 'SF9_PRINCIPAL_AUTHORIZATION',
+        resourceType: 'sf9_official_issuance',
+        resourceId: learner.studentId,
+        result: 'SUCCESS',
+        newState: {
+          studentId: learner.studentId,
+          enrollmentId: learner.enrollmentId,
+          sectionId,
+          targetTerm,
+          authorizedBy: actor.id,
+          authorizedByName,
+          authorizedAt: now.toISOString(),
+          stateHash: learner.stateHash,
+        },
+        correlationId: (req as any).correlationId,
+      });
+    }
 
     await createAuditLog({
       actorUserId: actor.id,
@@ -488,10 +537,14 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         sectionName: section.name,
         academicYearId: section.academic_year_id,
         targetTerm,
+        mode: isEligibleOnly ? 'eligible_only' : 'full_section',
         authorizedBy: actor.id,
         authorizedByName,
         authorizedAt: now.toISOString(),
         totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        authorizedStudentIds: readyLearners.map((l: any) => l.studentId),
+        excludedLearners: unreadyLearners,
         learnerStateHashes,
       },
       correlationId: (req as any).correlationId,
@@ -503,11 +556,177 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         sectionId,
         sectionName: section.name,
         targetTerm,
-        status: 'AUTHORIZED',
+        status: isEligibleOnly && unreadyLearners.length > 0 ? 'PARTIALLY_AUTHORIZED' : 'AUTHORIZED',
+        mode: isEligibleOnly ? 'eligible_only' : 'full_section',
         authorizedBy: actor.id,
         authorizedByName,
         authorizedAt: now.toISOString(),
         totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        excludedCount: unreadyLearners.length,
+        authorizedLearners: readyLearners,
+        excludedLearners: unreadyLearners,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sections/:sectionId/authorize-eligible', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    req.query.mode = 'eligible_only';
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+    const sectionId = req.params.sectionId as string;
+    await assertAuthorizedStaffForSection(actor, sectionId, prisma as any, 'authorize');
+
+    if (!actor.roles.includes('Principal')) {
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        'Official SF9 academic authorization is strictly restricted to the School Principal.'
+      );
+    }
+
+    const section = await (prisma as any).section.findUnique({
+      where: { id: sectionId },
+      include: { academic_year: true },
+    });
+    if (!section) throw new AppError(404, 'NOT_FOUND', `Section ${sectionId} not found`);
+
+    const targetTerm =
+      (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    const enrollments = await (prisma as any).enrollment.findMany({
+      where: { section_id: sectionId, status: 'Enrolled' },
+      include: {
+        student: {
+          include: { user: true },
+        },
+      },
+      orderBy: [
+        { student: { user: { last_name: 'asc' } } },
+        { student: { user: { first_name: 'asc' } } },
+      ],
+    });
+
+    if (enrollments.length === 0) {
+      throw new AppError(422, 'NO_ENROLLED_STUDENTS', `Section ${section.name} has no enrolled students.`);
+    }
+
+    const readyLearners: any[] = [];
+    const unreadyLearners: any[] = [];
+    const learnerStateHashes: Record<string, string> = {};
+
+    for (const enrollment of enrollments) {
+      const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
+        studentId: enrollment.student_id,
+        enrollmentId: enrollment.id,
+        academicYearId: enrollment.academic_year_id,
+        targetTerm,
+        renderPdf: false,
+        mode: 'OFFICIAL',
+      });
+
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
+      if (!evalResult.readyForOfficialSf9) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: evalResult.blockingReasons || [],
+        });
+      } else {
+        const stateHash = crypto
+          .createHash('sha256')
+          .update(JSON.stringify(evalResult.calculated || {}))
+          .digest('hex');
+        learnerStateHashes[enrollment.student_id] = stateHash;
+        readyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          stateHash,
+        });
+      }
+    }
+
+    if (readyLearners.length === 0) {
+      throw new AppError(
+        422,
+        'NO_ELIGIBLE_LEARNERS_FOR_AUTHORIZATION',
+        `No learners in Section ${section.name} are currently eligible for ${targetTerm} SF9 authorization.`
+      );
+    }
+
+    const now = new Date();
+    const authorizedByName =
+      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() ||
+      'Dr. Eduardo M. Santos, Ed.D.';
+
+    for (const learner of readyLearners) {
+      await createAuditLog({
+        actorUserId: actor.id,
+        action: 'SF9_PRINCIPAL_AUTHORIZATION',
+        resourceType: 'sf9_official_issuance',
+        resourceId: learner.studentId,
+        result: 'SUCCESS',
+        newState: {
+          studentId: learner.studentId,
+          enrollmentId: learner.enrollmentId,
+          sectionId,
+          targetTerm,
+          authorizedBy: actor.id,
+          authorizedByName,
+          authorizedAt: now.toISOString(),
+          stateHash: learner.stateHash,
+        },
+        correlationId: (req as any).correlationId,
+      });
+    }
+
+    await createAuditLog({
+      actorUserId: actor.id,
+      action: 'SF9_PRINCIPAL_AUTHORIZATION',
+      resourceType: 'sf9_section_authorization',
+      resourceId: sectionId,
+      result: 'SUCCESS',
+      newState: {
+        sectionId,
+        sectionName: section.name,
+        academicYearId: section.academic_year_id,
+        targetTerm,
+        mode: 'eligible_only',
+        authorizedBy: actor.id,
+        authorizedByName,
+        authorizedAt: now.toISOString(),
+        totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        authorizedStudentIds: readyLearners.map((l: any) => l.studentId),
+        excludedLearners: unreadyLearners,
+        learnerStateHashes,
+      },
+      correlationId: (req as any).correlationId,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        sectionId,
+        sectionName: section.name,
+        targetTerm,
+        status: unreadyLearners.length > 0 ? 'PARTIALLY_AUTHORIZED' : 'AUTHORIZED',
+        mode: 'eligible_only',
+        authorizedBy: actor.id,
+        authorizedByName,
+        authorizedAt: now.toISOString(),
+        totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        excludedCount: unreadyLearners.length,
+        authorizedLearners: readyLearners,
+        excludedLearners: unreadyLearners,
       },
     });
   } catch (err) {
@@ -735,95 +954,131 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
       commentsByStudent.add(c.student_id);
     });
 
-    const learners = enrollments.map((e: any) => {
-      const student = e.student;
-      const user = student.user || {};
-      const iss = issuanceMap.get(student.id);
+    const learners = await Promise.all(
+      enrollments.map(async (e: any) => {
+        const student = e.student;
+        const user = student.user || {};
+        const iss = issuanceMap.get(student.id);
 
-      let isReleased = false;
-      let releaseMeta: any = null;
-      let targetTerm: 'T1' | 'T2' | 'T3' = queryTerm;
-      let reportingPeriod = queryTerm === 'T1' ? 'Term 1 SF9' : queryTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)';
-      if (iss) {
-        try {
-          const summary = JSON.parse(iss.calculated_summary_encrypted || '{}');
-          if (summary.targetTerm) targetTerm = summary.targetTerm;
-          if (summary.reportingPeriod) reportingPeriod = summary.reportingPeriod;
-          if (summary.release?.released) {
-            isReleased = true;
-            releaseMeta = summary.release;
-            if (summary.release.reportingPeriod) reportingPeriod = summary.release.reportingPeriod;
-            if (summary.release.targetTerm) targetTerm = summary.release.targetTerm;
-          }
-        } catch {}
-      }
-
-      // Authoritative gender resolution from student record (User model has no gender)
-      const rawGender = student.gender || user.gender || '';
-      const resolvedGender = rawGender
-        ? rawGender.trim().toUpperCase().startsWith('M')
-          ? 'Male'
-          : rawGender.trim().toUpperCase().startsWith('F')
-          ? 'Female'
-          : rawGender.trim()
-        : 'Unknown';
-
-      const isStudentAuthorized =
-        isSectionAuthorized ||
-        principalAuthLogs.some((a: any) => {
-          let state: any = a.new_state;
+        let isReleased = false;
+        let releaseMeta: any = null;
+        let targetTerm: 'T1' | 'T2' | 'T3' = queryTerm;
+        let reportingPeriod = queryTerm === 'T1' ? 'Term 1 SF9' : queryTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)';
+        if (iss) {
           try {
-            if (typeof state === 'string') state = JSON.parse(state);
-          } catch {}
-          return a.resource_id === student.id && (state?.targetTerm === queryTerm || !state?.targetTerm);
-        });
-
-      return {
-        enrollmentId: e.id,
-        studentId: student.id,
-        lrn: student.lrn || '',
-        name: `${user.last_name || ''}, ${user.first_name || ''}`.trim(),
-        gender: resolvedGender,
-        gradeLevel: section.grade_level,
-        sectionName: section.name,
-        academicYear: section.academic_year?.name || 'SY 2026-2027',
-        totalSubjectsCount: canonicalRequiredCount,
-        assignedSubjectsCount,
-        publishedSubjectsCount,
-        hasAdviserComment: commentsByStudent.has(student.id),
-        principalAuthorization: {
-          isAuthorized: isStudentAuthorized,
-          targetTerm: queryTerm,
-        },
-        issuance: iss
-          ? {
-              isIssued: true,
-              issuanceId: iss.id,
-              version: iss.version,
-              targetTerm,
-              reportingPeriod,
-              issuedAt: iss.issued_at?.toISOString() || null,
-              pdfSha256: iss.pdf_sha256 || null,
+            const summary = JSON.parse(iss.calculated_summary_encrypted || '{}');
+            if (summary.targetTerm) targetTerm = summary.targetTerm;
+            if (summary.reportingPeriod) reportingPeriod = summary.reportingPeriod;
+            if (summary.release?.released) {
+              isReleased = true;
+              releaseMeta = summary.release;
+              if (summary.release.reportingPeriod) reportingPeriod = summary.release.reportingPeriod;
+              if (summary.release.targetTerm) targetTerm = summary.release.targetTerm;
             }
-          : {
-              isIssued: false,
-              issuanceId: null,
-              version: 0,
-              targetTerm: null,
-              reportingPeriod: null,
-              issuedAt: null,
-              pdfSha256: null,
-            },
-        release: {
-          isReleased,
-          releasedAt: releaseMeta?.releasedAt || null,
-          releasedBy: releaseMeta?.releasedById || null,
-          reportingPeriod: releaseMeta?.reportingPeriod || reportingPeriod,
-          targetTerm,
-        },
-      };
-    });
+          } catch {}
+        }
 
+        // Authoritative gender resolution from student record (User model has no gender)
+        const rawGender = student.gender || user.gender || '';
+        const resolvedGender = rawGender
+          ? rawGender.trim().toUpperCase().startsWith('M')
+            ? 'Male'
+            : rawGender.trim().toUpperCase().startsWith('F')
+            ? 'Female'
+            : rawGender.trim()
+          : 'Unknown';
+
+        // Evaluate genuine academic completeness & eligibility
+        let evalResult: any = null;
+        try {
+          evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
+            studentId: student.id,
+            enrollmentId: e.id,
+            academicYearId: section.academic_year_id,
+            targetTerm: queryTerm,
+            renderPdf: false,
+            mode: 'OFFICIAL',
+          });
+        } catch (err: any) {
+          evalResult = { readyForOfficialSf9: false, blockingReasons: [err.message || 'READINESS_EVALUATION_ERROR'] };
+        }
+
+        const isStudentAuthorized =
+          isSectionAuthorized ||
+          principalAuthLogs.some((a: any) => {
+            let state: any = a.new_state;
+            try {
+              if (typeof state === 'string') state = JSON.parse(state);
+            } catch {}
+            if (a.resource_id === student.id && (state?.targetTerm === queryTerm || !state?.targetTerm)) {
+              return true;
+            }
+            if (a.resource_id === sectionId && (state?.targetTerm === queryTerm || !state?.targetTerm)) {
+              if (state?.authorizedStudentIds && Array.isArray(state.authorizedStudentIds)) {
+                return state.authorizedStudentIds.includes(student.id);
+              }
+              return true;
+            }
+            return false;
+          });
+
+        const isEligible = evalResult.readyForOfficialSf9;
+
+        return {
+          enrollmentId: e.id,
+          studentId: student.id,
+          lrn: student.lrn || '',
+          name: `${user.last_name || ''}, ${user.first_name || ''}`.trim(),
+          gender: resolvedGender,
+          gradeLevel: section.grade_level,
+          sectionName: section.name,
+          academicYear: section.academic_year?.name || 'SY 2026-2027',
+          totalSubjectsCount: canonicalRequiredCount,
+          assignedSubjectsCount,
+          publishedSubjectsCount,
+          hasAdviserComment: commentsByStudent.has(student.id),
+          eligibility: {
+            isEligible,
+            readyForOfficialSf9: evalResult.readyForOfficialSf9,
+            blockingReasons: evalResult.blockingReasons || [],
+          },
+          principalAuthorization: {
+            isAuthorized: isStudentAuthorized,
+            targetTerm: queryTerm,
+          },
+          issuance: iss
+            ? {
+                isIssued: true,
+                issuanceId: iss.id,
+                version: iss.version,
+                targetTerm,
+                reportingPeriod,
+                issuedAt: iss.issued_at?.toISOString() || null,
+                pdfSha256: iss.pdf_sha256 || null,
+              }
+            : {
+                isIssued: false,
+                issuanceId: null,
+                version: 0,
+                targetTerm: null,
+                reportingPeriod: null,
+                issuedAt: null,
+                pdfSha256: null,
+              },
+          release: {
+            isReleased,
+            releasedAt: releaseMeta?.releasedAt || null,
+            releasedBy: releaseMeta?.releasedById || null,
+            reportingPeriod: releaseMeta?.reportingPeriod || reportingPeriod,
+            targetTerm,
+          },
+        };
+      })
+    );
+
+    const eligibleCount = learners.filter((l: any) => l.eligibility.isEligible).length;
+    const incompleteCount = learners.filter((l: any) => !l.eligibility.isEligible).length;
+    const authorizedCount = learners.filter((l: any) => l.principalAuthorization.isAuthorized).length;
     const issuedCount = learners.filter((l: any) => l.issuance.isIssued).length;
     const releasedCount = learners.filter((l: any) => l.release.isReleased).length;
 
@@ -842,6 +1097,9 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
         stats: {
           totalLearners: learners.length,
           targetTerm: queryTerm,
+          eligibleCount,
+          incompleteCount,
+          authorizedCount,
           canonicalRequiredCount,
           assignedSubjectsCount,
           publishedSubjectsCount,
@@ -849,12 +1107,82 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
           unassignedCurriculumCount: Math.max(0, canonicalRequiredCount - assignedSubjectsCount),
           isCurriculumFullyAssigned: assignedSubjectsCount >= canonicalRequiredCount,
           isTermFullyPublished: publishedSubjectsCount === canonicalRequiredCount,
-          isPrincipalAuthorized: isSectionAuthorized,
+          isPrincipalAuthorized: isSectionAuthorized || (eligibleCount > 0 && authorizedCount >= eligibleCount),
           issuedCount,
           releasedCount,
         },
         learners,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/academic/report-card/sections/:sectionId/bulk-issue
+ * Initiates asynchronous background generation and sealing of official SF9 documents
+ * for all eligible learners in the section with bounded concurrency.
+ * Authorized: Principal, Admin.
+ */
+router.post('/sections/:sectionId/bulk-issue', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+    const sectionId = req.params.sectionId as string;
+    await assertAuthorizedStaffForSection(actor, sectionId, prisma as any, 'issue');
+
+    const targetTerm =
+      (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    const actorName =
+      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() || actor.username;
+
+    const job = await queueSectionBatchIssuance({
+      sectionId,
+      targetTerm,
+      actorId: actor.id,
+      actorName,
+      correlationId: (req as any).correlationId,
+    });
+
+    res.status(202).json({
+      success: true,
+      data: {
+        batchId: job.id,
+        sectionId: job.sectionId,
+        sectionName: job.sectionName,
+        targetTerm: job.targetTerm,
+        totalItems: job.totalItems,
+        status: job.status,
+        startedAt: job.startedAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/academic/report-card/batches/:batchId/progress
+ * Retrieves real-time batch processing progress and telemetry.
+ */
+router.get('/batches/:batchId/progress', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+
+    const batchId = req.params.batchId as string;
+    const job = getBatchJob(batchId);
+
+    if (!job) {
+      throw new AppError(404, 'NOT_FOUND', `Batch job ${batchId} not found`);
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      data: job,
     });
   } catch (err) {
     next(err);

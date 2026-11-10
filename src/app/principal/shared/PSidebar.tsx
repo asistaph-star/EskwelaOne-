@@ -2,7 +2,7 @@ import React from 'react';
 import { PScreen } from '../../shared/types';
 import {
   LayoutDashboard, Monitor, BarChart2, Users, Package,
-  FileText, Calendar, CalendarDays, ShieldAlert, ClipboardList, Scan
+  FileText, Calendar, CalendarDays, ShieldAlert, ClipboardList, Scan, Award
 } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
 import { useAppContext } from '../../shared/AppContext';
@@ -12,6 +12,7 @@ const P_NAV_GROUPS: SidebarGroupConfig<PScreen>[] = [
     { id: "p-dashboard",  label: "Dashboard Overview", icon: LayoutDashboard },
   ]},
   { category: "Administration", items: [
+    { id: "p-report-cards", label: "Report Cards (SF9)", icon: Award },
     { id: "p-analytics",  label: "Academic Analytics",  icon: BarChart2 },
     { id: "p-school-years", label: "School Years",      icon: CalendarDays },
     { id: "p-teachers",   label: "Teacher Management",  icon: Users },
