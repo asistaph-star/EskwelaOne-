@@ -9,6 +9,8 @@
  */
 
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import defaultPrisma from '../../config/database.js';
 import type { PrismaClient } from '@prisma/client';
 
@@ -2016,9 +2018,64 @@ export async function generatePersistedStudentCalulutSf9FromDb(
       return true;
     };
 
-    const validateAssessmentProvenance = (
+    const validateTrustedHistoricalProvenance = async (
       g: any
-    ): { valid: boolean; reason?: string } => {
+    ): Promise<{ valid: boolean; reason?: string }> => {
+      try {
+        // 1. Authoritative source document verification
+        const doc = await (db as any).document.findFirst({
+          where: {
+            OR: [
+              { filename: { contains: enrollment.student_id } },
+              { storage_key: { contains: enrollment.student_id } },
+            ],
+          },
+        });
+
+        if (!doc) {
+          return { valid: false, reason: 'HOLLOW_GRADEBOOK_NO_ASSESSMENT_COLUMNS' };
+        }
+
+        // 2. Storage file integrity: verify file exists on disk
+        const storageDir = process.env.MEDIA_STORAGE_PATH || path.resolve(process.cwd(), 'storage/documents');
+        const resolvedPath = path.resolve(storageDir, doc.storage_key || '');
+        if (!fs.existsSync(resolvedPath)) {
+          return { valid: false, reason: 'HISTORICAL_SOURCE_DOCUMENT_MISSING_ON_DISK' };
+        }
+
+        // 3. Immutable audit verification by authorized role (Registrar or Admin)
+        const audit = await db.auditLog.findFirst({
+          where: {
+            OR: [
+              { resource_id: g.id },
+              {
+                resource_id: enrollment.student_id,
+                action: {
+                  in: [
+                    'HISTORICAL_GRADE_IMPORT',
+                    'SF10_PERMANENT_RECORD_IMPORT',
+                    'LEGITIMATE_TRANSCRIPT_TRANSCRIPTION',
+                  ],
+                },
+              },
+            ],
+            result: 'SUCCESS',
+          },
+        });
+
+        if (!audit) {
+          return { valid: false, reason: 'HOLLOW_GRADEBOOK_NO_AUTHENTICATED_AUDIT_LOG' };
+        }
+
+        return { valid: true };
+      } catch (err) {
+        return { valid: false, reason: 'HOLLOW_GRADEBOOK_NO_ASSESSMENT_COLUMNS' };
+      }
+    };
+
+    const validateAssessmentProvenance = async (
+      g: any
+    ): Promise<{ valid: boolean; reason?: string }> => {
       // 1. Source gradebook and publication status relationship
       if (!g || typeof g.published_term_grade !== 'number') {
         return { valid: false, reason: 'MISSING_NUMERIC_PUBLISHED_GRADE' };
@@ -2028,10 +2085,10 @@ export async function generatePersistedStudentCalulutSf9FromDb(
       }
 
       // If no published_gradebook record or no assessment columns exist,
-      // the published term grade snapshot itself is the authoritative record.
+      // validate authentic historical provenance; otherwise reject as hollow gradebook.
       const cols = g.published_gradebook?.columns;
       if (!Array.isArray(cols) || cols.length === 0) {
-        return { valid: true };
+        return await validateTrustedHistoricalProvenance(g);
       }
 
       // 2. Validate applicable assessment structure (DepEd Order No. 015, s. 2026)
@@ -2040,7 +2097,21 @@ export async function generatePersistedStudentCalulutSf9FromDb(
       const hasExam = cols.some((c: any) => ['EX', 'QA', 'TE', 'ST1', 'ST2'].includes(c.type));
 
       if (!hasWW || !hasPT || !hasExam) {
-        // If granular column types do not follow standard WW/PT/Exam, accept published snapshot
+        // Must ensure learner has recorded non-null scores in the present columns
+        let hasAnyScore = false;
+        for (const col of cols) {
+          const entry = col.entries?.find(
+            (e: any) =>
+              e.enrollment_id === params.enrollmentId ||
+              e.enrollment?.student_id === params.studentId
+          );
+          if (entry && entry.score !== null && entry.score !== undefined && !isNaN(Number(entry.score))) {
+            hasAnyScore = true;
+          }
+        }
+        if (!hasAnyScore) {
+          return { valid: false, reason: 'HOLLOW_GRADEBOOK_NO_ASSESSMENT_COLUMNS' };
+        }
         return { valid: true };
       }
 
@@ -2138,9 +2209,9 @@ export async function generatePersistedStudentCalulutSf9FromDb(
       return { valid: true };
     };
 
-    const t1Prov = t1Row ? validateAssessmentProvenance(t1Row) : { valid: false };
-    const t2Prov = t2Row ? validateAssessmentProvenance(t2Row) : { valid: false };
-    const t3Prov = t3Row ? validateAssessmentProvenance(t3Row) : { valid: false };
+    const t1Prov = t1Row ? await validateAssessmentProvenance(t1Row) : { valid: false };
+    const t2Prov = t2Row ? await validateAssessmentProvenance(t2Row) : { valid: false };
+    const t3Prov = t3Row ? await validateAssessmentProvenance(t3Row) : { valid: false };
 
     const t1Pub = t1Row && isPubValid(t1Row) && t1Prov.valid ? (t1Row.published_term_grade as number) : null;
     const t2Pub = t2Row && isPubValid(t2Row) && t2Prov.valid ? (t2Row.published_term_grade as number) : null;
@@ -2181,7 +2252,9 @@ export async function generatePersistedStudentCalulutSf9FromDb(
       const t3MissingProv = targetTerm === 'T3' && t3Row && isPubValid(t3Row) && !t3Prov.valid;
 
       if (t1MissingProv || t2MissingProv || t3MissingProv) {
-        blockingReasons.push(`MISSING_ACADEMIC_ASSESSMENT_PROVENANCE:${slot.key}`);
+        const failedProv = t1MissingProv ? t1Prov : t2MissingProv ? t2Prov : t3Prov;
+        const blockerReason = failedProv.reason || 'MISSING_ACADEMIC_ASSESSMENT_PROVENANCE';
+        blockingReasons.push(`${blockerReason}:${slot.key}`);
       } else {
         blockingReasons.push(`UNPUBLISHED_OR_MISSING_SUBJECT_GRADES:${slot.key}`);
       }

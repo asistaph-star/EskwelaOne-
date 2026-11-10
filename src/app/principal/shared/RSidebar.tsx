@@ -1,6 +1,6 @@
 import React from 'react';
 import { RScreen } from '../../shared/types';
-import { LayoutDashboard, Users, FileText, FolderOpen, AlertTriangle, Award, GraduationCap, CalendarDays, User } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, FolderOpen, Award, GraduationCap, CalendarDays, User } from 'lucide-react';
 import { PortalSidebar, SidebarGroupConfig } from '../../shared/components/navigation/PortalSidebar';
 import { useAppContext } from '../../shared/AppContext';
 
@@ -15,7 +15,6 @@ const R_NAV_GROUPS: SidebarGroupConfig<RScreen>[] = [
     { id: "r-doc-requests", label: "Document Requests", icon: FileText },
     { id: "r-records", label: "Academic Records (SF10)", icon: FolderOpen },
     { id: "r-report-cards", label: "Report Cards (SF9)", icon: Award },
-    { id: "r-deficiency", label: "Document Deficiencies", icon: AlertTriangle },
   ]},
   { category: "Academic Hub", items: [
     { id: "r-sections", label: "Sections and Rosters", icon: GraduationCap },

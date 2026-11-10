@@ -887,7 +887,8 @@ export function GradebookFullScreen({ classId, onBack, hideBack = false }: { cla
                 }
                 setIsLoading(true);
                 const termsPayload: Record<string, any> = {};
-                const termKeys = Array.from(new Set([...Object.keys(allData), term]));
+                // Only send the active term being edited; omit other terms so locked/published terms are not re-submitted
+                const termKeys = [term];
                 for (const t of termKeys) {
                   const tData = allData[t as TermKey] || (t === term ? qd : { wwItems: [], ptItems: [], grades: {} });
                   const rawExams = (tData.examItems && tData.examItems.length > 0)

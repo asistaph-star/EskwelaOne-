@@ -187,6 +187,7 @@ export async function createAcademicYear(
           academic_year_id: yearId,
           name: `Term ${termKey.replace('T', '')}`,
           key: termKey,
+          is_grades_visible_to_students: false,
         },
       });
     }
@@ -803,6 +804,7 @@ export async function addAcademicTerm(
         key: input.key,
         start_date: input.startDate ? new Date(input.startDate) : null,
         end_date: input.endDate ? new Date(input.endDate) : null,
+        is_grades_visible_to_students: false,
       },
     });
 

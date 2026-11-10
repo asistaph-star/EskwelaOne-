@@ -22,6 +22,16 @@ if ((process.env.NODE_ENV || '').trim() === 'test') {
   if (fs.existsSync(uatEnvPath)) {
     dotenv.config({ path: uatEnvPath, override: true });
   }
+} else if ((process.env.APP_ENV || '').trim() === 'sf9_dev') {
+  const sf9DevEnvPath = path.resolve(baseDir, '.env.sf9_dev');
+  if (fs.existsSync(sf9DevEnvPath)) {
+    dotenv.config({ path: sf9DevEnvPath, override: true });
+  }
+} else if (process.env.ENV_FILE) {
+  const customEnvPath = path.resolve(baseDir, process.env.ENV_FILE);
+  if (fs.existsSync(customEnvPath)) {
+    dotenv.config({ path: customEnvPath, override: true });
+  }
 }
 
 export const KNOWN_INSECURE_SECRETS = new Set([

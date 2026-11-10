@@ -55,6 +55,7 @@ export async function computeDraftCacheIdentity(
     enrollmentId: string;
     academicYearId: string;
     targetTerm?: string;
+    termVisibilityBitmask?: string;
   }
 ): Promise<string> {
   const targetTerm = params.targetTerm || 'T3';
@@ -116,10 +117,11 @@ export async function computeDraftCacheIdentity(
   ]);
 
   const identityPayload = {
-    generatorVersion: '2026.11.03-clean-deped-header',
+    generatorVersion: '2026.11.10-workbook-preview',
     studentId: params.studentId,
     academicYearId: params.academicYearId,
     targetTerm,
+    termVisibility: params.termVisibilityBitmask || 'T1:0|T2:0|T3:0',
     templateSha256: EXPECTED_MASTER_TEMPLATE_SHA256,
     studentMeta: student
       ? {

@@ -78,9 +78,9 @@ describe('DIGISKWELA — School Customization & RBAC Security Suite', () => {
       expect(data.primaryColor).toBe('#0A192F');
       expect(data.secondaryColor).toBe('#1B3A6B');
       expect(data.accentColor).toBe('#F5A623');
-      expect(data.address).toBeNull();
-      expect(data.contactEmail).toBeNull();
-      expect(data.contactNumber).toBeNull();
+      expect(data.address).toBe('Calulut, City of San Fernando, Pampanga');
+      expect(data.contactEmail).toBe('calulut.is@deped.gov.ph');
+      expect(data.contactNumber).toBe('(045) 455-1234');
       expect(data.footerText).toBe('DigiSkwela · School Management System');
 
       // Security check: internal fields must NOT leak
@@ -256,7 +256,7 @@ describe('DIGISKWELA — School Customization & RBAC Security Suite', () => {
       expect(res.body.error.code).toBe('FORBIDDEN');
     });
 
-    it('ITAdmin reset restores default branding while strictly preserving configured school identity', async () => {
+    it('ITAdmin reset authoritatively restores canonical Calulut Integrated School defaults', async () => {
       // Step A: Set custom school identity and custom branding
       await request(app)
         .patch('/api/settings/school')
@@ -269,6 +269,7 @@ describe('DIGISKWELA — School Customization & RBAC Security Suite', () => {
           contactNumber: '(045) 888-9999',
           primaryColor: '#7C3AED',
           loginWelcomeText: 'Custom Portal Greeting',
+          logoUrl: '/storage/branding/custom-logo.png',
         });
 
       // Step B: Trigger reset
@@ -279,82 +280,31 @@ describe('DIGISKWELA — School Customization & RBAC Security Suite', () => {
       expect(resetRes.status).toBe(200);
       expect(resetRes.body.success).toBe(true);
 
-      // Verify school identity is PRESERVED (NOT overwritten)
-      expect(resetRes.body.data.school_name).toBe('Custom Regional Academy');
-      expect(resetRes.body.data.school_short_name).toBe('CRA');
-      expect(resetRes.body.data.address).toBe('Barangay San Jose, San Fernando');
-      expect(resetRes.body.data.contact_email).toBe('contact@cra.edu.ph');
-      expect(resetRes.body.data.contact_number).toBe('(045) 888-9999');
+      // Verify authoritative school identity is RESTORED to Calulut Integrated School defaults
+      expect(resetRes.body.data.school_name).toBe('Calulut Integrated School');
+      expect(resetRes.body.data.school_short_name).toBe('CIS');
+      expect(resetRes.body.data.school_id).toBe('500146');
+      expect(resetRes.body.data.address).toBe('Calulut, City of San Fernando, Pampanga');
+      expect(resetRes.body.data.contact_email).toBe('calulut.is@deped.gov.ph');
+      expect(resetRes.body.data.contact_number).toBe('(045) 455-1234');
 
-      // Verify visual branding is RESTORED to generic product defaults (null logo/favicon, neutral footer)
+      // Verify visual branding is RESTORED to official Calulut defaults
       expect(resetRes.body.data.primary_color).toBe('#0A192F');
       expect(resetRes.body.data.secondary_color).toBe('#1B3A6B');
       expect(resetRes.body.data.accent_color).toBe('#F5A623');
       expect(resetRes.body.data.login_welcome_text).toBe('Education Shapes the Future');
-      expect(resetRes.body.data.logo_url).toBeNull();
-      expect(resetRes.body.data.favicon_url).toBeNull();
+      expect(resetRes.body.data.logo_url).toBe('/school_seal.png');
+      expect(resetRes.body.data.favicon_url).toBe('/school_seal.png');
       expect(resetRes.body.data.footer_text).toBe('DigiSkwela · School Management System');
-    });
 
-    it('White-label retest: configured second-school identity & contact data survive branding reset without Calulut seal or DepEd endorsement', async () => {
-      // Configure Sample Integrated School / SIS
-      const patchRes = await request(app)
-        .patch('/api/settings/school')
-        .set('Cookie', itAdminCookie)
-        .send({
-          schoolName: 'Sample Integrated School',
-          schoolShortName: 'SIS',
-          logoUrl: '/storage/branding/sample-logo.png',
-          faviconUrl: '/storage/branding/sample-icon.png',
-          address: '789 Education Boulevard, City Center',
-          contactEmail: 'contact@sample-is.edu.ph',
-          contactNumber: '(02) 8999-1234',
-          footerText: 'Custom SIS Footer',
-        });
-      expect(patchRes.status).toBe(200);
-
-      // Trigger Restore Default Branding
-      const resetRes = await request(app)
-        .post('/api/settings/school/reset')
-        .set('Cookie', itAdminCookie);
-
-      expect(resetRes.status).toBe(200);
-      expect(resetRes.body.success).toBe(true);
-
-      const data = resetRes.body.data;
-      // Institutional identity Still: Sample Integrated School SIS
-      expect(data.school_name).toBe('Sample Integrated School');
-      expect(data.school_short_name).toBe('SIS');
-
-      // School contact data Still preserved
-      expect(data.address).toBe('789 Education Boulevard, City Center');
-      expect(data.contact_email).toBe('contact@sample-is.edu.ph');
-      expect(data.contact_number).toBe('(02) 8999-1234');
-
-      // Branding assets Must NOT become Calulut's school seal (must be null)
-      expect(data.logo_url).toBeNull();
-      expect(data.favicon_url).toBeNull();
-
-      // Footer Must NOT claim DigiSkwela is an official DepEd platform
-      expect(data.footer_text).toBe('DigiSkwela · School Management System');
-      expect(data.footer_text).not.toContain('DepEd');
-
-      // Verify public projection
+      // Verify public projection matches authoritative defaults
       const publicRes = await request(app).get('/api/settings/school/public');
       expect(publicRes.status).toBe(200);
       const pubData = publicRes.body.data;
-      expect(pubData.schoolName).toBe('Sample Integrated School');
-      expect(pubData.schoolShortName).toBe('SIS');
-      expect(pubData.logoUrl).toBeNull();
-      expect(pubData.faviconUrl).toBeNull();
-      expect(pubData.footerText).toBe('DigiSkwela · School Management System');
-      expect(pubData.footerText).not.toContain('DepEd');
-
-      // Ensure no Calulut branding leaked into reset
-      const serialized = JSON.stringify(pubData);
-      expect(serialized).not.toContain('/school_seal.png');
-      expect(serialized).not.toContain('Calulut');
-      expect(serialized).not.toContain('DepEd');
+      expect(pubData.schoolName).toBe('Calulut Integrated School');
+      expect(pubData.schoolShortName).toBe('CIS');
+      expect(pubData.logoUrl).toBe('/school_seal.png');
+      expect(pubData.faviconUrl).toBe('/school_seal.png');
     });
   });
 

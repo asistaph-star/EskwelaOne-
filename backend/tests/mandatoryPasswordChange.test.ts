@@ -115,7 +115,7 @@ describe('Mandatory First-Login Password Change Security & Workflow', () => {
       createdUserIds.push(studentUserId);
 
       expect(temporaryPassword).toBeDefined();
-      expect(temporaryPassword.length).toBe(8);
+      expect(temporaryPassword.length).toBe(16);
       expect(studentSchoolId).toBeDefined();
 
       const dbUser = await prisma.user.findUnique({ where: { id: studentUserId } });

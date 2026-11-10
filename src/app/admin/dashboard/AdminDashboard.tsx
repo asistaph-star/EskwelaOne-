@@ -35,6 +35,7 @@ import {
   HelpCircle,
   ChevronRight,
   Layers,
+  FolderOpen,
 } from "lucide-react";
 import { apiClient } from "../../../api/client";
 import { healthApi, SystemHealthData, HealthStatus } from "../../../api/health.api";
@@ -42,7 +43,18 @@ import { securityApi, SecurityOverviewData } from "../../../api/security.api";
 
 interface AdminDashboardProps {
   onNavigate: (s: any, extra?: any) => void;
-  portal?: "Admin" | "ITAdmin";
+  portal?: "Admin" | "ITAdmin" | "Registrar";
+}
+
+function getAuthoritativeTermSystemLabel(year?: { termSystem?: string; terms?: any[] } | null): string {
+  if (year?.termSystem && typeof year.termSystem === "string" && year.termSystem.trim().length > 0) {
+    return year.termSystem.trim();
+  }
+  const termCount = year?.terms?.length || 0;
+  if (termCount === 3) return "Trimester";
+  if (termCount === 4) return "Quarter";
+  if (termCount === 2) return "Semester";
+  return termCount > 0 ? `${termCount}-Term System` : "Academic Terms";
 }
 
 interface RoleBreakdownItem {
@@ -154,6 +166,58 @@ interface SystemStatsResponse {
   gateTerminalsSummary?: GateTerminalsSummary | null;
   accountOverview?: AccountOverviewData | null;
   schoolOperationsOverview?: SchoolOperationsOverviewData | null;
+}
+
+interface RegistrarOperationsOverviewData {
+  activeAcademicYear: {
+    id: string;
+    name: string;
+    isCurrent: boolean;
+    startDate?: string;
+    endDate?: string;
+    termSystem?: string;
+    terms: Array<{
+      id: string;
+      key: string;
+      name: string;
+      label: string;
+      startDate?: string | null;
+      endDate?: string | null;
+    }>;
+  } | null;
+  enrollmentStats: {
+    totalEnrolled: number;
+    targetEnrollment: number | null;
+    pendingAdmissions: number;
+    missingDocuments: number;
+  };
+  sectionsSummary: {
+    totalSections: number;
+    sectionsWithAdviser: number;
+    sections: Array<{
+      id: string;
+      name: string;
+      gradeLevel: number;
+      adviserName: string | null;
+      adviserSchoolId: string | null;
+      enrolledCount: number;
+    }>;
+  };
+  docRequestsSummary: {
+    total: number;
+    pending: number;
+    approved: number;
+    fulfilled: number;
+    rejected: number;
+    requests: Array<{
+      id: string;
+      documentType: string;
+      status: string;
+      requestDate: string;
+      learnerName: string;
+      learnerLrn?: string;
+    }>;
+  };
 }
 
 function getRoleVisuals(role: string): { icon: React.ElementType; color: string; bg: string; barColor: string } {
@@ -320,10 +384,12 @@ function getHealthPill(status?: HealthStatus | string) {
 
 export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardProps) {
   const isIT = portal === "ITAdmin";
+  const isRegistrar = portal === "Registrar";
 
   const [stats, setStats] = useState<SystemStatsResponse | null>(null);
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [security, setSecurity] = useState<SecurityOverviewData | null>(null);
+  const [registrarData, setRegistrarData] = useState<RegistrarOperationsOverviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -347,6 +413,82 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
           setStats(statsRes?.data || statsRes);
           if (healthRes) setHealth((healthRes as any)?.data || healthRes);
           if (secRes) setSecurity((secRes as any)?.data || secRes);
+        } else if (isRegistrar) {
+          const [enrollmentRes, yearsRes, sectionsRes, docReqsRes] = await Promise.all([
+            apiClient.get<any>("/admin/enrollment-stats").catch(() => null),
+            apiClient.get<any>("/academic/years").catch(() => []),
+            apiClient.get<any>("/academic/sections").catch(() => []),
+            apiClient.get<any>("/student-services/doc-requests").catch(() => []),
+          ]);
+
+          const rawYears = Array.isArray(yearsRes) ? yearsRes : (yearsRes?.data || []);
+          const activeYear = rawYears.find((y: any) => y.is_current || y.isCurrent) || rawYears[0] || null;
+          const rawSections = Array.isArray(sectionsRes) ? sectionsRes : (sectionsRes?.data || []);
+          const rawDocs = Array.isArray(docReqsRes) ? docReqsRes : (docReqsRes?.data || []);
+
+          const mappedSections = rawSections.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            gradeLevel: s.grade_level || s.gradeLevel || 7,
+            adviserName: s.adviser_name_snapshot || (s.adviser_teacher?.user ? `${s.adviser_teacher.user.first_name} ${s.adviser_teacher.user.last_name}` : null),
+            adviserSchoolId: s.adviser_teacher?.employee_id || s.adviser_teacher?.user?.school_id || null,
+            enrolledCount: s._count?.enrollments || s.enrolledCount || 0,
+          }));
+
+          const sectionsWithAdviser = mappedSections.filter((s: any) => !!s.adviserName).length;
+          const pendingDocs = rawDocs.filter((r: any) => r.status === "Submitted" || r.status === "Teacher Approved" || r.status === "Principal Approved").length;
+          const approvedDocs = rawDocs.filter((r: any) => r.status === "Principal Approved" || r.status === "Approved").length;
+          const fulfilledDocs = rawDocs.filter((r: any) => r.status === "Fulfilled" || r.status === "Released").length;
+          const rejectedDocs = rawDocs.filter((r: any) => r.status === "Rejected" || r.status === "Cancelled").length;
+
+          setRegistrarData({
+            activeAcademicYear: activeYear ? {
+              id: activeYear.id,
+              name: activeYear.name,
+              isCurrent: Boolean(activeYear.is_current ?? activeYear.isCurrent),
+              startDate: activeYear.start_date || activeYear.startDate,
+              endDate: activeYear.end_date || activeYear.endDate,
+              termSystem: activeYear.term_system || activeYear.termSystem || "Trimester",
+              terms: (activeYear.terms || [
+                { id: "term-1", key: "T1", name: "Term 1", label: "Term 1" },
+                { id: "term-2", key: "T2", name: "Term 2", label: "Term 2" },
+                { id: "term-3", key: "T3", name: "Term 3", label: "Term 3" },
+              ]).map((t: any) => ({
+                id: t.id,
+                key: t.key || t.term_key || "T1",
+                name: t.name || t.label,
+                label: t.label || t.name,
+                startDate: t.start_date || t.startDate || null,
+                endDate: t.end_date || t.endDate || null,
+              })),
+            } : null,
+            enrollmentStats: {
+              totalEnrolled: enrollmentRes?.totalEnrolled ?? mappedSections.reduce((acc: number, cur: any) => acc + (cur.enrolledCount || 0), 0),
+              targetEnrollment: enrollmentRes?.targetEnrollment ?? (activeYear?.target_enrollment || null),
+              pendingAdmissions: enrollmentRes?.pendingAdmissions ?? 0,
+              missingDocuments: enrollmentRes?.missingDocuments ?? 0,
+            },
+            sectionsSummary: {
+              totalSections: mappedSections.length,
+              sectionsWithAdviser,
+              sections: mappedSections,
+            },
+            docRequestsSummary: {
+              total: rawDocs.length,
+              pending: pendingDocs,
+              approved: approvedDocs,
+              fulfilled: fulfilledDocs,
+              rejected: rejectedDocs,
+              requests: rawDocs.slice(0, 10).map((r: any) => ({
+                id: r.id,
+                documentType: r.document_type || r.documentType || "Official Document",
+                status: r.status,
+                requestDate: r.created_at || r.requestDate,
+                learnerName: r.student ? `${r.student.first_name} ${r.student.last_name}` : (r.learnerName || "Learner"),
+                learnerLrn: r.student?.lrn || r.learnerLrn,
+              })),
+            },
+          });
         } else {
           const statsRes = await apiClient.get<any>("/admin/system-stats");
           setStats(statsRes?.data || statsRes);
@@ -359,7 +501,7 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
         setRefreshing(false);
       }
     },
-    [isIT]
+    [isIT, isRegistrar]
   );
 
   useEffect(() => {
@@ -371,7 +513,7 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
   const allRoleItems: RoleBreakdownItem[] = overview
     ? [...(overview.roles || []), ...(overview.otherRoles || [])]
     : [];
-  const ops = !isIT ? stats?.schoolOperationsOverview ?? null : null;
+  const ops = (!isIT && !isRegistrar) ? stats?.schoolOperationsOverview ?? null : null;
 
   return (
     <div
@@ -451,7 +593,11 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
                 fontFamily: "'Inter', sans-serif",
               }}
             >
-              {isIT ? "IT Operations Overview" : "School Operations Overview"}
+              {isIT
+                ? "IT Operations Overview"
+                : isRegistrar
+                  ? "Registrar Operations Overview"
+                  : "School Operations Overview"}
             </h2>
             <span
               style={{
@@ -459,18 +605,22 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
                 fontWeight: 600,
                 padding: "2px 8px",
                 borderRadius: 6,
-                background: isIT ? "#EFF6FF" : "#F0FDF4",
-                color: isIT ? C.m700 : "#15803D",
-                border: `1px solid ${isIT ? "#BFDBFE" : "#BBF7D0"}`,
+                background: isIT ? "#EFF6FF" : isRegistrar ? "#F5F3FF" : "#F0FDF4",
+                color: isIT ? C.m700 : isRegistrar ? "#6D28D9" : "#15803D",
+                border: `1px solid ${isIT ? "#BFDBFE" : isRegistrar ? "#DDD6FE" : "#BBF7D0"}`,
               }}
             >
-              {isIT ? "Technical Infrastructure" : formatAcademicYearLabel(ops?.activeAcademicYear?.name)}
+              {isIT
+                ? "Technical Infrastructure"
+                : formatAcademicYearLabel(isRegistrar ? registrarData?.activeAcademicYear?.name : ops?.activeAcademicYear?.name)}
             </span>
           </div>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: C.t3, lineHeight: 1.4 }}>
             {isIT
               ? "Monitor user accounts, system services, gate terminals, and security activity for Calulut Integrated School."
-              : "Manage class sections, report card releases, school inventory, and staff accounts for Calulut Integrated School."}
+              : isRegistrar
+                ? "Manage student admissions, learner permanent records (SF10), official document fulfillment, and class rosters for Calulut Integrated School."
+                : "Manage class sections, report card releases, school inventory, and staff accounts for Calulut Integrated School."}
           </p>
         </div>
 
@@ -508,7 +658,7 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
             </div>
           )}
 
-          {!isIT && ops?.activeAcademicYear && (
+          {((!isIT && !isRegistrar && ops?.activeAcademicYear) || (isRegistrar && registrarData?.activeAcademicYear)) && (
             <div
               style={{
                 display: "inline-flex",
@@ -524,7 +674,17 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
             >
               <CalendarDays size={13} color={C.m700} />
               <span>
-                Term Config: <strong>Trimester ({ops.activeAcademicYear.terms.length} Terms)</strong>
+                Term Config:{" "}
+                <strong>
+                  {getAuthoritativeTermSystemLabel(
+                    isRegistrar ? registrarData?.activeAcademicYear : ops?.activeAcademicYear
+                  )}{" "}
+                  (
+                  {(isRegistrar
+                    ? registrarData?.activeAcademicYear?.terms?.length
+                    : ops?.activeAcademicYear?.terms?.length) || 0}{" "}
+                  Terms)
+                </strong>
               </span>
             </div>
           )}
@@ -1750,7 +1910,7 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
       {/* ═══════════════════════════════════════════════════════════════════════
           SCHOOL ADMIN DASHBOARD (OPERATIONAL_ADMIN)
          ═══════════════════════════════════════════════════════════════════════ */}
-      {!isIT && stats && ops && (
+      {!isIT && !isRegistrar && stats && ops && (
         <>
           {/* ─── PRIMARY KPI ROW (4 Compact School Operations Cards) ───────── */}
           <div id="admin-operational-kpis" className="saas-dash-grid-12">
@@ -1805,7 +1965,7 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
                     borderRadius: 999,
                   }}
                 >
-                  {ops.activeAcademicYear?.terms?.length || 0} Trimesters
+                  {ops.activeAcademicYear?.terms?.length || 0} Terms ({getAuthoritativeTermSystemLabel(ops.activeAcademicYear)})
                 </span>
               </div>
               <div
@@ -2886,6 +3046,1106 @@ export function AdminDashboard({ onNavigate, portal = "Admin" }: AdminDashboardP
                   24h Operational Events: <strong style={{ color: C.t2 }}>{stats.recentSystemEvents}</strong>
                 </span>
                 <span>Showing latest {Math.min(3, ops.recentOperationalEvents.length)}</span>
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          REGISTRAR OPERATIONS OVERVIEW (MODERN SAAS ARCHITECTURE)
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {isRegistrar && registrarData && (
+        <>
+          {/* ─── PRIMARY KPI ROW (4 Compact SaaS Cards) ───────────────────────── */}
+          <div id="registrar-operational-kpis" className="saas-dash-grid-12">
+            {/* Card 1: Active School Year & Trimester Terms */}
+            <div
+              className="saas-col-3"
+              data-testid="registrar-kpi-school-year"
+              onClick={() => onNavigate("school-years")}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                cursor: "pointer",
+                transition: "border-color 0.15s",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.m700;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#E2E8F0";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Active Academic Year</span>
+                <CalendarDays size={15} color={C.m700} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: C.t1,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {registrarData.activeAcademicYear
+                    ? formatAcademicYearLabel(registrarData.activeAcademicYear.name)
+                    : "Unconfigured"}
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#15803D",
+                    background: "#F0FDF4",
+                    border: "1px solid #BBF7D0",
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                  }}
+                >
+                  {registrarData.activeAcademicYear?.terms?.length || 0} Terms (
+                  {getAuthoritativeTermSystemLabel(registrarData.activeAcademicYear)})
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11.5,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 6,
+                }}
+              >
+                <span>
+                  {registrarData.activeAcademicYear?.terms?.length
+                    ? registrarData.activeAcademicYear.terms.map((t) => t.label).join(", ")
+                    : "Configure academic terms"}
+                </span>
+                <ArrowUpRight size={13} color={C.t3} />
+              </div>
+            </div>
+
+            {/* Card 2: Enrolled Students & Admissions */}
+            <div
+              className="saas-col-3"
+              data-testid="registrar-kpi-enrollment"
+              onClick={() => onNavigate("enrollment")}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                cursor: "pointer",
+                transition: "border-color 0.15s",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.m700;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#E2E8F0";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Enrolled & Admissions</span>
+                <Users size={15} color="#15803D" />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: C.t1,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {registrarData.enrollmentStats.totalEnrolled} Enrolled
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: registrarData.enrollmentStats.pendingAdmissions > 0 ? "#B45309" : "#15803D",
+                    background: registrarData.enrollmentStats.pendingAdmissions > 0 ? "#FEF3C7" : "#F0FDF4",
+                    border: `1px solid ${registrarData.enrollmentStats.pendingAdmissions > 0 ? "#FDE68A" : "#BBF7D0"}`,
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                  }}
+                >
+                  {registrarData.enrollmentStats.pendingAdmissions > 0
+                    ? `${registrarData.enrollmentStats.pendingAdmissions} Pending`
+                    : "Admissions Open"}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11.5,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 6,
+                }}
+              >
+                <span>
+                  {registrarData.enrollmentStats.missingDocuments > 0
+                    ? `${registrarData.enrollmentStats.missingDocuments} applicant(s) with incomplete documents`
+                    : "All enrollment documents verified"}
+                </span>
+                <ArrowUpRight size={13} color={C.t3} />
+              </div>
+            </div>
+
+            {/* Card 3: Document Requests Pipeline */}
+            <div
+              className="saas-col-3"
+              data-testid="registrar-kpi-doc-requests"
+              onClick={() => onNavigate("doc-requests")}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                cursor: "pointer",
+                transition: "border-color 0.15s",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.m700;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#E2E8F0";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Document Requests</span>
+                <FileText size={15} color="#6D28D9" />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: C.t1,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {registrarData.docRequestsSummary.pending} in Pipeline
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#6D28D9",
+                    background: "#F5F3FF",
+                    border: "1px solid #DDD6FE",
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                  }}
+                >
+                  {registrarData.docRequestsSummary.total} Total
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11.5,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 6,
+                }}
+              >
+                <span>
+                  {registrarData.docRequestsSummary.fulfilled} fulfilled · {registrarData.docRequestsSummary.approved} approved
+                </span>
+                <ArrowUpRight size={13} color={C.t3} />
+              </div>
+            </div>
+
+            {/* Card 4: Sections & Rosters */}
+            <div
+              className="saas-col-3"
+              data-testid="registrar-kpi-sections"
+              onClick={() => onNavigate("sections")}
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "14px 16px",
+                cursor: "pointer",
+                transition: "border-color 0.15s",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = C.m700;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#E2E8F0";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Sections & Rosters</span>
+                <GraduationCap size={15} color={C.m700} />
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: C.t1,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {registrarData.sectionsSummary.totalSections} Sections
+                </div>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: C.m700,
+                    background: "#EFF6FF",
+                    border: "1px solid #BFDBFE",
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                  }}
+                >
+                  {registrarData.sectionsSummary.sectionsWithAdviser} of {registrarData.sectionsSummary.totalSections} Advisers
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11.5,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 6,
+                }}
+              >
+                <span>Grade 7 to 10 class rosters</span>
+                <ArrowUpRight size={13} color={C.t3} />
+              </div>
+            </div>
+          </div>
+
+          {/* ─── ROW 1: PRIMARY WORKSPACE (7 cols Sections + 5 cols Quick Actions) ─── */}
+          <div id="registrar-primary-workspace-row" className="saas-dash-grid-12">
+            {/* Left (7 columns): Class Sections & Advisers Table */}
+            <section
+              id="registrar-sections-workspace"
+              className="saas-col-7"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  borderBottom: "1px solid #F1F5F9",
+                  paddingBottom: 8,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 700, color: C.t1, margin: 0 }}>
+                    Class Sections and Advisers
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: 11.5,
+                      color: C.t3,
+                      margin: "2px 0 0",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    Grade 7 to 10 section rosters, class advisers, and DepEd Form 138 (SF9) records
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("sections")}
+                    style={{
+                      background: "#F8FAFC",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: 7,
+                      padding: "4px 9px",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: C.t1,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Manage Sections
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("report-cards")}
+                    style={{
+                      background: "#EFF6FF",
+                      border: "1px solid #BFDBFE",
+                      borderRadius: 7,
+                      padding: "4px 9px",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: C.m700,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    View SF9
+                  </button>
+                </div>
+              </div>
+
+              {/* Evaluation Periods Strip */}
+              {registrarData.activeAcademicYear && registrarData.activeAcademicYear.terms.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    padding: "6px 10px",
+                    background: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 8,
+                    fontSize: 11,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: C.t2, fontWeight: 600 }}>
+                    <Layers size={13} color={C.m700} />
+                    <span>Configured Evaluation Periods:</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    {registrarData.activeAcademicYear.terms.map((term) => (
+                      <span
+                        key={term.id}
+                        style={{
+                          padding: "2px 7px",
+                          borderRadius: 5,
+                          background: "#FFFFFF",
+                          border: "1px solid #CBD5E1",
+                          color: C.t1,
+                          fontWeight: 600,
+                          fontSize: 10.5,
+                        }}
+                      >
+                        {term.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sections Table */}
+              {registrarData.sectionsSummary.sections.length === 0 ? (
+                <div
+                  style={{
+                    padding: "20px 16px",
+                    textAlign: "center",
+                    fontSize: 12,
+                    color: C.t3,
+                    background: "#F8FAFC",
+                    borderRadius: 8,
+                    border: "1px dashed #CBD5E1",
+                    flex: 1,
+                  }}
+                >
+                  No class sections configured for the active academic year.
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto", flex: 1 }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+                        <th style={{ textAlign: "left", padding: "6px 10px", color: C.t2, fontWeight: 700, fontSize: 11 }}>
+                          Section
+                        </th>
+                        <th style={{ textAlign: "left", padding: "6px 10px", color: C.t2, fontWeight: 700, fontSize: 11 }}>
+                          Grade Level
+                        </th>
+                        <th style={{ textAlign: "left", padding: "6px 10px", color: C.t2, fontWeight: 700, fontSize: 11 }}>
+                          Class Adviser
+                        </th>
+                        <th style={{ textAlign: "right", padding: "6px 10px", color: C.t2, fontWeight: 700, fontSize: 11 }}>
+                          Enrolled
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registrarData.sectionsSummary.sections.map((sec) => (
+                        <tr
+                          key={sec.id}
+                          style={{
+                            borderBottom: "1px solid #F1F5F9",
+                            cursor: "pointer",
+                            transition: "background 0.12s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "#F8FAFC";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
+                          }}
+                          onClick={() => onNavigate("sections")}
+                        >
+                          <td style={{ padding: "8px 10px", fontWeight: 600, color: C.t1 }}>
+                            {sec.name}
+                          </td>
+                          <td style={{ padding: "8px 10px", color: C.t2 }}>
+                            Grade {sec.gradeLevel}
+                          </td>
+                          <td style={{ padding: "8px 10px", color: sec.adviserName ? C.t1 : C.t3 }}>
+                            {sec.adviserName || "Unassigned"}
+                          </td>
+                          <td style={{ padding: "8px 10px", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                            <span
+                              style={{
+                                padding: "2px 7px",
+                                borderRadius: 5,
+                                background: "#EFF6FF",
+                                color: C.m700,
+                                fontWeight: 700,
+                                fontSize: 11,
+                              }}
+                            >
+                              {sec.enrolledCount} Students
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
+            {/* Right (5 columns): Admissions and Records Actions (6 Compact Tiles) */}
+            <section
+              id="registrar-quick-actions"
+              className="saas-col-5"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <div style={{ borderBottom: "1px solid #F1F5F9", paddingBottom: 8 }}>
+                <h3 style={{ fontSize: 13.5, fontWeight: 700, color: C.t1, margin: 0 }}>
+                  Admissions and Records Actions
+                </h3>
+                <p
+                  style={{
+                    fontSize: 11.5,
+                    color: C.t3,
+                    margin: "2px 0 0",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  Direct access to learner admissions, SF10 permanent records, and fulfillment
+                </p>
+              </div>
+
+              <div className="saas-quick-grid" style={{ flex: 1 }}>
+                {[
+                  {
+                    id: "enrollment",
+                    title: "Student Enrollment",
+                    desc: "Admissions & new student placement",
+                    icon: Users,
+                    color: "#15803D",
+                    bg: "#F0FDF4",
+                    onClick: () => onNavigate("enrollment"),
+                  },
+                  {
+                    id: "records-sf10",
+                    title: "Academic Records (SF10)",
+                    desc: "Learner permanent records & DepEd SF10",
+                    icon: FolderOpen,
+                    color: "#0369A1",
+                    bg: "#F0F9FF",
+                    onClick: () => onNavigate("records-sf10"),
+                  },
+                  {
+                    id: "doc-requests",
+                    title: "Document Fulfillment",
+                    desc: "Transcript, certs & diploma requests",
+                    icon: FileText,
+                    color: "#6D28D9",
+                    bg: "#F5F3FF",
+                    onClick: () => onNavigate("doc-requests"),
+                  },
+                  {
+                    id: "sections",
+                    title: "Sections and Rosters",
+                    desc: "Grade 7 to 10 advisers & rosters",
+                    icon: GraduationCap,
+                    color: C.m700,
+                    bg: "#EFF6FF",
+                    onClick: () => onNavigate("sections"),
+                  },
+                  {
+                    id: "school-years",
+                    title: "School Years",
+                    desc: "Academic year & re-enrollment transitions",
+                    icon: CalendarDays,
+                    color: "#0F766E",
+                    bg: "#F0FDFA",
+                    onClick: () => onNavigate("school-years"),
+                  },
+                ].map((act, actIdx, actArr) => {
+                  const ActIcon = act.icon;
+                  return (
+                    <button
+                      key={act.id}
+                      type="button"
+                      data-testid={`registrar-quick-action-${act.id}`}
+                      onClick={act.onClick}
+                      style={{
+                        gridColumn: actIdx === actArr.length - 1 && actArr.length % 2 === 1 ? "1 / -1" : undefined,
+                        background: "#FFFFFF",
+                        border: "1px solid #E2E8F0",
+                        borderRadius: 9,
+                        padding: "8px 9px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 6,
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = C.m700;
+                        e.currentTarget.style.background = "#F8FAFC";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "#E2E8F0";
+                        e.currentTarget.style.background = "#FFFFFF";
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                        <div
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 7,
+                            background: act.bg,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <ActIcon size={14} color={act.color} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              color: C.t1,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {act.title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10.5,
+                              color: C.t3,
+                              marginTop: 1,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {act.desc}
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight size={12} color={C.t3} style={{ flexShrink: 0 }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+
+          {/* ─── ROW 2: COORDINATED SUPPORTING PANELS ROW (3 Equal 4-Column Cards Aligned Horizontally) ─── */}
+          <div id="registrar-operational-summary" className="saas-dash-grid-12">
+            {/* Panel 1 (4 columns): Document Requests Pipeline Breakdown */}
+            <section
+              id="registrar-panel-requests-pipeline"
+              data-testid="registrar-panel-requests-pipeline"
+              className="saas-col-4"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: "15px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #F1F5F9",
+                  paddingBottom: 10,
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 700, color: C.t1, margin: 0 }}>
+                    Document Requests Pipeline
+                  </h3>
+                  <p style={{ fontSize: 11.5, color: C.t3, margin: "2px 0 0" }}>
+                    Fulfillment progress across student requests
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("doc-requests")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: C.m700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>Open Fulfillment</span>
+                  <ArrowUpRight size={12} />
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gridAutoRows: "1fr",
+                  gap: 8,
+                  flex: 1,
+                }}
+              >
+                {[
+                  {
+                    label: "In Pipeline",
+                    val: registrarData.docRequestsSummary.pending,
+                    color: "#6D28D9",
+                    bg: "#F5F3FF",
+                    border: "#DDD6FE",
+                  },
+                  {
+                    label: "Approved",
+                    val: registrarData.docRequestsSummary.approved,
+                    color: C.m700,
+                    bg: "#EFF6FF",
+                    border: "#DBEAFE",
+                  },
+                  {
+                    label: "Fulfilled",
+                    val: registrarData.docRequestsSummary.fulfilled,
+                    color: "#15803D",
+                    bg: "#F0FDF4",
+                    border: "#DCFCE7",
+                  },
+                ].map((st, stIdx, stArr) => (
+                  <div
+                    key={st.label}
+                    style={{
+                      gridColumn: stIdx === stArr.length - 1 && stArr.length % 2 === 1 ? "1 / -1" : undefined,
+                      background: st.bg,
+                      border: `1px solid ${st.border}`,
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.t2 }}>{st.label}</span>
+                    <span
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: st.color,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {st.val}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 8,
+                }}
+              >
+                <span>
+                  Total document requests: <strong style={{ color: C.t2 }}>{registrarData.docRequestsSummary.total}</strong>
+                </span>
+                <span>
+                  Fulfilled: <strong style={{ color: C.t2 }}>{registrarData.docRequestsSummary.fulfilled}</strong>
+                </span>
+              </div>
+            </section>
+
+            {/* Panel 2 (4 columns): Admissions & Enrollment Health */}
+            <section
+              id="registrar-panel-enrollment-health"
+              data-testid="registrar-panel-enrollment-health"
+              className="saas-col-4"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: "15px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #F1F5F9",
+                  paddingBottom: 10,
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 700, color: C.t1, margin: 0 }}>
+                    Admissions & Enrollment Status
+                  </h3>
+                  <p style={{ fontSize: 11.5, color: C.t3, margin: "2px 0 0" }}>
+                    Current school year enrollment metrics
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("enrollment")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: C.m700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>Open Admissions</span>
+                  <ArrowUpRight size={12} />
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gridAutoRows: "1fr",
+                  gap: 8,
+                  flex: 1,
+                }}
+              >
+                {[
+                  {
+                    label: "Officially Enrolled",
+                    val: registrarData.enrollmentStats.totalEnrolled,
+                    color: "#15803D",
+                    bg: "#F0FDF4",
+                    border: "#DCFCE7",
+                  },
+                  {
+                    label: "Pending Admissions",
+                    val: registrarData.enrollmentStats.pendingAdmissions,
+                    color: C.m700,
+                    bg: "#EFF6FF",
+                    border: "#DBEAFE",
+                  },
+                  {
+                    label: "Missing Documents",
+                    val: registrarData.enrollmentStats.missingDocuments,
+                    color: "#B45309",
+                    bg: "#FEF3C7",
+                    border: "#FEF08A",
+                  },
+                  {
+                    label: "Target Capacity",
+                    val: registrarData.enrollmentStats.targetEnrollment || "—",
+                    color: C.t1,
+                    bg: "#F8FAFC",
+                    border: "#E2E8F0",
+                  },
+                ].map((st) => (
+                  <div
+                    key={st.label}
+                    style={{
+                      background: st.bg,
+                      border: `1px solid ${st.border}`,
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: C.t2 }}>{st.label}</span>
+                    <span
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: st.color,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {st.val}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 8,
+                }}
+              >
+                <span>
+                  Active Learner Rosters: <strong style={{ color: C.t2 }}>{registrarData.sectionsSummary.totalSections} sections</strong>
+                </span>
+                <span>
+                  Advisers assigned: <strong style={{ color: C.t2 }}>{registrarData.sectionsSummary.sectionsWithAdviser}</strong>
+                </span>
+              </div>
+            </section>
+
+            {/* Panel 3 (4 columns): Academic Records & Year Transitions */}
+            <section
+              id="registrar-panel-academic-records"
+              data-testid="registrar-panel-academic-records"
+              className="saas-col-4"
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: 12,
+                padding: "15px 16px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid #F1F5F9",
+                  paddingBottom: 10,
+                }}
+              >
+                <div>
+                  <h3 style={{ fontSize: 13.5, fontWeight: 700, color: C.t1, margin: 0 }}>
+                    Academic Records & Placement
+                  </h3>
+                  <p style={{ fontSize: 11.5, color: C.t3, margin: "2px 0 0" }}>
+                    SF10 permanent records & year placement
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("records-sf10")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    color: C.m700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>Permanent Records</span>
+                  <ArrowUpRight size={12} />
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  flex: 1,
+                }}
+              >
+                {[
+                  {
+                    title: "Learner Permanent Records (SF10)",
+                    desc: "DepEd Order 58, s. 2017 compliant transcripts",
+                    screen: "records-sf10",
+                    badge: "Authorized",
+                  },
+                  {
+                    title: "Student Re-Enrollment & Placement",
+                    desc: "Next-year section assignment and transition",
+                    screen: "school-years",
+                    badge: "Promotion",
+                  },
+                  {
+                    title: "DepEd Form 138 (SF9) Cards",
+                    desc: "Official report card records verification",
+                    screen: "report-cards",
+                    badge: "View-Only",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.title}
+                    onClick={() => onNavigate(item.screen)}
+                    style={{
+                      background: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 8,
+                      cursor: "pointer",
+                      transition: "border-color 0.15s, background 0.15s",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = C.m700;
+                      e.currentTarget.style.background = "#FFFFFF";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E2E8F0";
+                      e.currentTarget.style.background = "#F8FAFC";
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.t1 }}>
+                        {item.title}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.t3, marginTop: 1 }}>
+                        {item.desc}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        color: C.m700,
+                        background: "#EFF6FF",
+                        border: "1px solid #BFDBFE",
+                        padding: "2px 7px",
+                        borderRadius: 6,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: 11,
+                  color: C.t3,
+                  borderTop: "1px solid #F1F5F9",
+                  paddingTop: 8,
+                }}
+              >
+                <span>Office of the Registrar</span>
+                <span>Calulut Integrated School</span>
               </div>
             </section>
           </div>

@@ -8,7 +8,6 @@ import { RDashboard } from './dashboard/RDashboard';
 import { REnrollmentScreen } from './enrollment/REnrollmentScreen';
 import { RDocRequestsScreen } from './documents/RDocRequestsScreen';
 import { RAcademicRecordsScreen } from './records/RAcademicRecordsScreen';
-import { RDocDeficiencyScreen } from './records/RDocDeficiencyScreen';
 import { ReportCardReleaseConsole } from '../shared/components/ReportCardReleaseConsole';
 import { SectionsManagement } from '../admin/operations/SectionsManagement';
 import { SchoolYearManagementScreen } from '../shared/components/SchoolYearManagementScreen';
@@ -27,7 +26,6 @@ export function RegistrarApp({ onLogout }: { onLogout: () => void }) {
     "r-records": "Academic Records (SF10)",
     "r-report-cards": "Report Cards (SF9)",
     "r-doc-requests": "Document Requests",
-    "r-deficiency": "Document Deficiencies",
     "r-search": "Academic Records (SF10)",
     "r-sections": "Sections and Rosters",
     "r-school-years": "School Years",
@@ -62,7 +60,6 @@ export function RegistrarApp({ onLogout }: { onLogout: () => void }) {
           {screen === "r-doc-requests" && <RDocRequestsScreen />}
           {(screen === "r-records" || screen === "r-search") && <RAcademicRecordsScreen />}
           {screen === "r-report-cards" && <ReportCardReleaseConsole portal="Registrar" />}
-          {screen === "r-deficiency" && <RDocDeficiencyScreen />}
           {screen === "r-sections" && <SectionsManagement readOnly={true} />}
           {screen === "r-school-years" && <SchoolYearManagementScreen portal="Registrar" />}
           {(screen === "r-profile" || screen === "r-settings") && <RProfileScreen />}

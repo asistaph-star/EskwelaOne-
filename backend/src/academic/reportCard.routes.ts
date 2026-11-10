@@ -20,6 +20,8 @@ import {
   resolveStudentSf9DataMapping,
   generatePersistedStudentCalulutSf9FromDb,
   renderCalulutSf9BufferToPdf,
+  applyUnofficialPreviewWatermark,
+  resolveLibreOfficeBinary,
   assertAuthorizedSf9Staff,
   assertAuthorizedStaffForSection,
   EXPECTED_MASTER_TEMPLATE_SHA256,
@@ -28,6 +30,11 @@ import {
   getCachedDraftPdf,
   setCachedDraftPdf,
 } from './grading/index.js';
+import {
+  queueSectionBatchIssuance,
+  getBatchJob,
+  listRecentBatchJobs,
+} from './grading/sf9BatchQueue.service.js';
 
 const STORAGE_DIR = getMediaStoragePath();
 try {
@@ -428,11 +435,68 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
       throw new AppError(422, 'NO_ENROLLED_STUDENTS', `Section ${section.name} has no enrolled students.`);
     }
 
+    const mode = ((req.query?.mode as string) || (req.body?.mode as string) || '').toLowerCase();
+    const isEligibleOnly = mode === 'eligible_only';
+
     // Validate readiness for all enrolled students and compute cryptographic snapshots
+    const readyLearners: any[] = [];
     const unreadyLearners: any[] = [];
     const learnerStateHashes: Record<string, string> = {};
 
     for (const enrollment of enrollments) {
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
+      // Check if student already has a current issued SF9 for this academic year and target term
+      const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+        where: {
+          student_id: enrollment.student_id,
+          academic_year_id: enrollment.academic_year_id,
+          is_current: true,
+        },
+      });
+
+      if (existingIssuance) {
+        let isReleased = false;
+        let issuedTerm = 'T1';
+        try {
+          const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+          issuedTerm = summary.targetTerm || 'T1';
+          isReleased = Boolean(summary.release?.released);
+        } catch {}
+
+        if (issuedTerm === targetTerm) {
+          unreadyLearners.push({
+            studentId: enrollment.student_id,
+            enrollmentId: enrollment.id,
+            name: learnerName,
+            blockingReasons: [
+              isReleased
+                ? `ALREADY_RELEASED_V${existingIssuance.version}`
+                : `ALREADY_ISSUED_V${existingIssuance.version}_PENDING_RELEASE`,
+            ],
+          });
+          continue;
+        }
+      }
+
+      // Check if student already has an active, unconsumed Principal authorization
+      const existingAuth = await verifyPrincipalAuthorization(
+        prisma as any,
+        sectionId,
+        enrollment.student_id,
+        targetTerm,
+        { academicYearId: enrollment.academic_year_id }
+      );
+      if (existingAuth.isAuthorized && !existingAuth.isStale) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: ['ALREADY_AUTHORIZED'],
+        });
+        continue;
+      }
+
       const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
         studentId: enrollment.student_id,
         enrollmentId: enrollment.id,
@@ -445,18 +509,26 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
       if (!evalResult.readyForOfficialSf9) {
         unreadyLearners.push({
           studentId: enrollment.student_id,
-          name: `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim(),
+          enrollmentId: enrollment.id,
+          name: learnerName,
           blockingReasons: evalResult.blockingReasons || [],
         });
       } else {
-        learnerStateHashes[enrollment.student_id] = crypto
+        const stateHash = crypto
           .createHash('sha256')
           .update(JSON.stringify(evalResult.calculated || {}))
           .digest('hex');
+        learnerStateHashes[enrollment.student_id] = stateHash;
+        readyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          stateHash,
+        });
       }
     }
 
-    if (unreadyLearners.length > 0) {
+    if (!isEligibleOnly && unreadyLearners.length > 0) {
       throw new AppError(
         422,
         'CANNOT_AUTHORIZE_INCOMPLETE_ACADEMIC_RECORDS',
@@ -472,10 +544,40 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
       );
     }
 
+    if (readyLearners.length === 0) {
+      throw new AppError(
+        422,
+        'NO_ELIGIBLE_LEARNERS_FOR_AUTHORIZATION',
+        `No learners in Section ${section.name} are currently eligible for ${targetTerm} SF9 authorization.`
+      );
+    }
+
     const now = new Date();
     const authorizedByName =
       `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() ||
       'Dr. Eduardo M. Santos, Ed.D.';
+
+    // Record individual audit logs for each eligible learner
+    for (const learner of readyLearners) {
+      await createAuditLog({
+        actorUserId: actor.id,
+        action: 'SF9_PRINCIPAL_AUTHORIZATION',
+        resourceType: 'sf9_official_issuance',
+        resourceId: learner.studentId,
+        result: 'SUCCESS',
+        newState: {
+          studentId: learner.studentId,
+          enrollmentId: learner.enrollmentId,
+          sectionId,
+          targetTerm,
+          authorizedBy: actor.id,
+          authorizedByName,
+          authorizedAt: now.toISOString(),
+          stateHash: learner.stateHash,
+        },
+        correlationId: (req as any).correlationId,
+      });
+    }
 
     await createAuditLog({
       actorUserId: actor.id,
@@ -488,10 +590,14 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         sectionName: section.name,
         academicYearId: section.academic_year_id,
         targetTerm,
+        mode: isEligibleOnly ? 'eligible_only' : 'full_section',
         authorizedBy: actor.id,
         authorizedByName,
         authorizedAt: now.toISOString(),
         totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        authorizedStudentIds: readyLearners.map((l: any) => l.studentId),
+        excludedLearners: unreadyLearners,
         learnerStateHashes,
       },
       correlationId: (req as any).correlationId,
@@ -503,11 +609,228 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         sectionId,
         sectionName: section.name,
         targetTerm,
-        status: 'AUTHORIZED',
+        status: isEligibleOnly && unreadyLearners.length > 0 ? 'PARTIALLY_AUTHORIZED' : 'AUTHORIZED',
+        mode: isEligibleOnly ? 'eligible_only' : 'full_section',
         authorizedBy: actor.id,
         authorizedByName,
         authorizedAt: now.toISOString(),
         totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        excludedCount: unreadyLearners.length,
+        authorizedLearners: readyLearners,
+        excludedLearners: unreadyLearners,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sections/:sectionId/authorize-eligible', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    req.query.mode = 'eligible_only';
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+    const sectionId = req.params.sectionId as string;
+    await assertAuthorizedStaffForSection(actor, sectionId, prisma as any, 'authorize');
+
+    if (!actor.roles.includes('Principal')) {
+      throw new AppError(
+        403,
+        'FORBIDDEN',
+        'Official SF9 academic authorization is strictly restricted to the School Principal.'
+      );
+    }
+
+    const section = await (prisma as any).section.findUnique({
+      where: { id: sectionId },
+      include: { academic_year: true },
+    });
+    if (!section) throw new AppError(404, 'NOT_FOUND', `Section ${sectionId} not found`);
+
+    const targetTerm =
+      (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    const enrollments = await (prisma as any).enrollment.findMany({
+      where: { section_id: sectionId, status: 'Enrolled' },
+      include: {
+        student: {
+          include: { user: true },
+        },
+      },
+      orderBy: [
+        { student: { user: { last_name: 'asc' } } },
+        { student: { user: { first_name: 'asc' } } },
+      ],
+    });
+
+    if (enrollments.length === 0) {
+      throw new AppError(422, 'NO_ENROLLED_STUDENTS', `Section ${section.name} has no enrolled students.`);
+    }
+
+    const readyLearners: any[] = [];
+    const unreadyLearners: any[] = [];
+    const learnerStateHashes: Record<string, string> = {};
+
+    for (const enrollment of enrollments) {
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
+      // Check if student already has a current issued SF9 for this academic year and target term
+      const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+        where: {
+          student_id: enrollment.student_id,
+          academic_year_id: enrollment.academic_year_id,
+          is_current: true,
+        },
+      });
+
+      if (existingIssuance) {
+        let isReleased = false;
+        let issuedTerm = 'T1';
+        try {
+          const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+          issuedTerm = summary.targetTerm || 'T1';
+          isReleased = Boolean(summary.release?.released);
+        } catch {}
+
+        if (issuedTerm === targetTerm) {
+          unreadyLearners.push({
+            studentId: enrollment.student_id,
+            enrollmentId: enrollment.id,
+            name: learnerName,
+            blockingReasons: [
+              isReleased
+                ? `ALREADY_RELEASED_V${existingIssuance.version}`
+                : `ALREADY_ISSUED_V${existingIssuance.version}_PENDING_RELEASE`,
+            ],
+          });
+          continue;
+        }
+      }
+
+      // Check if student already has an active, unconsumed Principal authorization
+      const existingAuth = await verifyPrincipalAuthorization(
+        prisma as any,
+        sectionId,
+        enrollment.student_id,
+        targetTerm,
+        { academicYearId: enrollment.academic_year_id }
+      );
+      if (existingAuth.isAuthorized && !existingAuth.isStale) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: ['ALREADY_AUTHORIZED'],
+        });
+        continue;
+      }
+
+      const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
+        studentId: enrollment.student_id,
+        enrollmentId: enrollment.id,
+        academicYearId: enrollment.academic_year_id,
+        targetTerm,
+        renderPdf: false,
+        mode: 'OFFICIAL',
+      });
+
+      if (!evalResult.readyForOfficialSf9) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: evalResult.blockingReasons || [],
+        });
+      } else {
+        const stateHash = crypto
+          .createHash('sha256')
+          .update(JSON.stringify(evalResult.calculated || {}))
+          .digest('hex');
+        learnerStateHashes[enrollment.student_id] = stateHash;
+        readyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          stateHash,
+        });
+      }
+    }
+
+    if (readyLearners.length === 0) {
+      throw new AppError(
+        422,
+        'NO_ELIGIBLE_LEARNERS_FOR_AUTHORIZATION',
+        `No learners in Section ${section.name} are currently eligible for ${targetTerm} SF9 authorization.`
+      );
+    }
+
+    const now = new Date();
+    const authorizedByName =
+      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() ||
+      'Dr. Eduardo M. Santos, Ed.D.';
+
+    for (const learner of readyLearners) {
+      await createAuditLog({
+        actorUserId: actor.id,
+        action: 'SF9_PRINCIPAL_AUTHORIZATION',
+        resourceType: 'sf9_official_issuance',
+        resourceId: learner.studentId,
+        result: 'SUCCESS',
+        newState: {
+          studentId: learner.studentId,
+          enrollmentId: learner.enrollmentId,
+          sectionId,
+          targetTerm,
+          authorizedBy: actor.id,
+          authorizedByName,
+          authorizedAt: now.toISOString(),
+          stateHash: learner.stateHash,
+        },
+        correlationId: (req as any).correlationId,
+      });
+    }
+
+    await createAuditLog({
+      actorUserId: actor.id,
+      action: 'SF9_PRINCIPAL_AUTHORIZATION',
+      resourceType: 'sf9_section_authorization',
+      resourceId: sectionId,
+      result: 'SUCCESS',
+      newState: {
+        sectionId,
+        sectionName: section.name,
+        academicYearId: section.academic_year_id,
+        targetTerm,
+        mode: 'eligible_only',
+        authorizedBy: actor.id,
+        authorizedByName,
+        authorizedAt: now.toISOString(),
+        totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        authorizedStudentIds: readyLearners.map((l: any) => l.studentId),
+        excludedLearners: unreadyLearners,
+        learnerStateHashes,
+      },
+      correlationId: (req as any).correlationId,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        sectionId,
+        sectionName: section.name,
+        targetTerm,
+        status: unreadyLearners.length > 0 ? 'PARTIALLY_AUTHORIZED' : 'AUTHORIZED',
+        mode: 'eligible_only',
+        authorizedBy: actor.id,
+        authorizedByName,
+        authorizedAt: now.toISOString(),
+        totalLearners: enrollments.length,
+        authorizedCount: readyLearners.length,
+        excludedCount: unreadyLearners.length,
+        authorizedLearners: readyLearners,
+        excludedLearners: unreadyLearners,
       },
     });
   } catch (err) {
@@ -545,6 +868,48 @@ router.post('/:studentId/sf9/authorize', async (req: Request, res: Response, nex
 
     const targetTerm =
       (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    // Prevent duplicate authorization if already issued or released
+    const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+      where: {
+        student_id: studentId,
+        academic_year_id: enrollment.academic_year_id,
+        is_current: true,
+      },
+    });
+    if (existingIssuance) {
+      let isReleased = false;
+      let issuedTerm = 'T1';
+      try {
+        const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+        issuedTerm = summary.targetTerm || 'T1';
+        isReleased = Boolean(summary.release?.released);
+      } catch {}
+
+      if (issuedTerm === targetTerm) {
+        throw new AppError(
+          409,
+          'ALREADY_ISSUED_OR_RELEASED',
+          `Principal authorization denied: Learner already has an official SF9 ${isReleased ? 'released' : 'issued'} (v${existingIssuance.version}) for ${targetTerm}.`
+        );
+      }
+    }
+
+    // Prevent duplicate authorization if already actively authorized
+    const existingAuth = await verifyPrincipalAuthorization(
+      prisma as any,
+      enrollment.section_id,
+      studentId,
+      targetTerm,
+      { academicYearId: enrollment.academic_year_id }
+    );
+    if (existingAuth.isAuthorized && !existingAuth.isStale) {
+      throw new AppError(
+        409,
+        'ALREADY_AUTHORIZED',
+        `Principal authorization denied: Learner is already authorized for ${targetTerm}.`
+      );
+    }
 
     const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
       studentId,
@@ -735,95 +1100,141 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
       commentsByStudent.add(c.student_id);
     });
 
-    const learners = enrollments.map((e: any) => {
-      const student = e.student;
-      const user = student.user || {};
-      const iss = issuanceMap.get(student.id);
+    const learners = await Promise.all(
+      enrollments.map(async (e: any) => {
+        const student = e.student;
+        const user = student.user || {};
+        const iss = issuanceMap.get(student.id);
 
-      let isReleased = false;
-      let releaseMeta: any = null;
-      let targetTerm: 'T1' | 'T2' | 'T3' = queryTerm;
-      let reportingPeriod = queryTerm === 'T1' ? 'Term 1 SF9' : queryTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)';
-      if (iss) {
-        try {
-          const summary = JSON.parse(iss.calculated_summary_encrypted || '{}');
-          if (summary.targetTerm) targetTerm = summary.targetTerm;
-          if (summary.reportingPeriod) reportingPeriod = summary.reportingPeriod;
-          if (summary.release?.released) {
-            isReleased = true;
-            releaseMeta = summary.release;
-            if (summary.release.reportingPeriod) reportingPeriod = summary.release.reportingPeriod;
-            if (summary.release.targetTerm) targetTerm = summary.release.targetTerm;
-          }
-        } catch {}
-      }
-
-      // Authoritative gender resolution from student record (User model has no gender)
-      const rawGender = student.gender || user.gender || '';
-      const resolvedGender = rawGender
-        ? rawGender.trim().toUpperCase().startsWith('M')
-          ? 'Male'
-          : rawGender.trim().toUpperCase().startsWith('F')
-          ? 'Female'
-          : rawGender.trim()
-        : 'Unknown';
-
-      const isStudentAuthorized =
-        isSectionAuthorized ||
-        principalAuthLogs.some((a: any) => {
-          let state: any = a.new_state;
+        let isReleased = false;
+        let releaseMeta: any = null;
+        let targetTerm: 'T1' | 'T2' | 'T3' = queryTerm;
+        let reportingPeriod = queryTerm === 'T1' ? 'Term 1 SF9' : queryTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)';
+        if (iss) {
           try {
-            if (typeof state === 'string') state = JSON.parse(state);
-          } catch {}
-          return a.resource_id === student.id && (state?.targetTerm === queryTerm || !state?.targetTerm);
-        });
-
-      return {
-        enrollmentId: e.id,
-        studentId: student.id,
-        lrn: student.lrn || '',
-        name: `${user.last_name || ''}, ${user.first_name || ''}`.trim(),
-        gender: resolvedGender,
-        gradeLevel: section.grade_level,
-        sectionName: section.name,
-        academicYear: section.academic_year?.name || 'SY 2026-2027',
-        totalSubjectsCount: canonicalRequiredCount,
-        assignedSubjectsCount,
-        publishedSubjectsCount,
-        hasAdviserComment: commentsByStudent.has(student.id),
-        principalAuthorization: {
-          isAuthorized: isStudentAuthorized,
-          targetTerm: queryTerm,
-        },
-        issuance: iss
-          ? {
-              isIssued: true,
-              issuanceId: iss.id,
-              version: iss.version,
-              targetTerm,
-              reportingPeriod,
-              issuedAt: iss.issued_at?.toISOString() || null,
-              pdfSha256: iss.pdf_sha256 || null,
+            const summary = JSON.parse(iss.calculated_summary_encrypted || '{}');
+            if (summary.targetTerm) targetTerm = summary.targetTerm;
+            if (summary.reportingPeriod) reportingPeriod = summary.reportingPeriod;
+            if (summary.release?.released) {
+              isReleased = true;
+              releaseMeta = summary.release;
+              if (summary.release.reportingPeriod) reportingPeriod = summary.release.reportingPeriod;
+              if (summary.release.targetTerm) targetTerm = summary.release.targetTerm;
             }
-          : {
-              isIssued: false,
-              issuanceId: null,
-              version: 0,
-              targetTerm: null,
-              reportingPeriod: null,
-              issuedAt: null,
-              pdfSha256: null,
-            },
-        release: {
-          isReleased,
-          releasedAt: releaseMeta?.releasedAt || null,
-          releasedBy: releaseMeta?.releasedById || null,
-          reportingPeriod: releaseMeta?.reportingPeriod || reportingPeriod,
-          targetTerm,
-        },
-      };
-    });
+          } catch {}
+        }
 
+        // Authoritative gender resolution from student record (User model has no gender)
+        const rawGender = student.gender || user.gender || '';
+        const resolvedGender = rawGender
+          ? rawGender.trim().toUpperCase().startsWith('M')
+            ? 'Male'
+            : rawGender.trim().toUpperCase().startsWith('F')
+            ? 'Female'
+            : rawGender.trim()
+          : 'Unknown';
+
+        // Evaluate genuine academic completeness & eligibility
+        let evalResult: any = null;
+        try {
+          evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
+            studentId: student.id,
+            enrollmentId: e.id,
+            academicYearId: section.academic_year_id,
+            targetTerm: queryTerm,
+            renderPdf: false,
+            mode: 'OFFICIAL',
+          });
+        } catch (err: any) {
+          evalResult = { readyForOfficialSf9: false, blockingReasons: [err.message || 'READINESS_EVALUATION_ERROR'] };
+        }
+
+        const isStudentAuthorized =
+          isSectionAuthorized ||
+          principalAuthLogs.some((a: any) => {
+            let state: any = a.new_state;
+            try {
+              if (typeof state === 'string') state = JSON.parse(state);
+            } catch {}
+            if (a.resource_id === student.id && (state?.targetTerm === queryTerm || !state?.targetTerm)) {
+              return true;
+            }
+            if (a.resource_id === sectionId && (state?.targetTerm === queryTerm || !state?.targetTerm)) {
+              if (state?.authorizedStudentIds && Array.isArray(state.authorizedStudentIds)) {
+                return state.authorizedStudentIds.includes(student.id);
+              }
+              return true;
+            }
+            return false;
+          });
+
+        let isEligible = evalResult.readyForOfficialSf9;
+        const blockingReasons = [...(evalResult.blockingReasons || [])];
+
+        if (iss) {
+          isEligible = false;
+          if (isReleased) {
+            blockingReasons.push(`ALREADY_RELEASED_V${iss.version}`);
+          } else {
+            blockingReasons.push(`ALREADY_ISSUED_V${iss.version}_PENDING_RELEASE`);
+          }
+        }
+
+        return {
+          enrollmentId: e.id,
+          studentId: student.id,
+          lrn: student.lrn || '',
+          name: `${user.last_name || ''}, ${user.first_name || ''}`.trim(),
+          gender: resolvedGender,
+          gradeLevel: section.grade_level,
+          sectionName: section.name,
+          academicYear: section.academic_year?.name || 'SY 2026-2027',
+          totalSubjectsCount: canonicalRequiredCount,
+          assignedSubjectsCount,
+          publishedSubjectsCount,
+          hasAdviserComment: commentsByStudent.has(student.id),
+          eligibility: {
+            isEligible,
+            readyForOfficialSf9: isEligible,
+            blockingReasons,
+          },
+          principalAuthorization: {
+            isAuthorized: isStudentAuthorized,
+            targetTerm: queryTerm,
+          },
+          issuance: iss
+            ? {
+                isIssued: true,
+                issuanceId: iss.id,
+                version: iss.version,
+                targetTerm,
+                reportingPeriod,
+                issuedAt: iss.issued_at?.toISOString() || null,
+                pdfSha256: iss.pdf_sha256 || null,
+              }
+            : {
+                isIssued: false,
+                issuanceId: null,
+                version: 0,
+                targetTerm: null,
+                reportingPeriod: null,
+                issuedAt: null,
+                pdfSha256: null,
+              },
+          release: {
+            isReleased,
+            releasedAt: releaseMeta?.releasedAt || null,
+            releasedBy: releaseMeta?.releasedById || null,
+            reportingPeriod: releaseMeta?.reportingPeriod || reportingPeriod,
+            targetTerm,
+          },
+        };
+      })
+    );
+
+    const eligibleCount = learners.filter((l: any) => l.eligibility.isEligible).length;
+    const incompleteCount = learners.filter((l: any) => !l.eligibility.isEligible).length;
+    const authorizedCount = learners.filter((l: any) => l.principalAuthorization.isAuthorized).length;
     const issuedCount = learners.filter((l: any) => l.issuance.isIssued).length;
     const releasedCount = learners.filter((l: any) => l.release.isReleased).length;
 
@@ -842,6 +1253,9 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
         stats: {
           totalLearners: learners.length,
           targetTerm: queryTerm,
+          eligibleCount,
+          incompleteCount,
+          authorizedCount,
           canonicalRequiredCount,
           assignedSubjectsCount,
           publishedSubjectsCount,
@@ -849,12 +1263,82 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
           unassignedCurriculumCount: Math.max(0, canonicalRequiredCount - assignedSubjectsCount),
           isCurriculumFullyAssigned: assignedSubjectsCount >= canonicalRequiredCount,
           isTermFullyPublished: publishedSubjectsCount === canonicalRequiredCount,
-          isPrincipalAuthorized: isSectionAuthorized,
+          isPrincipalAuthorized: isSectionAuthorized || (eligibleCount > 0 && authorizedCount >= eligibleCount),
           issuedCount,
           releasedCount,
         },
         learners,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/academic/report-card/sections/:sectionId/bulk-issue
+ * Initiates asynchronous background generation and sealing of official SF9 documents
+ * for all eligible learners in the section with bounded concurrency.
+ * Authorized: Principal, Admin.
+ */
+router.post('/sections/:sectionId/bulk-issue', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+    const sectionId = req.params.sectionId as string;
+    await assertAuthorizedStaffForSection(actor, sectionId, prisma as any, 'issue');
+
+    const targetTerm =
+      (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    const actorName =
+      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() || (actor as any).username || (actor as any).email || actor.id;
+
+    const job = await queueSectionBatchIssuance({
+      sectionId,
+      targetTerm,
+      actorId: actor.id,
+      actorName,
+      correlationId: (req as any).correlationId,
+    });
+
+    res.status(202).json({
+      success: true,
+      data: {
+        batchId: job.id,
+        sectionId: job.sectionId,
+        sectionName: job.sectionName,
+        targetTerm: job.targetTerm,
+        totalItems: job.totalItems,
+        status: job.status,
+        startedAt: job.startedAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/academic/report-card/batches/:batchId/progress
+ * Retrieves real-time batch processing progress and telemetry.
+ */
+router.get('/batches/:batchId/progress', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+    assertAuthorizedSf9Staff(actor);
+
+    const batchId = req.params.batchId as string;
+    const job = getBatchJob(batchId);
+
+    if (!job) {
+      throw new AppError(404, 'NOT_FOUND', `Batch job ${batchId} not found`);
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({
+      success: true,
+      data: job,
     });
   } catch (err) {
     next(err);
@@ -1375,6 +1859,32 @@ router.post('/:studentId/sf9/issue', async (req: Request, res: Response, next: N
       (req.body?.reportingPeriod as string) ||
       (targetTerm === 'T1' ? 'Term 1 SF9' : targetTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)');
 
+    // Prevent duplicate official issuance
+    const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+      where: {
+        student_id: studentId,
+        academic_year_id: enrollment.academic_year_id,
+        is_current: true,
+      },
+    });
+    if (existingIssuance) {
+      let isReleased = false;
+      let issuedTerm = 'T1';
+      try {
+        const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+        issuedTerm = summary.targetTerm || 'T1';
+        isReleased = Boolean(summary.release?.released);
+      } catch {}
+
+      if (issuedTerm === targetTerm) {
+        throw new AppError(
+          409,
+          'ALREADY_ISSUED',
+          `Official SF9 issuance denied: Learner already has an official SF9 ${isReleased ? 'released' : 'issued'} (v${existingIssuance.version}) for ${targetTerm}.`
+        );
+      }
+    }
+
     // 1. Enforce preliminary Principal Authorization check (Term, Year, Identity, Freshness)
     const principalAuth = await verifyPrincipalAuthorization(
       prisma as any,
@@ -1879,6 +2389,335 @@ router.get('/student/released-sf9', async (req: Request, res: Response, next: Ne
         history,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/academic/report-card/student/preview/pdf
+ * Authenticated, student-scoped endpoint for the authentic Calulut SF9 original-workbook PDF preview.
+ * - Strictly derives student identity from session token (no user-controlled studentId).
+ * - Queries term visibility settings from AcademicTerm: if Term 1 visibility is OFF, ratings are stripped to null BEFORE workbook generation.
+ * - Populates ONLY authoritative records (grades, SF2 attendance, adviser comments).
+ * - Never populates concealed grades and covers them visually.
+ * - Does NOT require Principal authorization or official SF9 release.
+ * - Does NOT write to Sf9OfficialIssuance or create release records.
+ * - Returns application/pdf with Cache-Control: no-store, private.
+ * - If headless LibreOffice is absent on teammate machines, returns HTTP 503 RENDERER_UNAVAILABLE_FALLBACK_TO_DIGITAL.
+ */
+router.get('/student/preview/pdf', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+
+    let targetStudentId: string | null = null;
+    if ((actor as any).studentProfile?.id) {
+      targetStudentId = (actor as any).studentProfile.id;
+    } else {
+      const studentRec = await (prisma as any).student.findFirst({
+        where: { user_id: actor.id },
+      });
+      if (studentRec) {
+        targetStudentId = studentRec.id;
+      }
+    }
+
+    if (!targetStudentId) {
+      throw new AppError(403, 'STUDENT_PROFILE_NOT_FOUND', 'Could not resolve student profile for the current authenticated user.');
+    }
+
+    const academicYearIdQuery = req.query.academicYearId as string | undefined;
+
+    // 1. Resolve student enrollment
+    const enrollment = await (prisma as any).enrollment.findFirst({
+      where: academicYearIdQuery
+        ? { student_id: targetStudentId, academic_year_id: academicYearIdQuery, status: 'Enrolled' }
+        : { student_id: targetStudentId, status: 'Enrolled' },
+      include: {
+        academic_year: true,
+        section: {
+          include: {
+            adviser_teacher: {
+              include: { user: true },
+            },
+          },
+        },
+        student: {
+          include: { user: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (!enrollment) {
+      throw new AppError(404, 'ENROLLMENT_NOT_FOUND', 'No active enrollment record found for this learner.');
+    }
+
+    const student = enrollment.student;
+    const academicYearId = enrollment.academic_year_id;
+
+    // 2. Query school term visibility settings
+    const terms = await (prisma as any).term.findMany({
+      where: { academic_year_id: academicYearId },
+    });
+
+    const t1Term = terms.find((t: any) => t.key === 'T1' || t.name.includes('1') || t.name.includes('First'));
+    const t2Term = terms.find((t: any) => t.key === 'T2' || t.name.includes('2') || t.name.includes('Second'));
+    const t3Term = terms.find((t: any) => t.key === 'T3' || t.name.includes('3') || t.name.includes('Third'));
+
+    const isT1Visible = Boolean(t1Term?.is_grades_visible_to_students);
+    const isT2Visible = Boolean(t2Term?.is_grades_visible_to_students);
+    const isT3Visible = Boolean(t3Term?.is_grades_visible_to_students);
+    const termVisibilityBitmask = `T1:${isT1Visible ? 1 : 0}|T2:${isT2Visible ? 1 : 0}|T3:${isT3Visible ? 1 : 0}`;
+
+    // 3. Check version-aware draft preview cache (with term visibility)
+    const draftCacheKey = await computeDraftCacheIdentity(prisma as any, {
+      studentId: targetStudentId,
+      enrollmentId: enrollment.id,
+      academicYearId,
+      targetTerm: 'T1',
+      termVisibilityBitmask,
+    });
+
+    const cachedDraftPdf = getCachedDraftPdf(draftCacheKey);
+    const filename = `Calulut_SF9_Preview_${student?.lrn || targetStudentId}.pdf`;
+
+    if (cachedDraftPdf) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-store, private');
+      res.setHeader('X-Sf9-Mode', 'PREVIEW_UNOFFICIAL');
+      res.setHeader('X-Sf9-Draft-Cache', 'HIT');
+      res.setHeader('X-Sf9-Visibility-T1', isT1Visible ? 'VISIBLE' : 'HIDDEN');
+      return res.send(cachedDraftPdf);
+    }
+
+    // 4. Check if LibreOffice is available (Teammate zero-dependency fallback)
+    const libreOfficeBin = resolveLibreOfficeBinary();
+    if (!libreOfficeBin) {
+      return res.status(503).json({
+        success: false,
+        code: 'RENDERER_UNAVAILABLE_FALLBACK_TO_DIGITAL',
+        message: 'Headless LibreOffice Calc binary not configured on backend. Falling back to digital report card.',
+        targetStudentId,
+        isT1Visible,
+      });
+    }
+
+    // 5. Gather authoritative database records
+    // Demographics
+    const lastName = (student.user?.last_name || student.last_name || '').trim().toUpperCase();
+    const firstName = (student.user?.first_name || student.first_name || '').trim().toUpperCase();
+    const middleName = (student.user?.middle_name || student.middle_name || '').trim().toUpperCase();
+    const formalName = `${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`.trim() || 'LEARNER';
+
+    let rawLrn = student.lrn || '';
+    if (rawLrn.startsWith('v1.') || !/^\d{12}$/.test(rawLrn)) {
+      if (enrollment.id.startsWith('enr_') && /^\d{12}$/.test(enrollment.id.slice(4))) {
+        rawLrn = enrollment.id.slice(4);
+      } else if (student.user?.school_id && /^\d{12}$/.test(student.user.school_id)) {
+        rawLrn = student.user.school_id;
+      }
+    }
+
+    let age = 15;
+    if (student.date_of_birth) {
+      const dob = new Date(student.date_of_birth);
+      if (!isNaN(dob.getTime())) {
+        const diff = Date.now() - dob.getTime();
+        age = Math.max(5, Math.abs(new Date(diff).getUTCFullYear() - 1970));
+      }
+    }
+
+    let gender: 'M' | 'F' = 'M';
+    if (student.gender && /^(female|f)$/i.test(student.gender.trim())) {
+      gender = 'F';
+    }
+
+    // Adviser name
+    let adviserName = 'Maria Corazon G. Alcantara';
+    if (enrollment.section?.adviser_name_snapshot) {
+      adviserName = enrollment.section.adviser_name_snapshot;
+    } else if (enrollment.section?.adviser_teacher?.user) {
+      const u = enrollment.section.adviser_teacher.user;
+      adviserName = `${u.first_name} ${u.middle_name ? u.middle_name[0] + '. ' : ''}${u.last_name}`.trim();
+    }
+
+    // School head
+    const schoolHead = 'Dr. Eduardo M. Santos, Ed.D.';
+
+    // 6. Query published grades
+    const rawGrades = await (prisma as any).grade.findMany({
+      where: {
+        student_id: targetStudentId,
+        academic_year_id: academicYearId,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    const getSubjectGrade = (pattern: RegExp, termCode: string): number | null => {
+      const match = rawGrades.find(
+        (g: any) =>
+          g.term === termCode &&
+          g.subject &&
+          (pattern.test(g.subject.name) || pattern.test(g.subject.code || ''))
+      );
+      if (!match) return null;
+      if (typeof match.published_term_grade === 'number') return match.published_term_grade;
+      if (typeof match.term_grade === 'number') return Math.round(match.term_grade);
+      return null;
+    };
+
+    // Apply grade visibility: if visibility is OFF, ratings are strictly null
+    const fil1 = isT1Visible ? getSubjectGrade(/filipino/i, 'T1') : null;
+    const eng1 = isT1Visible ? getSubjectGrade(/english/i, 'T1') : null;
+    const math1 = isT1Visible ? getSubjectGrade(/math/i, 'T1') : null;
+    const sci1 = isT1Visible ? getSubjectGrade(/science/i, 'T1') : null;
+    const ap1 = isT1Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T1') : null;
+    const gmrc1 = isT1Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T1') : null;
+    const tle1 = isT1Visible ? getSubjectGrade(/technology|tle|epp/i, 'T1') : null;
+    const music1 = isT1Visible ? getSubjectGrade(/music/i, 'T1') : null;
+    const pe1 = isT1Visible ? getSubjectGrade(/physical|pe/i, 'T1') : null;
+
+    const fil2 = isT2Visible ? getSubjectGrade(/filipino/i, 'T2') : null;
+    const eng2 = isT2Visible ? getSubjectGrade(/english/i, 'T2') : null;
+    const math2 = isT2Visible ? getSubjectGrade(/math/i, 'T2') : null;
+    const sci2 = isT2Visible ? getSubjectGrade(/science/i, 'T2') : null;
+    const ap2 = isT2Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T2') : null;
+    const gmrc2 = isT2Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T2') : null;
+    const tle2 = isT2Visible ? getSubjectGrade(/technology|tle|epp/i, 'T2') : null;
+    const music2 = isT2Visible ? getSubjectGrade(/music/i, 'T2') : null;
+    const pe2 = isT2Visible ? getSubjectGrade(/physical|pe/i, 'T2') : null;
+
+    const fil3 = isT3Visible ? getSubjectGrade(/filipino/i, 'T3') : null;
+    const eng3 = isT3Visible ? getSubjectGrade(/english/i, 'T3') : null;
+    const math3 = isT3Visible ? getSubjectGrade(/math/i, 'T3') : null;
+    const sci3 = isT3Visible ? getSubjectGrade(/science/i, 'T3') : null;
+    const ap3 = isT3Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T3') : null;
+    const gmrc3 = isT3Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T3') : null;
+    const tle3 = isT3Visible ? getSubjectGrade(/technology|tle|epp/i, 'T3') : null;
+    const music3 = isT3Visible ? getSubjectGrade(/music/i, 'T3') : null;
+    const pe3 = isT3Visible ? getSubjectGrade(/physical|pe/i, 'T3') : null;
+
+    // 7. Query authoritative SF2 attendance from database
+    const dailyAttendance = await (prisma as any).officialDailyAttendance.findMany({
+      where: {
+        student_id: targetStudentId,
+        academic_year_id: academicYearId,
+      },
+    });
+
+    const presentArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const classDaysArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    // If authoritative attendance records exist, aggregate by month; otherwise all 0
+    if (dailyAttendance && dailyAttendance.length > 0) {
+      for (const rec of dailyAttendance) {
+        const d = new Date(rec.date);
+        const m = d.getUTCMonth(); // 0-based: 5=Jun, 6=Jul, 7=Aug, 8=Sep...
+        let slotIdx = -1;
+        if (m === 5) slotIdx = 0; // Jun
+        else if (m === 6) slotIdx = 1; // Jul
+        else if (m === 7) slotIdx = 2; // Aug
+        else if (m === 8) slotIdx = 3; // Sep
+        else if (m === 9) slotIdx = 4; // Oct
+        else if (m === 10) slotIdx = 5; // Nov
+        else if (m === 11) slotIdx = 6; // Dec
+        else if (m === 0) slotIdx = 7; // Jan
+        else if (m === 1) slotIdx = 8; // Feb
+        else if (m === 2) slotIdx = 9; // Mar
+        else if (m === 3) slotIdx = 10; // Apr
+
+        if (slotIdx >= 0) {
+          classDaysArr[slotIdx]++;
+          if (rec.status === 'PRESENT' || rec.status === 'LATE') {
+            presentArr[slotIdx]++;
+          }
+        }
+      }
+    }
+
+    // 8. Query authoritative adviser comments from database
+    const commentsList = await (prisma as any).sf9AdviserComment.findMany({
+      where: {
+        enrollment_id: enrollment.id,
+      },
+    });
+
+    const t1CommentRec = commentsList.find((c: any) => c.term === 'T1' || c.term === 1);
+    const t2CommentRec = commentsList.find((c: any) => c.term === 'T2' || c.term === 2);
+    const t3CommentRec = commentsList.find((c: any) => c.term === 'T3' || c.term === 3);
+
+    const t1Comment = t1CommentRec?.comment || '';
+    const t2Comment = t2CommentRec?.comment || '';
+    const t3Comment = t3CommentRec?.comment || '';
+
+    // 9. Generate authentic Calulut SF9 OpenXML workbook
+    const input: any = {
+      demographics: {
+        name: formalName,
+        lrn: rawLrn,
+        gradeLevel: enrollment.section?.grade_level || 10,
+        section: enrollment.section?.name || 'Aguinaldo',
+        schoolYear: enrollment.academic_year?.name || '2026-2027',
+        age,
+        gender,
+        schoolName: 'Calulut Integrated School',
+        schoolId: '500146',
+        schoolHead,
+        adviser: adviserName,
+      },
+      grades: {
+        filipino: [fil1, fil2, fil3],
+        english: [eng1, eng2, eng3],
+        math: [math1, math2, math3],
+        science: [sci1, sci2, sci3],
+        ap: [ap1, ap2, ap3],
+        gmrc: [gmrc1, gmrc2, gmrc3],
+        tle: [tle1, tle2, tle3],
+        music: [music1, music2, music3],
+        pe: [pe1, pe2, pe3],
+      },
+      attendance: {
+        present: presentArr,
+        classDays: classDaysArr,
+      },
+      comments: {
+        t1: t1Comment,
+        t2: t2Comment,
+        t3: t3Comment,
+      },
+      targetTerm: 'T1',
+      mode: 'DRAFT',
+    };
+
+    const genResult = generateCalulutSf9(input);
+    if (!genResult.success || !genResult.buffer) {
+      throw new AppError(500, 'SF9_GENERATION_FAILED', `Failed to generate authentic SF9 workbook: ${genResult.reason}`);
+    }
+
+    // 10. Convert workbook to PDF via headless LibreOffice Calc (with bounded queue in calulutSf9PdfRenderer)
+    const rawPdfBuffer = await renderCalulutSf9BufferToPdf(genResult.buffer, {
+      cachePolicy: 'no-store',
+      timeoutMs: 60000,
+    });
+
+    // 11. Apply subtle diagonal "UNOFFICIAL PREVIEW" watermark
+    const markedPdfBuffer = await applyUnofficialPreviewWatermark(rawPdfBuffer);
+
+    // 12. Save to draft cache with version-aware key
+    setCachedDraftPdf(draftCacheKey, markedPdfBuffer);
+
+    // 13. Stream PDF response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('X-Sf9-Mode', 'PREVIEW_UNOFFICIAL');
+    res.setHeader('X-Sf9-Draft-Cache', 'MISS');
+    res.setHeader('X-Sf9-Visibility-T1', isT1Visible ? 'VISIBLE' : 'HIDDEN');
+    return res.send(markedPdfBuffer);
   } catch (err) {
     next(err);
   }
