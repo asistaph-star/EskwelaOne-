@@ -3,6 +3,7 @@ import { AppError } from '../common/middleware/errorHandler.js';
 import { classifyAcademicYearLifecycle } from '../common/utils/calendarValidation.js';
 import { getStudentIdentity } from '../common/utils/studentIdentity.js';
 import { resolveSubjectGradeLevel } from './academic.service.js';
+import { computePersistedStudentMonthlyAttendance } from './grading/calulutSf2Sf9Persistence.service.js';
 
 export interface ReportCardSubject {
   id: string;
@@ -52,8 +53,13 @@ export interface ReportCardDTO {
     configuredTerms: ('T1' | 'T2' | 'T3' | 'T4')[];
     termCount: number;
   };
-  attendance: null; // explicitly missing due to lack of a calendar model
+  attendance: any;
   adviser: string | null;
+  adviserComments?: {
+    T1: string | null;
+    T2: string | null;
+    T3: string | null;
+  };
   principal: string | null;
   promotionApproval?: {
     isApproved: boolean;
@@ -542,6 +548,57 @@ export async function getReportCardData(studentId: string, actorId: string, requ
     }
   }
 
+  // Compute authentic attendance from official SF2 and school-calendar records
+  let attendancePayload: any = null;
+  try {
+    const attRes = await computePersistedStudentMonthlyAttendance(prisma as any, {
+      studentId: student.id,
+      academicYearId,
+      targetTerm: 'T1',
+    });
+    if (attRes?.sf9Mapping) {
+      attendancePayload = {
+        totalClassDays: attRes.sf9Mapping.totalClassDays,
+        totalDaysPresent: attRes.sf9Mapping.totalDaysPresent,
+        totalDaysAbsent: attRes.sf9Mapping.totalDaysAbsent,
+        totalDaysTardy: attRes.sf9Mapping.totalDaysTardy,
+        classDaysByMonth: attRes.sf9Mapping.attendance?.classDays,
+        presentByMonth: attRes.sf9Mapping.attendance?.present,
+        monthlySummaries: attRes.monthlySummaries,
+      };
+    }
+  } catch (attErr) {
+    attendancePayload = null;
+  }
+
+  // Fetch published adviser comments for this student and academic year
+  const publishedComments = await (prisma as any).sf9AdviserComment.findMany({
+    where: {
+      student_id: student.id,
+      academic_year_id: academicYearId,
+      status: 'PUBLISHED',
+    },
+  });
+
+  const adviserComments: { T1: string | null; T2: string | null; T3: string | null } = {
+    T1: null,
+    T2: null,
+    T3: null,
+  };
+
+  for (const c of publishedComments) {
+    const termKey = c.target_term as 'T1' | 'T2' | 'T3';
+    if (termKey === 'T1' || termKey === 'T2' || termKey === 'T3') {
+      const termObj = configuredTerms.find((t: any) => t.key === termKey);
+      const isTermGradesVisible = (termObj as any)?.is_grades_visible_to_students !== false;
+      if (isStudentUser && !isReleasedSf9 && !isTermGradesVisible) {
+        adviserComments[termKey] = null;
+      } else {
+        adviserComments[termKey] = c.comment || null;
+      }
+    }
+  }
+
   return {
     student: {
       id: student.id,
@@ -568,8 +625,9 @@ export async function getReportCardData(studentId: string, actorId: string, requ
       configuredTerms: configuredTermKeys,
       termCount: configuredTermKeys.length
     },
-    attendance: null,
+    attendance: attendancePayload,
     adviser: adviserName,
+    adviserComments,
     principal: principalName,
     promotionApproval,
     termsMetadata: configuredTerms.map((t: any) => ({

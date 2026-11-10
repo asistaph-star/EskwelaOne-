@@ -10,6 +10,7 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
+import path from 'path';
 import defaultPrisma from '../../config/database.js';
 import type { PrismaClient } from '@prisma/client';
 
@@ -2022,16 +2023,12 @@ export async function generatePersistedStudentCalulutSf9FromDb(
     ): Promise<{ valid: boolean; reason?: string }> => {
       try {
         // 1. Authoritative source document verification
-        const doc = await db.document.findFirst({
+        const doc = await (db as any).document.findFirst({
           where: {
-            student_id: enrollment.student_id,
-            type: {
-              in: [
-                'HISTORICAL_REPORT_CARD',
-                'OFFICIAL_TRANSCRIPT',
-                'AUTHENTICATED_PERMANENT_RECORD_SF10',
-              ],
-            },
+            OR: [
+              { filename: { contains: enrollment.student_id } },
+              { storage_key: { contains: enrollment.student_id } },
+            ],
           },
         });
 
@@ -2040,7 +2037,9 @@ export async function generatePersistedStudentCalulutSf9FromDb(
         }
 
         // 2. Storage file integrity: verify file exists on disk
-        if (doc.file_path && !fs.existsSync(doc.file_path)) {
+        const storageDir = process.env.MEDIA_STORAGE_PATH || path.resolve(process.cwd(), 'storage/documents');
+        const resolvedPath = path.resolve(storageDir, doc.storage_key || '');
+        if (!fs.existsSync(resolvedPath)) {
           return { valid: false, reason: 'HISTORICAL_SOURCE_DOCUMENT_MISSING_ON_DISK' };
         }
 

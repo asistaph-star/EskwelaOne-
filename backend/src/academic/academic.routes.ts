@@ -362,7 +362,7 @@ router.patch('/terms/:termId/visibility', async (req: Request, res: Response, ne
 
     const termId = req.params.termId as string;
     const rawVisible = req.body.isVisible ?? req.body.isGradesVisible ?? req.body.isGradesVisibleToStudents;
-    const isVisible = rawVisible !== undefined ? Boolean(rawVisible) : true;
+    const isVisible = rawVisible !== undefined ? Boolean(rawVisible) : false;
 
     await (prisma as any).$executeRawUnsafe(
       `UPDATE terms SET is_grades_visible_to_students = $1, updated_at = NOW() WHERE id = $2`,

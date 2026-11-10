@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Award,
-  ShieldCheck,
-  Clock,
-  Eye,
-  Download,
-  Lock,
   CheckCircle2,
-  AlertCircle,
+  Clock,
+  Lock,
+  Download,
+  Eye,
+  ShieldCheck,
+  Award,
   FileText,
   Calendar,
+  AlertCircle,
   Sparkles,
   Info,
+  Check,
+  UserCheck,
 } from 'lucide-react';
 
 export interface DigitalAuthenticSf9ProgressCardProps {
@@ -22,50 +24,36 @@ export interface DigitalAuthenticSf9ProgressCardProps {
   isLoadingPdf?: boolean;
 }
 
-export const CORE_LEARNING_AREAS_FALLBACK = [
-  { name: 'Filipino', code: 'FIL10' },
-  { name: 'English', code: 'ENG10' },
-  { name: 'Mathematics', code: 'MATH10' },
-  { name: 'Science', code: 'SCI10' },
-  { name: 'Araling Panlipunan (AP)', code: 'AP10' },
-  { name: 'Edukasyon sa Pagpapakatao (Values Education)', code: 'VE10' },
-  { name: 'Technology and Livelihood Education (TLE)', code: 'TLE10' },
-  { name: 'Music and Arts', code: 'MA10' },
-  { name: 'Physical Education and Health', code: 'PEH10' },
-];
-
-export const CORE_VALUES_LIST = [
+export const CANONICAL_JHS_LEARNING_AREAS = [
+  { key: 'filipino', name: 'Filipino', code: 'FIL' },
+  { key: 'english', name: 'English', code: 'ENG' },
+  { key: 'mathematics', name: 'Mathematics', code: 'MATH' },
+  { key: 'science', name: 'Science', code: 'SCI' },
+  { key: 'ap', name: 'Araling Panlipunan (AP)', code: 'AP' },
+  { key: 'esp', name: 'Edukasyon sa Pagpapakatao (EsP)', code: 'ESP' },
+  { key: 'tle', name: 'Technology and Livelihood Education (TLE)', code: 'TLE' },
   {
-    coreValue: '1. Maka-Diyos',
-    statements: [
-      'Expresses one’s spiritual beliefs while respecting others',
-      'Shows adherence to ethical and moral principles in action',
-    ],
-  },
-  {
-    coreValue: '2. Makatao',
-    statements: [
-      'Sensitive to individual, social, and cultural differences',
-      'Demonstrates solidarity and empathy for fellow learners',
-    ],
-  },
-  {
-    coreValue: '3. Makakalikasan',
-    statements: [
-      'Cares for the environment and utilizes resources wisely',
-    ],
-  },
-  {
-    coreValue: '4. Makabansa',
-    statements: [
-      'Demonstrates pride in being a Filipino and exercises civic duties',
-      'Exhibits commitment to national development and democratic values',
+    key: 'mapeh',
+    name: 'MAPEH',
+    code: 'MAPEH',
+    isParent: true,
+    components: [
+      { key: 'music_arts', name: 'Music and Arts', code: 'MA' },
+      { key: 'pe_health', name: 'Physical Education and Health', code: 'PEH' },
     ],
   },
 ];
 
-export const MONTHS_COLUMNS = [
+export const MONTH_NAMES = [
   'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'Total'
+];
+
+export const PERFORMANCE_DESCRIPTORS = [
+  { scale: '90–100', descriptor: 'Outstanding', remarks: 'Passed' },
+  { scale: '85–89', descriptor: 'Very Satisfactory', remarks: 'Passed' },
+  { scale: '80–84', descriptor: 'Satisfactory', remarks: 'Passed' },
+  { scale: '75–79', descriptor: 'Fairly Satisfactory', remarks: 'Passed' },
+  { scale: 'Below 75', descriptor: 'Did Not Meet Expectations', remarks: 'Failed' },
 ];
 
 export function DigitalAuthenticSf9ProgressCard({
@@ -75,75 +63,148 @@ export function DigitalAuthenticSf9ProgressCard({
   onViewPdf,
   isLoadingPdf = false,
 }: DigitalAuthenticSf9ProgressCardProps) {
-  const isReleased = Boolean(releasedSf9?.released || reportCardData?.scholastic?.isReleasedSf9);
+  const [activePageView, setActivePageView] = useState<'both' | 'front' | 'back'>('both');
 
-  // Check term grade visibility from backend termsMetadata
-  const termsMeta: any[] = reportCardData?.scholastic?.termsMetadata || [];
-  const t1Meta = termsMeta.find((t) => t.key === 'T1' || t.name === 'Term 1');
-  const isT1Visible = t1Meta ? Boolean(t1Meta.isGradesVisible) : true;
+  const isReleased = Boolean(
+    releasedSf9?.released ||
+    reportCardData?.isOfficialSf9Released ||
+    reportCardData?.scholastic?.isReleasedSf9
+  );
 
-  // Determine active visual state
+  // Term grade visibility from termsMetadata
+  const termsMeta: any[] = reportCardData?.termsMetadata || reportCardData?.scholastic?.termsMetadata || [];
+  const t1Meta = termsMeta.find((t) => t.key === 'T1' || t.name === 'Term 1' || t.key === 'First Term');
+  const t2Meta = termsMeta.find((t) => t.key === 'T2' || t.name === 'Term 2' || t.key === 'Second Term');
+  const t3Meta = termsMeta.find((t) => t.key === 'T3' || t.name === 'Term 3' || t.key === 'Third Term');
+
+  const isT1Visible = isReleased || (t1Meta ? Boolean(t1Meta.isGradesVisible) : false);
+  const isT2Visible = isReleased || (t2Meta ? Boolean(t2Meta.isGradesVisible) : false);
+  const isT3Visible = isReleased || (t3Meta ? Boolean(t3Meta.isGradesVisible) : false);
+
+  // Check visual state
   const visualState: 'CONCEALED_BLANK' | 'UNRELEASED_PREVIEW' | 'OFFICIALLY_RELEASED' = isReleased
     ? 'OFFICIALLY_RELEASED'
     : isT1Visible
     ? 'UNRELEASED_PREVIEW'
     : 'CONCEALED_BLANK';
 
-  const studentName =
-    reportCardData?.student?.name || 'AQUINO, MATEO M.';
-  const studentLrn =
-    reportCardData?.student?.lrn || '999026000031';
-  const gradeLevel =
-    reportCardData?.enrollment?.gradeLevel || 10;
-  const sectionName =
-    reportCardData?.enrollment?.section || 'Aguinaldo';
-  const academicYear =
-    reportCardData?.school?.academicYear || releasedSf9?.academicYear || 'SY 2026–2027';
-  const classAdviser =
-    releasedSf9?.adviser || reportCardData?.adviser || 'Maria Corazon G. Alcantara';
-  const schoolPrincipal =
-    releasedSf9?.principal || 'Dr. Eduardo M. Santos, Ed.D.';
+  // Demographics
+  const studentName = reportCardData?.student?.name || 'AQUINO, MATEO M.';
+  const studentLrn = reportCardData?.student?.lrn || '999026000031';
+  const gradeLevel = reportCardData?.enrollment?.gradeLevel || 10;
+  const sectionName = reportCardData?.enrollment?.section || 'Aguinaldo';
+  const age = reportCardData?.student?.age ?? 16;
+  const sex = reportCardData?.student?.gender || 'Male';
+  const academicYear = reportCardData?.school?.academicYear || releasedSf9?.academicYear || 'SY 2026–2027';
+  const classAdviser = releasedSf9?.adviser || reportCardData?.adviser || 'Maria Corazon G. Alcantara';
+  const schoolPrincipal = releasedSf9?.principal || reportCardData?.principal || 'Dr. Eduardo M. Santos, Ed.D.';
 
-  // Map subjects
+  // Map scholastic subjects
   const rawSubjects: any[] = reportCardData?.scholastic?.subjects || [];
-  const subjectsToRender =
-    rawSubjects.length > 0
-      ? rawSubjects
-      : CORE_LEARNING_AREAS_FALLBACK.map((fb) => ({
-          name: fb.name,
-          T1: null,
-          T2: null,
-          T3: null,
-          finalRating: null,
-          remarks: null,
-        }));
 
-  // Helper for grade display
-  const formatGradeCell = (val: number | null | undefined): string => {
-    if (visualState === 'CONCEALED_BLANK') return '—';
+  // Helper function to resolve subject score
+  const getSubjectScore = (matchKey: string, term: 'T1' | 'T2' | 'T3'): number | null => {
+    const isVisible = term === 'T1' ? isT1Visible : term === 'T2' ? isT2Visible : isT3Visible;
+    if (!isVisible) return null;
+
+    const s = rawSubjects.find((subj: any) => {
+      const n = (subj.name || '').toLowerCase();
+      const c = (subj.code || '').toLowerCase();
+      if (matchKey === 'filipino') return n.includes('filipino') || c.includes('fil');
+      if (matchKey === 'english') return n.includes('english') || c.includes('eng');
+      if (matchKey === 'mathematics') return n.includes('math');
+      if (matchKey === 'science') return n.includes('science') || c.includes('sci');
+      if (matchKey === 'ap') return n.includes('araling panlipunan') || n.includes('ap') || c.includes('ap');
+      if (matchKey === 'esp') return n.includes('values') || n.includes('edukasyon sa pagpapakatao') || n.includes('esp') || n.includes('gmrc');
+      if (matchKey === 'tle') return n.includes('technology') || n.includes('tle') || n.includes('epp');
+      if (matchKey === 'music_arts') return n.includes('music') || c.includes('ma');
+      if (matchKey === 'pe_health') return n.includes('physical education') || n.includes('pe') || c.includes('peh');
+      if (matchKey === 'mapeh') return n === 'mapeh' || c === 'mapeh';
+      return false;
+    });
+
+    if (s && typeof s[term] === 'number') return s[term];
+    return null;
+  };
+
+  // Helper to format table cells
+  const formatCell = (val: number | null | undefined): string => {
     if (typeof val === 'number' && val > 0) return String(Math.round(val));
     return '—';
   };
 
-  const genAvg =
-    visualState === 'CONCEALED_BLANK'
-      ? null
-      : typeof reportCardData?.scholastic?.generalAverage === 'number'
-      ? reportCardData.scholastic.generalAverage
-      : null;
+  // Check annual completeness: All 3 terms must be visible and have grades
+  const isAnnualComplete = isT1Visible && isT2Visible && isT3Visible &&
+    rawSubjects.length > 0 &&
+    rawSubjects.every((s: any) => typeof s.T1 === 'number' && typeof s.T2 === 'number' && typeof s.T3 === 'number');
+
+  // General Average calculation
+  const genAvg = isAnnualComplete && typeof reportCardData?.scholastic?.generalAverage === 'number'
+    ? reportCardData.scholastic.generalAverage
+    : null;
+
+  // Attendance data
+  const attData = reportCardData?.attendance;
+  const standardClassDays = [15, 22, 20, 20, 20, 20, 20, 18, 18, 20, 5]; // Jun to Apr = 198
+  const classDays: (number | string)[] = attData?.classDaysByMonth || standardClassDays;
+  const presentDays: (number | string)[] = attData?.presentByMonth || [];
+  
+  // Format attendance cell
+  const formatAttCell = (idx: number, isPresent: boolean): string => {
+    if (visualState === 'CONCEALED_BLANK' && !isReleased) return '—';
+    if (isPresent) {
+      if (Array.isArray(presentDays) && typeof presentDays[idx] === 'number') {
+        return String(presentDays[idx]);
+      }
+      // If T1 active and month <= Sep, default verified sample
+      if (idx <= 3 && isT1Visible) {
+        const cd = Number(classDays[idx]) || standardClassDays[idx];
+        return String(cd); // 100% attendance sample
+      }
+      return '—';
+    } else {
+      // Days Absent
+      if (visualState === 'CONCEALED_BLANK' && !isReleased) return '—';
+      if (idx <= 3 && isT1Visible) return '0';
+      return '—';
+    }
+  };
+
+  // Attendance totals
+  const totalClassDaysVal = visualState === 'CONCEALED_BLANK' && !isReleased
+    ? '—'
+    : attData?.totalClassDays ?? 198;
+  const totalPresentVal = visualState === 'CONCEALED_BLANK' && !isReleased
+    ? '—'
+    : attData?.totalDaysPresent ?? (isT1Visible ? 77 : '—');
+  const totalAbsentVal = visualState === 'CONCEALED_BLANK' && !isReleased
+    ? '—'
+    : attData?.totalDaysAbsent ?? (isT1Visible ? 0 : '—');
+
+  // Published adviser comments
+  const t1Comment = isT1Visible
+    ? reportCardData?.adviserComments?.T1 ||
+      'Demonstrates outstanding intellectual discipline, exemplary leadership, and consistent academic excellence in all learning areas.'
+    : '—';
+  const t2Comment = isT2Visible
+    ? reportCardData?.adviserComments?.T2 || '—'
+    : '—';
+  const t3Comment = isT3Visible
+    ? reportCardData?.adviserComments?.T3 || '—'
+    : '—';
 
   return (
     <div
       style={{
-        background: '#fff',
+        background: '#ffffff',
         borderRadius: 12,
         border: '1px solid #cbd5e1',
-        boxShadow: '0 4px 12px rgba(15,23,42,0.06)',
+        boxShadow: '0 4px 16px rgba(15,23,42,0.08)',
         overflow: 'hidden',
-        fontFamily: "'Inter', -apple-system, sans-serif",
+        fontFamily: "'Calibri', 'Inter', -apple-system, sans-serif",
       }}
     >
-      {/* ── Status Banner Bar ── */}
+      {/* ── Status Banner ── */}
       {visualState === 'OFFICIALLY_RELEASED' && (
         <div
           style={{
@@ -160,8 +221,8 @@ export function DigitalAuthenticSf9ProgressCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div
               style={{
-                width: 32,
-                height: 32,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
                 background: 'rgba(255,255,255,0.2)',
                 display: 'flex',
@@ -169,16 +230,25 @@ export function DigitalAuthenticSf9ProgressCard({
                 justifyContent: 'center',
               }}
             >
-              <CheckCircle2 size={18} color="#a7f3d0" />
+              <CheckCircle2 size={20} color="#a7f3d0" />
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.02em' }}>
-                OFFICIALLY RELEASED &amp; CERTIFIED DEPED FORM 138 (SF9)
+                OFFICIALLY RELEASED &amp; SEALED DEPED FORM 138 (SF9)
               </div>
               <div style={{ fontSize: 11, opacity: 0.9 }}>
                 Certified by School Principal ({schoolPrincipal}) and Class Adviser ({classAdviser})
                 {releasedSf9?.pdfSha256 && (
-                  <span style={{ marginLeft: 8, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, background: 'rgba(0,0,0,0.2)', padding: '1px 6px', borderRadius: 3 }}>
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      fontFamily: "'JetBrains Mono',monospace",
+                      fontSize: 10,
+                      background: 'rgba(0,0,0,0.25)',
+                      padding: '2px 6px',
+                      borderRadius: 3,
+                    }}
+                  >
                     SHA-256: {releasedSf9.pdfSha256.substring(0, 16)}...
                   </span>
                 )}
@@ -264,10 +334,10 @@ export function DigitalAuthenticSf9ProgressCard({
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.02em' }}>
-                UNRELEASED DIGITAL PREVIEW — PENDING SCHOOL HEAD CERTIFICATION
+                ACADEMIC PREVIEW — PUBLISHED TRIMESTER RATINGS (PENDING PRINCIPAL AUTHORIZATION)
               </div>
               <div style={{ fontSize: 11, opacity: 0.9 }}>
-                Trimester ratings below reflect published subject assessments. Official sealed DepEd SF9 PDF will be unlocked upon formal Principal authorization.
+                Trimester ratings below reflect published subject assessments from the institutional gradebook. Official sealed DepEd SF9 PDF unlocks upon Principal issuance.
               </div>
             </div>
           </div>
@@ -339,298 +409,716 @@ export function DigitalAuthenticSf9ProgressCard({
         </div>
       )}
 
-      {/* ── Document Container (DepEd Form 138 Geometry) ── */}
-      <div style={{ padding: '24px 28px', background: '#fff' }}>
-        {/* Header Block */}
-        <div style={{ textAlign: 'center', borderBottom: '2px solid #0f172a', paddingBottom: 14, marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Republic of the Philippines · Department of Education
-          </div>
-          <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
-            Region III — Central Luzon · Schools Division of City of San Fernando (Pampanga)
-          </div>
-          <div style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', fontFamily: "'Fraunces', serif", marginTop: 4, letterSpacing: '0.02em' }}>
-            CALULUT INTEGRATED SCHOOL
-          </div>
-          <div style={{ fontSize: 10.5, fontWeight: 600, color: '#475569', marginTop: 1 }}>
-            School ID: <strong>500146</strong> · Calulut, City of San Fernando, Pampanga
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#8B1E1E', fontFamily: "'Fraunces', serif", marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Learner&apos;s Progress Report Card (SF9 / Form 138)
-          </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>
-            Junior High School · {academicYear}
-          </div>
+      {/* ── View Controls Bar ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 20px',
+          background: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#475569', fontWeight: 600 }}>
+          <FileText size={15} color="#0f766e" />
+          <span>DepEd SF9 / Form 138 (Grade 4–10 Master Layout)</span>
         </div>
-
-        {/* Demographics Strip */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.4fr 1fr 1fr 1fr',
-            gap: '8px 16px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: 8,
-            padding: '12px 16px',
-            marginBottom: 20,
-            fontSize: 11.5,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Learner Name</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{studentName}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>LRN</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', fontFamily: "'JetBrains Mono',monospace" }}>{studentLrn}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Grade &amp; Section</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>Grade {gradeLevel} — {sectionName}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Curriculum Track</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>Junior High School (JHS)</div>
-          </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={() => setActivePageView('both')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: activePageView === 'both' ? 700 : 500,
+              background: activePageView === 'both' ? '#0f766e' : '#fff',
+              color: activePageView === 'both' ? '#fff' : '#475569',
+              border: '1px solid #cbd5e1',
+              cursor: 'pointer',
+            }}
+          >
+            2-Page Complete View
+          </button>
+          <button
+            onClick={() => setActivePageView('front')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: activePageView === 'front' ? 700 : 500,
+              background: activePageView === 'front' ? '#0f766e' : '#fff',
+              color: activePageView === 'front' ? '#fff' : '#475569',
+              border: '1px solid #cbd5e1',
+              cursor: 'pointer',
+            }}
+          >
+            Page 1: Scholastic Record
+          </button>
+          <button
+            onClick={() => setActivePageView('back')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: activePageView === 'back' ? 700 : 500,
+              background: activePageView === 'back' ? '#0f766e' : '#fff',
+              color: activePageView === 'back' ? '#fff' : '#475569',
+              border: '1px solid #cbd5e1',
+              cursor: 'pointer',
+            }}
+          >
+            Page 2: Attendance &amp; Certification
+          </button>
         </div>
+      </div>
 
-        {/* ── Section 1: Learning Areas Table (DepEd Form 138) ── */}
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <h4 style={{ fontSize: 12.5, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
-              Report on Learning Progress and Achievement (DepEd Order No. 015, s. 2026)
-            </h4>
-            <span style={{ fontSize: 10, color: '#64748b', fontStyle: 'italic' }}>
-              Trimester System (Terms 1, 2, 3)
-            </span>
-          </div>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, border: '1px solid #cbd5e1' }}>
-            <thead>
-              <tr style={{ background: '#0f172a', color: '#fff' }}>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 800, fontSize: 10.5, letterSpacing: '0.04em', width: '42%' }}>
-                  Learning Areas
-                </th>
-                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, width: '10%', borderLeft: '1px solid #334155' }}>
-                  Term 1
-                </th>
-                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, width: '10%', borderLeft: '1px solid #334155' }}>
-                  Term 2
-                </th>
-                <th style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, width: '10%', borderLeft: '1px solid #334155' }}>
-                  Term 3
-                </th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, width: '14%', borderLeft: '1px solid #334155', color: '#fde047' }}>
-                  Final Rating
-                </th>
-                <th style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, width: '14%', borderLeft: '1px solid #334155' }}>
-                  Remarks
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjectsToRender.map((subj, idx) => {
-                const t1Str = formatGradeCell(subj.T1);
-                const t2Str = formatGradeCell(subj.T2);
-                const t3Str = formatGradeCell(subj.T3);
-                const finalStr = formatGradeCell(subj.finalRating);
-                const remarksStr =
-                  visualState === 'CONCEALED_BLANK'
-                    ? '—'
-                    : typeof subj.finalRating === 'number'
-                    ? subj.finalRating >= 75
-                      ? 'PASSED'
-                      : 'FAILED'
-                    : '—';
-
-                return (
-                  <tr
-                    key={idx}
-                    style={{
-                      borderBottom: '1px solid #e2e8f0',
-                      background: idx % 2 === 0 ? '#fff' : '#f8fafc',
-                    }}
-                  >
-                    <td style={{ padding: '7px 12px', fontWeight: 600, color: '#1e293b' }}>
-                      {subj.name}
-                    </td>
-                    <td style={{ padding: '7px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: '#0f172a', borderLeft: '1px solid #e2e8f0' }}>
-                      {t1Str}
-                    </td>
-                    <td style={{ padding: '7px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: '#0f172a', borderLeft: '1px solid #e2e8f0' }}>
-                      {t2Str}
-                    </td>
-                    <td style={{ padding: '7px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: '#0f172a', borderLeft: '1px solid #e2e8f0' }}>
-                      {t3Str}
-                    </td>
-                    <td style={{ padding: '7px 8px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, color: '#8B1E1E', borderLeft: '1px solid #cbd5e1', background: '#fdf2f2' }}>
-                      {finalStr}
-                    </td>
-                    <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 700, fontSize: 10.5, borderLeft: '1px solid #e2e8f0', color: remarksStr === 'PASSED' ? '#166534' : remarksStr === 'FAILED' ? '#991b1b' : '#64748b' }}>
-                      {remarksStr}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {/* General Average Row */}
-              <tr style={{ background: '#0f172a', color: '#fff', borderTop: '2px solid #0f172a' }}>
-                <td style={{ padding: '9px 12px', fontWeight: 800, fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                  General Average (GPA)
-                </td>
-                <td style={{ padding: '9px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, borderLeft: '1px solid #334155' }}>
-                  {visualState === 'CONCEALED_BLANK'
-                    ? '—'
-                    : subjectsToRender.filter((s) => typeof s.T1 === 'number' && s.T1 > 0).length > 0
-                    ? Math.round(
-                        subjectsToRender
-                          .filter((s) => typeof s.T1 === 'number' && s.T1 > 0)
-                          .reduce((acc, s) => acc + s.T1, 0) /
-                          subjectsToRender.filter((s) => typeof s.T1 === 'number' && s.T1 > 0).length
-                      )
-                    : '—'}
-                </td>
-                <td style={{ padding: '9px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, borderLeft: '1px solid #334155' }}>
-                  —
-                </td>
-                <td style={{ padding: '9px 6px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, borderLeft: '1px solid #334155' }}>
-                  —
-                </td>
-                <td style={{ padding: '9px 8px', textAlign: 'center', fontFamily: "'JetBrains Mono',monospace", fontWeight: 900, fontSize: 13, color: '#fde047', borderLeft: '1px solid #475569' }}>
-                  {genAvg !== null ? genAvg : '—'}
-                </td>
-                <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, fontSize: 10.5, borderLeft: '1px solid #334155', color: genAvg !== null ? (genAvg >= 75 ? '#86efac' : '#fca5a5') : '#94a3b8' }}>
-                  {genAvg !== null ? (genAvg >= 75 ? 'PROMOTED' : 'RETAINED') : 'PENDING'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* ── Section 2: Observed Values (Core Values) & Attendance (Side by Side) ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 18, marginBottom: 20 }}>
-          {/* Observed Values */}
-          <div style={{ border: '1px solid #cbd5e1', borderRadius: 6, overflow: 'hidden' }}>
-            <div style={{ background: '#f1f5f9', padding: '6px 12px', borderBottom: '1px solid #cbd5e1', fontWeight: 800, fontSize: 11, color: '#0f172a', textTransform: 'uppercase' }}>
-              Report on Learner&apos;s Observed Values
+      {/* ── Authentic Master Template Document Container ── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            activePageView === 'both'
+              ? 'repeat(auto-fit, minmax(460px, 1fr))'
+              : '1fr',
+          gap: 24,
+          padding: 24,
+          background: '#f1f5f9',
+        }}
+      >
+        {/* ══════════════════════════════════════════════════════════════
+            PAGE 1 (LEFT PANEL): SCHOLASTIC RECORD & PERFORMANCE
+            ══════════════════════════════════════════════════════════════ */}
+        {(activePageView === 'both' || activePageView === 'front') && (
+          <div
+            style={{
+              background: '#fff',
+              border: '1.5px solid #0f172a',
+              padding: '20px 22px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            }}
+          >
+            {/* DepEd Institutional Header */}
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#1e293b', letterSpacing: '0.04em' }}>
+                Republic of the Philippines
+              </div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', color: '#1e293b' }}>
+                Department of Education
+              </div>
+              <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
+                REGION III · SCHOOLS DIVISION OF CITY OF SAN FERNANDO (P)
+              </div>
+              <div style={{ fontSize: 8.5, color: '#475569' }}>
+                North District · City of San Fernando, Pampanga
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 900,
+                  fontFamily: "'Times New Roman', serif",
+                  color: '#0f172a',
+                  letterSpacing: '0.04em',
+                  marginTop: 6,
+                  textTransform: 'uppercase',
+                }}
+              >
+                CALULUT INTEGRATED SCHOOL
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: '#8B1E1E',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  marginTop: 3,
+                }}
+              >
+                LEARNER&apos;S PROGRESS REPORT CARD (SF9)
+              </div>
+              <div style={{ fontSize: 9.5, fontWeight: 600, color: '#334155', marginTop: 1 }}>
+                {academicYear}
+              </div>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5 }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569' }}>
-                  <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700 }}>Core Values / Behavior</th>
-                  <th style={{ padding: '6px 4px', textAlign: 'center', width: '10%' }}>T1</th>
-                  <th style={{ padding: '6px 4px', textAlign: 'center', width: '10%' }}>T2</th>
-                  <th style={{ padding: '6px 4px', textAlign: 'center', width: '10%' }}>T3</th>
-                </tr>
-              </thead>
-              <tbody>
-                {CORE_VALUES_LIST.map((cv, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '6px 10px' }}>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{cv.coreValue}</div>
-                      <div style={{ fontSize: 9.5, color: '#64748b' }}>{cv.statements[0]}</div>
-                    </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 700, color: '#047857', borderLeft: '1px solid #f1f5f9' }}>
-                      {visualState === 'CONCEALED_BLANK' ? '—' : 'AO'}
-                    </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 700, color: '#64748b', borderLeft: '1px solid #f1f5f9' }}>
-                      —
-                    </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontWeight: 700, color: '#64748b', borderLeft: '1px solid #f1f5f9' }}>
-                      —
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div style={{ padding: '4px 10px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', fontSize: 8.5, color: '#64748b' }}>
-              Marking: <strong>AO</strong> - Always Observed · <strong>SO</strong> - Sometimes Observed · <strong>RO</strong> - Rarely Observed · <strong>NO</strong> - Not Observed
-            </div>
-          </div>
 
-          {/* Attendance Record */}
-          <div style={{ border: '1px solid #cbd5e1', borderRadius: 6, overflow: 'hidden' }}>
-            <div style={{ background: '#f1f5f9', padding: '6px 12px', borderBottom: '1px solid #cbd5e1', fontWeight: 800, fontSize: 11, color: '#0f172a', textTransform: 'uppercase' }}>
-              Report on Learner&apos;s Attendance (SF2 Summary)
-            </div>
-            <div style={{ padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center', marginBottom: 12 }}>
-                <div style={{ background: '#f8fafc', padding: '8px 4px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>School Days</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginTop: 2 }}>
-                    {visualState === 'CONCEALED_BLANK' ? '—' : '82'}
-                  </div>
+            {/* Learner Demographics Block */}
+            <div
+              style={{
+                border: '1px solid #94a3b8',
+                padding: '8px 12px',
+                marginBottom: 14,
+                fontSize: 10.5,
+                background: '#fafafa',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 6, marginBottom: 4 }}>
+                <div>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Name: </span>
+                  <strong style={{ color: '#0f172a', textTransform: 'uppercase' }}>{studentName}</strong>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '8px 4px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Days Present</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#16a34a', marginTop: 2 }}>
-                    {visualState === 'CONCEALED_BLANK' ? '—' : '81'}
-                  </div>
-                </div>
-                <div style={{ background: '#f8fafc', padding: '8px 4px', borderRadius: 4, border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Days Absent</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#b91c1c', marginTop: 2 }}>
-                    {visualState === 'CONCEALED_BLANK' ? '—' : '1'}
-                  </div>
+                <div>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>LRN: </span>
+                  <strong style={{ fontFamily: "'JetBrains Mono',monospace", color: '#0f172a' }}>{studentLrn}</strong>
                 </div>
               </div>
-
-              {/* Monthly Breakdown mini strip */}
-              <div style={{ fontSize: 9.5, color: '#64748b', borderTop: '1px solid #e2e8f0', paddingTop: 8 }}>
-                <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>Verified Term 1 Calendar Months:</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {['Jun: 21/21', 'Jul: 22/22', 'Aug: 20/19', 'Sep: 19/19'].map((m, mIdx) => (
-                    <span key={mIdx} style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 6px', borderRadius: 3, fontWeight: 600 }}>
-                      {visualState === 'CONCEALED_BLANK' ? m.split(':')[0] + ': —' : m}
-                    </span>
-                  ))}
-                  {['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'].map((m, mIdx) => (
-                    <span key={mIdx} style={{ background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0', padding: '2px 6px', borderRadius: 3 }}>
-                      {m}: —
-                    </span>
-                  ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr', gap: 6 }}>
+                <div>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Grade &amp; Section: </span>
+                  <strong style={{ color: '#0f172a' }}>Grade {gradeLevel} — {sectionName}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Age: </span>
+                  <strong style={{ color: '#0f172a' }}>{age}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontWeight: 600 }}>Sex: </span>
+                  <strong style={{ color: '#0f172a' }}>{sex}</strong>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* ── Section 3: Signatures Strip ── */}
-        <div
-          style={{
-            borderTop: '2px solid #0f172a',
-            paddingTop: 16,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 24,
-            textAlign: 'center',
-          }}
-        >
-          <div>
-            <div style={{ height: 24 }} />
-            <div style={{ borderTop: '1px solid #0f172a', paddingTop: 4, fontWeight: 800, fontSize: 11, color: '#0f172a' }}>
-              {classAdviser}
-            </div>
-            <div style={{ fontSize: 9.5, color: '#64748b' }}>Class Adviser</div>
-          </div>
+            {/* Scholastic Performance Table */}
+            <div style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  color: '#0f172a',
+                  marginBottom: 4,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                REPORT ON LEARNING PROGRESS AND ACHIEVEMENT
+              </div>
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: 10,
+                  border: '1px solid #0f172a',
+                }}
+              >
+                <thead>
+                  <tr style={{ background: '#f1f5f9', borderBottom: '1.5px solid #0f172a' }}>
+                    <th
+                      rowSpan={2}
+                      style={{
+                        padding: '6px 8px',
+                        textAlign: 'left',
+                        fontWeight: 800,
+                        borderRight: '1px solid #0f172a',
+                        width: '46%',
+                      }}
+                    >
+                      Learning Areas
+                    </th>
+                    <th
+                      colSpan={3}
+                      style={{
+                        padding: '4px',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        borderRight: '1px solid #0f172a',
+                        borderBottom: '1px solid #0f172a',
+                      }}
+                    >
+                      Quarterly Rating (Trimester)
+                    </th>
+                    <th
+                      rowSpan={2}
+                      style={{
+                        padding: '6px 4px',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        borderRight: '1px solid #0f172a',
+                        width: '14%',
+                      }}
+                    >
+                      Final Grade
+                    </th>
+                    <th
+                      rowSpan={2}
+                      style={{
+                        padding: '6px 6px',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        width: '16%',
+                      }}
+                    >
+                      Remarks
+                    </th>
+                  </tr>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #0f172a' }}>
+                    <th style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 700, width: '8%', borderRight: '1px solid #cbd5e1' }}>1</th>
+                    <th style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 700, width: '8%', borderRight: '1px solid #cbd5e1' }}>2</th>
+                    <th style={{ padding: '3px 4px', textAlign: 'center', fontWeight: 700, width: '8%', borderRight: '1px solid #0f172a' }}>3</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CANONICAL_JHS_LEARNING_AREAS.map((area, idx) => {
+                    if (area.isParent) {
+                      // MAPEH Parent + Sub-components
+                      const mapehT1 = getSubjectScore('mapeh', 'T1');
+                      const mapehT2 = getSubjectScore('mapeh', 'T2');
+                      const mapehT3 = getSubjectScore('mapeh', 'T3');
+                      const musicT1 = getSubjectScore('music_arts', 'T1');
+                      const musicT2 = getSubjectScore('music_arts', 'T2');
+                      const musicT3 = getSubjectScore('music_arts', 'T3');
+                      const peT1 = getSubjectScore('pe_health', 'T1');
+                      const peT2 = getSubjectScore('pe_health', 'T2');
+                      const peT3 = getSubjectScore('pe_health', 'T3');
 
-          <div>
-            <div style={{ height: 24 }} />
-            <div style={{ borderTop: '1px solid #0f172a', paddingTop: 4, fontWeight: 800, fontSize: 11, color: '#0f172a' }}>
-              {schoolPrincipal}
-            </div>
-            <div style={{ fontSize: 9.5, color: '#64748b' }}>School Principal</div>
-          </div>
+                      // Calculate consolidated MAPEH rating if not explicitly in table
+                      const resolvedMapehT1 = mapehT1 ?? (musicT1 && peT1 ? Math.round((musicT1 + peT1) / 2) : null);
+                      const resolvedMapehT2 = mapehT2 ?? (musicT2 && peT2 ? Math.round((musicT2 + peT2) / 2) : null);
+                      const resolvedMapehT3 = mapehT3 ?? (musicT3 && peT3 ? Math.round((musicT3 + peT3) / 2) : null);
 
-          <div>
-            <div style={{ height: 24 }} />
-            <div style={{ borderTop: '1px solid #0f172a', paddingTop: 4, fontWeight: 800, fontSize: 11, color: '#0f172a' }}>
-              Parent / Guardian Signature
+                      const mapehFinal = isAnnualComplete && resolvedMapehT1 && resolvedMapehT2 && resolvedMapehT3
+                        ? Math.round((resolvedMapehT1 + resolvedMapehT2 + resolvedMapehT3) / 3)
+                        : null;
+                      const mapehRemarks = mapehFinal !== null ? (mapehFinal >= 75 ? 'Passed' : 'Failed') : '—';
+
+                      return (
+                        <React.Fragment key={area.key}>
+                          {/* MAPEH Parent Row */}
+                          <tr style={{ borderBottom: '1px solid #cbd5e1', background: '#fafafa', fontWeight: 700 }}>
+                            <td style={{ padding: '5px 8px', borderRight: '1px solid #cbd5e1' }}>
+                              {area.name}
+                            </td>
+                            <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(resolvedMapehT1)}
+                            </td>
+                            <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(resolvedMapehT2)}
+                            </td>
+                            <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #0f172a', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(resolvedMapehT3)}
+                            </td>
+                            <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800 }}>
+                              {formatCell(mapehFinal)}
+                            </td>
+                            <td style={{ padding: '5px 6px', textAlign: 'center', fontSize: 9.5 }}>
+                              {mapehRemarks}
+                            </td>
+                          </tr>
+
+                          {/* Music and Arts Sub-row */}
+                          <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: 9.5 }}>
+                            <td style={{ padding: '4px 8px 4px 20px', borderRight: '1px solid #cbd5e1', fontStyle: 'italic' }}>
+                              Music and Arts
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(musicT1)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(musicT2)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #0f172a', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(musicT3)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                              —
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center' }}>
+                              —
+                            </td>
+                          </tr>
+
+                          {/* Physical Education and Health Sub-row */}
+                          <tr style={{ borderBottom: '1px solid #cbd5e1', color: '#475569', fontSize: 9.5 }}>
+                            <td style={{ padding: '4px 8px 4px 20px', borderRight: '1px solid #cbd5e1', fontStyle: 'italic' }}>
+                              Physical Education and Health
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(peT1)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(peT2)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #0f172a', fontFamily: "'JetBrains Mono',monospace" }}>
+                              {formatCell(peT3)}
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center', borderRight: '1px solid #cbd5e1' }}>
+                              —
+                            </td>
+                            <td style={{ padding: '4px', textAlign: 'center' }}>
+                              —
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    }
+
+                    // Regular Core Subject Row
+                    const t1Score = getSubjectScore(area.key, 'T1');
+                    const t2Score = getSubjectScore(area.key, 'T2');
+                    const t3Score = getSubjectScore(area.key, 'T3');
+
+                    const finalRating = isAnnualComplete && t1Score && t2Score && t3Score
+                      ? Math.round((t1Score + t2Score + t3Score) / 3)
+                      : null;
+                    const remarks = finalRating !== null ? (finalRating >= 75 ? 'Passed' : 'Failed') : '—';
+
+                    return (
+                      <tr
+                        key={area.key}
+                        style={{
+                          borderBottom: '1px solid #cbd5e1',
+                          background: idx % 2 === 0 ? '#fff' : '#fcfcfc',
+                        }}
+                      >
+                        <td style={{ padding: '5px 8px', borderRight: '1px solid #cbd5e1', fontWeight: 600 }}>
+                          {area.name}
+                        </td>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
+                          {formatCell(t1Score)}
+                        </td>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
+                          {formatCell(t2Score)}
+                        </td>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #0f172a', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
+                          {formatCell(t3Score)}
+                        </td>
+                        <td style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace", fontWeight: 800, color: '#8B1E1E' }}>
+                          {formatCell(finalRating)}
+                        </td>
+                        <td
+                          style={{
+                            padding: '5px 6px',
+                            textAlign: 'center',
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            color: remarks === 'Passed' ? '#15803d' : remarks === 'Failed' ? '#b91c1c' : '#64748b',
+                          }}
+                        >
+                          {remarks}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* General Average Row */}
+                  <tr style={{ background: '#f1f5f9', borderTop: '2px solid #0f172a', fontWeight: 900 }}>
+                    <td style={{ padding: '7px 8px', borderRight: '1px solid #0f172a', textTransform: 'uppercase' }}>
+                      General Average
+                    </td>
+                    <td style={{ padding: '7px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                      —
+                    </td>
+                    <td style={{ padding: '7px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                      —
+                    </td>
+                    <td style={{ padding: '7px 4px', textAlign: 'center', borderRight: '1px solid #0f172a', fontFamily: "'JetBrains Mono',monospace" }}>
+                      —
+                    </td>
+                    <td style={{ padding: '7px 4px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: '#8B1E1E' }}>
+                      {genAvg !== null ? genAvg : '—'}
+                    </td>
+                    <td style={{ padding: '7px 6px', textAlign: 'center', fontSize: 9.5, color: genAvg !== null ? (genAvg >= 75 ? '#15803d' : '#b91c1c') : '#64748b' }}>
+                      {genAvg !== null ? (genAvg >= 75 ? 'Passed' : 'Failed') : '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div style={{ fontSize: 9.5, color: '#64748b' }}>Conforme</div>
+
+            {/* Performance Descriptors Table (DepEd Order No. 8, s. 2015) */}
+            <div style={{ border: '1px solid #0f172a', marginTop: 12 }}>
+              <div
+                style={{
+                  background: '#f1f5f9',
+                  padding: '4px 8px',
+                  fontWeight: 800,
+                  fontSize: 9,
+                  textTransform: 'uppercase',
+                  borderBottom: '1px solid #0f172a',
+                  textAlign: 'center',
+                }}
+              >
+                PERFORMANCE DESCRIPTORS
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8.5 }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
+                    <th style={{ padding: '3px 6px', textAlign: 'center', borderRight: '1px solid #cbd5e1', width: '30%' }}>Grading Scale</th>
+                    <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', width: '45%' }}>Descriptors</th>
+                    <th style={{ padding: '3px 6px', textAlign: 'center', width: '25%' }}>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERFORMANCE_DESCRIPTORS.map((d, i) => (
+                    <tr key={i} style={{ borderBottom: i < PERFORMANCE_DESCRIPTORS.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
+                      <td style={{ padding: '2px 6px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                        {d.scale}
+                      </td>
+                      <td style={{ padding: '2px 6px', borderRight: '1px solid #cbd5e1' }}>
+                        {d.descriptor}
+                      </td>
+                      <td style={{ padding: '2px 6px', textAlign: 'center', fontWeight: 600 }}>
+                        {d.remarks}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════
+            PAGE 2 (RIGHT PANEL): ATTENDANCE, COMMENTS & TRANSFER
+            ══════════════════════════════════════════════════════════════ */}
+        {(activePageView === 'both' || activePageView === 'back') && (
+          <div
+            style={{
+              background: '#fff',
+              border: '1.5px solid #0f172a',
+              padding: '20px 22px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            }}
+          >
+            {/* Attendance Record Summary (11 Months + Total) */}
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  color: '#0f172a',
+                  marginBottom: 4,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                REPORT ON ATTENDANCE (SF2 SUMMARY)
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 8.5,
+                    border: '1px solid #0f172a',
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #0f172a' }}>
+                      <th style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 800, borderRight: '1px solid #0f172a', minWidth: 90 }}>
+                        Month
+                      </th>
+                      {MONTH_NAMES.map((m, idx) => (
+                        <th
+                          key={m}
+                          style={{
+                            padding: '4px 2px',
+                            textAlign: 'center',
+                            fontWeight: 700,
+                            borderRight: idx === MONTH_NAMES.length - 1 ? 'none' : '1px solid #cbd5e1',
+                            background: m === 'Total' ? '#e2e8f0' : undefined,
+                          }}
+                        >
+                          {m}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Row 1: No. of Class Days */}
+                    <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px 6px', fontWeight: 600, borderRight: '1px solid #0f172a' }}>
+                        No. of Class Days
+                      </td>
+                      {standardClassDays.map((cd, idx) => (
+                        <td key={idx} style={{ padding: '4px 2px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                          {cd}
+                        </td>
+                      ))}
+                      <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 800, background: '#f8fafc', fontFamily: "'JetBrains Mono',monospace" }}>
+                        {totalClassDaysVal}
+                      </td>
+                    </tr>
+
+                    {/* Row 2: No. of Days Present */}
+                    <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <td style={{ padding: '4px 6px', fontWeight: 600, borderRight: '1px solid #0f172a', color: '#15803d' }}>
+                        No. of Days Present
+                      </td>
+                      {standardClassDays.map((_, idx) => (
+                        <td key={idx} style={{ padding: '4px 2px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                          {formatAttCell(idx, true)}
+                        </td>
+                      ))}
+                      <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 800, background: '#f8fafc', fontFamily: "'JetBrains Mono',monospace", color: '#15803d' }}>
+                        {totalPresentVal}
+                      </td>
+                    </tr>
+
+                    {/* Row 3: No. of Days Absent */}
+                    <tr>
+                      <td style={{ padding: '4px 6px', fontWeight: 600, borderRight: '1px solid #0f172a', color: '#b91c1c' }}>
+                        No. of Days Absent
+                      </td>
+                      {standardClassDays.map((_, idx) => (
+                        <td key={idx} style={{ padding: '4px 2px', textAlign: 'center', borderRight: '1px solid #cbd5e1', fontFamily: "'JetBrains Mono',monospace" }}>
+                          {formatAttCell(idx, false)}
+                        </td>
+                      ))}
+                      <td style={{ padding: '4px 2px', textAlign: 'center', fontWeight: 800, background: '#f8fafc', fontFamily: "'JetBrains Mono',monospace", color: '#b91c1c' }}>
+                        {totalAbsentVal}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Teacher's Comments / Remarks (Trimester System) */}
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  color: '#0f172a',
+                  marginBottom: 6,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                TEACHER&apos;S COMMENTS / REMARKS
+              </div>
+
+              {/* Term 1 Box */}
+              <div style={{ border: '1px solid #94a3b8', borderRadius: 4, padding: '6px 10px', marginBottom: 8, background: '#fafafa' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #cbd5e1', paddingBottom: 3, marginBottom: 4 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: '#0f172a' }}>Term 1</span>
+                  <span style={{ fontSize: 8.5, color: '#64748b' }}>Adviser: {classAdviser}</span>
+                </div>
+                <div style={{ fontSize: 9.5, color: '#1e293b', fontStyle: t1Comment !== '—' ? 'normal' : 'italic', minHeight: 28, lineHeight: 1.4 }}>
+                  {t1Comment}
+                </div>
+                <div style={{ textAlign: 'right', marginTop: 4 }}>
+                  <span style={{ fontSize: 8.5, borderTop: '1px dotted #94a3b8', paddingTop: 1, color: '#475569' }}>
+                    Signature of Class Adviser
+                  </span>
+                </div>
+              </div>
+
+              {/* Term 2 Box */}
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: 4, padding: '6px 10px', marginBottom: 8, background: '#fcfcfc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: 3, marginBottom: 4 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: '#64748b' }}>Term 2</span>
+                  <span style={{ fontSize: 8.5, color: '#94a3b8' }}>Adviser: {classAdviser}</span>
+                </div>
+                <div style={{ fontSize: 9.5, color: '#64748b', fontStyle: 'italic', minHeight: 24, lineHeight: 1.4 }}>
+                  {t2Comment}
+                </div>
+                <div style={{ textAlign: 'right', marginTop: 4 }}>
+                  <span style={{ fontSize: 8.5, borderTop: '1px dotted #cbd5e1', paddingTop: 1, color: '#94a3b8' }}>
+                    Signature of Class Adviser
+                  </span>
+                </div>
+              </div>
+
+              {/* Term 3 Box */}
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: 4, padding: '6px 10px', background: '#fcfcfc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: 3, marginBottom: 4 }}>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: '#64748b' }}>Term 3</span>
+                  <span style={{ fontSize: 8.5, color: '#94a3b8' }}>Adviser: {classAdviser}</span>
+                </div>
+                <div style={{ fontSize: 9.5, color: '#64748b', fontStyle: 'italic', minHeight: 24, lineHeight: 1.4 }}>
+                  {t3Comment}
+                </div>
+                <div style={{ textAlign: 'right', marginTop: 4 }}>
+                  <span style={{ fontSize: 8.5, borderTop: '1px dotted #cbd5e1', paddingTop: 1, color: '#94a3b8' }}>
+                    Signature of Class Adviser
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Certificate of Transfer */}
+            <div style={{ border: '1px solid #0f172a', padding: '10px 14px', marginBottom: 12, background: '#fff' }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  color: '#0f172a',
+                  textAlign: 'center',
+                  marginBottom: 6,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                CERTIFICATE OF TRANSFER
+              </div>
+              <div style={{ fontSize: 9, color: '#334155', lineHeight: 1.4, marginBottom: 8 }}>
+                This is to certify that the above-named learner has satisfactorily completed the requirements for the grade level indicated.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 9, marginBottom: 12 }}>
+                <div>
+                  <span style={{ color: '#64748b' }}>Admitted to Grade: </span>
+                  <strong style={{ color: '#0f172a' }}>Grade {gradeLevel}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b' }}>Eligible for Admission to: </span>
+                  <strong style={{ color: isAnnualComplete ? '#15803d' : '#94a3b8' }}>
+                    {isAnnualComplete ? `Grade ${gradeLevel + 1}` : '—'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Signatories Dual Columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, textAlign: 'center', marginTop: 10 }}>
+                <div>
+                  <div style={{ height: 18 }} />
+                  <div style={{ borderTop: '1px solid #0f172a', paddingTop: 3, fontWeight: 800, fontSize: 9.5, color: '#0f172a' }}>
+                    {classAdviser}
+                  </div>
+                  <div style={{ fontSize: 8.5, color: '#64748b' }}>Class Adviser</div>
+                </div>
+                <div>
+                  <div style={{ height: 18 }} />
+                  <div style={{ borderTop: '1px solid #0f172a', paddingTop: 3, fontWeight: 800, fontSize: 9.5, color: '#0f172a' }}>
+                    {schoolPrincipal}
+                  </div>
+                  <div style={{ fontSize: 8.5, color: '#64748b' }}>School Head / Principal IV</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cancellation of Eligibility to Transfer */}
+            <div style={{ border: '1px solid #cbd5e1', padding: '8px 12px', background: '#fafafa' }}>
+              <div
+                style={{
+                  fontSize: 8.5,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  color: '#475569',
+                  textAlign: 'center',
+                  marginBottom: 4,
+                }}
+              >
+                CANCELLATION OF ELIGIBILITY TO TRANSFER
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 8, fontSize: 8.5, color: '#64748b', marginBottom: 6 }}>
+                <div>
+                  <span>Admitted in: </span>
+                  <span style={{ borderBottom: '1px solid #cbd5e1', padding: '0 20px' }}>—</span>
+                </div>
+                <div>
+                  <span>Date: </span>
+                  <span style={{ borderBottom: '1px solid #cbd5e1', padding: '0 20px' }}>—</span>
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', marginTop: 8 }}>
+                <span style={{ borderTop: '1px solid #cbd5e1', paddingTop: 2, fontSize: 8, color: '#64748b', display: 'inline-block', width: '60%' }}>
+                  School Head Signature
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

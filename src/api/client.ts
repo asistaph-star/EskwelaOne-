@@ -4,7 +4,7 @@
  * Automatically attaches the authentication JWT to all requests.
  */
 
-export const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__API_BASE_URL__) || import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const API_BASE_URL = (typeof window !== 'undefined' && (window as any).__API_BASE_URL__) || import.meta.env.VITE_API_URL || (import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:4001/api');
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '');
 
 export function resolveBackendUrl(urlOrPath: string): string {

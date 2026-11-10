@@ -442,6 +442,59 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
     const learnerStateHashes: Record<string, string> = {};
 
     for (const enrollment of enrollments) {
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
+      // Check if student already has a current issued SF9 for this academic year and target term
+      const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+        where: {
+          student_id: enrollment.student_id,
+          academic_year_id: enrollment.academic_year_id,
+          is_current: true,
+        },
+      });
+
+      if (existingIssuance) {
+        let isReleased = false;
+        let issuedTerm = 'T1';
+        try {
+          const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+          issuedTerm = summary.targetTerm || 'T1';
+          isReleased = Boolean(summary.release?.released);
+        } catch {}
+
+        if (issuedTerm === targetTerm) {
+          unreadyLearners.push({
+            studentId: enrollment.student_id,
+            enrollmentId: enrollment.id,
+            name: learnerName,
+            blockingReasons: [
+              isReleased
+                ? `ALREADY_RELEASED_V${existingIssuance.version}`
+                : `ALREADY_ISSUED_V${existingIssuance.version}_PENDING_RELEASE`,
+            ],
+          });
+          continue;
+        }
+      }
+
+      // Check if student already has an active, unconsumed Principal authorization
+      const existingAuth = await verifyPrincipalAuthorization(
+        prisma as any,
+        sectionId,
+        enrollment.student_id,
+        targetTerm,
+        { academicYearId: enrollment.academic_year_id }
+      );
+      if (existingAuth.isAuthorized && !existingAuth.isStale) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: ['ALREADY_AUTHORIZED'],
+        });
+        continue;
+      }
+
       const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
         studentId: enrollment.student_id,
         enrollmentId: enrollment.id,
@@ -450,8 +503,6 @@ router.post('/sections/:sectionId/authorize', async (req: Request, res: Response
         renderPdf: false,
         mode: 'OFFICIAL',
       });
-
-      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
 
       if (!evalResult.readyForOfficialSf9) {
         unreadyLearners.push({
@@ -620,6 +671,59 @@ router.post('/sections/:sectionId/authorize-eligible', async (req: Request, res:
     const learnerStateHashes: Record<string, string> = {};
 
     for (const enrollment of enrollments) {
+      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
+
+      // Check if student already has a current issued SF9 for this academic year and target term
+      const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+        where: {
+          student_id: enrollment.student_id,
+          academic_year_id: enrollment.academic_year_id,
+          is_current: true,
+        },
+      });
+
+      if (existingIssuance) {
+        let isReleased = false;
+        let issuedTerm = 'T1';
+        try {
+          const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+          issuedTerm = summary.targetTerm || 'T1';
+          isReleased = Boolean(summary.release?.released);
+        } catch {}
+
+        if (issuedTerm === targetTerm) {
+          unreadyLearners.push({
+            studentId: enrollment.student_id,
+            enrollmentId: enrollment.id,
+            name: learnerName,
+            blockingReasons: [
+              isReleased
+                ? `ALREADY_RELEASED_V${existingIssuance.version}`
+                : `ALREADY_ISSUED_V${existingIssuance.version}_PENDING_RELEASE`,
+            ],
+          });
+          continue;
+        }
+      }
+
+      // Check if student already has an active, unconsumed Principal authorization
+      const existingAuth = await verifyPrincipalAuthorization(
+        prisma as any,
+        sectionId,
+        enrollment.student_id,
+        targetTerm,
+        { academicYearId: enrollment.academic_year_id }
+      );
+      if (existingAuth.isAuthorized && !existingAuth.isStale) {
+        unreadyLearners.push({
+          studentId: enrollment.student_id,
+          enrollmentId: enrollment.id,
+          name: learnerName,
+          blockingReasons: ['ALREADY_AUTHORIZED'],
+        });
+        continue;
+      }
+
       const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
         studentId: enrollment.student_id,
         enrollmentId: enrollment.id,
@@ -628,8 +732,6 @@ router.post('/sections/:sectionId/authorize-eligible', async (req: Request, res:
         renderPdf: false,
         mode: 'OFFICIAL',
       });
-
-      const learnerName = `${enrollment.student?.user?.last_name || ''}, ${enrollment.student?.user?.first_name || ''}`.trim();
 
       if (!evalResult.readyForOfficialSf9) {
         unreadyLearners.push({
@@ -764,6 +866,48 @@ router.post('/:studentId/sf9/authorize', async (req: Request, res: Response, nex
 
     const targetTerm =
       (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
+
+    // Prevent duplicate authorization if already issued or released
+    const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+      where: {
+        student_id: studentId,
+        academic_year_id: enrollment.academic_year_id,
+        is_current: true,
+      },
+    });
+    if (existingIssuance) {
+      let isReleased = false;
+      let issuedTerm = 'T1';
+      try {
+        const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+        issuedTerm = summary.targetTerm || 'T1';
+        isReleased = Boolean(summary.release?.released);
+      } catch {}
+
+      if (issuedTerm === targetTerm) {
+        throw new AppError(
+          409,
+          'ALREADY_ISSUED_OR_RELEASED',
+          `Principal authorization denied: Learner already has an official SF9 ${isReleased ? 'released' : 'issued'} (v${existingIssuance.version}) for ${targetTerm}.`
+        );
+      }
+    }
+
+    // Prevent duplicate authorization if already actively authorized
+    const existingAuth = await verifyPrincipalAuthorization(
+      prisma as any,
+      enrollment.section_id,
+      studentId,
+      targetTerm,
+      { academicYearId: enrollment.academic_year_id }
+    );
+    if (existingAuth.isAuthorized && !existingAuth.isStale) {
+      throw new AppError(
+        409,
+        'ALREADY_AUTHORIZED',
+        `Principal authorization denied: Learner is already authorized for ${targetTerm}.`
+      );
+    }
 
     const evalResult = await generatePersistedStudentCalulutSf9FromDb(prisma as any, {
       studentId,
@@ -1022,7 +1166,17 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
             return false;
           });
 
-        const isEligible = evalResult.readyForOfficialSf9;
+        let isEligible = evalResult.readyForOfficialSf9;
+        const blockingReasons = [...(evalResult.blockingReasons || [])];
+
+        if (iss) {
+          isEligible = false;
+          if (isReleased) {
+            blockingReasons.push(`ALREADY_RELEASED_V${iss.version}`);
+          } else {
+            blockingReasons.push(`ALREADY_ISSUED_V${iss.version}_PENDING_RELEASE`);
+          }
+        }
 
         return {
           enrollmentId: e.id,
@@ -1039,8 +1193,8 @@ router.get('/sections/:sectionId/overview', async (req: Request, res: Response, 
           hasAdviserComment: commentsByStudent.has(student.id),
           eligibility: {
             isEligible,
-            readyForOfficialSf9: evalResult.readyForOfficialSf9,
-            blockingReasons: evalResult.blockingReasons || [],
+            readyForOfficialSf9: isEligible,
+            blockingReasons,
           },
           principalAuthorization: {
             isAuthorized: isStudentAuthorized,
@@ -1136,7 +1290,7 @@ router.post('/sections/:sectionId/bulk-issue', async (req: Request, res: Respons
       (((req.body?.targetTerm as string) || (req.query?.term as string))?.toUpperCase() as 'T1' | 'T2' | 'T3') || 'T1';
 
     const actorName =
-      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() || actor.username;
+      `${(actor as any).firstName || ''} ${(actor as any).lastName || ''}`.trim() || (actor as any).username || (actor as any).email || actor.id;
 
     const job = await queueSectionBatchIssuance({
       sectionId,
@@ -1702,6 +1856,32 @@ router.post('/:studentId/sf9/issue', async (req: Request, res: Response, next: N
     const reportingPeriod =
       (req.body?.reportingPeriod as string) ||
       (targetTerm === 'T1' ? 'Term 1 SF9' : targetTerm === 'T2' ? 'Term 2 SF9' : 'Annual SF9 (Terms 1-3)');
+
+    // Prevent duplicate official issuance
+    const existingIssuance = await (prisma as any).sf9OfficialIssuance.findFirst({
+      where: {
+        student_id: studentId,
+        academic_year_id: enrollment.academic_year_id,
+        is_current: true,
+      },
+    });
+    if (existingIssuance) {
+      let isReleased = false;
+      let issuedTerm = 'T1';
+      try {
+        const summary = JSON.parse(existingIssuance.calculated_summary_encrypted || '{}');
+        issuedTerm = summary.targetTerm || 'T1';
+        isReleased = Boolean(summary.release?.released);
+      } catch {}
+
+      if (issuedTerm === targetTerm) {
+        throw new AppError(
+          409,
+          'ALREADY_ISSUED',
+          `Official SF9 issuance denied: Learner already has an official SF9 ${isReleased ? 'released' : 'issued'} (v${existingIssuance.version}) for ${targetTerm}.`
+        );
+      }
+    }
 
     // 1. Enforce preliminary Principal Authorization check (Term, Year, Identity, Freshness)
     const principalAuth = await verifyPrincipalAuthorization(
