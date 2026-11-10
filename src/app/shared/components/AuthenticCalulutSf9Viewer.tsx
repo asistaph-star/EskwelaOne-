@@ -22,6 +22,7 @@ import {
 import { apiClient } from '../../../api/client';
 import { ModernConfirmModal } from './ModernConfirmModal';
 import { ModernToast, ToastMessage } from './ModernToast';
+import { DigitalAuthenticSf9ProgressCard } from '../../student/components/DigitalAuthenticSf9ProgressCard';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -376,6 +377,187 @@ export function categorizeDiagnosticReasons(
   ];
 }
 
+export function mapSyntheticDataToReportCard(syntheticData: any) {
+  const p = syntheticData?.payload || syntheticData || {};
+  const d = p.demographics || {};
+  const g = p.grades || {};
+  const att = p.attendance || {};
+  const comm = p.comments || {};
+  const calc = syntheticData?.calculated || {};
+
+  const subjects = [
+    {
+      subjectCode: 'FIL',
+      subjectName: 'Filipino',
+      name: 'Filipino',
+      code: 'FIL',
+      T1: g.filipino?.[0] ?? 88,
+      T2: g.filipino?.[1] ?? 90,
+      T3: g.filipino?.[2] ?? 92,
+      finalRating: calc?.grades?.filipino?.final ?? 90,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'ENG',
+      subjectName: 'English',
+      name: 'English',
+      code: 'ENG',
+      T1: g.english?.[0] ?? 85,
+      T2: g.english?.[1] ?? 87,
+      T3: g.english?.[2] ?? 88,
+      finalRating: calc?.grades?.english?.final ?? 87,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'MATH',
+      subjectName: 'Mathematics',
+      name: 'Mathematics',
+      code: 'MATH',
+      T1: g.math?.[0] ?? 91,
+      T2: g.math?.[1] ?? 93,
+      T3: g.math?.[2] ?? 95,
+      finalRating: calc?.grades?.math?.final ?? 93,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'SCI',
+      subjectName: 'Science',
+      name: 'Science',
+      code: 'SCI',
+      T1: g.science?.[0] ?? 89,
+      T2: g.science?.[1] ?? 91,
+      T3: g.science?.[2] ?? 90,
+      finalRating: calc?.grades?.science?.final ?? 90,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'AP',
+      subjectName: 'Araling Panlipunan (AP)',
+      name: 'Araling Panlipunan',
+      code: 'AP',
+      T1: g.ap?.[0] ?? 86,
+      T2: g.ap?.[1] ?? 88,
+      T3: g.ap?.[2] ?? 90,
+      finalRating: calc?.grades?.ap?.final ?? 88,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'ESP',
+      subjectName: 'Edukasyon sa Pagpapakatao (EsP)',
+      name: 'Edukasyon sa Pagpapakatao',
+      code: 'ESP',
+      T1: g.gmrc?.[0] ?? 92,
+      T2: g.gmrc?.[1] ?? 94,
+      T3: g.gmrc?.[2] ?? 96,
+      finalRating: calc?.grades?.gmrc?.final ?? 94,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'TLE',
+      subjectName: 'Technology and Livelihood Education (TLE)',
+      name: 'Technology and Livelihood Education',
+      code: 'TLE',
+      T1: g.tle?.[0] ?? 87,
+      T2: g.tle?.[1] ?? 89,
+      T3: g.tle?.[2] ?? 91,
+      finalRating: calc?.grades?.tle?.final ?? 89,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'MAPEH',
+      subjectName: 'MAPEH',
+      name: 'MAPEH',
+      code: 'MAPEH',
+      isParent: true,
+      T1: calc?.grades?.mapeh?.t1 ?? 89,
+      T2: calc?.grades?.mapeh?.t2 ?? 91,
+      T3: calc?.grades?.mapeh?.t3 ?? 93,
+      finalRating: calc?.grades?.mapeh?.final ?? 91,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'MA',
+      subjectName: 'Music and Arts',
+      name: 'Music and Arts',
+      code: 'MA',
+      T1: g.music?.[0] ?? 90,
+      T2: g.music?.[1] ?? 92,
+      T3: g.music?.[2] ?? 94,
+      finalRating: calc?.grades?.music?.final ?? 92,
+      remarks: 'Passed',
+    },
+    {
+      subjectCode: 'PEH',
+      subjectName: 'Physical Education and Health',
+      name: 'Physical Education and Health',
+      code: 'PEH',
+      T1: g.pe?.[0] ?? 88,
+      T2: g.pe?.[1] ?? 90,
+      T3: g.pe?.[2] ?? 92,
+      finalRating: calc?.grades?.pe?.final ?? 90,
+      remarks: 'Passed',
+    },
+  ];
+
+  const monthLabels = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'];
+  const classDays = att.classDays || [15, 22, 20, 20, 20, 20, 20, 18, 18, 20, 5];
+  const presentDays = att.present || [15, 22, 20, 20, 19, 20, 20, 18, 18, 20, 5];
+  const attendanceList = monthLabels.map((m, idx) => ({
+    monthName: m,
+    monthNumber: idx + 1,
+    schoolDays: classDays[idx] ?? 20,
+    presentDays: presentDays[idx] ?? 20,
+    absentDays: Math.max(0, (classDays[idx] ?? 20) - (presentDays[idx] ?? 20)),
+  }));
+
+  return {
+    student: {
+      id: 'qa-synthetic-learner',
+      name: d.name || 'DELA CRUZ, JUAN SYNTHETIC',
+      lrn: d.lrn || '999999260001',
+      age: d.age || 13,
+      gender: d.gender === 'M' ? 'Male' : (d.gender === 'F' ? 'Female' : d.gender || 'Male'),
+    },
+    enrollment: {
+      gradeLevel: d.gradeLevel || 7,
+      section: d.section || 'Agoncillo',
+    },
+    school: {
+      academicYear: d.schoolYear || '2026-2027',
+      schoolName: d.schoolName || 'Calulut Integrated School',
+      schoolId: d.schoolId || '500146',
+    },
+    scholastic: {
+      subjects,
+      generalAverage: calc?.generalAverage ?? 90.13,
+      promotionStatus: 'Promoted to Grade 8',
+      termsMetadata: [
+        { key: 'T1', name: 'Term 1', isGradesVisible: true },
+        { key: 'T2', name: 'Term 2', isGradesVisible: true },
+        { key: 'T3', name: 'Term 3', isGradesVisible: true },
+      ],
+    },
+    attendance: {
+      classDaysByMonth: classDays,
+      presentByMonth: presentDays,
+      totalClassDays: classDays.reduce((a: number, b: number) => a + b, 0),
+      totalDaysPresent: presentDays.reduce((a: number, b: number) => a + b, 0),
+      totalDaysAbsent:
+        classDays.reduce((a: number, b: number) => a + b, 0) -
+        presentDays.reduce((a: number, b: number) => a + b, 0),
+      months: attendanceList,
+    },
+    adviserComments: {
+      T1: comm.t1 || 'Demonstrates commendable academic dedication and exemplary conduct.',
+      T2: comm.t2 || 'Consistently achieves high performance across all learning areas.',
+      T3: comm.t3 || 'Maintains outstanding enthusiasm and mastery of competencies.',
+    },
+    adviser: d.adviser || 'KATHRINA MAE H. OMLANG',
+    principal: d.schoolHead || 'APRIL G. CONCEPCION',
+    isOfficialSf9Released: false,
+  };
+}
+
 export interface AuthenticCalulutSf9ViewerProps {
   mode: 'qa-preview' | 'student';
   studentData?: any;
@@ -398,6 +580,17 @@ export function AuthenticCalulutSf9Viewer({
   const [prerequisiteEvaluation, setPrerequisiteEvaluation] = useState<any | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isOfficialReady, setIsOfficialReady] = useState<boolean>(false);
+
+  // View Format & Integration State: Default to instant authentic digital preview (0 LibreOffice dependency!)
+  const [viewFormat, setViewFormat] = useState<'digital' | 'pdf'>('digital');
+  const [activeTab, setActiveTab] = useState<'preview' | 'gating'>('preview');
+  const [resolvedReportCardData, setResolvedReportCardData] = useState<any>(
+    studentData?.data || studentData || null
+  );
+  const [releasedSf9Data, setReleasedSf9Data] = useState<any>(null);
+  const [isLibreOfficeAvailable, setIsLibreOfficeAvailable] = useState<boolean | null>(null);
+  const [pdfRendererNotice, setPdfRendererNotice] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState<boolean>(false);
 
   // Adviser Comments Drawer State
   const [isCommentsDrawerOpen, setIsCommentsDrawerOpen] = useState<boolean>(false);
@@ -438,6 +631,13 @@ export function AuthenticCalulutSf9Viewer({
       : rawEnrollment.section || 'Assigned Section';
   const schoolYear = studentData?.school?.academicYear || '2026-2027';
 
+  // Synchronize when parent passes updated studentData
+  useEffect(() => {
+    if (studentData) {
+      setResolvedReportCardData(studentData?.data || studentData);
+    }
+  }, [studentData]);
+
   // Request counter to cancel stale in-flight fetches and avoid race condition flashes
   const requestIdRef = useRef<number>(0);
   const currentBlobUrlRef = useRef<string | null>(null);
@@ -469,17 +669,170 @@ export function AuthenticCalulutSf9Viewer({
     try {
       if (activeMode === 'student') {
         if (!studentId) {
-          // Awaiting learner record from parent component; maintain clean loading state
+          setLoading(false);
           return;
         }
 
-        const endpoint = `${API_BASE_URL}/academic/report-card/${encodeURIComponent(studentId)}/sf9/pdf?mode=${docMode.toLowerCase()}&term=${selectedReleaseTerm}`;
+        // 1. Fetch authoritative report card JSON & release status in parallel (0 LibreOffice dependency!)
+        const [rcRes, relRes] = await Promise.all([
+          (!resolvedReportCardData || resolvedReportCardData.student?.id !== studentId)
+            ? apiClient.get<any>(`/academic/report-card/${encodeURIComponent(studentId)}`).catch(() => null)
+            : Promise.resolve(null),
+          apiClient.get<any>(`/academic/report-card/${encodeURIComponent(studentId)}/released-sf9`).catch(() => null),
+        ]);
+
+        if (thisRequestId !== requestIdRef.current) return;
+
+        if (rcRes) {
+          const freshData = rcRes?.data || rcRes;
+          setResolvedReportCardData(freshData);
+        }
+
+        const relData = relRes?.data || relRes;
+        if (relData) {
+          setReleasedSf9Data(relData);
+          if (relData.released) {
+            setIsReleased(true);
+          }
+        }
+
+        // Primary JSON loaded: mark initial loading complete so the digital viewer displays immediately!
+        setLoading(false);
+
+        // 2. Fetch or compile PDF (either stored official release or draft via backend)
         const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
         const headers: Record<string, string> = {};
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        // If officially released, stream stored PDF directly from disk without invoking LibreOffice!
+        const pdfEndpoint = relData?.released
+          ? `${API_BASE_URL}/academic/report-card/${encodeURIComponent(studentId)}/released-sf9/pdf`
+          : `${API_BASE_URL}/academic/report-card/${encodeURIComponent(studentId)}/sf9/pdf?mode=${docMode.toLowerCase()}&term=${selectedReleaseTerm}`;
+
+        setLoadingPdf(true);
+        try {
+          const pdfResp = await fetch(pdfEndpoint, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          });
+
+          if (thisRequestId !== requestIdRef.current) return;
+
+          if (!pdfResp.ok) {
+            const errJson = await pdfResp.json().catch(() => null);
+            const errCode = errJson?.error?.code || errJson?.code;
+            const msg = errJson?.error?.message || errJson?.message || '';
+
+            // Check if LibreOffice is missing on host
+            if (
+              pdfResp.status === 503 ||
+              errCode === 'RENDERER_UNAVAILABLE' ||
+              /LibreOffice|soffice/i.test(msg) ||
+              /RENDERER_UNAVAILABLE/i.test(errCode || '')
+            ) {
+              setIsLibreOfficeAvailable(false);
+              setPdfRendererNotice(
+                msg ||
+                  'Headless LibreOffice Calc binary is not found on the backend host. In-app vector PDF compilation is unavailable; preview the authentic Digital Form 138 or download the populated Excel workbook (.xlsx).'
+              );
+              setLoadingPdf(false);
+              return;
+            }
+
+            // Gating prerequisite failures (HTTP 422)
+            if (pdfResp.status === 422) {
+              const rawList: string[] =
+                errJson?.error?.details?.blockingReasons ||
+                errJson?.details?.blockingReasons ||
+                errJson?.error?.blockingReasons ||
+                errJson?.blockingReasons ||
+                [];
+              const subjEval =
+                errJson?.error?.details?.subjectEvaluation ||
+                errJson?.details?.subjectEvaluation ||
+                null;
+              const prereqEval =
+                errJson?.error?.details?.prerequisiteEvaluation ||
+                errJson?.details?.prerequisiteEvaluation ||
+                null;
+              const gateMsg =
+                msg ||
+                (docMode === 'OFFICIAL'
+                  ? 'Official SF9 report card cannot be issued until all prerequisite term grades, verified calendar attendance, adviser comments, and institutional signatories are completed.'
+                  : 'Draft SF9 report card cannot be generated until learner demographics and term gradebooks are encoded.');
+
+              let parsedReasons: string[] = rawList;
+              if (parsedReasons.length === 0 && gateMsg.includes(':')) {
+                const parts = gateMsg
+                  .split(':')
+                  .slice(1)
+                  .join(':')
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                if (parts.length > 0) parsedReasons = parts;
+              }
+
+              setGateReason(gateMsg);
+              setBlockingReasons(parsedReasons);
+              setSubjectEvaluation(subjEval);
+              setPrerequisiteEvaluation(prereqEval);
+              setLoadingPdf(false);
+              return;
+            }
+
+            // Other error
+            setPdfRendererNotice(msg || `PDF unavailable (HTTP ${pdfResp.status}).`);
+            setLoadingPdf(false);
+            return;
+          }
+
+          const readyHeader = pdfResp.headers.get('X-Sf9-Official-Ready');
+          if (readyHeader) setIsOfficialReady(readyHeader === 'true');
+
+          const pdfBlob = await pdfResp.blob();
+          if (thisRequestId !== requestIdRef.current) return;
+
+          if (currentBlobUrlRef.current) {
+            URL.revokeObjectURL(currentBlobUrlRef.current);
+          }
+          const nextObjectUrl = URL.createObjectURL(pdfBlob);
+          currentBlobUrlRef.current = nextObjectUrl;
+          setPdfBlobUrl(nextObjectUrl);
+          setIsLibreOfficeAvailable(true);
+          setPdfRendererNotice(null);
+        } catch (pdfErr: any) {
+          if (thisRequestId !== requestIdRef.current) return;
+          setIsLibreOfficeAvailable(false);
+          setPdfRendererNotice(pdfErr?.message || 'Unable to connect to document rendering service.');
+        } finally {
+          if (thisRequestId === requestIdRef.current) {
+            setLoadingPdf(false);
+          }
         }
-        const pdfResp = await fetch(endpoint, {
+        return;
+      }
+
+      // QA Verification Preview Mode
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // 1. Fetch synthetic preview data (JSON) - instant and 0 LibreOffice dependency!
+      const metaRes = await apiClient.get<any>('/academic/report-card/sf9/preview/data').catch(() => null);
+      if (thisRequestId !== requestIdRef.current) return;
+
+      const metaData = metaRes?.payload ? metaRes : metaRes?.data || metaRes;
+      setMeta(metaData);
+      const mapped = mapSyntheticDataToReportCard(metaData);
+      setResolvedReportCardData(mapped);
+      setLoading(false);
+
+      // 2. Try fetching synthetic PDF preview in background
+      setLoadingPdf(true);
+      try {
+        const pdfResp = await fetch(`${API_BASE_URL}/academic/report-card/sf9/preview/pdf`, {
           method: 'GET',
           headers,
           credentials: 'include',
@@ -489,78 +842,21 @@ export function AuthenticCalulutSf9Viewer({
 
         if (!pdfResp.ok) {
           const errJson = await pdfResp.json().catch(() => null);
-          const errCode = errJson?.error?.code || errJson?.code;
-          const msg =
-            errJson?.error?.message ||
-            errJson?.message ||
-            '';
-
-          // 1. Check for Server Infrastructure / Document Renderer Failure (HTTP 503 or RENDERER_UNAVAILABLE)
+          const msg = errJson?.error?.message || errJson?.message || '';
           if (
             pdfResp.status === 503 ||
-            errCode === 'RENDERER_UNAVAILABLE' ||
             /LibreOffice|soffice/i.test(msg) ||
-            /RENDERER_UNAVAILABLE/i.test(errCode || '')
+            errJson?.error?.code === 'RENDERER_UNAVAILABLE'
           ) {
-            setRenderError(
-              msg ||
-                'Server Configuration Error: Headless LibreOffice Calc binary not found on the backend host. Cannot render Calulut SF9 workbook to PDF.'
+            setIsLibreOfficeAvailable(false);
+            setPdfRendererNotice(
+              'Headless LibreOffice Calc binary is not found on the backend host. In-app vector PDF compilation is unavailable; preview the authentic Digital Form 138 or download the populated Excel workbook (.xlsx).'
             );
-            setLoading(false);
-            return;
+          } else {
+            setPdfRendererNotice(msg || `PDF preview unavailable (HTTP ${pdfResp.status})`);
           }
-
-          // 2. HTTP 422: Confirmed Student Academic Prerequisites Completeness Check (DepEd Order 015 Gating)
-          if (pdfResp.status === 422) {
-            const rawList: string[] =
-              errJson?.error?.details?.blockingReasons ||
-              errJson?.details?.blockingReasons ||
-              errJson?.error?.blockingReasons ||
-              errJson?.blockingReasons ||
-              [];
-            const subjEval =
-              errJson?.error?.details?.subjectEvaluation ||
-              errJson?.details?.subjectEvaluation ||
-              null;
-            const prereqEval =
-              errJson?.error?.details?.prerequisiteEvaluation ||
-              errJson?.details?.prerequisiteEvaluation ||
-              null;
-            const gateMsg =
-              msg ||
-              (docMode === 'OFFICIAL'
-                ? 'Official SF9 report card cannot be issued until all prerequisite term grades, verified calendar attendance, adviser comments, and institutional signatories are completed.'
-                : 'Draft SF9 report card cannot be generated until learner demographics and term gradebooks are encoded.');
-
-            let parsedReasons: string[] = rawList;
-            if (parsedReasons.length === 0 && gateMsg.includes(':')) {
-              const parts = gateMsg
-                .split(':')
-                .slice(1)
-                .join(':')
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean);
-              if (parts.length > 0) parsedReasons = parts;
-            }
-
-            setGateReason(gateMsg);
-            setBlockingReasons(parsedReasons);
-            setSubjectEvaluation(subjEval);
-            setPrerequisiteEvaluation(prereqEval);
-            setLoading(false);
-            return;
-          }
-
-          // 3. Any other HTTP error (e.g. 404, 500) -> general render error
-          setRenderError(msg || `Failed to generate SF9 report card (HTTP ${pdfResp.status}).`);
-          setLoading(false);
           return;
         }
-
-        const readyHeader = pdfResp.headers.get('X-Sf9-Official-Ready');
-        if (thisRequestId !== requestIdRef.current) return;
-        setIsOfficialReady(readyHeader === 'true');
 
         const pdfBlob = await pdfResp.blob();
         if (thisRequestId !== requestIdRef.current) return;
@@ -571,60 +867,23 @@ export function AuthenticCalulutSf9Viewer({
         const nextObjectUrl = URL.createObjectURL(pdfBlob);
         currentBlobUrlRef.current = nextObjectUrl;
         setPdfBlobUrl(nextObjectUrl);
-        setLoading(false);
-
-        apiClient.get<any>(`/academic/report-card/${encodeURIComponent(studentId)}/released-sf9`)
-          .then((res: any) => {
-            if (thisRequestId !== requestIdRef.current) return;
-            if (res?.data?.released) setIsReleased(true);
-            else setIsReleased(false);
-          })
-          .catch(() => {});
-        return;
+        setIsLibreOfficeAvailable(true);
+        setPdfRendererNotice(null);
+      } catch (err: any) {
+        if (thisRequestId !== requestIdRef.current) return;
+        setIsLibreOfficeAvailable(false);
+        setPdfRendererNotice(err?.message || 'Unable to connect to document rendering service.');
+      } finally {
+        if (thisRequestId === requestIdRef.current) {
+          setLoadingPdf(false);
+        }
       }
-
-      // QA Verification Preview mode: load metadata + LibreOffice-rendered PDF from the populated workbook
-      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const [metaRes, pdfResp] = await Promise.all([
-        apiClient.get<any>('/academic/report-card/sf9/preview/data').catch(() => null),
-        fetch(`${API_BASE_URL}/academic/report-card/sf9/preview/pdf`, {
-          method: 'GET',
-          headers,
-          credentials: 'include',
-        }),
-      ]);
-
-      if (thisRequestId !== requestIdRef.current) return;
-
-      if (!pdfResp.ok) {
-        const errJson = await pdfResp.json().catch(() => null);
-        throw new Error(
-          errJson?.error?.message ||
-            `Failed to render authentic Calulut SF9 workbook (HTTP ${pdfResp.status}).`
-        );
-      }
-
-      const pdfBlob = await pdfResp.blob();
-      if (thisRequestId !== requestIdRef.current) return;
-
-      if (currentBlobUrlRef.current) {
-        URL.revokeObjectURL(currentBlobUrlRef.current);
-      }
-      const nextObjectUrl = URL.createObjectURL(pdfBlob);
-      currentBlobUrlRef.current = nextObjectUrl;
-      setMeta(metaRes?.payload ? metaRes : metaRes?.data || metaRes);
-      setPdfBlobUrl(nextObjectUrl);
-      setLoading(false);
     } catch (err: any) {
       if (thisRequestId !== requestIdRef.current) return;
-      setRenderError(err?.message || 'Unable to load the workbook-rendered SF9 document.');
+      setRenderError(err?.message || 'Unable to load SF9 report card.');
       setLoading(false);
     }
-  }, [activeMode, docMode, studentId, selectedReleaseTerm]);
+  }, [activeMode, docMode, studentId, selectedReleaseTerm, resolvedReportCardData]);
 
   useEffect(() => {
     loadDocument();
@@ -775,17 +1034,52 @@ export function AuthenticCalulutSf9Viewer({
     }
   };
 
-  const handleDownloadPdf = () => {
-    if (!pdfBlobUrl) return;
-    const a = document.createElement('a');
-    a.href = pdfBlobUrl;
-    a.download =
-      activeMode === 'qa-preview'
-        ? 'SF9_Calulut_7-Agoncillo_Synthetic_Verification.pdf'
-        : `SF9_Calulut_${learnerName.replace(/[^a-zA-Z0-9]/g, '_')}_${docMode}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownloadPdf = async () => {
+    if (pdfBlobUrl) {
+      const a = document.createElement('a');
+      a.href = pdfBlobUrl;
+      a.download =
+        activeMode === 'qa-preview'
+          ? 'SF9_Calulut_7-Agoncillo_Synthetic_Verification.pdf'
+          : `SF9_Calulut_${learnerName.replace(/[^a-zA-Z0-9]/g, '_')}_${docMode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
+    if (isReleased && studentId) {
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const resp = await fetch(
+          `${API_BASE_URL}/academic/report-card/${encodeURIComponent(studentId)}/released-sf9/pdf`,
+          {
+            headers,
+            credentials: 'include',
+          }
+        );
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `SF9_Calulut_${learnerName.replace(/[^a-zA-Z0-9]/g, '_')}_OFFICIAL.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    showToast(
+      'Vector PDF compilation requires headless LibreOffice on the backend host. Please review via the Digital Form 138 preview or download the populated Excel workbook (.xlsx).',
+      'info'
+    );
   };
 
   const handleDownloadExcel = async () => {
@@ -817,7 +1111,7 @@ export function AuthenticCalulutSf9Viewer({
     }
   };
 
-  if (loading) {
+  if (loading && !resolvedReportCardData) {
     return (
       <div
         style={{
@@ -834,21 +1128,19 @@ export function AuthenticCalulutSf9Viewer({
       >
         <Loader2 className="animate-spin" size={32} style={{ marginBottom: 14, color: '#8B1E1E' }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-          Loading SF9 report card…
+          Loading authentic SF9 report card…
         </div>
         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
           {activeMode === 'qa-preview'
-            ? 'Generating synthetic verification SF9 report card...'
-            : docMode === 'DRAFT'
-            ? 'Populating draft grades, attendance, and adviser comments into master template'
-            : 'Enforcing release gate conditions and generating official sealed document'}
+            ? 'Populating synthetic Calulut Form 138 preview...'
+            : 'Retrieving authoritative learner records, attendance, and quarterly ratings...'}
         </div>
       </div>
     );
   }
 
-  // Diagnostic Gating Card for Student Mode ONLY when HTTP 422 prerequisite failure is confirmed
-  if (activeMode === 'student' && gateReason && !pdfBlobUrl) {
+  // Diagnostic Gating Card for Student Mode ONLY when explicitly active via activeTab === 'gating'
+  if (activeTab === 'gating' && activeMode === 'student') {
     return (
       <div
         style={{
@@ -1173,7 +1465,8 @@ export function AuthenticCalulutSf9Viewer({
     );
   }
 
-  if (renderError || !pdfBlobUrl) {
+  // Fallback fatal error ONLY when no report card data at all could be loaded
+  if (!resolvedReportCardData && renderError) {
     return (
       <div
         style={{
@@ -1188,33 +1481,11 @@ export function AuthenticCalulutSf9Viewer({
       >
         <AlertTriangle size={36} color="#dc2626" style={{ marginBottom: 12 }} />
         <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-          {/LibreOffice|soffice/i.test(renderError || '')
-            ? 'Server Infrastructure Configuration Error'
-            : renderError
-            ? 'Document Rendering Error'
-            : 'Preview Unavailable'}
+          Report Card Record Unavailable
         </div>
         <div style={{ fontSize: 13, color: '#475569', maxWidth: 560, textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
-          {renderError || gateReason || 'The requested SF9 document could not be rendered at this time.'}
+          {renderError}
         </div>
-        {/LibreOffice|soffice/i.test(renderError || '') && (
-          <div
-            style={{
-              maxWidth: 560,
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: 6,
-              padding: '10px 14px',
-              fontSize: 12,
-              color: '#991b1b',
-              marginBottom: 16,
-              textAlign: 'left',
-              lineHeight: 1.4,
-            }}
-          >
-            <strong>Server Deployment Notice:</strong> The central DigiSkwela backend server requires headless LibreOffice Calc (<code>soffice</code>) to compile official Calulut SF9 workbooks to PDF. This is a server host configuration requirement, not an issue with the student&apos;s academic records.
-          </div>
-        )}
         <button
           onClick={onBack}
           style={{
@@ -1355,8 +1626,9 @@ export function AuthenticCalulutSf9Viewer({
           </div>
         </div>
 
-        {/* Center: Mode Toggle (Draft vs Official) */}
-        {activeMode === 'student' && (
+        {/* Center: View Format Toggle & Mode Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Format Selector: Digital Form 138 vs Vector PDF */}
           <div
             style={{
               display: 'flex',
@@ -1368,7 +1640,8 @@ export function AuthenticCalulutSf9Viewer({
             }}
           >
             <button
-              onClick={() => setDocMode('DRAFT')}
+              type="button"
+              onClick={() => { setViewFormat('digital'); setActiveTab('preview'); }}
               style={{
                 padding: '4px 12px',
                 fontSize: 11,
@@ -1376,15 +1649,19 @@ export function AuthenticCalulutSf9Viewer({
                 borderRadius: 4,
                 border: 'none',
                 cursor: 'pointer',
-                background: docMode === 'DRAFT' ? '#fff' : 'transparent',
-                color: docMode === 'DRAFT' ? '#b45309' : '#64748b',
-                boxShadow: docMode === 'DRAFT' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                background: viewFormat === 'digital' && activeTab === 'preview' ? '#0f766e' : 'transparent',
+                color: viewFormat === 'digital' && activeTab === 'preview' ? '#fff' : '#475569',
+                boxShadow: viewFormat === 'digital' && activeTab === 'preview' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
               }}
             >
-              Draft Preview
+              <Eye size={12} /> Digital Preview
             </button>
             <button
-              onClick={() => setDocMode('OFFICIAL')}
+              type="button"
+              onClick={() => { setViewFormat('pdf'); setActiveTab('preview'); }}
               style={{
                 padding: '4px 12px',
                 fontSize: 11,
@@ -1392,15 +1669,87 @@ export function AuthenticCalulutSf9Viewer({
                 borderRadius: 4,
                 border: 'none',
                 cursor: 'pointer',
-                background: docMode === 'OFFICIAL' ? '#fff' : 'transparent',
-                color: docMode === 'OFFICIAL' ? '#15803d' : '#64748b',
-                boxShadow: docMode === 'OFFICIAL' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                background: viewFormat === 'pdf' && activeTab === 'preview' ? '#0f766e' : 'transparent',
+                color: viewFormat === 'pdf' && activeTab === 'preview' ? '#fff' : '#475569',
+                boxShadow: viewFormat === 'pdf' && activeTab === 'preview' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
               }}
             >
-              Official Issuance
+              <FileText size={12} /> Vector PDF
             </button>
           </div>
-        )}
+
+          {activeMode === 'student' && (
+            <div
+              style={{
+                display: 'flex',
+                background: '#f1f5f9',
+                padding: 3,
+                borderRadius: 6,
+                border: '1px solid #cbd5e1',
+                gap: 2,
+              }}
+            >
+              <button
+                onClick={() => setDocMode('DRAFT')}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: docMode === 'DRAFT' ? '#fff' : 'transparent',
+                  color: docMode === 'DRAFT' ? '#b45309' : '#64748b',
+                  boxShadow: docMode === 'DRAFT' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                Draft Preview
+              </button>
+              <button
+                onClick={() => setDocMode('OFFICIAL')}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: docMode === 'OFFICIAL' ? '#fff' : 'transparent',
+                  color: docMode === 'OFFICIAL' ? '#15803d' : '#64748b',
+                  boxShadow: docMode === 'OFFICIAL' ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                Official Issuance
+              </button>
+            </div>
+          )}
+
+          {blockingReasons.length > 0 && activeMode === 'student' && (
+            <button
+              type="button"
+              onClick={() => setActiveTab(activeTab === 'gating' ? 'preview' : 'gating')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 11,
+                fontWeight: 700,
+                color: activeTab === 'gating' ? '#fff' : '#92400e',
+                background: activeTab === 'gating' ? '#b45309' : '#fef3c7',
+                border: activeTab === 'gating' ? '1px solid #b45309' : '1px solid #fde68a',
+                borderRadius: 4,
+                padding: '5px 10px',
+                cursor: 'pointer',
+              }}
+              title="View DepEd Order 015 prerequisite gating diagnostics"
+            >
+              <ShieldAlert size={12} /> Gating Audit ({blockingReasons.length})
+            </button>
+          )}
+        </div>
 
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1616,18 +1965,128 @@ export function AuthenticCalulutSf9Viewer({
       )}
 
       {/* Main Document Viewer Container */}
-      <div style={{ flex: 1, width: '100%', height: '100%', display: 'flex', position: 'relative' }}>
-        <iframe
-          src={`${pdfBlobUrl}#toolbar=1&navpanes=0&view=FitH`}
-          title="Authentic Calulut SF9 Workbook-Rendered PDF"
+      <div style={{ flex: 1, width: '100%', height: '100%', display: 'flex', position: 'relative', overflow: 'hidden' }}>
+        <div
           style={{
             width: isCommentsDrawerOpen ? 'calc(100% - 380px)' : '100%',
             height: '100%',
-            border: 'none',
-            background: '#525659',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: viewFormat === 'digital' ? 'auto' : 'hidden',
+            background: '#334155',
             transition: 'width 0.2s ease',
           }}
-        />
+        >
+          {viewFormat === 'digital' ? (
+            <div style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto', width: '100%' }}>
+              <DigitalAuthenticSf9ProgressCard
+                reportCardData={resolvedReportCardData}
+                releasedSf9={releasedSf9Data}
+                isTeacherPreview={true}
+                onDownloadPdf={pdfBlobUrl || isReleased ? handleDownloadPdf : undefined}
+                onViewPdf={pdfBlobUrl || isReleased ? () => setViewFormat('pdf') : undefined}
+              />
+            </div>
+          ) : pdfBlobUrl ? (
+            <iframe
+              src={`${pdfBlobUrl}#toolbar=1&navpanes=0&view=FitH`}
+              title="Authentic Calulut SF9 Workbook-Rendered PDF"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                background: '#525659',
+              }}
+            />
+          ) : isLibreOfficeAvailable === false || pdfRendererNotice ? (
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 32,
+                background: '#f8fafc',
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: 620,
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: 10,
+                  padding: 24,
+                  textAlign: 'center',
+                }}
+              >
+                <Info size={36} color="#2563eb" style={{ margin: '0 auto 12px auto' }} />
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#1e3a8a', marginBottom: 8 }}>
+                  Server Host Notice: Headless LibreOffice Calc Not Detected
+                </div>
+                <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.5, marginBottom: 16 }}>
+                  Direct XLSX-to-PDF compilation on the server requires headless LibreOffice Calc (<code>soffice</code>).
+                  On this host, you can review the complete authentic Form 138 layout in full fidelity via the browser-based Digital Preview, or download the populated Excel workbook (.xlsx).
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewFormat('digital')}
+                    style={{
+                      padding: '8px 18px',
+                      background: '#0f766e',
+                      color: '#fff',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Eye size={14} /> Switch to Digital Form 138 Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadExcel}
+                    style={{
+                      padding: '8px 18px',
+                      background: '#fff',
+                      color: '#0f766e',
+                      border: '1px solid #0f766e',
+                      borderRadius: 6,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <FileSpreadsheet size={14} /> Download .xlsx Workbook
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#f8fafc',
+                color: '#64748b',
+              }}
+            >
+              <Loader2 className="animate-spin" size={32} style={{ marginBottom: 12, color: '#0f766e' }} />
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Rendering vector PDF via headless LibreOffice...</div>
+            </div>
+          )}
+        </div>
 
         {/* Adviser Narrative Comments Side Drawer */}
         {isCommentsDrawerOpen && (

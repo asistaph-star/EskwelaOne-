@@ -4,6 +4,7 @@ import prisma from './config/database.js';
 import { GateNotificationWorker } from './notifications/gateNotificationWorker.js';
 import { BrevoEmailProvider } from './notifications/email/brevoEmailProvider.js';
 import { MockEmailProvider } from './notifications/email/mockEmailProvider.js';
+import { recoverPendingSf9BatchJobs } from './academic/grading/sf9BatchQueue.service.js';
 
 let gateWorker: GateNotificationWorker | null = null;
 
@@ -54,6 +55,11 @@ async function main() {
       gateWorker.start();
       console.log(`✓ Gate Notification Worker started (Provider: ${config.email.provider}, Mode: ${config.email.recipientMode}, Auth: ${config.email.authorizationMode})`);
     }
+
+    // Auto-recover any interrupted or pending SF9 batch issuance jobs upon startup
+    recoverPendingSf9BatchJobs().catch((err) => {
+      console.error('Failed to auto-recover interrupted SF9 batch jobs upon startup:', err);
+    });
   });
 }
 

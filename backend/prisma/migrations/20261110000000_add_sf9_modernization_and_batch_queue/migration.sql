@@ -30,3 +30,4 @@ CREATE INDEX IF NOT EXISTS "idx_sf9_batch_jobs_section_term" ON "sf9_bulk_batch_
 
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "idx_sf9_batch_jobs_status" ON "sf9_bulk_batch_jobs"("status");
+

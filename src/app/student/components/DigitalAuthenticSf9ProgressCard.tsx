@@ -22,6 +22,7 @@ export interface DigitalAuthenticSf9ProgressCardProps {
   onDownloadPdf?: () => void;
   onViewPdf?: () => void;
   isLoadingPdf?: boolean;
+  isTeacherPreview?: boolean;
 }
 
 export const CANONICAL_JHS_LEARNING_AREAS = [
@@ -62,6 +63,7 @@ export function DigitalAuthenticSf9ProgressCard({
   onDownloadPdf,
   onViewPdf,
   isLoadingPdf = false,
+  isTeacherPreview = false,
 }: DigitalAuthenticSf9ProgressCardProps) {
   const [activePageView, setActivePageView] = useState<'both' | 'front' | 'back'>('both');
 
@@ -77,13 +79,15 @@ export function DigitalAuthenticSf9ProgressCard({
   const t2Meta = termsMeta.find((t) => t.key === 'T2' || t.name === 'Term 2' || t.key === 'Second Term');
   const t3Meta = termsMeta.find((t) => t.key === 'T3' || t.name === 'Term 3' || t.key === 'Third Term');
 
-  const isT1Visible = isReleased || (t1Meta ? Boolean(t1Meta.isGradesVisible) : false);
-  const isT2Visible = isReleased || (t2Meta ? Boolean(t2Meta.isGradesVisible) : false);
-  const isT3Visible = isReleased || (t3Meta ? Boolean(t3Meta.isGradesVisible) : false);
+  const isT1Visible = isTeacherPreview || isReleased || (t1Meta ? Boolean(t1Meta.isGradesVisible) : false);
+  const isT2Visible = isTeacherPreview || isReleased || (t2Meta ? Boolean(t2Meta.isGradesVisible) : false);
+  const isT3Visible = isTeacherPreview || isReleased || (t3Meta ? Boolean(t3Meta.isGradesVisible) : false);
 
   // Check visual state
-  const visualState: 'CONCEALED_BLANK' | 'UNRELEASED_PREVIEW' | 'OFFICIALLY_RELEASED' = isReleased
+  const visualState: 'CONCEALED_BLANK' | 'UNRELEASED_PREVIEW' | 'OFFICIALLY_RELEASED' | 'TEACHER_PREVIEW' = isReleased
     ? 'OFFICIALLY_RELEASED'
+    : isTeacherPreview
+    ? 'TEACHER_PREVIEW'
     : isT1Visible
     ? 'UNRELEASED_PREVIEW'
     : 'CONCEALED_BLANK';
@@ -108,8 +112,8 @@ export function DigitalAuthenticSf9ProgressCard({
     if (!isVisible) return null;
 
     const s = rawSubjects.find((subj: any) => {
-      const n = (subj.name || '').toLowerCase();
-      const c = (subj.code || '').toLowerCase();
+      const n = (subj.name || subj.subjectName || '').toLowerCase();
+      const c = (subj.code || subj.subjectCode || '').toLowerCase();
       if (matchKey === 'filipino') return n.includes('filipino') || c.includes('fil');
       if (matchKey === 'english') return n.includes('english') || c.includes('eng');
       if (matchKey === 'mathematics') return n.includes('math');
@@ -123,7 +127,12 @@ export function DigitalAuthenticSf9ProgressCard({
       return false;
     });
 
-    if (s && typeof s[term] === 'number') return s[term];
+    if (s) {
+      if (typeof s[term] === 'number') return s[term];
+      if (typeof s[term.toLowerCase()] === 'number') return s[term.toLowerCase()];
+      if (typeof s.terms?.[term]?.numericScore === 'number') return s.terms[term].numericScore;
+      if (typeof s.terms?.[term] === 'number') return s.terms[term];
+    }
     return null;
   };
 
@@ -299,6 +308,58 @@ export function DigitalAuthenticSf9ProgressCard({
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {visualState === 'TEACHER_PREVIEW' && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg, #1e3a5f 0%, #1e40af 100%)',
+            color: '#fff',
+            padding: '10px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Eye size={16} color="#93c5fd" />
+            </div>
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.02em' }}>
+                STAFF ACADEMIC PREVIEW — AUTHENTIC CALULUT FORM 138
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>
+                Reviewing authoritative database records (grades, SF2 attendance, and signatories) formatted to Calulut Form 138 layout.
+              </div>
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: 4,
+              background: '#dbeafe',
+              color: '#1e40af',
+              textTransform: 'uppercase',
+            }}
+          >
+            Teacher Verification Mode
+          </span>
         </div>
       )}
 
