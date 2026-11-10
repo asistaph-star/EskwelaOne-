@@ -249,8 +249,9 @@ model Term {
   end_date         DateTime?
   created_at       DateTime     @default(now())
   updated_at       DateTime     @updatedAt
-  key              TermKey
-  gradebooks       gradebooks[]
+  key                           TermKey
+  is_grades_visible_to_students Boolean      @default(true)
+  gradebooks                    gradebooks[]
   academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id])
 
   @@unique([academic_year_id, key])
