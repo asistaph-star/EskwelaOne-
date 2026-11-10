@@ -451,7 +451,7 @@ describe('Account Provisioning Policy & Authorization', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.temporaryPassword).toBeDefined();
-      expect(res.body.data.temporaryPassword.length).toBe(8);
+      expect(res.body.data.temporaryPassword.length).toBe(16);
 
       const dbUser = await prisma.user.findUnique({ where: { id: studentUserId } });
       expect(dbUser?.must_change_password).toBe(true);

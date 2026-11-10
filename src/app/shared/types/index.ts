@@ -22,7 +22,6 @@ export type RScreen =
   | "r-records"
   | "r-report-cards"
   | "r-doc-requests"
-  | "r-deficiency"
   | "r-search"
   | "r-sections"
   | "r-school-years"

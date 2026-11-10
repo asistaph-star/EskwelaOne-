@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { C } from '../../shared/constants/tokens';
-import { 
-  X, Search, UserPlus, CheckCircle, AlertTriangle, 
+import {
+  X, Search, UserPlus, CheckCircle, AlertTriangle,
   User, Shield, Calendar, ArrowRight, UserCheck, ChevronRight, Info, AlertCircle
 } from 'lucide-react';
 import { apiClient } from '../../../api/client';
@@ -180,7 +180,7 @@ export function AdviserAddLearnerModal({
     try {
       const res: any = await apiClient.get(`/academic/advisory/search?q=${encodeURIComponent(cleanLrn)}`);
       const results: SearchLearnerResult[] = res?.data || (Array.isArray(res) ? res : []);
-      
+
       const exactMatch = results.find(r => r.lrn === cleanLrn);
       if (exactMatch) {
         setLrnExistingMatch(exactMatch);
@@ -300,18 +300,18 @@ export function AdviserAddLearnerModal({
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div 
+    <div
       id="adviser-add-learner-modal-overlay"
-      style={{ 
-        position: 'fixed', inset: 0, zIndex: 99999, 
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
         background: 'rgba(10, 25, 47, 0.7)', backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div 
+      <div
         id="adviser-add-learner-modal-container"
-        style={{ 
+        style={{
           width: '100%', maxWidth: 660, maxHeight: '92vh', overflowY: 'auto',
           background: '#ffffff', borderRadius: 12, boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
           display: 'flex', flexDirection: 'column', border: `1px solid ${C.border}`
@@ -332,9 +332,9 @@ export function AdviserAddLearnerModal({
               </div>
             </div>
           </div>
-          <button 
+          <button
             id="btn-close-learner-modal"
-            onClick={onClose} 
+            onClick={onClose}
             title="Close Modal"
             style={{ width: 28, height: 28, borderRadius: 4, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
@@ -404,29 +404,29 @@ export function AdviserAddLearnerModal({
                 <div style={{ display: 'flex', gap: 8 }}>
                   <div style={{ position: 'relative', flex: 1 }}>
                     <Search size={14} color={C.t3} style={{ position: 'absolute', left: 12, top: 11 }} />
-                    <input 
+                    <input
                       id="enroll-search-input"
-                      type="text" 
+                      type="text"
                       placeholder="e.g. 100000000001 or dela Cruz"
                       value={searchQuery}
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         if (searchError) setSearchError(null);
                       }}
-                      style={{ 
-                        width: '100%', padding: '9px 12px 9px 34px', fontSize: 12, 
-                        borderRadius: 6, border: `1px solid ${searchError ? '#ef4444' : C.borderMed}`, 
-                        outline: 'none', boxSizing: 'border-box' 
+                      style={{
+                        width: '100%', padding: '9px 12px 9px 34px', fontSize: 12,
+                        borderRadius: 6, border: `1px solid ${searchError ? '#ef4444' : C.borderMed}`,
+                        outline: 'none', boxSizing: 'border-box'
                       }}
                     />
                   </div>
-                  <button 
+                  <button
                     id="btn-enroll-search"
-                    type="submit" 
+                    type="submit"
                     disabled={isSearching}
-                    style={{ 
-                      padding: '9px 18px', background: C.m700, color: '#ffffff', border: 'none', 
-                      borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: isSearching ? 'not-allowed' : 'pointer', 
+                    style={{
+                      padding: '9px 18px', background: C.m700, color: '#ffffff', border: 'none',
+                      borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: isSearching ? 'not-allowed' : 'pointer',
                       display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
                     }}
                   >
@@ -481,16 +481,16 @@ export function AdviserAddLearnerModal({
                   ) : (
                     <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {searchResults.map((learner) => {
-                        const isEnrolledInThisSection = 
-                          learner.currentEnrollment?.isEnrolled && 
+                        const isEnrolledInThisSection =
+                          learner.currentEnrollment?.isEnrolled &&
                           learner.currentEnrollment?.sectionId === sectionId;
-                        const isEnrolledInOtherSection = 
-                          learner.currentEnrollment?.isEnrolled && 
+                        const isEnrolledInOtherSection =
+                          learner.currentEnrollment?.isEnrolled &&
                           learner.currentEnrollment?.sectionId !== sectionId;
                         const isSelected = selectedLearner?.studentId === learner.studentId;
 
                         return (
-                          <div 
+                          <div
                             key={learner.studentId}
                             style={{
                               padding: '10px 12px',
@@ -635,9 +635,9 @@ export function AdviserAddLearnerModal({
                       Learner Reference Number (LRN) *
                     </label>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <input 
+                      <input
                         id="register-lrn-input"
-                        type="text" 
+                        type="text"
                         maxLength={12}
                         placeholder="Enter 12-digit DepEd LRN"
                         value={lrnInput}
@@ -650,19 +650,19 @@ export function AdviserAddLearnerModal({
                             setLrnCheckError(null);
                           }
                         }}
-                        style={{ 
-                          flex: 1, padding: '9px 12px', fontSize: 12, 
-                          borderRadius: 6, border: `1px solid ${lrnCheckError ? '#ef4444' : C.borderMed}`, 
-                          outline: 'none', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' 
+                        style={{
+                          flex: 1, padding: '9px 12px', fontSize: 12,
+                          borderRadius: 6, border: `1px solid ${lrnCheckError ? '#ef4444' : C.borderMed}`,
+                          outline: 'none', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box'
                         }}
                       />
-                      <button 
+                      <button
                         id="btn-verify-lrn"
-                        type="submit" 
+                        type="submit"
                         disabled={isCheckingLrn}
-                        style={{ 
-                          padding: '9px 16px', background: C.m700, color: '#ffffff', border: 'none', 
-                          borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: isCheckingLrn ? 'not-allowed' : 'pointer', 
+                        style={{
+                          padding: '9px 16px', background: C.m700, color: '#ffffff', border: 'none',
+                          borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: isCheckingLrn ? 'not-allowed' : 'pointer',
                           display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap'
                         }}
                       >
@@ -714,7 +714,7 @@ export function AdviserAddLearnerModal({
                         <span>LRN {formData.lrn} Verified Absent from Local Records</span>
                       </div>
                       <div style={{ fontSize: 11, color: '#1e3a8a', lineHeight: 1.5 }}>
-                        <strong>LIS Verification Notice:</strong> Local absence confirms this LRN does not yet exist in this DigiSkwela database. 
+                        <strong>LIS Verification Notice:</strong> Local absence confirms this LRN does not yet exist in this DigiSkwela database.
                         <em> Note: Local verification does not constitute national DepEd Learner Information System (LIS) verification.</em> Ensure physical PSA birth certificate or Form 137 has been verified.
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
@@ -758,9 +758,9 @@ export function AdviserAddLearnerModal({
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>First Name *</label>
-                      <input 
+                      <input
                         id="reg-first-name"
-                        type="text" 
+                        type="text"
                         placeholder="e.g. Crispin"
                         value={formData.firstName}
                         onChange={(e) => {
@@ -778,9 +778,9 @@ export function AdviserAddLearnerModal({
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Last Name *</label>
-                      <input 
+                      <input
                         id="reg-last-name"
-                        type="text" 
+                        type="text"
                         placeholder="e.g. Sisa"
                         value={formData.lastName}
                         onChange={(e) => {
@@ -799,9 +799,9 @@ export function AdviserAddLearnerModal({
 
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Middle Name</label>
-                      <input 
+                      <input
                         id="reg-middle-name"
-                        type="text" 
+                        type="text"
                         placeholder="Optional"
                         value={formData.middleName}
                         onChange={(e) => {
@@ -819,9 +819,9 @@ export function AdviserAddLearnerModal({
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Suffix</label>
-                      <input 
+                      <input
                         id="reg-suffix"
-                        type="text" 
+                        type="text"
                         placeholder="Jr., III, etc."
                         value={formData.suffix}
                         onChange={(e) => {
@@ -840,9 +840,9 @@ export function AdviserAddLearnerModal({
 
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Date of Birth *</label>
-                      <input 
+                      <input
                         id="reg-dob"
-                        type="date" 
+                        type="date"
                         value={formData.dateOfBirth}
                         onChange={(e) => {
                           setFormData({ ...formData, dateOfBirth: e.target.value });
@@ -859,7 +859,7 @@ export function AdviserAddLearnerModal({
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Recorded Biological Sex *</label>
-                      <select 
+                      <select
                         id="reg-gender"
                         value={formData.gender}
                         onChange={(e) => {
@@ -883,9 +883,9 @@ export function AdviserAddLearnerModal({
                       <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.t2, marginBottom: 4 }}>Parent / Guardian Details</label>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                         <div>
-                          <input 
+                          <input
                             id="reg-guardian-first"
-                            type="text" 
+                            type="text"
                             placeholder="Guardian First Name"
                             value={formData.guardianFirstName}
                             onChange={(e) => {
@@ -902,9 +902,9 @@ export function AdviserAddLearnerModal({
                           )}
                         </div>
                         <div>
-                          <input 
+                          <input
                             id="reg-guardian-last"
-                            type="text" 
+                            type="text"
                             placeholder="Guardian Last Name"
                             value={formData.guardianLastName}
                             onChange={(e) => {
@@ -921,9 +921,9 @@ export function AdviserAddLearnerModal({
                           )}
                         </div>
                         <div>
-                          <input 
+                          <input
                             id="reg-guardian-phone"
-                            type="tel" 
+                            type="tel"
                             placeholder="0917 123 4567"
                             value={formData.guardianPhone}
                             onChange={(e) => {
@@ -944,7 +944,7 @@ export function AdviserAddLearnerModal({
                     </div>
                   </div>
 
-                  
+
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
                     <button
@@ -976,7 +976,7 @@ export function AdviserAddLearnerModal({
                     <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 4 }}>
                       <span style={{ color: C.t3, fontWeight: 600 }}>Learner Name:</span>
                       <strong style={{ color: C.t1 }}>{formData.lastName}, {formData.firstName} {formData.middleName || ''} {formData.suffix || ''}</strong>
-                      
+
                       <span style={{ color: C.t3, fontWeight: 600 }}>12-Digit LRN:</span>
                       <strong style={{ color: C.t1, fontFamily: "'JetBrains Mono', monospace" }}>{formData.lrn}</strong>
 

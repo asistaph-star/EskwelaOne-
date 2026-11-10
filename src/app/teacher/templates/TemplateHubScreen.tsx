@@ -7,18 +7,18 @@ import { apiClient } from '../../../api/client';
 
 export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "registrar" }) {
   const [modal, setModal] = useState<"rc" | null>(null);
-  
+
   // Real workflow: fetch authorized students
   const [students, setStudents] = useState<any[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState("");
-  
+
   // Report Card State
   const [rcData, setRcData] = useState<any>(null);
   const [loadingRc, setLoadingRc] = useState(false);
   const [rcError, setRcError] = useState<string | null>(null);
   const [showConsole, setShowConsole] = useState<boolean>(false);
-  
+
   const [viewing, setViewing] = useState<"rc" | "qa-preview" | null>(null);
 
   const TEMPLATES = [
@@ -52,16 +52,35 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
 
   async function handleView() {
     if (!selectedStudentId) return;
-    
+
     setLoadingRc(true);
     setRcError(null);
-    setRcData(null);
+
+    const sel = students.find((s) => s.id === selectedStudentId);
+    const initialStudentData = {
+      student: {
+        id: selectedStudentId,
+        name: sel?.user ? `${sel.user.last_name}, ${sel.user.first_name}` : 'Enrolled Learner',
+        first_name: sel?.user?.first_name,
+        last_name: sel?.user?.last_name,
+        lrn: sel?.user?.lrn || sel?.lrn || 'Pending',
+        gender: sel?.user?.gender || sel?.gender,
+      },
+      enrollment: {
+        gradeLevel: sel?.gradeLevel || sel?.current_section?.grade_level || 7,
+        section: sel?.current_section?.name || 'Assigned Section',
+      },
+    };
+
+    setRcData(initialStudentData);
     setViewing("rc");
     setModal(null);
 
     try {
       const data = await apiClient.get<any>(`/academic/report-card/${selectedStudentId}`);
-      setRcData(data);
+      if (data) {
+        setRcData(data);
+      }
     } catch (err: any) {
       setRcError(err.message || "An unexpected error occurred.");
     } finally {
@@ -113,7 +132,7 @@ export function TemplateHubScreen({ role = "teacher" }: { role?: "teacher" | "re
           <div style={{ fontSize: 13, color: C.t3 }}>
             Official school document templates and DepEd scholastic records for Calulut Integrated School.
           </div>
-          
+
           <div style={{ marginTop: 12, padding: "10px 14px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0", fontSize: 12, color: "#166534", display: "flex", alignItems: "center", gap: 10 }}>
             <ShieldCheck size={18} color="#15803d" style={{ flexShrink: 0 }} />
             <span>

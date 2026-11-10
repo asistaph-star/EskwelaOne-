@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { C } from "../../shared/constants/tokens";
-import { 
-  User, Shield, School, Calendar, CheckCircle2, AlertCircle, 
+import {
+  User, Shield, School, Calendar, CheckCircle2, AlertCircle,
   Save, RefreshCw, Lock, BadgeCheck, FileText, Info, Key, Clock,
   Check, X
 } from "lucide-react";
@@ -162,7 +162,7 @@ export function PSettingsScreen() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80">
               Saved
             </span>
-            <button 
+            <button
               type="button"
               onClick={() => setSaveSuccess(false)}
               className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100 shrink-0 ml-0.5"
@@ -186,7 +186,7 @@ export function PSettingsScreen() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/80">
               Error
             </span>
-            <button 
+            <button
               type="button"
               onClick={() => setSaveError("")}
               className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100 shrink-0 ml-0.5"
@@ -205,7 +205,7 @@ export function PSettingsScreen() {
             <h1 style={{ fontSize: 24, fontWeight: 800, color: C.t1, fontFamily: "'Fraunces', serif", margin: 0 }}>
               Settings & Institutional Profile
             </h1>
-            <span style={{ 
+            <span style={{
               display: "inline-flex", alignItems: "center", gap: 5,
               background: "rgba(139, 30, 30, 0.08)", color: C.m700,
               fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
@@ -245,14 +245,14 @@ export function PSettingsScreen() {
         <div className="w-full max-w-[1060px] mx-auto flex flex-col gap-6">
 
           {/* Section 1: Account & Profile Details (Editable Self-Service) */}
-          <div style={{ 
+          <div style={{
             background: "#fff", borderRadius: 12, border: `1px solid ${C.borderMed}`,
             boxShadow: "0 1px 4px rgba(0,0,0,0.03)", padding: "24px 28px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 14 }}>
-              <div style={{ 
+              <div style={{
                 width: 38, height: 38, borderRadius: 8, background: "rgba(139, 30, 30, 0.08)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: C.m700 
+                display: "flex", alignItems: "center", justifyContent: "center", color: C.m700
               }}>
                 <User size={20} />
               </div>
@@ -323,7 +323,7 @@ export function PSettingsScreen() {
               </div>
 
               {/* Read-Only Account Identifiers */}
-              <div style={{ 
+              <div style={{
                 background: C.m50, borderRadius: 8, padding: "16px 20px", marginBottom: 24,
                 border: "1px solid rgba(139, 30, 30, 0.12)", display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16
@@ -404,14 +404,14 @@ export function PSettingsScreen() {
           </div>
 
           {/* Section 2: Security & Session Status (Read-Only / Informational) */}
-          <div style={{ 
+          <div style={{
             background: "#fff", borderRadius: 12, border: `1px solid ${C.borderMed}`,
             boxShadow: "0 1px 4px rgba(0,0,0,0.03)", padding: "24px 28px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 14 }}>
-              <div style={{ 
+              <div style={{
                 width: 38, height: 38, borderRadius: 8, background: "rgba(245, 158, 11, 0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "#b45309" 
+                display: "flex", alignItems: "center", justifyContent: "center", color: "#b45309"
               }}>
                 <Shield size={20} />
               </div>
@@ -467,7 +467,7 @@ export function PSettingsScreen() {
             </div>
 
             {/* Honest Architectural Status Note */}
-            <div style={{ 
+            <div style={{
               display: "flex", alignItems: "flex-start", gap: 12,
               background: "rgba(245, 158, 11, 0.06)", border: "1px solid rgba(245, 158, 11, 0.2)",
               borderRadius: 8, padding: "14px 18px", color: "#92400e", fontSize: 12, lineHeight: 1.6
@@ -480,14 +480,14 @@ export function PSettingsScreen() {
           </div>
 
           {/* Section 3: Institutional & Academic Oversight (Read-Only Real Data) */}
-          <div style={{ 
+          <div style={{
             background: "#fff", borderRadius: 12, border: `1px solid ${C.borderMed}`,
             boxShadow: "0 1px 4px rgba(0,0,0,0.03)", padding: "24px 28px"
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, borderBottom: `1px solid ${C.borderLight}`, paddingBottom: 14 }}>
-              <div style={{ 
+              <div style={{
                 width: 38, height: 38, borderRadius: 8, background: "rgba(16, 185, 129, 0.1)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "#065f46" 
+                display: "flex", alignItems: "center", justifyContent: "center", color: "#065f46"
               }}>
                 <School size={20} />
               </div>
@@ -553,15 +553,15 @@ export function PSettingsScreen() {
                   <Calendar size={14} color={C.t2} />
                   Active Academic Terms ({terms.length} Terms Configured)
                 </div>
-                <div style={{ 
+                <div style={{
                   borderRadius: 8, border: `1px solid ${C.borderLight}`, overflow: "hidden",
-                  display: "grid", gridTemplateColumns: `repeat(${terms.length}, 1fr)` 
+                  display: "grid", gridTemplateColumns: `repeat(${terms.length}, 1fr)`
                 }}>
                   {terms.map((t, idx) => (
-                    <div 
-                      key={t.id || idx} 
-                      style={{ 
-                        padding: "10px 14px", 
+                    <div
+                      key={t.id || idx}
+                      style={{
+                        padding: "10px 14px",
                         background: idx % 2 === 0 ? "#fff" : C.paper,
                         borderRight: idx < terms.length - 1 ? `1px solid ${C.borderLight}` : "none",
                         textAlign: "center"

@@ -26,11 +26,35 @@ import { DEFAULT_MASTER_TEMPLATE_PATH } from './calulutSf9Generator.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const rawBackendRoot = path.resolve(__dirname, '../../../');
-const BACKEND_ROOT =
-  fs.existsSync(rawBackendRoot) && fs.realpathSync.native
-    ? fs.realpathSync.native(rawBackendRoot)
-    : rawBackendRoot;
+/**
+ * Universally resolve the backend project root directory across both
+ * development (tsx watch src/) and production (node dist/src/server.js).
+ */
+export function resolveBackendRoot(): string {
+  let cur = path.resolve(__dirname);
+  for (let i = 0; i < 6; i++) {
+    const pkgPath = path.join(cur, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        if (pkg.name === 'digiskwela-backend') {
+          return fs.existsSync(cur) && fs.realpathSync.native
+            ? fs.realpathSync.native(cur)
+            : cur;
+        }
+      } catch {}
+    }
+    const parent = path.dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  const fallback = path.resolve(__dirname, '../../../');
+  return fs.existsSync(fallback) && fs.realpathSync.native
+    ? fs.realpathSync.native(fallback)
+    : fallback;
+}
+
+export const BACKEND_ROOT = resolveBackendRoot();
 
 export const EXPECTED_MASTER_TEMPLATE_SHA256 =
   'df7745d5758ff60a9260e53904f49f2259de25478ba453307ea4fb2f5ab29c78';
@@ -135,8 +159,12 @@ export function getCandidateLibreOfficePaths(): string[] {
     path.join(BACKEND_ROOT, 'tools', 'libreoffice', 'program', 'soffice.exe'),
     'C:\\Program Files\\LibreOffice\\program\\soffice.bin',
     'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+    'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.bin',
+    'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
     '/usr/bin/soffice',
     '/usr/bin/libreoffice',
+    '/usr/local/bin/soffice',
+    '/Applications/LibreOffice.app/Contents/MacOS/soffice',
   ].filter((p): p is string => Boolean(p));
 }
 

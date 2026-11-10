@@ -21,16 +21,50 @@ import AdmZip from 'adm-zip';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/**
+ * Universally resolve the backend project root directory across both
+ * development (tsx in src/) and production (node in dist/).
+ */
+export function resolveBackendRoot(): string {
+  let cur = path.resolve(__dirname);
+  for (let i = 0; i < 6; i++) {
+    const pkgPath = path.join(cur, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        if (pkg.name === 'digiskwela-backend') {
+          return fs.existsSync(cur) && fs.realpathSync.native
+            ? fs.realpathSync.native(cur)
+            : cur;
+        }
+      } catch {}
+    }
+    const parent = path.dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  const fallback = path.resolve(__dirname, '../../../');
+  return fs.existsSync(fallback) && fs.realpathSync.native
+    ? fs.realpathSync.native(fallback)
+    : fallback;
+}
+
+export const BACKEND_ROOT = resolveBackendRoot();
+
 // Default master template location
-export const DEFAULT_MASTER_TEMPLATE_PATH = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'templates',
-  'sf9',
-  'master_template_sanitized.xlsx'
-);
+export function resolveMasterTemplatePath(): string {
+  const envPath = process.env.SF9_TEMPLATE_PATH?.trim();
+  if (envPath && fs.existsSync(envPath)) {
+    return envPath;
+  }
+  const rootTpl = path.join(BACKEND_ROOT, 'templates', 'sf9', 'master_template_sanitized.xlsx');
+  if (fs.existsSync(rootTpl)) {
+    return rootTpl;
+  }
+  return path.resolve(__dirname, '../../../templates/sf9/master_template_sanitized.xlsx');
+}
+
+export const DEFAULT_MASTER_TEMPLATE_PATH = resolveMasterTemplatePath();
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
 

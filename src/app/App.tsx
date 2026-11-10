@@ -210,7 +210,7 @@ export default function App() {
       return <ITAdminApp key="it-admin-app" onLogout={handleLogout} />;
     }
     if (role === "Registrar") {
-      return <RegistrarApp key="registrar-app" onLogout={handleLogout} />;
+      return <AdminApp key="admin-app" onLogout={handleLogout} />;
     }
     if (role === "Student") {
       return <StudentPortal key="student-portal-app" onLogout={handleLogout} />;

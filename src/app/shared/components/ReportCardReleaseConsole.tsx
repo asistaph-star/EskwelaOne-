@@ -308,6 +308,7 @@ export function ReportCardReleaseConsole({
             id: selectedStudentForViewer.studentId,
             name: selectedStudentForViewer.name,
             lrn: selectedStudentForViewer.lrn,
+            gender: selectedStudentForViewer.gender,
           },
           enrollment: {
             gradeLevel: selectedStudentForViewer.gradeLevel,

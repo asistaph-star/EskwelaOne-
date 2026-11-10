@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronLeft,
   Printer,
@@ -45,33 +45,50 @@ export function categorizeDiagnosticReasons(
 
   // 1. Truly Missing Demographics
   let demoItems: { label: string; ok: boolean; detail?: string }[];
+  const isGenderValid = (g?: string | null): boolean => {
+    if (!g) return false;
+    const trimmed = String(g).trim().toLowerCase();
+    return ['male', 'female', 'm', 'f'].includes(trimmed);
+  };
+  const isLrnValid = (lrn?: string | null): boolean => {
+    if (!lrn) return false;
+    return /^\d{12}$/.test(String(lrn).trim());
+  };
+
   if (prerequisiteEvaluation?.demographics) {
     const d = prerequisiteEvaluation.demographics;
+    const genderRecorded = isGenderValid(rawStudent.gender);
+    const validGender = Boolean(d.validGender && (rawStudent.gender !== undefined ? genderRecorded : true));
     demoItems = [
       {
         label: 'Learner Reference Number (LRN)',
-        ok: d.validLrn,
+        ok: Boolean(d.validLrn && (rawStudent.lrn ? isLrnValid(rawStudent.lrn) : true)),
         detail: rawStudent.lrn || (d.validLrn ? 'Verified 12-digit DepEd LRN' : 'Pending authoritative 12-digit DepEd LRN'),
       },
       {
         label: 'Authoritative Date of Birth',
-        ok: d.validBirthdate,
+        ok: Boolean(d.validBirthdate),
         detail: d.validBirthdate ? (d.age ? `Recorded (Age ${d.age})` : 'Recorded') : 'Missing in student demographic profile',
       },
       {
         label: 'Learner Gender / Sex',
-        ok: d.validGender,
-        detail: d.validGender ? (rawStudent.gender || 'Recorded') : 'Missing in student demographic profile',
+        ok: validGender,
+        detail: validGender
+          ? (rawStudent.gender ? (rawStudent.gender.toLowerCase().startsWith('f') ? 'Female' : 'Male') : 'Recorded')
+          : (rawStudent.gender ? `Invalid value: "${rawStudent.gender}" (Must be Male or Female)` : 'Missing in student demographic profile'),
       },
     ];
   } else {
     const hasBirthdateBlock = reasonsText.includes('MISSING_AUTHORITATIVE_BIRTHDATE');
     const hasGenderBlock = reasonsText.includes('MISSING_AUTHORITATIVE_GENDER');
     const hasLrnBlock = reasonsText.includes('MISSING_AUTHORITATIVE_LRN');
+    const genderRecorded = isGenderValid(rawStudent.gender);
+    const validGender = !hasGenderBlock && (rawStudent.gender !== undefined ? genderRecorded : !hasGenderBlock);
+
     demoItems = [
       {
         label: 'Learner Reference Number (LRN)',
-        ok: !hasLrnBlock && !!(rawStudent.lrn && /^\d{12}$/.test(rawStudent.lrn)),
+        ok: !hasLrnBlock && isLrnValid(rawStudent.lrn),
         detail: rawStudent.lrn || 'Pending authoritative 12-digit DepEd LRN',
       },
       {
@@ -81,8 +98,10 @@ export function categorizeDiagnosticReasons(
       },
       {
         label: 'Learner Gender / Sex',
-        ok: !hasGenderBlock,
-        detail: hasGenderBlock ? 'Missing in student demographic profile' : (rawStudent.gender || 'Recorded'),
+        ok: Boolean(validGender),
+        detail: validGender
+          ? (rawStudent.gender ? (rawStudent.gender.toLowerCase().startsWith('f') ? 'Female' : 'Male') : 'Recorded')
+          : (rawStudent.gender ? `Invalid value: "${rawStudent.gender}" (Must be Male or Female)` : 'Missing in student demographic profile'),
       },
     ];
   }
@@ -419,11 +438,27 @@ export function AuthenticCalulutSf9Viewer({
       : rawEnrollment.section || 'Assigned Section';
   const schoolYear = studentData?.school?.academicYear || '2026-2027';
 
+  // Request counter to cancel stale in-flight fetches and avoid race condition flashes
+  const requestIdRef = useRef<number>(0);
+  const currentBlobUrlRef = useRef<string | null>(null);
+
+  // Clean up object URLs when unmounting
+  useEffect(() => {
+    return () => {
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
+        currentBlobUrlRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setActiveMode(initialMode);
   }, [initialMode]);
 
   const loadDocument = useCallback(async () => {
+    const thisRequestId = ++requestIdRef.current;
+
     setLoading(true);
     setGateReason(null);
     setBlockingReasons([]);
@@ -431,13 +466,10 @@ export function AuthenticCalulutSf9Viewer({
     setPrerequisiteEvaluation(null);
     setRenderError(null);
 
-    let currentObjectUrl: string | null = null;
-
     try {
       if (activeMode === 'student') {
         if (!studentId) {
-          setGateReason('No enrolled student identifier was provided to retrieve academic records.');
-          setLoading(false);
+          // Awaiting learner record from parent component; maintain clean loading state
           return;
         }
 
@@ -453,59 +485,97 @@ export function AuthenticCalulutSf9Viewer({
           credentials: 'include',
         });
 
+        if (thisRequestId !== requestIdRef.current) return;
+
         if (!pdfResp.ok) {
           const errJson = await pdfResp.json().catch(() => null);
-          const rawList: string[] =
-            errJson?.error?.details?.blockingReasons ||
-            errJson?.details?.blockingReasons ||
-            errJson?.error?.blockingReasons ||
-            errJson?.blockingReasons ||
-            [];
-          const subjEval =
-            errJson?.error?.details?.subjectEvaluation ||
-            errJson?.details?.subjectEvaluation ||
-            null;
-          const prereqEval =
-            errJson?.error?.details?.prerequisiteEvaluation ||
-            errJson?.details?.prerequisiteEvaluation ||
-            null;
+          const errCode = errJson?.error?.code || errJson?.code;
           const msg =
             errJson?.error?.message ||
             errJson?.message ||
-            (docMode === 'OFFICIAL'
-              ? 'Official SF9 report card cannot be issued until all prerequisite term grades, verified calendar attendance, adviser comments, and institutional signatories are completed.'
-              : 'Draft SF9 report card cannot be generated until learner demographics and term gradebooks are encoded.');
+            '';
 
-          let parsedReasons: string[] = rawList;
-          if (parsedReasons.length === 0 && msg.includes(':')) {
-            const parts = msg
-              .split(':')
-              .slice(1)
-              .join(':')
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean);
-            if (parts.length > 0) parsedReasons = parts;
+          // 1. Check for Server Infrastructure / Document Renderer Failure (HTTP 503 or RENDERER_UNAVAILABLE)
+          if (
+            pdfResp.status === 503 ||
+            errCode === 'RENDERER_UNAVAILABLE' ||
+            /LibreOffice|soffice/i.test(msg) ||
+            /RENDERER_UNAVAILABLE/i.test(errCode || '')
+          ) {
+            setRenderError(
+              msg ||
+                'Server Configuration Error: Headless LibreOffice Calc binary not found on the backend host. Cannot render Calulut SF9 workbook to PDF.'
+            );
+            setLoading(false);
+            return;
           }
 
-          setGateReason(msg);
-          setBlockingReasons(parsedReasons);
-          setSubjectEvaluation(subjEval);
-          setPrerequisiteEvaluation(prereqEval);
+          // 2. HTTP 422: Confirmed Student Academic Prerequisites Completeness Check (DepEd Order 015 Gating)
+          if (pdfResp.status === 422) {
+            const rawList: string[] =
+              errJson?.error?.details?.blockingReasons ||
+              errJson?.details?.blockingReasons ||
+              errJson?.error?.blockingReasons ||
+              errJson?.blockingReasons ||
+              [];
+            const subjEval =
+              errJson?.error?.details?.subjectEvaluation ||
+              errJson?.details?.subjectEvaluation ||
+              null;
+            const prereqEval =
+              errJson?.error?.details?.prerequisiteEvaluation ||
+              errJson?.details?.prerequisiteEvaluation ||
+              null;
+            const gateMsg =
+              msg ||
+              (docMode === 'OFFICIAL'
+                ? 'Official SF9 report card cannot be issued until all prerequisite term grades, verified calendar attendance, adviser comments, and institutional signatories are completed.'
+                : 'Draft SF9 report card cannot be generated until learner demographics and term gradebooks are encoded.');
+
+            let parsedReasons: string[] = rawList;
+            if (parsedReasons.length === 0 && gateMsg.includes(':')) {
+              const parts = gateMsg
+                .split(':')
+                .slice(1)
+                .join(':')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+              if (parts.length > 0) parsedReasons = parts;
+            }
+
+            setGateReason(gateMsg);
+            setBlockingReasons(parsedReasons);
+            setSubjectEvaluation(subjEval);
+            setPrerequisiteEvaluation(prereqEval);
+            setLoading(false);
+            return;
+          }
+
+          // 3. Any other HTTP error (e.g. 404, 500) -> general render error
+          setRenderError(msg || `Failed to generate SF9 report card (HTTP ${pdfResp.status}).`);
           setLoading(false);
           return;
         }
 
         const readyHeader = pdfResp.headers.get('X-Sf9-Official-Ready');
+        if (thisRequestId !== requestIdRef.current) return;
         setIsOfficialReady(readyHeader === 'true');
 
         const pdfBlob = await pdfResp.blob();
-        currentObjectUrl = URL.createObjectURL(pdfBlob);
-        setPdfBlobUrl(currentObjectUrl);
+        if (thisRequestId !== requestIdRef.current) return;
+
+        if (currentBlobUrlRef.current) {
+          URL.revokeObjectURL(currentBlobUrlRef.current);
+        }
+        const nextObjectUrl = URL.createObjectURL(pdfBlob);
+        currentBlobUrlRef.current = nextObjectUrl;
+        setPdfBlobUrl(nextObjectUrl);
         setLoading(false);
 
         apiClient.get<any>(`/academic/report-card/${encodeURIComponent(studentId)}/released-sf9`)
           .then((res: any) => {
+            if (thisRequestId !== requestIdRef.current) return;
             if (res?.data?.released) setIsReleased(true);
             else setIsReleased(false);
           })
@@ -528,6 +598,8 @@ export function AuthenticCalulutSf9Viewer({
         }),
       ]);
 
+      if (thisRequestId !== requestIdRef.current) return;
+
       if (!pdfResp.ok) {
         const errJson = await pdfResp.json().catch(() => null);
         throw new Error(
@@ -537,22 +609,25 @@ export function AuthenticCalulutSf9Viewer({
       }
 
       const pdfBlob = await pdfResp.blob();
-      currentObjectUrl = URL.createObjectURL(pdfBlob);
+      if (thisRequestId !== requestIdRef.current) return;
+
+      if (currentBlobUrlRef.current) {
+        URL.revokeObjectURL(currentBlobUrlRef.current);
+      }
+      const nextObjectUrl = URL.createObjectURL(pdfBlob);
+      currentBlobUrlRef.current = nextObjectUrl;
       setMeta(metaRes?.payload ? metaRes : metaRes?.data || metaRes);
-      setPdfBlobUrl(currentObjectUrl);
+      setPdfBlobUrl(nextObjectUrl);
       setLoading(false);
     } catch (err: any) {
+      if (thisRequestId !== requestIdRef.current) return;
       setRenderError(err?.message || 'Unable to load the workbook-rendered SF9 document.');
       setLoading(false);
     }
   }, [activeMode, docMode, studentId, selectedReleaseTerm]);
 
   useEffect(() => {
-    let active = true;
     loadDocument();
-    return () => {
-      active = false;
-    };
   }, [loadDocument]);
 
   // Fetch comments when drawer opens
@@ -758,11 +833,13 @@ export function AuthenticCalulutSf9Viewer({
         }}
       >
         <Loader2 className="animate-spin" size={32} style={{ marginBottom: 14, color: '#8B1E1E' }} />
-        <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-          Rendering Authentic Calulut SF9 Workbook (`SF9 - GRADE 4-10`)...
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+          Loading SF9 report card…
         </div>
         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-          {docMode === 'DRAFT'
+          {activeMode === 'qa-preview'
+            ? 'Generating synthetic verification SF9 report card...'
+            : docMode === 'DRAFT'
             ? 'Populating draft grades, attendance, and adviser comments into master template'
             : 'Enforcing release gate conditions and generating official sealed document'}
         </div>
@@ -770,8 +847,8 @@ export function AuthenticCalulutSf9Viewer({
     );
   }
 
-  // Diagnostic Gating Card for Student Mode when conditions are not yet met
-  if (activeMode === 'student' && gateReason) {
+  // Diagnostic Gating Card for Student Mode ONLY when HTTP 422 prerequisite failure is confirmed
+  if (activeMode === 'student' && gateReason && !pdfBlobUrl) {
     return (
       <div
         style={{
@@ -949,10 +1026,10 @@ export function AuthenticCalulutSf9Viewer({
               return (
                 <>
                   <div style={{ fontSize: 13, color: '#334155', lineHeight: 1.6, marginBottom: 18 }}>
-                    Under <strong>DepEd Order No. 015, s. 2026</strong> (Implementing Guidelines on Assessment and Grading for the Three-Term Trimester Academic Calendar), the official sealed School Form 9 (Form 138) requires complete, verified academic, attendance, demographic, and signatory records across all three terms (T1, T2, T3).
+                    Under <strong>DepEd Order No. 015, s. 2026</strong> (Classroom Assessment and Grading) in conjunction with <strong>DepEd Order No. 009, s. 2026</strong> (Three-Term School Calendar and Attendance Guidelines), official issuance of School Form 9 (Form 138) requires complete, verified quarterly/term gradebooks, finalized SF2 monthly attendance summaries, and authorized institutional signatories across all three terms (T1, T2, T3).
                     {docMode === 'DRAFT' && (
                       <div style={{ marginTop: 6, fontSize: 12, color: '#64748b' }}>
-                        In accordance with DepEd policy, draft preview generation requires student demographic and term gradebook records to be encoded. Incomplete records cannot generate a partial report card.
+                        In accordance with DepEd policy, draft preview generation requires student demographic records and active term gradebook scores to be encoded. Incomplete records cannot generate a partial report card.
                       </div>
                     )}
                   </div>
@@ -1111,11 +1188,33 @@ export function AuthenticCalulutSf9Viewer({
       >
         <AlertTriangle size={36} color="#dc2626" style={{ marginBottom: 12 }} />
         <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>
-          {renderError ? 'Document Rendering Error' : 'Preview Unavailable'}
+          {/LibreOffice|soffice/i.test(renderError || '')
+            ? 'Server Infrastructure Configuration Error'
+            : renderError
+            ? 'Document Rendering Error'
+            : 'Preview Unavailable'}
         </div>
-        <div style={{ fontSize: 13, color: '#475569', maxWidth: 520, textAlign: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: '#475569', maxWidth: 560, textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
           {renderError || gateReason || 'The requested SF9 document could not be rendered at this time.'}
         </div>
+        {/LibreOffice|soffice/i.test(renderError || '') && (
+          <div
+            style={{
+              maxWidth: 560,
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 6,
+              padding: '10px 14px',
+              fontSize: 12,
+              color: '#991b1b',
+              marginBottom: 16,
+              textAlign: 'left',
+              lineHeight: 1.4,
+            }}
+          >
+            <strong>Server Deployment Notice:</strong> The central DigiSkwela backend server requires headless LibreOffice Calc (<code>soffice</code>) to compile official Calulut SF9 workbooks to PDF. This is a server host configuration requirement, not an issue with the student&apos;s academic records.
+          </div>
+        )}
         <button
           onClick={onBack}
           style={{

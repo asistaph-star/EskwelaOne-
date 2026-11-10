@@ -28,7 +28,7 @@ interface SchoolSettingsContextType {
 const SchoolSettingsContext = createContext<SchoolSettingsContextType>({
   settings: GENERIC_DEFAULT_SETTINGS,
   isLoading: false,
-  refreshSettings: async () => {},
+  refreshSettings: async () => { },
   updateSettings: async () => GENERIC_DEFAULT_SETTINGS,
   resetSettings: async () => GENERIC_DEFAULT_SETTINGS,
 });

@@ -16,10 +16,10 @@ import { apiClient, resolveBackendUrl } from '../../../api/client';
 const LEAVE_TYPES = ['Sick Leave', 'Vacation Leave', 'Emergency Leave', 'Maternity / Paternity Leave', 'Service Incentive Leave'];
 
 const BALANCE = [
-  { type: 'Sick Leave',       icon: Heart,    color: C.red,   bg: C.redBg },
-  { type: 'Vacation Leave',   icon: Briefcase, color: C.m700,  bg: C.m100 },
-  { type: 'Emergency Leave',  icon: Clock,    color: C.amber, bg: C.amberBg },
-  { type: 'Special Privilege',icon: Calendar, color: '#6366f1', bg: '#ede9fe' },
+  { type: 'Sick Leave', icon: Heart, color: C.red, bg: C.redBg },
+  { type: 'Vacation Leave', icon: Briefcase, color: C.m700, bg: C.m100 },
+  { type: 'Emergency Leave', icon: Clock, color: C.amber, bg: C.amberBg },
+  { type: 'Special Privilege', icon: Calendar, color: '#6366f1', bg: '#ede9fe' },
 ];
 
 function statusColor(s: 'Pending' | 'Approved' | 'Rejected') {
@@ -160,7 +160,7 @@ export function TLeaveScreen() {
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: C.t1, fontFamily: "'Fraunces',serif" }}>Request History</span>
           <div style={{ display: 'flex', gap: 4 }}>
-            {(['All','Pending','Approved','Rejected'] as const).map(f => (
+            {(['All', 'Pending', 'Approved', 'Rejected'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: filter === f ? `1.5px solid ${C.m700}` : `1px solid ${C.borderMed}`, background: filter === f ? C.m700 : '#fff', color: filter === f ? '#fff' : C.t2, transition: 'all 0.12s' }}>
                 {f}

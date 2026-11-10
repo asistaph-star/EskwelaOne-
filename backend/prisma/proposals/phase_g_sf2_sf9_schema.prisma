@@ -1,0 +1,1194 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto]
+}
+
+model User {
+  id                             String                @id @db.VarChar(36)
+  school_id                      String                @unique @default(cuid()) @db.VarChar(100)
+  email                          String?               @unique @db.VarChar(255)
+  password_hash                  String                @db.VarChar(255)
+  first_name                     String                @db.VarChar(100)
+  last_name                      String                @db.VarChar(100)
+  middle_name                    String?               @db.VarChar(100)
+  status                         String                @default("active") @db.VarChar(20)
+  created_at                     DateTime              @default(now())
+  updated_at                     DateTime              @updatedAt
+  must_change_password           Boolean               @default(false)
+  announcements                  Announcement[]
+  audit_logs                     AuditLog[]
+  ai_audit_logs                  AIAuditLog[]
+  behaviorLogs                   BehaviorLog[]
+  clinic_referrals_recorded      ClinicReferral[]
+  document_requests_approved     DocumentRequest[]     @relation("PrincipalApprover")
+  documents_uploaded             Document[]
+  events                         Event[]
+  grade_entries_created          grade_entries[]
+  guidance_records_counseled     GuidanceRecord[]
+  inventoryUpdates               InventoryUpdate[]
+  leave_requests_approved        LeaveRequest[]        @relation("LeaveApprover")
+  leave_requests_made            LeaveRequest[]        @relation("LeaveRequester")
+  received_messages              Message[]             @relation("MessageReceiver")
+  sent_messages                  Message[]             @relation("MessageSender")
+  migration_quarantines_resolved MigrationQuarantine[]
+  notifications                  Notification[]
+  staff                          Staff?
+  student                        Student?
+  teacher                        Teacher?
+  user_roles                     UserRole[]
+  campus_media                   CampusMedia[]
+  faculty_attendance_corrections FacultyAttendance[]   @relation("FacultyAttendanceCorrections")
+  school_settings_updated        SchoolSettings[]      @relation("SchoolSettingsUpdater")
+
+  // Phase G: Official Calendar, Attendance, Comments, Grade Publication & SF9 Issuance relations
+  calendar_months_reviewed       SchoolCalendarMonth[]      @relation("CalendarMonthReviewer")
+  calendar_months_finalized      SchoolCalendarMonth[]      @relation("CalendarMonthFinalizer")
+  calendar_months_reopened       SchoolCalendarMonth[]      @relation("CalendarMonthReopener")
+  calendar_days_recorded         SchoolCalendarDay[]        @relation("CalendarDayRecorder")
+  calendar_days_updated          SchoolCalendarDay[]        @relation("CalendarDayUpdater")
+  calendar_days_approved         SchoolCalendarDay[]        @relation("CalendarDayApprover")
+  section_exceptions_recorded    SectionCalendarException[] @relation("SectionExceptionRecorder")
+  section_exceptions_approved    SectionCalendarException[] @relation("SectionExceptionApprover")
+  official_att_recorded          OfficialDailyAttendance[]  @relation("OfficialAttRecorder")
+  official_att_updated           OfficialDailyAttendance[]  @relation("OfficialAttUpdater")
+  official_att_verified          OfficialDailyAttendance[]  @relation("OfficialAttVerifier")
+  adviser_comments_recorded      Sf9AdviserComment[]        @relation("AdviserCommentRecorder")
+  adviser_comments_updated       Sf9AdviserComment[]        @relation("AdviserCommentUpdater")
+  adviser_comments_published     Sf9AdviserComment[]        @relation("AdviserCommentPublisher")
+  grades_published               Grade[]                    @relation("GradePublisher")
+  sf9_issuances_issued           Sf9OfficialIssuance[]      @relation("Sf9IssuanceIssuer")
+
+  @@map("users")
+}
+
+model Role {
+  id               String           @id @db.VarChar(36)
+  name             String           @unique @db.VarChar(50)
+  role_permissions RolePermission[]
+  user_roles       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id               String           @id @db.VarChar(36)
+  key              String           @unique @db.VarChar(100)
+  role_permissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+  permission    Permission @relation(fields: [permission_id], references: [id])
+  role          Role       @relation(fields: [role_id], references: [id])
+
+  @@id([role_id, permission_id])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  user_id     String
+  role_id     String
+  assigned_at DateTime @default(now())
+  role        Role     @relation(fields: [role_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
+
+  @@id([user_id, role_id])
+  @@map("user_roles")
+}
+
+model Student {
+  id                        String                    @id(map: "student_profiles_pkey") @db.VarChar(36)
+  user_id                   String                    @unique(map: "student_profiles_user_id_key") @db.VarChar(36)
+  student_number            String?                   @unique(map: "student_profiles_student_number_key") @db.VarChar(100)
+  /// @encrypted?mode=strict
+  lrn                       String                    @unique(map: "student_profiles_lrn_key")
+  grade_level               Int
+  date_of_birth             DateTime?
+  gender                    String?                   @db.VarChar(10)
+  /// @encrypted?mode=strict
+  guardian_phone            String?
+  /// @encrypted?mode=strict
+  guardian_email            String?
+  /// @encrypted?mode=strict
+  blood_type                String?
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime                  @updatedAt
+  current_section_id        String?                   @db.VarChar(36)
+  city                      String?                   @db.VarChar(100)
+  guardian_first_name       String?                   @db.VarChar(100)
+  guardian_last_name        String?                   @db.VarChar(100)
+  state_province            String?                   @db.VarChar(100)
+  street                    String?                   @db.VarChar(255)
+  zip_code                  String?                   @db.VarChar(20)
+  /// @encrypted?mode=strict
+  allergies                 String?
+  /// @encrypted?mode=strict
+  medical_conditions        String?
+  /// @encryption:hash(lrn)
+  lrn_hash                  String?                   @unique
+  appointments              Appointment[]
+  behavior_logs             BehaviorLog[]
+  clinic_referrals          ClinicReferral[]
+  documentRequests          DocumentRequest[]
+  enrollments               Enrollment[]
+  excuseLetters             ExcuseLetter[]
+  gate_attendance           GateAttendance[]
+  grades                    Grade[]
+  guidance_records          GuidanceRecord[]
+  official_daily_attendance OfficialDailyAttendance[]
+  sf9_adviser_comments      Sf9AdviserComment[]
+  sf9_issuances             Sf9OfficialIssuance[]
+  user                      User                      @relation(fields: [user_id], references: [id], map: "student_profiles_user_id_fkey")
+  current_section           Section?                  @relation(fields: [current_section_id], references: [id], onDelete: Restrict)
+
+  @@map("students")
+}
+
+model Teacher {
+  id                  String                     @id(map: "teacher_profiles_pkey") @db.VarChar(36)
+  user_id             String                     @unique(map: "teacher_profiles_user_id_key") @db.VarChar(36)
+  employee_id         String                     @unique(map: "teacher_profiles_employee_id_key") @db.VarChar(50)
+  department          String?                    @db.VarChar(100)
+  position            String?                    @db.VarChar(100)
+  specialization      String?                    @db.VarChar(200)
+  date_hired          DateTime?
+  created_at          DateTime                   @default(now())
+  updated_at          DateTime                   @updatedAt
+  appointments        Appointment[]
+  documentRequests    DocumentRequest[]
+  excuseLetters       ExcuseLetter[]
+  teacherRankings     TeacherRanking[]
+  assignments         TeacherSubjectAssignment[]
+  faculty_attendances FacultyAttendance[]
+  scan_credentials    TeacherScanCredential[]
+  advised_sections    Section[]                  @relation("SectionAdviser")
+  sf9_issuances       Sf9OfficialIssuance[]      @relation("Sf9IssuanceAdviser")
+  user                User                       @relation(fields: [user_id], references: [id], map: "teacher_profiles_user_id_fkey")
+
+  @@map("teachers")
+}
+
+model TeacherScanCredential {
+  id              String   @id @db.VarChar(36)
+  teacher_id      String   @db.VarChar(36)
+  scan_identifier String   @unique(map: "teacher_scan_credentials_identifier_key") @db.VarChar(100)
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  teacher         Teacher  @relation(fields: [teacher_id], references: [id], onDelete: Cascade)
+
+  @@index([scan_identifier, is_active], map: "teacher_scan_credentials_lookup_idx")
+  @@map("teacher_scan_credentials")
+}
+
+model Staff {
+  id           String        @id(map: "staff_profiles_pkey") @db.VarChar(36)
+  user_id      String        @unique(map: "staff_profiles_user_id_key") @db.VarChar(36)
+  employee_id  String        @unique(map: "staff_profiles_employee_id_key") @db.VarChar(50)
+  department   String?       @db.VarChar(100)
+  position     String?       @db.VarChar(100)
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  appointments Appointment[]
+  user         User          @relation(fields: [user_id], references: [id], map: "staff_profiles_user_id_fkey")
+
+  @@map("staff")
+}
+
+model AcademicYear {
+  id                         String                     @id @db.VarChar(36)
+  name                       String                     @unique @db.VarChar(50)
+  start_date                 DateTime
+  end_date                   DateTime
+  is_current                 Boolean                    @default(false)
+  created_at                 DateTime                   @default(now())
+  updated_at                 DateTime                   @updatedAt
+  target_enrollment          Int?
+  school_head_name_snapshot  String?                    @db.VarChar(150)
+  school_head_title_snapshot String?                    @db.VarChar(100)
+  enrollments                Enrollment[]
+  grades                     Grade[]
+  sections                   Section[]
+  teacherRankings            TeacherRanking[]
+  assignments                TeacherSubjectAssignment[]
+  terms                      Term[]
+  calendar_months            SchoolCalendarMonth[]
+  calendar_days              SchoolCalendarDay[]
+  section_exceptions         SectionCalendarException[]
+  official_daily_attendance  OfficialDailyAttendance[]
+  sf9_adviser_comments       Sf9AdviserComment[]
+  sf9_issuances              Sf9OfficialIssuance[]
+
+  @@map("academic_years")
+}
+
+model Term {
+  id               String       @id @db.VarChar(36)
+  academic_year_id String       @db.VarChar(36)
+  name             String       @db.VarChar(50)
+  start_date       DateTime?
+  end_date         DateTime?
+  created_at       DateTime     @default(now())
+  updated_at       DateTime     @updatedAt
+  key              TermKey
+  gradebooks       gradebooks[]
+  academic_year    AcademicYear @relation(fields: [academic_year_id], references: [id])
+
+  @@unique([academic_year_id, key])
+  @@map("terms")
+}
+
+model Subject {
+  id          String                     @id @db.VarChar(36)
+  code        String                     @unique @db.VarChar(20)
+  name        String                     @db.VarChar(100)
+  created_at  DateTime                   @default(now())
+  updated_at  DateTime                   @updatedAt
+  grades      Grade[]
+  assignments TeacherSubjectAssignment[]
+
+  @@map("subjects")
+}
+
+model Section {
+  id                        String                     @id @db.VarChar(36)
+  academic_year_id          String                     @db.VarChar(36)
+  name                      String                     @db.VarChar(50)
+  grade_level               Int
+  adviser_teacher_id        String?                    @db.VarChar(36)
+  adviser_assigned_at       DateTime?
+  adviser_name_snapshot     String?                    @db.VarChar(150)
+  created_at                DateTime                   @default(now())
+  updated_at                DateTime                   @updatedAt
+  enrollments               Enrollment[]
+  academic_year             AcademicYear               @relation(fields: [academic_year_id], references: [id])
+  adviser_teacher           Teacher?                   @relation("SectionAdviser", fields: [adviser_teacher_id], references: [id], onDelete: Restrict)
+  students                  Student[]
+  assignments               TeacherSubjectAssignment[]
+  calendar_exceptions       SectionCalendarException[]
+  official_daily_attendance OfficialDailyAttendance[]
+  sf9_adviser_comments      Sf9AdviserComment[]
+  sf9_issuances             Sf9OfficialIssuance[]
+
+  @@unique([academic_year_id, name, grade_level])
+  // Composite key target so child tables can enforce (section_id, academic_year_id) consistency at DB level
+  @@unique([id, academic_year_id])
+  @@index([adviser_teacher_id])
+  @@map("sections")
+}
+
+model TeacherSubjectAssignment {
+  id                String            @id(map: "assignments_pkey") @db.VarChar(36)
+  academic_year_id  String            @db.VarChar(36)
+  teacher_id        String            @db.VarChar(36)
+  section_id        String            @db.VarChar(36)
+  subject_id        String            @db.VarChar(36)
+  days              String?           @db.VarChar(50)
+  start_time        String?           @db.VarChar(10)
+  end_time          String?           @db.VarChar(10)
+  room              String?           @db.VarChar(50)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  class_attendances ClassAttendance[]
+  gradebooks        gradebooks[]
+  academic_year     AcademicYear      @relation(fields: [academic_year_id], references: [id], map: "assignments_academic_year_id_fkey")
+  section           Section           @relation(fields: [section_id], references: [id], map: "assignments_section_id_fkey")
+  subject           Subject           @relation(fields: [subject_id], references: [id], map: "assignments_subject_id_fkey")
+  teacher           Teacher           @relation(fields: [teacher_id], references: [id], map: "assignments_teacher_id_fkey")
+
+  @@unique([academic_year_id, teacher_id, section_id, subject_id], map: "assignments_academic_year_id_teacher_id_section_id__key")
+  @@index([teacher_id, academic_year_id], map: "assignments_teacher_id_academic_year_id_idx")
+  @@map("teacher_subject_assignments")
+}
+
+model Enrollment {
+  id                        String                    @id(map: "student_enrollments_pkey") @db.VarChar(36)
+  academic_year_id          String                    @db.VarChar(36)
+  student_id                String                    @db.VarChar(36)
+  section_id                String                    @db.VarChar(36)
+  status                    String                    @db.VarChar(20)
+  effective_start_date      DateTime?                 @db.Date
+  effective_end_date        DateTime?                 @db.Date
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime                  @updatedAt
+  class_attendances         ClassAttendance[]
+  official_daily_attendance OfficialDailyAttendance[]
+  sf9_adviser_comments      Sf9AdviserComment[]
+  sf9_issuances             Sf9OfficialIssuance[]
+  academic_year             AcademicYear              @relation(fields: [academic_year_id], references: [id], map: "student_enrollments_academic_year_id_fkey")
+  // Preserves existing Prisma Client relation signature (fields: [section_id]) while SQL migration
+  // additionally enforces composite FK student_enrollments_section_ay_fkey (section_id, academic_year_id)
+  section                   Section                   @relation(fields: [section_id], references: [id], map: "student_enrollments_section_id_fkey")
+  student                   Student                   @relation(fields: [student_id], references: [id], map: "student_enrollments_student_id_fkey")
+  grade_entries             grade_entries[]
+
+  // Composite key target so OfficialDailyAttendance & Sf9OfficialIssuance can enforce
+  // (enrollment_id, student_id, section_id, academic_year_id) match at the PostgreSQL FK level
+  @@unique([id, student_id, section_id, academic_year_id])
+  @@index([academic_year_id, student_id], map: "student_enrollments_academic_year_id_student_id_idx")
+  @@index([section_id], map: "student_enrollments_section_id_idx")
+  @@map("enrollments")
+}
+
+model GateAttendance {
+  id         String    @id @db.VarChar(36)
+  student_id String    @db.VarChar(36)
+  date       DateTime  @db.Date
+  status     String    @db.VarChar(20)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  time_in    DateTime? @db.Time(3)
+  time_out   DateTime? @db.Time(3)
+  student    Student   @relation(fields: [student_id], references: [id])
+
+  @@unique([student_id, date])
+  @@map("gate_attendance")
+}
+
+model ClassAttendance {
+  id            String                   @id @db.VarChar(36)
+  date          DateTime                 @db.Date
+  status        String                   @db.VarChar(5)
+  remarks       String?
+  created_at    DateTime                 @default(now())
+  updated_at    DateTime                 @updatedAt
+  assignment_id String                   @db.VarChar(36)
+  enrollment_id String                   @db.VarChar(36)
+  assignment    TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id])
+  enrollment    Enrollment               @relation(fields: [enrollment_id], references: [id])
+
+  @@unique([assignment_id, enrollment_id, date])
+  @@map("class_attendance")
+}
+
+model Document {
+  id                      String                   @id @db.VarChar(36)
+  storage_key             String                   @db.VarChar(500)
+  filename                String                   @db.VarChar(255)
+  mime_type               String                   @db.VarChar(100)
+  size_bytes              Int
+  uploaded_by             String                   @db.VarChar(36)
+  created_at              DateTime                 @default(now())
+  document_requests       DocumentRequest[]        @relation("AttachedDocument")
+  uploader                User                     @relation(fields: [uploaded_by], references: [id])
+  excuseLetters           ExcuseLetter[]
+  teacherRankingDocuments TeacherRankingDocument[]
+  campus_media            CampusMedia?
+  sf9_official_issuances  Sf9OfficialIssuance[]    @relation("IssuedSf9PdfDocument")
+
+  @@map("documents")
+}
+
+model DocumentRequest {
+  id                      String    @id @db.VarChar(36)
+  student_id              String    @db.VarChar(36)
+  document_type           String    @db.VarChar(100)
+  purpose                 String
+  status                  String    @db.VarChar(30)
+  current_stage           Int       @default(1)
+  submitted_date          DateTime  @default(now())
+  teacher_id              String?   @db.VarChar(36)
+  teacher_approved_date   DateTime?
+  teacher_remarks         String?
+  principal_approved_date DateTime?
+  principal_remarks       String?
+  ready_date              DateTime?
+  attached_document_id    String?   @db.VarChar(36)
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+  principal_id            String?   @db.VarChar(36)
+  attached_document       Document? @relation("AttachedDocument", fields: [attached_document_id], references: [id], onDelete: Restrict)
+  principal               User?     @relation("PrincipalApprover", fields: [principal_id], references: [id], onDelete: Restrict)
+  student                 Student   @relation(fields: [student_id], references: [id])
+  teacher                 Teacher?  @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+
+  @@map("document_requests")
+}
+
+model ClinicReferral {
+  id             String    @id @db.VarChar(36)
+  student_id     String    @db.VarChar(36)
+  date           DateTime
+  blood_pressure String?   @db.VarChar(20)
+  heart_rate     String?   @db.VarChar(10)
+  /// @encrypted?mode=strict
+  notes          String?
+  recorded_by    String?   @db.VarChar(36)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  time           DateTime? @db.Time(3)
+  temperature    Float?
+  /// @encrypted?mode=strict
+  diagnosis      String?
+  /// @encrypted?mode=strict
+  medications    String?
+  /// @encrypted?mode=strict
+  symptoms       String?
+  /// @encrypted?mode=strict
+  treatments     String?
+  recorder       User?     @relation(fields: [recorded_by], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id], map: "clinic_referrals_student_id_fkey")
+
+  @@map("clinic_referrals")
+}
+
+model GuidanceRecord {
+  id             String    @id @db.VarChar(36)
+  student_id     String    @db.VarChar(36)
+  counselor_id   String?   @db.VarChar(36)
+  date           DateTime
+  type           String    @db.VarChar(50)
+  /// @encrypted?mode=strict
+  reason         String?
+  /// @encrypted?mode=strict
+  notes          String?
+  /// @encrypted?mode=strict
+  action_taken   String?
+  follow_up_date DateTime?
+  status         String    @default("Open") @db.VarChar(20)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  counselor      User?     @relation(fields: [counselor_id], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id])
+
+  @@map("guidance_records")
+}
+
+model BehaviorLog {
+  id          String   @id @db.VarChar(36)
+  student_id  String   @db.VarChar(36)
+  type        String   @db.VarChar(50)
+  date        DateTime
+  status      String   @db.VarChar(50)
+  note        String?
+  reported_by String?  @db.VarChar(36)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  reporter    User?    @relation(fields: [reported_by], references: [id], onDelete: Restrict)
+  student     Student  @relation(fields: [student_id], references: [id])
+
+  @@map("behavior_logs")
+}
+
+model Appointment {
+  id           String   @id @db.VarChar(36)
+  student_id   String   @db.VarChar(36)
+  parent_email String?  @db.VarChar(255)
+  teacher_id   String?  @db.VarChar(36)
+  date         DateTime
+  purpose      String
+  status       String   @default("Pending") @db.VarChar(20)
+  direction    String   @db.VarChar(30)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  time         DateTime @db.Time(3)
+  staff_id     String?  @db.VarChar(36)
+  staff        Staff?   @relation(fields: [staff_id], references: [id], onDelete: Restrict)
+  student      Student  @relation(fields: [student_id], references: [id])
+  teacher      Teacher? @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+
+  @@map("appointments")
+}
+
+model LeaveRequest {
+  id             String   @id @db.VarChar(36)
+  user_id        String   @db.VarChar(36)
+  type           String   @db.VarChar(50)
+  start_date     DateTime
+  end_date       DateTime
+  days           Int
+  reason         String
+  status         String   @default("Pending") @db.VarChar(20)
+  submitted_on   DateTime @default(now())
+  approver_note  String?
+  attachment_url String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  approver_id    String?  @db.VarChar(36)
+  approver       User?    @relation("LeaveApprover", fields: [approver_id], references: [id], onDelete: Restrict)
+  user           User     @relation("LeaveRequester", fields: [user_id], references: [id])
+
+  @@map("leave_requests")
+}
+
+model ExcuseLetter {
+  id             String    @id @db.VarChar(36)
+  student_id     String    @db.VarChar(36)
+  teacher_id     String    @db.VarChar(36)
+  reason         String
+  document_id    String?   @db.VarChar(36)
+  status         String    @default("Pending Review") @db.VarChar(30)
+  teacher_note   String?
+  submitted_date DateTime  @default(now())
+  reviewed_at    DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  end_date       DateTime  @db.Date
+  start_date     DateTime  @db.Date
+  document       Document? @relation(fields: [document_id], references: [id], onDelete: Restrict)
+  student        Student   @relation(fields: [student_id], references: [id])
+  teacher        Teacher   @relation(fields: [teacher_id], references: [id])
+
+  @@map("excuse_letters")
+}
+
+model EnrollmentApplication {
+  id           String   @id @db.VarChar(36)
+  type         String   @db.VarChar(30)
+  date_applied DateTime @default(now())
+  status       String   @default("Pending Review") @db.VarChar(30)
+  birth_cert   Boolean  @default(false)
+  form138      Boolean  @default(false)
+  good_moral   Boolean  @default(false)
+  medical      Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  grade_level  Int
+  first_name   String   @db.VarChar(100)
+  last_name    String   @db.VarChar(100)
+
+  @@map("enrollment_applications")
+}
+
+model Announcement {
+  id         String   @id @db.VarChar(36)
+  title      String   @db.VarChar(255)
+  body       String
+  audience   String   @db.VarChar(50)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  author_id  String   @db.VarChar(36)
+  author     User     @relation(fields: [author_id], references: [id])
+
+  @@map("announcements")
+}
+
+model Message {
+  id          String   @id @db.VarChar(36)
+  sender_id   String   @db.VarChar(36)
+  receiver_id String?  @db.VarChar(36)
+  content     String
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+  receiver    User?    @relation("MessageReceiver", fields: [receiver_id], references: [id], onDelete: Restrict)
+  sender      User     @relation("MessageSender", fields: [sender_id], references: [id])
+
+  @@index([sender_id])
+  @@index([receiver_id])
+  @@map("messages")
+}
+
+model Notification {
+  id           String   @id @db.VarChar(36)
+  recipient_id String   @db.VarChar(36)
+  title        String   @db.VarChar(255)
+  body         String
+  icon_type    String   @default("alert") @db.VarChar(20)
+  is_read      Boolean  @default(false)
+  created_at   DateTime @default(now())
+  recipient    User     @relation(fields: [recipient_id], references: [id])
+
+  @@index([recipient_id])
+  @@map("notifications")
+}
+
+model Event {
+  id            String    @id @db.VarChar(36)
+  title         String    @db.VarChar(255)
+  description   String?
+  date          DateTime
+  end_date      DateTime?
+  type          String    @db.VarChar(50)
+  audience      String?   @db.VarChar(50)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  created_by_id String    @db.VarChar(36)
+  creator       User      @relation(fields: [created_by_id], references: [id])
+
+  @@map("events")
+}
+
+model InventoryItem {
+  id            String            @id @db.VarChar(36)
+  name          String            @db.VarChar(200)
+  category      String            @db.VarChar(100)
+  description   String?
+  quantity      Int               @default(0)
+  unit          String            @db.VarChar(50)
+  supplier      String?           @db.VarChar(200)
+  purchase_date DateTime?
+  condition     String            @db.VarChar(50)
+  location      String?           @db.VarChar(200)
+  status        String            @default("Good") @db.VarChar(20)
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+  expiry_date   DateTime?
+  reorder_level Int?
+  updates       InventoryUpdate[]
+
+  @@map("inventory_items")
+}
+
+model InventoryUpdate {
+  id         String        @id @db.VarChar(36)
+  item_id    String        @db.VarChar(36)
+  action     String        @db.VarChar(100)
+  details    String
+  created_at DateTime      @default(now())
+  user_id    String        @db.VarChar(36)
+  item       InventoryItem @relation(fields: [item_id], references: [id])
+  user       User          @relation(fields: [user_id], references: [id])
+
+  @@index([item_id])
+  @@map("inventory_updates")
+}
+
+model AuditLog {
+  id              String   @id @db.VarChar(36)
+  actor_user_id   String?  @db.VarChar(36)
+  actor_school_id String?  @db.VarChar(100)
+  actor_role      String?  @db.VarChar(50)
+  action          String   @db.VarChar(100)
+  category        String?  @db.VarChar(50)
+  resource_type   String   @db.VarChar(50)
+  resource_id     String?  @db.VarChar(36)
+  target_label    String?  @db.VarChar(255)
+  result          String   @default("SUCCESS") @db.VarChar(20)
+  ip_address      String?  @db.VarChar(45)
+  user_agent      String?  @db.VarChar(255)
+  previous_state  Json?
+  new_state       Json?
+  reason          String?
+  correlation_id  String?  @db.VarChar(36)
+  created_at      DateTime @default(now())
+  actor           User?    @relation(fields: [actor_user_id], references: [id], onDelete: Restrict)
+
+  @@index([resource_type, resource_id])
+  @@index([actor_user_id])
+  @@index([created_at])
+  @@index([category])
+  @@index([action])
+  @@index([result])
+  @@map("audit_logs")
+}
+
+model MigrationQuarantine {
+  id                 String    @id @db.VarChar(36)
+  legacy_entity_type String    @db.VarChar(50)
+  legacy_id          String    @db.VarChar(100)
+  original_payload   Json
+  reason             String
+  detected_at        DateTime  @default(now())
+  resolution_status  String    @default("PENDING") @db.VarChar(20)
+  resolved_at        DateTime?
+  resolved_by        String?   @db.VarChar(36)
+  resolution_notes   String?
+  resolver           User?     @relation(fields: [resolved_by], references: [id], onDelete: Restrict)
+
+  @@index([legacy_entity_type, legacy_id])
+  @@map("migration_quarantines")
+}
+
+model grade_entries {
+  id                String            @id @db.VarChar(36)
+  column_id         String            @db.VarChar(36)
+  score             Float
+  created_at        DateTime          @default(now())
+  created_by        String            @db.VarChar(36)
+  is_superseded     Boolean           @default(false)
+  superseded_by_id  String?           @db.VarChar(36)
+  correction_reason String?
+  enrollment_id     String            @db.VarChar(36)
+  column            gradebook_columns @relation(fields: [column_id], references: [id])
+  creator           User              @relation(fields: [created_by], references: [id])
+  enrollment        Enrollment        @relation(fields: [enrollment_id], references: [id])
+  supersededBy      grade_entries?    @relation("SupersededGrades", fields: [superseded_by_id], references: [id])
+  supersedes        grade_entries[]   @relation("SupersededGrades")
+
+  @@index([column_id])
+  @@index([enrollment_id])
+}
+
+model gradebook_columns {
+  id           String          @id @db.VarChar(36)
+  gradebook_id String          @db.VarChar(36)
+  type         String          @db.VarChar(5)
+  label        String          @db.VarChar(50)
+  max_score    Float           @default(100)
+  sort_order   Int             @default(0)
+  created_at   DateTime        @default(now())
+  updated_at   DateTime
+  entries      grade_entries[]
+  gradebook    gradebooks      @relation(fields: [gradebook_id], references: [id])
+
+  @@index([gradebook_id])
+}
+
+model gradebooks {
+  id               String                   @id @db.VarChar(36)
+  term_id          String                   @db.VarChar(36)
+  version          Int                      @default(1)
+  status           String                   @default("Draft") @db.VarChar(20)
+  created_at       DateTime                 @default(now())
+  updated_at       DateTime
+  assignment_id    String                   @db.VarChar(36)
+  columns          gradebook_columns[]
+  published_grades Grade[]                  @relation("GradePublishedFromGradebook")
+  assignment       TeacherSubjectAssignment @relation(fields: [assignment_id], references: [id])
+  term             Term                     @relation(fields: [term_id], references: [id])
+
+  @@unique([assignment_id, term_id])
+}
+
+model Grade {
+  id                            String       @id @db.VarChar(36)
+  student_id                    String       @db.VarChar(36)
+  subject_id                    String       @db.VarChar(36)
+  term                          TermKey
+  written_work                  Float?
+  performance_task              Float?
+  term_assessment               Float?
+  term_grade                    Float?
+  // Phase G: Integer published term grade (60..100) to prevent floating-point drift
+  published_term_grade          Int?         @db.SmallInt
+  published_initial_grade       Decimal?     @db.Decimal(5, 2)
+  published_gradebook_id        String?      @db.VarChar(36)
+  published_version             Int?
+  published_at                  DateTime?
+  published_by_id               String?      @db.VarChar(36)
+  publication_correction_reason String?      @db.VarChar(500)
+  created_at                    DateTime     @default(now())
+  updated_at                    DateTime     @updatedAt
+  academic_year_id              String       @db.VarChar(36)
+  academic_year                 AcademicYear @relation(fields: [academic_year_id], references: [id])
+  student                       Student      @relation(fields: [student_id], references: [id])
+  subject                       Subject      @relation(fields: [subject_id], references: [id])
+  published_gradebook           gradebooks?  @relation("GradePublishedFromGradebook", fields: [published_gradebook_id], references: [id], onDelete: Restrict)
+  published_by                  User?        @relation("GradePublisher", fields: [published_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([student_id, subject_id, term, academic_year_id])
+  @@index([student_id])
+  @@index([subject_id])
+  @@index([published_gradebook_id])
+  @@map("grades")
+}
+
+model TeacherRanking {
+  id                   String                   @id @db.VarChar(36)
+  teacher_id           String                   @db.VarChar(36)
+  academic_year_id     String                   @db.VarChar(36)
+  current_position     String                   @db.VarChar(100)
+  target_position      String                   @db.VarChar(100)
+  total_score          Float                    @default(0)
+  status               String                   @default("Pending") @db.VarChar(50)
+  remarks              String?
+  assessment_info      String?
+  criteria_scores      Json                     @default("[]")
+  created_at           DateTime                 @default(now())
+  updated_at           DateTime                 @updatedAt
+  supporting_documents TeacherRankingDocument[]
+  academic_year        AcademicYear             @relation(fields: [academic_year_id], references: [id])
+  teacher              Teacher                  @relation(fields: [teacher_id], references: [id])
+
+  @@unique([teacher_id, academic_year_id, target_position])
+  @@map("teacher_rankings")
+}
+
+model TeacherRankingDocument {
+  ranking_id  String         @db.VarChar(36)
+  document_id String         @db.VarChar(36)
+  document    Document       @relation(fields: [document_id], references: [id])
+  ranking     TeacherRanking @relation(fields: [ranking_id], references: [id], onDelete: Cascade)
+
+  @@id([ranking_id, document_id])
+  @@map("teacher_ranking_documents")
+}
+
+model CampusMedia {
+  id            String   @id @db.VarChar(36)
+  title         String   @db.VarChar(255)
+  media_type    String   @db.VarChar(20)
+  is_active     Boolean  @default(true)
+  sort_order    Int      @default(0)
+  duration_ms   Int?
+  document_id   String   @unique @db.VarChar(36)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by_id String   @db.VarChar(36)
+
+  document Document @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [created_by_id], references: [id])
+
+  @@map("campus_media")
+}
+
+enum TermKey {
+  T1
+  T2
+  T3
+  T4
+}
+
+model FacultyAttendance {
+  id               String    @id @db.VarChar(36)
+  teacher_id       String    @db.VarChar(36)
+  date             DateTime  @db.Date
+  time_in          DateTime? @db.Timestamptz(3)
+  time_out         DateTime? @db.Timestamptz(3)
+  capture_source   String    @default("web_teacher") @db.VarChar(30)
+  override_status  String?   @db.VarChar(30)
+  override_remarks String?   @db.VarChar(255)
+  corrected_by_id  String?   @db.VarChar(36)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  teacher          Teacher   @relation(fields: [teacher_id], references: [id], onDelete: Restrict)
+  corrected_by     User?     @relation("FacultyAttendanceCorrections", fields: [corrected_by_id], references: [id], onDelete: SetNull)
+
+  @@unique([teacher_id, date], map: "faculty_attendance_teacher_id_date_key")
+  @@index([date], map: "faculty_attendance_date_idx")
+  @@index([teacher_id, date], map: "faculty_attendance_teacher_id_date_idx")
+  @@map("faculty_attendance")
+}
+
+model GateTerminal {
+  id            String   @id @db.VarChar(36)
+  terminal_name String   @db.VarChar(100)
+  terminal_type String   @default("student") @db.VarChar(20)
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([active], map: "gate_terminals_active_idx")
+  @@map("gate_terminals")
+}
+
+model AIAuditLog {
+  id              String   @id @db.VarChar(36)
+  trace_id        String   @db.VarChar(36)
+  user_id         String   @db.VarChar(36)
+  role            String   @db.VarChar(50)
+  portal          String   @db.VarChar(50)
+  scope_decision  String   @db.VarChar(50)
+  tools_requested Json     @default("[]")
+  tools_executed  Json     @default("[]")
+  status          String   @db.VarChar(50)
+  provider_mode   String   @db.VarChar(50)
+  latency_ms      Int
+  token_usage     Json?
+  created_at      DateTime @default(now())
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@index([trace_id], map: "ai_audit_logs_trace_id_idx")
+  @@index([user_id], map: "ai_audit_logs_user_id_idx")
+  @@index([created_at], map: "ai_audit_logs_created_at_idx")
+  @@index([portal], map: "ai_audit_logs_portal_idx")
+  @@map("ai_audit_logs")
+}
+
+model SchoolSettings {
+  id                   String   @id @default("default") @db.VarChar(36)
+  school_name          String   @default("Calulut Integrated School") @db.VarChar(255)
+  school_short_name    String   @default("CIS") @db.VarChar(50)
+  school_id            String?  @db.VarChar(20)
+  region               String?  @db.VarChar(100)
+  division             String?  @db.VarChar(150)
+  district             String?  @db.VarChar(150)
+  school_head_name     String?  @db.VarChar(150)
+  school_head_title    String?  @db.VarChar(100)
+  logo_url             String?  @db.VarChar(500)
+  favicon_url          String?  @db.VarChar(500)
+  login_background_url String?  @db.VarChar(500)
+  primary_color        String   @default("#0A192F") @db.VarChar(20)
+  secondary_color      String   @default("#1B3A6B") @db.VarChar(20)
+  accent_color         String   @default("#F5A623") @db.VarChar(20)
+  address              String?  @db.VarChar(255)
+  contact_email        String?  @db.VarChar(255)
+  contact_number       String?  @db.VarChar(50)
+  login_welcome_text   String?  @default("Education Shapes the Future") @db.VarChar(255)
+  footer_text          String?  @default("DigiSkwela · School Management System") @db.VarChar(255)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  updated_by_id        String?  @db.VarChar(36)
+  updated_by           User?    @relation("SchoolSettingsUpdater", fields: [updated_by_id], references: [id])
+
+  @@map("school_settings")
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PHASE G — OFFICIAL SF2 / SF9 CALENDAR, DAILY ATTENDANCE, COMMENTS & ISSUANCE
+// ═════════════════════════════════════════════════════════════════════════════
+
+enum Sf9MonthKey {
+  JUN
+  JUL
+  AUG
+  SEP
+  OCT
+  NOV
+  DEC
+  JAN
+  FEB
+  MAR
+  APR
+}
+
+enum CalendarMonthStatus {
+  DRAFT
+  REVIEWED
+  FINALIZED
+}
+
+enum CalendarDayType {
+  INSTRUCTIONAL
+  WEEKEND
+  REGULAR_HOLIDAY
+  SPECIAL_NON_WORKING_HOLIDAY
+  CLASS_SUSPENSION
+  MAKEUP_INSTRUCTIONAL
+  SCHOOL_ACTIVITY_NON_INSTRUCTIONAL
+}
+
+enum CalendarDayApprovalStatus {
+  DRAFT
+  APPROVED
+}
+
+enum OfficialAttendanceStatus {
+  P
+  A
+  L
+  E
+}
+
+enum OfficialAttendanceRecordStatus {
+  DRAFT
+  VERIFIED
+  INVALIDATED_NON_INSTRUCTIONAL
+}
+
+enum CommentPublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model SchoolCalendarMonth {
+  id                         String              @id @db.VarChar(36)
+  academic_year_id           String              @db.VarChar(36)
+  month_key                  Sf9MonthKey
+  calendar_year              Int
+  calendar_month             Int
+  status                     CalendarMonthStatus @default(DRAFT)
+  planned_instructional_days Int?
+  reviewed_by_id             String?             @db.VarChar(36)
+  reviewed_at                DateTime?
+  finalized_by_id            String?             @db.VarChar(36)
+  finalized_at               DateTime?
+  reopened_by_id             String?             @db.VarChar(36)
+  reopened_at                DateTime?
+  reopen_reason              String?             @db.VarChar(500)
+  created_at                 DateTime            @default(now())
+  updated_at                 DateTime            @updatedAt
+
+  academic_year              AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  reviewed_by                User?               @relation("CalendarMonthReviewer", fields: [reviewed_by_id], references: [id], onDelete: Restrict)
+  finalized_by               User?               @relation("CalendarMonthFinalizer", fields: [finalized_by_id], references: [id], onDelete: Restrict)
+  reopened_by                User?               @relation("CalendarMonthReopener", fields: [reopened_by_id], references: [id], onDelete: Restrict)
+  calendar_days              SchoolCalendarDay[]
+
+  @@unique([academic_year_id, month_key])
+  @@unique([academic_year_id, calendar_year, calendar_month])
+  // Composite key target so SchoolCalendarDay can enforce (calendar_month_id, academic_year_id) match at DB level
+  @@unique([id, academic_year_id])
+  @@index([academic_year_id, status])
+  @@map("school_calendar_months")
+}
+
+model SchoolCalendarDay {
+  id                  String                    @id @db.VarChar(36)
+  academic_year_id    String                    @db.VarChar(36)
+  calendar_month_id   String                    @db.VarChar(36)
+  date                DateTime                  @db.Date
+  day_type            CalendarDayType
+  is_instructional    Boolean                   @default(false)
+  description         String?                   @db.VarChar(255)
+  approval_status     CalendarDayApprovalStatus @default(DRAFT)
+  recorded_by_id      String                    @db.VarChar(36)
+  updated_by_id       String?                   @db.VarChar(36)
+  approved_by_id      String?                   @db.VarChar(36)
+  approved_at         DateTime?
+  correction_reason   String?                   @db.VarChar(500)
+  created_at          DateTime                  @default(now())
+  updated_at          DateTime                  @updatedAt
+
+  academic_year       AcademicYear              @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  // Enforces at DB level that calendar_month_id belongs to the exact same academic_year_id
+  calendar_month      SchoolCalendarMonth       @relation(fields: [calendar_month_id, academic_year_id], references: [id, academic_year_id], onDelete: Restrict)
+  recorded_by         User                      @relation("CalendarDayRecorder", fields: [recorded_by_id], references: [id], onDelete: Restrict)
+  updated_by          User?                     @relation("CalendarDayUpdater", fields: [updated_by_id], references: [id], onDelete: Restrict)
+  approved_by         User?                     @relation("CalendarDayApprover", fields: [approved_by_id], references: [id], onDelete: Restrict)
+  section_exceptions  SectionCalendarException[]
+  official_attendance OfficialDailyAttendance[]
+
+  @@unique([academic_year_id, date])
+  // Composite key target so child tables enforce (calendar_day_id, academic_year_id, date) match at DB level
+  @@unique([id, academic_year_id, date])
+  @@index([calendar_month_id, is_instructional, approval_status])
+  @@map("school_calendar_days")
+}
+
+model SectionCalendarException {
+  id                        String                    @id @db.VarChar(36)
+  academic_year_id          String                    @db.VarChar(36)
+  section_id                String                    @db.VarChar(36)
+  calendar_day_id           String                    @db.VarChar(36)
+  date                      DateTime                  @db.Date
+  override_day_type         CalendarDayType
+  override_is_instructional Boolean
+  reason                    String                    @db.VarChar(500)
+  approval_status           CalendarDayApprovalStatus @default(DRAFT)
+  recorded_by_id            String                    @db.VarChar(36)
+  approved_by_id            String?                   @db.VarChar(36)
+  approved_at               DateTime?
+  created_at                DateTime                  @default(now())
+  updated_at                DateTime                  @updatedAt
+
+  academic_year             AcademicYear              @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  // Enforces at DB level that section_id belongs to the exact same academic_year_id
+  section                   Section                   @relation(fields: [section_id, academic_year_id], references: [id, academic_year_id], onDelete: Restrict)
+  // Enforces at DB level that calendar_day_id belongs to the exact same academic_year_id and date
+  calendar_day              SchoolCalendarDay         @relation(fields: [calendar_day_id, academic_year_id, date], references: [id, academic_year_id, date], onDelete: Restrict)
+  recorded_by               User                      @relation("SectionExceptionRecorder", fields: [recorded_by_id], references: [id], onDelete: Restrict)
+  approved_by               User?                     @relation("SectionExceptionApprover", fields: [approved_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([section_id, calendar_day_id])
+  @@unique([academic_year_id, section_id, date])
+  @@index([calendar_day_id, approval_status])
+  @@map("section_calendar_exceptions")
+}
+
+model OfficialDailyAttendance {
+  id                String                         @id @db.VarChar(36)
+  academic_year_id  String                         @db.VarChar(36)
+  section_id        String                         @db.VarChar(36)
+  student_id        String                         @db.VarChar(36)
+  enrollment_id     String                         @db.VarChar(36)
+  calendar_day_id   String                         @db.VarChar(36)
+  date              DateTime                       @db.Date
+  status            OfficialAttendanceStatus
+  record_status     OfficialAttendanceRecordStatus @default(DRAFT)
+  tardy_type        String?                        @db.VarChar(30)
+  remarks           String?                        @db.VarChar(500)
+  correction_reason String?                        @db.VarChar(500)
+  recorded_by_id    String                         @db.VarChar(36)
+  updated_by_id     String?                        @db.VarChar(36)
+  verified_by_id    String?                        @db.VarChar(36)
+  verified_at       DateTime?
+  created_at        DateTime                       @default(now())
+  updated_at        DateTime                       @updatedAt
+
+  academic_year     AcademicYear                   @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  section           Section                        @relation(fields: [section_id, academic_year_id], references: [id, academic_year_id], onDelete: Restrict)
+  student           Student                        @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  // Composite FK enforces at DB level that enrollment_id matches student_id, section_id, and academic_year_id
+  enrollment        Enrollment                     @relation(fields: [enrollment_id, student_id, section_id, academic_year_id], references: [id, student_id, section_id, academic_year_id], onDelete: Restrict)
+  // Composite FK enforces at DB level that calendar_day_id matches academic_year_id and date
+  calendar_day      SchoolCalendarDay              @relation(fields: [calendar_day_id, academic_year_id, date], references: [id, academic_year_id, date], onDelete: Restrict)
+  recorded_by       User                           @relation("OfficialAttRecorder", fields: [recorded_by_id], references: [id], onDelete: Restrict)
+  updated_by        User?                          @relation("OfficialAttUpdater", fields: [updated_by_id], references: [id], onDelete: Restrict)
+  verified_by       User?                          @relation("OfficialAttVerifier", fields: [verified_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([enrollment_id, date])
+  @@unique([student_id, date])
+  @@unique([enrollment_id, calendar_day_id])
+  @@index([academic_year_id, section_id, date])
+  @@index([enrollment_id, record_status, date])
+  @@map("official_daily_attendance")
+}
+
+model Sf9AdviserComment {
+  id                String                   @id @db.VarChar(36)
+  enrollment_id     String                   @db.VarChar(36)
+  student_id        String                   @db.VarChar(36)
+  section_id        String                   @db.VarChar(36)
+  academic_year_id  String                   @db.VarChar(36)
+  term              TermKey
+  comment           String                   @db.Text
+  status            CommentPublicationStatus @default(DRAFT)
+  version           Int                      @default(1)
+  recorded_by_id    String                   @db.VarChar(36)
+  updated_by_id     String?                  @db.VarChar(36)
+  published_by_id   String?                  @db.VarChar(36)
+  published_at      DateTime?
+  correction_reason String?                  @db.VarChar(500)
+  created_at        DateTime                 @default(now())
+  updated_at        DateTime                 @updatedAt
+
+  // Composite FK enforces at DB level that enrollment_id matches student_id, section_id, and academic_year_id
+  enrollment        Enrollment               @relation(fields: [enrollment_id, student_id, section_id, academic_year_id], references: [id, student_id, section_id, academic_year_id], onDelete: Restrict)
+  student           Student                  @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  section           Section                  @relation(fields: [section_id, academic_year_id], references: [id, academic_year_id], onDelete: Restrict)
+  academic_year     AcademicYear             @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  recorded_by       User                     @relation("AdviserCommentRecorder", fields: [recorded_by_id], references: [id], onDelete: Restrict)
+  updated_by        User?                    @relation("AdviserCommentUpdater", fields: [updated_by_id], references: [id], onDelete: Restrict)
+  published_by      User?                    @relation("AdviserCommentPublisher", fields: [published_by_id], references: [id], onDelete: Restrict)
+
+  @@unique([enrollment_id, term])
+  @@index([enrollment_id, status])
+  @@index([student_id, academic_year_id, status])
+  @@index([section_id, academic_year_id, term, status])
+  @@map("sf9_adviser_comments")
+}
+
+model Sf9OfficialIssuance {
+  id                           String                @id @db.VarChar(36)
+  enrollment_id                String                @db.VarChar(36)
+  student_id                   String                @db.VarChar(36)
+  section_id                   String                @db.VarChar(36)
+  academic_year_id             String                @db.VarChar(36)
+  version                      Int                   @default(1)
+  is_current                   Boolean               @default(true)
+  /// @encrypted?mode=strict
+  frozen_payload_encrypted     String                @db.Text
+  /// @encrypted?mode=strict
+  calculated_summary_encrypted String                @db.Text
+  template_sha256              String                @db.VarChar(64)
+  xlsx_sha256                  String                @db.VarChar(64)
+  pdf_sha256                   String                @db.VarChar(64)
+  libreoffice_version          String                @db.VarChar(100)
+  issued_pdf_document_id       String?               @db.VarChar(36)
+  adviser_teacher_id           String                @db.VarChar(36)
+  adviser_name                 String                @db.VarChar(150)
+  school_head_name             String                @db.VarChar(150)
+  school_head_title            String                @db.VarChar(100)
+  issued_by_id                 String                @db.VarChar(36)
+  issued_at                    DateTime              @default(now())
+  superseded_by_id             String?               @db.VarChar(36)
+  correction_reason            String?               @db.VarChar(500)
+
+  // Composite FK enforces at DB level that enrollment_id matches student_id, section_id, and academic_year_id
+  enrollment                   Enrollment            @relation(fields: [enrollment_id, student_id, section_id, academic_year_id], references: [id, student_id, section_id, academic_year_id], onDelete: Restrict)
+  student                      Student               @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  section                      Section               @relation(fields: [section_id, academic_year_id], references: [id, academic_year_id], onDelete: Restrict)
+  academic_year                AcademicYear          @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  adviser_teacher              Teacher               @relation("Sf9IssuanceAdviser", fields: [adviser_teacher_id], references: [id], onDelete: Restrict)
+  issued_pdf_document          Document?             @relation("IssuedSf9PdfDocument", fields: [issued_pdf_document_id], references: [id], onDelete: Restrict)
+  issued_by                    User                  @relation("Sf9IssuanceIssuer", fields: [issued_by_id], references: [id], onDelete: Restrict)
+  superseded_by                Sf9OfficialIssuance?  @relation("SupersededSf9Issuance", fields: [superseded_by_id], references: [id], onDelete: Restrict)
+  supersedes                   Sf9OfficialIssuance[] @relation("SupersededSf9Issuance")
+
+  @@unique([enrollment_id, version])
+  @@index([enrollment_id, is_current])
+  @@index([student_id, academic_year_id, is_current])
+  @@map("sf9_official_issuances")
+}

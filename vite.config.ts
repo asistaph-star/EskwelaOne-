@@ -33,4 +33,20 @@ export default defineConfig({
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  // Backend sources and the bundled spreadsheet-rendering toolchain
+  // (backend/tools/libreoffice) are never imported by the frontend.
+  // Watching them crashes the dev server with EBUSY on locked binaries.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+    watch: {
+      ignored: ['**/backend/**'],
+    },
+  },
 })
