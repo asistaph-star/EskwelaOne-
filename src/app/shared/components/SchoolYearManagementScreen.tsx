@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { academicApi } from '../../../api/academic.api';
 import { StudentPromotionWorkspace } from './StudentPromotionWorkspace';
+import { StudentGradeVisibilityCard } from './StudentGradeVisibilityCard';
 
 export function formatGradebookStatus(status: string): string {
   switch (status) {
@@ -428,6 +429,12 @@ export function SchoolYearManagementScreen({ portal }: SchoolYearManagementScree
             </div>
 
           </div>
+
+          {/* Student Grade Visibility Controls */}
+          <StudentGradeVisibilityCard
+            academicYearId={data.academicYear?.id}
+            academicYearName={data.academicYear?.name}
+          />
 
           {/* Configured Academic Terms Schedule Table */}
           <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">

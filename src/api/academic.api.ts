@@ -16,6 +16,8 @@ export interface Term {
   label?: string;
   start_date: string;
   end_date: string;
+  is_grades_visible_to_students?: boolean;
+  isGradesVisible?: boolean;
 }
 
 export interface Subject {
@@ -96,6 +98,8 @@ export const academicApi = {
     apiClient.post<{ success: boolean; data: Term }>(`/academic/years/${yearId}/terms`, data),
   removeTerm: (yearId: string, termId: string) =>
     apiClient.delete<{ success: boolean; removedTerm: Term }>(`/academic/years/${yearId}/terms/${termId}`),
+  updateTermVisibility: (termId: string, isVisible: boolean) =>
+    apiClient.patch<{ success: boolean; data: any }>(`/academic/terms/${termId}/visibility`, { isVisible }),
   getSubjects: () => apiClient.get<Subject[]>('/academic/subjects'),
   getSections: (yearId: string) => apiClient.get<Section[]>(`/academic/years/${yearId}/sections`),
   getAllSections: (params?: { yearId?: string; gradeLevel?: number }) => {

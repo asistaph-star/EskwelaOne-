@@ -23,6 +23,7 @@ import { apiClient } from '../../../api/client';
 import { AuthenticCalulutSf9Viewer } from './AuthenticCalulutSf9Viewer';
 import { ModernConfirmModal } from './ModernConfirmModal';
 import { ModernToast, ToastMessage } from './ModernToast';
+import { StudentGradeVisibilityCard } from './StudentGradeVisibilityCard';
 
 export interface ReportCardReleaseConsoleProps {
   portal?: 'Principal' | 'Registrar' | 'Teacher' | 'Admin';
@@ -755,6 +756,14 @@ export function ReportCardReleaseConsole({
             <AlertTriangle size={18} />
             <span>{error}</span>
           </div>
+        )}
+
+        {/* Student Grade Visibility Control for Authorized Administration Roles */}
+        {(portal === 'Admin' || portal === 'Principal') && (
+          <StudentGradeVisibilityCard
+            className="flex-shrink-0"
+            academicYearName="SY 2026–2027"
+          />
         )}
 
         {/* ── Section Metric Cards Strip ── */}
