@@ -114,7 +114,6 @@ import { ClinicVisitsScreen } from "./teacher/clinic/ClinicVisitsScreen";
 import { AIToolsScreen } from "./teacher/ai-tools/AIToolsScreen";
 import { ProDevScreen } from "./teacher/pro-dev/ProDevScreen";
 import { CalendarScreen } from "./teacher/calendar/CalendarScreen";
-import { TemplateHubScreen } from "./teacher/templates/TemplateHubScreen";
 
 import { StubScreen } from "./shared/components/StubScreen";
 
@@ -136,7 +135,7 @@ import { useAppContext } from "./shared/AppContext";
 
 export default function App() {
   const { currentUser, setCurrentUser } = useAppContext();
-  const isUat = import.meta.env.VITE_IS_UAT === 'true' || (typeof window !== 'undefined' && window.location.port === '5174');
+  const isUat = import.meta.env.VITE_IS_UAT === 'true' || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('uat') === 'true');
 
   const uatBanner = isUat ? (
     <aside 

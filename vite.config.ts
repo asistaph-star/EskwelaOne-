@@ -38,10 +38,10 @@ export default defineConfig({
   // (backend/tools/libreoffice) are never imported by the frontend.
   // Watching them crashes the dev server with EBUSY on locked binaries.
   server: {
-    port: 5174,
+    port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:4001',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:4000',
         changeOrigin: true,
         secure: false,
       },

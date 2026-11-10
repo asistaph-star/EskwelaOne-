@@ -1559,7 +1559,7 @@ export function AuthenticCalulutSf9Viewer({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>
                 {activeMode === 'qa-preview'
-                  ? 'DELA CRUZ, JUAN SYNTHETIC — Grade 7 Agoncillo'
+                  ? 'DELA CRUZ, JUAN SYNTHETIC (TEST FIXTURE) — Grade 7 Agoncillo'
                   : `${learnerName} — ${gradeSection}`}
               </span>
 
@@ -1569,9 +1569,9 @@ export function AuthenticCalulutSf9Viewer({
                   style={{
                     fontSize: 9.5,
                     fontWeight: 800,
-                    color: '#166534',
-                    background: '#dcfce7',
-                    border: '1px solid #bbf7d0',
+                    color: '#0369a1',
+                    background: '#e0f2fe',
+                    border: '1px solid #bae6fd',
                     padding: '2px 8px',
                     borderRadius: 3,
                     textTransform: 'uppercase',
@@ -1580,7 +1580,7 @@ export function AuthenticCalulutSf9Viewer({
                     gap: 4,
                   }}
                 >
-                  <CheckCircle2 size={11} /> Synthetic Baseline Preview
+                  <CheckCircle2 size={11} /> QA Synthetic Fixture
                 </span>
               ) : docMode === 'DRAFT' ? (
                 <span
@@ -1621,7 +1621,7 @@ export function AuthenticCalulutSf9Viewer({
               )}
             </div>
             <div style={{ fontSize: 10, color: '#64748b' }}>
-              Source Workbook: <strong>SF9 7-Agoncillo (SY 2026-2027).xlsx</strong> · Sheet: <strong>SF9 - GRADE 4-10</strong> · LRN: <strong>{activeMode === 'qa-preview' ? '999999260001' : learnerLrn}</strong>
+              Source Workbook: <strong>SF9 7-Agoncillo (SY 2026-2027).xlsx</strong> · Sheet: <strong>SF9 - GRADE 4-10</strong> · LRN: <strong>{activeMode === 'qa-preview' ? '999999260001 (Synthetic Fixture)' : learnerLrn}</strong>
             </div>
           </div>
         </div>

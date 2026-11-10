@@ -49,19 +49,24 @@ export function StudentProfileScreen({ currentUser, setTab }: {
   const profile = detailedUser?.student || currentUser?.studentProfile || {};
   const user = detailedUser || currentUser || {};
 
-  const fullName = `${user?.first_name || user?.firstName || 'Juan'} ${user?.middle_name || user?.middleName ? (user?.middle_name || user?.middleName) + ' ' : ''}${user?.last_name || user?.lastName || 'Dela Cruz'}`.trim();
-  const lrn = profile?.lrn || currentUser?.lrn || currentUser?.schoolId || '123456789012';
-  const schoolId = user?.school_id || user?.schoolId || '2026-00001';
-  const sectionName = profile?.sectionName || profile?.current_section?.name || currentUser?.studentProfile?.sectionName || 'Rizal';
-  const gradeLevel = profile?.gradeLevel || profile?.grade_level || 10;
-  const adviserName = profile?.adviserName || profile?.current_section?.adviser_teacher?.user?.first_name 
-    ? `${profile?.current_section?.adviser_teacher?.user?.first_name} ${profile?.current_section?.adviser_teacher?.user?.last_name}`
-    : (currentUser?.studentProfile?.adviserName || 'Maria Clara');
+  const nameParts = [
+    user?.first_name || user?.firstName,
+    user?.middle_name || user?.middleName,
+    user?.last_name || user?.lastName
+  ].filter(Boolean);
+  const fullName = nameParts.length > 0 ? nameParts.join(' ') : (user?.name || 'Enrolled Student');
+  const lrn = profile?.lrn || currentUser?.lrn || currentUser?.schoolId || '—';
+  const schoolId = user?.school_id || user?.schoolId || '—';
+  const sectionName = profile?.sectionName || profile?.current_section?.name || currentUser?.studentProfile?.sectionName || '—';
+  const gradeLevel = profile?.gradeLevel || profile?.grade_level || (profile?.current_section?.grade_level ? `Grade ${profile.current_section.grade_level}` : '—');
+  const adviserName = profile?.adviserName || (profile?.current_section?.adviser_teacher?.user
+    ? `${profile.current_section.adviser_teacher.user.first_name} ${profile.current_section.adviser_teacher.user.last_name}`
+    : (currentUser?.studentProfile?.adviserName || '—'));
   const academicYear = profile?.academicYear || currentUser?.studentProfile?.academicYear || 'SY 2026-2027';
 
   const dobRaw = profile?.dateOfBirth || profile?.date_of_birth || profile?.dob;
-  let formattedDob = 'April 15, 2011';
-  let calculatedAge = 15;
+  let formattedDob = '—';
+  let calculatedAge: number | string = '—';
   if (dobRaw) {
     try {
       const d = new Date(dobRaw);
@@ -76,22 +81,24 @@ export function StudentProfileScreen({ currentUser, setTab }: {
     }
   }
 
-  const gender = profile?.gender || 'Male';
-  const bloodType = profile?.bloodType || profile?.blood_type || 'O+';
-  const allergies = profile?.allergies || 'Peanuts';
-  const medicalConditions = profile?.medicalConditions || profile?.medical_conditions || 'Mild Asthma';
+  const gender = profile?.gender || user?.gender || '—';
+  const bloodType = profile?.bloodType || profile?.blood_type || '—';
+  const allergies = profile?.allergies || 'None Recorded';
+  const medicalConditions = profile?.medicalConditions || profile?.medical_conditions || 'None Recorded';
 
-  const guardianFirst = profile?.guardianFirstName || profile?.guardian_first_name || 'Pedro';
-  const guardianLast = profile?.guardianLastName || profile?.guardian_last_name || 'Dela Cruz';
-  const guardianFullName = `${guardianFirst} ${guardianLast}`.trim();
-  const guardianPhone = profile?.guardianPhone || profile?.guardian_phone || '0917-123-4567';
-  const guardianEmail = profile?.guardianEmail || profile?.guardian_email || 'pedro.delacruz@example.ph';
+  const guardianFirst = profile?.guardianFirstName || profile?.guardian_first_name || '';
+  const guardianLast = profile?.guardianLastName || profile?.guardian_last_name || '';
+  const guardianFullName = [guardianFirst, guardianLast].filter(Boolean).join(' ') || profile?.guardianName || '—';
+  const guardianPhone = profile?.guardianPhone || profile?.guardian_phone || '—';
+  const guardianEmail = profile?.guardianEmail || profile?.guardian_email || '—';
 
-  const street = profile?.street || '124 Calulut Main St';
-  const city = profile?.city || 'City of San Fernando';
-  const stateProvince = profile?.stateProvince || profile?.state_province || 'Pampanga';
-  const zipCode = profile?.zipCode || profile?.zip_code || '2000';
-  const fullAddress = `${street}, ${city}, ${stateProvince} ${zipCode}`.trim();
+  const addressParts = [
+    profile?.street,
+    profile?.city,
+    profile?.stateProvince || profile?.state_province,
+    profile?.zipCode || profile?.zip_code
+  ].filter(Boolean);
+  const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '—';
 
   return (
     <div id="student-personal-records-view" style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1100, margin: '0 auto', animation: 'fadeIn 0.25s ease-out' }}>
