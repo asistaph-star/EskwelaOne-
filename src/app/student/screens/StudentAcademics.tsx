@@ -526,6 +526,7 @@ export function StudentAcademics({ setTab, currentUser }: any) {
                   onViewPdf={() => handleViewReleasedPdf()}
                   onDownloadPdf={() => handleDownloadReleasedPdf()}
                   isLoadingPdf={isLoadingPdf}
+                  academicYearId={selectedAcademicYearId}
                 />
               </div>
 

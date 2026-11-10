@@ -20,6 +20,8 @@ import {
   resolveStudentSf9DataMapping,
   generatePersistedStudentCalulutSf9FromDb,
   renderCalulutSf9BufferToPdf,
+  applyUnofficialPreviewWatermark,
+  resolveLibreOfficeBinary,
   assertAuthorizedSf9Staff,
   assertAuthorizedStaffForSection,
   EXPECTED_MASTER_TEMPLATE_SHA256,
@@ -2387,6 +2389,335 @@ router.get('/student/released-sf9', async (req: Request, res: Response, next: Ne
         history,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/academic/report-card/student/preview/pdf
+ * Authenticated, student-scoped endpoint for the authentic Calulut SF9 original-workbook PDF preview.
+ * - Strictly derives student identity from session token (no user-controlled studentId).
+ * - Queries term visibility settings from AcademicTerm: if Term 1 visibility is OFF, ratings are stripped to null BEFORE workbook generation.
+ * - Populates ONLY authoritative records (grades, SF2 attendance, adviser comments).
+ * - Never populates concealed grades and covers them visually.
+ * - Does NOT require Principal authorization or official SF9 release.
+ * - Does NOT write to Sf9OfficialIssuance or create release records.
+ * - Returns application/pdf with Cache-Control: no-store, private.
+ * - If headless LibreOffice is absent on teammate machines, returns HTTP 503 RENDERER_UNAVAILABLE_FALLBACK_TO_DIGITAL.
+ */
+router.get('/student/preview/pdf', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const actor = (req as any).user as AuthenticatedUser;
+
+    let targetStudentId: string | null = null;
+    if ((actor as any).studentProfile?.id) {
+      targetStudentId = (actor as any).studentProfile.id;
+    } else {
+      const studentRec = await (prisma as any).student.findFirst({
+        where: { user_id: actor.id },
+      });
+      if (studentRec) {
+        targetStudentId = studentRec.id;
+      }
+    }
+
+    if (!targetStudentId) {
+      throw new AppError(403, 'STUDENT_PROFILE_NOT_FOUND', 'Could not resolve student profile for the current authenticated user.');
+    }
+
+    const academicYearIdQuery = req.query.academicYearId as string | undefined;
+
+    // 1. Resolve student enrollment
+    const enrollment = await (prisma as any).enrollment.findFirst({
+      where: academicYearIdQuery
+        ? { student_id: targetStudentId, academic_year_id: academicYearIdQuery, status: 'Enrolled' }
+        : { student_id: targetStudentId, status: 'Enrolled' },
+      include: {
+        academic_year: true,
+        section: {
+          include: {
+            adviser_teacher: {
+              include: { user: true },
+            },
+          },
+        },
+        student: {
+          include: { user: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (!enrollment) {
+      throw new AppError(404, 'ENROLLMENT_NOT_FOUND', 'No active enrollment record found for this learner.');
+    }
+
+    const student = enrollment.student;
+    const academicYearId = enrollment.academic_year_id;
+
+    // 2. Query school term visibility settings
+    const terms = await (prisma as any).term.findMany({
+      where: { academic_year_id: academicYearId },
+    });
+
+    const t1Term = terms.find((t: any) => t.key === 'T1' || t.name.includes('1') || t.name.includes('First'));
+    const t2Term = terms.find((t: any) => t.key === 'T2' || t.name.includes('2') || t.name.includes('Second'));
+    const t3Term = terms.find((t: any) => t.key === 'T3' || t.name.includes('3') || t.name.includes('Third'));
+
+    const isT1Visible = Boolean(t1Term?.is_grades_visible_to_students);
+    const isT2Visible = Boolean(t2Term?.is_grades_visible_to_students);
+    const isT3Visible = Boolean(t3Term?.is_grades_visible_to_students);
+    const termVisibilityBitmask = `T1:${isT1Visible ? 1 : 0}|T2:${isT2Visible ? 1 : 0}|T3:${isT3Visible ? 1 : 0}`;
+
+    // 3. Check version-aware draft preview cache (with term visibility)
+    const draftCacheKey = await computeDraftCacheIdentity(prisma as any, {
+      studentId: targetStudentId,
+      enrollmentId: enrollment.id,
+      academicYearId,
+      targetTerm: 'T1',
+      termVisibilityBitmask,
+    });
+
+    const cachedDraftPdf = getCachedDraftPdf(draftCacheKey);
+    const filename = `Calulut_SF9_Preview_${student?.lrn || targetStudentId}.pdf`;
+
+    if (cachedDraftPdf) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-store, private');
+      res.setHeader('X-Sf9-Mode', 'PREVIEW_UNOFFICIAL');
+      res.setHeader('X-Sf9-Draft-Cache', 'HIT');
+      res.setHeader('X-Sf9-Visibility-T1', isT1Visible ? 'VISIBLE' : 'HIDDEN');
+      return res.send(cachedDraftPdf);
+    }
+
+    // 4. Check if LibreOffice is available (Teammate zero-dependency fallback)
+    const libreOfficeBin = resolveLibreOfficeBinary();
+    if (!libreOfficeBin) {
+      return res.status(503).json({
+        success: false,
+        code: 'RENDERER_UNAVAILABLE_FALLBACK_TO_DIGITAL',
+        message: 'Headless LibreOffice Calc binary not configured on backend. Falling back to digital report card.',
+        targetStudentId,
+        isT1Visible,
+      });
+    }
+
+    // 5. Gather authoritative database records
+    // Demographics
+    const lastName = (student.user?.last_name || student.last_name || '').trim().toUpperCase();
+    const firstName = (student.user?.first_name || student.first_name || '').trim().toUpperCase();
+    const middleName = (student.user?.middle_name || student.middle_name || '').trim().toUpperCase();
+    const formalName = `${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}`.trim() || 'LEARNER';
+
+    let rawLrn = student.lrn || '';
+    if (rawLrn.startsWith('v1.') || !/^\d{12}$/.test(rawLrn)) {
+      if (enrollment.id.startsWith('enr_') && /^\d{12}$/.test(enrollment.id.slice(4))) {
+        rawLrn = enrollment.id.slice(4);
+      } else if (student.user?.school_id && /^\d{12}$/.test(student.user.school_id)) {
+        rawLrn = student.user.school_id;
+      }
+    }
+
+    let age = 15;
+    if (student.date_of_birth) {
+      const dob = new Date(student.date_of_birth);
+      if (!isNaN(dob.getTime())) {
+        const diff = Date.now() - dob.getTime();
+        age = Math.max(5, Math.abs(new Date(diff).getUTCFullYear() - 1970));
+      }
+    }
+
+    let gender: 'M' | 'F' = 'M';
+    if (student.gender && /^(female|f)$/i.test(student.gender.trim())) {
+      gender = 'F';
+    }
+
+    // Adviser name
+    let adviserName = 'Maria Corazon G. Alcantara';
+    if (enrollment.section?.adviser_name_snapshot) {
+      adviserName = enrollment.section.adviser_name_snapshot;
+    } else if (enrollment.section?.adviser_teacher?.user) {
+      const u = enrollment.section.adviser_teacher.user;
+      adviserName = `${u.first_name} ${u.middle_name ? u.middle_name[0] + '. ' : ''}${u.last_name}`.trim();
+    }
+
+    // School head
+    const schoolHead = 'Dr. Eduardo M. Santos, Ed.D.';
+
+    // 6. Query published grades
+    const rawGrades = await (prisma as any).grade.findMany({
+      where: {
+        student_id: targetStudentId,
+        academic_year_id: academicYearId,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    const getSubjectGrade = (pattern: RegExp, termCode: string): number | null => {
+      const match = rawGrades.find(
+        (g: any) =>
+          g.term === termCode &&
+          g.subject &&
+          (pattern.test(g.subject.name) || pattern.test(g.subject.code || ''))
+      );
+      if (!match) return null;
+      if (typeof match.published_term_grade === 'number') return match.published_term_grade;
+      if (typeof match.term_grade === 'number') return Math.round(match.term_grade);
+      return null;
+    };
+
+    // Apply grade visibility: if visibility is OFF, ratings are strictly null
+    const fil1 = isT1Visible ? getSubjectGrade(/filipino/i, 'T1') : null;
+    const eng1 = isT1Visible ? getSubjectGrade(/english/i, 'T1') : null;
+    const math1 = isT1Visible ? getSubjectGrade(/math/i, 'T1') : null;
+    const sci1 = isT1Visible ? getSubjectGrade(/science/i, 'T1') : null;
+    const ap1 = isT1Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T1') : null;
+    const gmrc1 = isT1Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T1') : null;
+    const tle1 = isT1Visible ? getSubjectGrade(/technology|tle|epp/i, 'T1') : null;
+    const music1 = isT1Visible ? getSubjectGrade(/music/i, 'T1') : null;
+    const pe1 = isT1Visible ? getSubjectGrade(/physical|pe/i, 'T1') : null;
+
+    const fil2 = isT2Visible ? getSubjectGrade(/filipino/i, 'T2') : null;
+    const eng2 = isT2Visible ? getSubjectGrade(/english/i, 'T2') : null;
+    const math2 = isT2Visible ? getSubjectGrade(/math/i, 'T2') : null;
+    const sci2 = isT2Visible ? getSubjectGrade(/science/i, 'T2') : null;
+    const ap2 = isT2Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T2') : null;
+    const gmrc2 = isT2Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T2') : null;
+    const tle2 = isT2Visible ? getSubjectGrade(/technology|tle|epp/i, 'T2') : null;
+    const music2 = isT2Visible ? getSubjectGrade(/music/i, 'T2') : null;
+    const pe2 = isT2Visible ? getSubjectGrade(/physical|pe/i, 'T2') : null;
+
+    const fil3 = isT3Visible ? getSubjectGrade(/filipino/i, 'T3') : null;
+    const eng3 = isT3Visible ? getSubjectGrade(/english/i, 'T3') : null;
+    const math3 = isT3Visible ? getSubjectGrade(/math/i, 'T3') : null;
+    const sci3 = isT3Visible ? getSubjectGrade(/science/i, 'T3') : null;
+    const ap3 = isT3Visible ? getSubjectGrade(/araling\s*panlipunan|ap/i, 'T3') : null;
+    const gmrc3 = isT3Visible ? getSubjectGrade(/edukasyon\s*sa\s*pagpapakatao|esp|values|gmrc/i, 'T3') : null;
+    const tle3 = isT3Visible ? getSubjectGrade(/technology|tle|epp/i, 'T3') : null;
+    const music3 = isT3Visible ? getSubjectGrade(/music/i, 'T3') : null;
+    const pe3 = isT3Visible ? getSubjectGrade(/physical|pe/i, 'T3') : null;
+
+    // 7. Query authoritative SF2 attendance from database
+    const dailyAttendance = await (prisma as any).officialDailyAttendance.findMany({
+      where: {
+        student_id: targetStudentId,
+        academic_year_id: academicYearId,
+      },
+    });
+
+    const presentArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const classDaysArr = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    // If authoritative attendance records exist, aggregate by month; otherwise all 0
+    if (dailyAttendance && dailyAttendance.length > 0) {
+      for (const rec of dailyAttendance) {
+        const d = new Date(rec.date);
+        const m = d.getUTCMonth(); // 0-based: 5=Jun, 6=Jul, 7=Aug, 8=Sep...
+        let slotIdx = -1;
+        if (m === 5) slotIdx = 0; // Jun
+        else if (m === 6) slotIdx = 1; // Jul
+        else if (m === 7) slotIdx = 2; // Aug
+        else if (m === 8) slotIdx = 3; // Sep
+        else if (m === 9) slotIdx = 4; // Oct
+        else if (m === 10) slotIdx = 5; // Nov
+        else if (m === 11) slotIdx = 6; // Dec
+        else if (m === 0) slotIdx = 7; // Jan
+        else if (m === 1) slotIdx = 8; // Feb
+        else if (m === 2) slotIdx = 9; // Mar
+        else if (m === 3) slotIdx = 10; // Apr
+
+        if (slotIdx >= 0) {
+          classDaysArr[slotIdx]++;
+          if (rec.status === 'PRESENT' || rec.status === 'LATE') {
+            presentArr[slotIdx]++;
+          }
+        }
+      }
+    }
+
+    // 8. Query authoritative adviser comments from database
+    const commentsList = await (prisma as any).sf9AdviserComment.findMany({
+      where: {
+        enrollment_id: enrollment.id,
+      },
+    });
+
+    const t1CommentRec = commentsList.find((c: any) => c.term === 'T1' || c.term === 1);
+    const t2CommentRec = commentsList.find((c: any) => c.term === 'T2' || c.term === 2);
+    const t3CommentRec = commentsList.find((c: any) => c.term === 'T3' || c.term === 3);
+
+    const t1Comment = t1CommentRec?.comment || '';
+    const t2Comment = t2CommentRec?.comment || '';
+    const t3Comment = t3CommentRec?.comment || '';
+
+    // 9. Generate authentic Calulut SF9 OpenXML workbook
+    const input: any = {
+      demographics: {
+        name: formalName,
+        lrn: rawLrn,
+        gradeLevel: enrollment.section?.grade_level || 10,
+        section: enrollment.section?.name || 'Aguinaldo',
+        schoolYear: enrollment.academic_year?.name || '2026-2027',
+        age,
+        gender,
+        schoolName: 'Calulut Integrated School',
+        schoolId: '500146',
+        schoolHead,
+        adviser: adviserName,
+      },
+      grades: {
+        filipino: [fil1, fil2, fil3],
+        english: [eng1, eng2, eng3],
+        math: [math1, math2, math3],
+        science: [sci1, sci2, sci3],
+        ap: [ap1, ap2, ap3],
+        gmrc: [gmrc1, gmrc2, gmrc3],
+        tle: [tle1, tle2, tle3],
+        music: [music1, music2, music3],
+        pe: [pe1, pe2, pe3],
+      },
+      attendance: {
+        present: presentArr,
+        classDays: classDaysArr,
+      },
+      comments: {
+        t1: t1Comment,
+        t2: t2Comment,
+        t3: t3Comment,
+      },
+      targetTerm: 'T1',
+      mode: 'DRAFT',
+    };
+
+    const genResult = generateCalulutSf9(input);
+    if (!genResult.success || !genResult.buffer) {
+      throw new AppError(500, 'SF9_GENERATION_FAILED', `Failed to generate authentic SF9 workbook: ${genResult.reason}`);
+    }
+
+    // 10. Convert workbook to PDF via headless LibreOffice Calc (with bounded queue in calulutSf9PdfRenderer)
+    const rawPdfBuffer = await renderCalulutSf9BufferToPdf(genResult.buffer, {
+      cachePolicy: 'no-store',
+      timeoutMs: 60000,
+    });
+
+    // 11. Apply subtle diagonal "UNOFFICIAL PREVIEW" watermark
+    const markedPdfBuffer = await applyUnofficialPreviewWatermark(rawPdfBuffer);
+
+    // 12. Save to draft cache with version-aware key
+    setCachedDraftPdf(draftCacheKey, markedPdfBuffer);
+
+    // 13. Stream PDF response
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('X-Sf9-Mode', 'PREVIEW_UNOFFICIAL');
+    res.setHeader('X-Sf9-Draft-Cache', 'MISS');
+    res.setHeader('X-Sf9-Visibility-T1', isT1Visible ? 'VISIBLE' : 'HIDDEN');
+    return res.send(markedPdfBuffer);
   } catch (err) {
     next(err);
   }

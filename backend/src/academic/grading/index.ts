@@ -84,6 +84,7 @@ export {
   clearSf9SyntheticMemoryCache,
   prepareSingleSheetSf9Workbook,
   renderCalulutSf9BufferToPdf,
+  applyUnofficialPreviewWatermark,
   checkSf9RendererHealth,
   type Sf9RenderCachePolicy,
   type Sf9RenderOptions,

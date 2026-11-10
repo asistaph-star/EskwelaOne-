@@ -20,6 +20,7 @@ import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import AdmZip from 'adm-zip';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { AppError } from '../../common/middleware/errorHandler.js';
 import { DEFAULT_MASTER_TEMPLATE_PATH } from './calulutSf9Generator.js';
 
@@ -693,4 +694,30 @@ export function checkSf9RendererHealth(): Sf9RendererHealthStatus {
     lastConversionStatus: rendererObservation.lastStatus,
     latencyMs: rendererObservation.lastLatencyMs ?? checkLatencyMs,
   };
+}
+
+/**
+ * Injects a subtle, DepEd-compliant diagonal "UNOFFICIAL PREVIEW" watermark
+ * across the rendered SF9 PDF pages without covering or obscuring text, borders,
+ * seals, or altering original workbook dimensions.
+ */
+export async function applyUnofficialPreviewWatermark(pdfBuffer: Buffer): Promise<Buffer> {
+  const doc = await PDFDocument.load(pdfBuffer);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const pages = doc.getPages();
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+    // Centered light diagonal watermark: "UNOFFICIAL PREVIEW"
+    // Preserves original borders, seals, ratings, attendance, remarks, and signatories.
+    page.drawText('UNOFFICIAL PREVIEW', {
+      x: width * 0.22,
+      y: height * 0.25,
+      size: 42,
+      font: fontBold,
+      color: rgb(0.68, 0.68, 0.72),
+      opacity: 0.12,
+      rotate: degrees(30),
+    });
+  }
+  return Buffer.from(await doc.save());
 }

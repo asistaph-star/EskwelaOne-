@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -14,7 +14,10 @@ import {
   Info,
   Check,
   UserCheck,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { API_BASE_URL } from '../../../api/client';
 
 export interface DigitalAuthenticSf9ProgressCardProps {
   reportCardData: any;
@@ -23,6 +26,7 @@ export interface DigitalAuthenticSf9ProgressCardProps {
   onViewPdf?: () => void;
   isLoadingPdf?: boolean;
   isTeacherPreview?: boolean;
+  academicYearId?: string;
 }
 
 export const CANONICAL_JHS_LEARNING_AREAS = [
@@ -64,14 +68,85 @@ export function DigitalAuthenticSf9ProgressCard({
   onViewPdf,
   isLoadingPdf = false,
   isTeacherPreview = false,
+  academicYearId,
 }: DigitalAuthenticSf9ProgressCardProps) {
   const [activePageView, setActivePageView] = useState<'both' | 'front' | 'back'>('both');
+  const [viewMode, setViewMode] = useState<'workbook-pdf' | 'digital-view'>('workbook-pdf');
+  const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState<string | null>(null);
+  const [isLoadingPreviewPdf, setIsLoadingPreviewPdf] = useState<boolean>(true);
+  const [previewPdfError, setPreviewPdfError] = useState<string | null>(null);
+  const [rendererUnavailable, setRendererUnavailable] = useState<boolean>(false);
 
   const isReleased = Boolean(
     releasedSf9?.released ||
     reportCardData?.isOfficialSf9Released ||
     reportCardData?.scholastic?.isReleasedSf9
   );
+
+  const fetchPreviewPdf = async () => {
+    setIsLoadingPreviewPdf(true);
+    setPreviewPdfError(null);
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const query = academicYearId ? `?academicYearId=${encodeURIComponent(academicYearId)}` : '';
+      const resp = await fetch(`${API_BASE_URL}/academic/report-card/student/preview/pdf${query}`, {
+        credentials: 'include',
+        headers,
+      });
+
+      if (resp.status === 503) {
+        setRendererUnavailable(true);
+        setViewMode('digital-view');
+        return;
+      }
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => null);
+        throw new Error(err?.message || `Failed to load preview PDF (HTTP ${resp.status})`);
+      }
+
+      const blob = await resp.blob();
+      const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([await blob.arrayBuffer()], { type: 'application/pdf' });
+      setPreviewPdfBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(pdfBlob);
+      });
+      setRendererUnavailable(false);
+    } catch (err: any) {
+      console.warn('Workbook PDF preview unavailable, falling back to digital view:', err);
+      setPreviewPdfError(err.message || 'Renderer unavailable');
+      setRendererUnavailable(true);
+      setViewMode('digital-view');
+    } finally {
+      setIsLoadingPreviewPdf(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isReleased) {
+      fetchPreviewPdf();
+    }
+    return () => {
+      if (previewPdfBlobUrl) {
+        URL.revokeObjectURL(previewPdfBlobUrl);
+      }
+    };
+  }, [academicYearId, isReleased, reportCardData?.termsMetadata]);
+
+  const handleDownloadUnofficialPdf = () => {
+    if (!previewPdfBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = previewPdfBlobUrl;
+    const lrn = reportCardData?.student?.lrn || 'Learner';
+    a.download = `Calulut_SF9_${lrn}_Unofficial_Preview.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Term grade visibility from termsMetadata
   const termsMeta: any[] = reportCardData?.termsMetadata || reportCardData?.scholastic?.termsMetadata || [];
@@ -363,12 +438,13 @@ export function DigitalAuthenticSf9ProgressCard({
         </div>
       )}
 
-      {visualState === 'UNRELEASED_PREVIEW' && (
+      {/* ── Compact Unofficial Academic Preview Bar ── */}
+      {!isReleased && !isTeacherPreview && (
         <div
           style={{
-            background: 'linear-gradient(90deg, #78350f 0%, #b45309 100%)',
-            color: '#fff',
-            padding: '10px 20px',
+            background: '#fffbeb',
+            borderBottom: '1px solid #fde68a',
+            padding: '10px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -377,95 +453,211 @@ export function DigitalAuthenticSf9ProgressCard({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
+            <span
               style={{
-                width: 30,
-                height: 30,
+                width: 9,
+                height: 9,
                 borderRadius: '50%',
-                background: 'rgba(255,255,255,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                backgroundColor: '#d97706',
+                boxShadow: '0 0 0 3px rgba(217, 119, 6, 0.2)',
+                display: 'inline-block',
+                flexShrink: 0,
               }}
-            >
-              <Clock size={16} color="#fde68a" />
-            </div>
+            />
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.02em' }}>
-                ACADEMIC PREVIEW — PUBLISHED TRIMESTER RATINGS (PENDING PRINCIPAL AUTHORIZATION)
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#92400e', letterSpacing: '0.01em' }}>
+                Academic Preview — Not an Officially Released SF9
               </div>
-              <div style={{ fontSize: 11, opacity: 0.9 }}>
-                Trimester ratings below reflect published subject assessments from the institutional gradebook. Official sealed DepEd SF9 PDF unlocks upon Principal issuance.
+              <div style={{ fontSize: 11, color: '#b45309' }}>
+                Authoritative DepEd Form 138 preview derived from authentic Calulut workbook. Official signed document unlocks upon Principal issuance.
               </div>
             </div>
           </div>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              padding: '2px 8px',
-              borderRadius: 4,
-              background: '#fef3c7',
-              color: '#92400e',
-              textTransform: 'uppercase',
-            }}
-          >
-            Digital Preview Mode
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* View Mode Switcher */}
+            <div style={{ display: 'flex', background: '#fef3c7', borderRadius: 6, padding: 2, border: '1px solid #fcd34d' }}>
+              <button
+                type="button"
+                id="btn-view-workbook-pdf"
+                onClick={() => setViewMode('workbook-pdf')}
+                disabled={rendererUnavailable}
+                title={rendererUnavailable ? 'Workbook renderer unavailable' : 'View original Form 138 workbook PDF'}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: viewMode === 'workbook-pdf' ? 700 : 500,
+                  borderRadius: 4,
+                  border: 'none',
+                  background: viewMode === 'workbook-pdf' ? '#b45309' : 'transparent',
+                  color: viewMode === 'workbook-pdf' ? '#ffffff' : '#78350f',
+                  cursor: rendererUnavailable ? 'not-allowed' : 'pointer',
+                  opacity: rendererUnavailable ? 0.5 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <FileSpreadsheet size={13} />
+                <span>Original SF9 (Workbook PDF)</span>
+              </button>
+              <button
+                type="button"
+                id="btn-view-digital-table"
+                onClick={() => setViewMode('digital-view')}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: viewMode === 'digital-view' ? 700 : 500,
+                  borderRadius: 4,
+                  border: 'none',
+                  background: viewMode === 'digital-view' ? '#b45309' : 'transparent',
+                  color: viewMode === 'digital-view' ? '#ffffff' : '#78350f',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Eye size={13} />
+                <span>Digital View</span>
+              </button>
+            </div>
+
+            {/* Download Preview Button */}
+            {viewMode === 'workbook-pdf' && previewPdfBlobUrl && !isLoadingPreviewPdf && (
+              <>
+                <button
+                  type="button"
+                  id="btn-download-preview-pdf"
+                  onClick={handleDownloadUnofficialPdf}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 12px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    borderRadius: 6,
+                    background: '#ffffff',
+                    border: '1px solid #d97706',
+                    color: '#92400e',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  }}
+                  title="Download unofficial PDF preview copy"
+                >
+                  <Download size={13} />
+                  <span>Download Preview (Unofficial)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchPreviewPdf}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '5px 8px',
+                    borderRadius: 6,
+                    background: '#ffffff',
+                    border: '1px solid #d97706',
+                    color: '#92400e',
+                    cursor: 'pointer',
+                  }}
+                  title="Refresh preview"
+                >
+                  <RefreshCw size={13} />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
-      {visualState === 'CONCEALED_BLANK' && (
+      {/* ── Graceful Fallback Notice ── */}
+      {rendererUnavailable && (
         <div
+          id="sf9-renderer-unavailable-notice"
           style={{
-            background: 'linear-gradient(90deg, #1e293b 0%, #334155 100%)',
-            color: '#fff',
-            padding: '10px 20px',
+            background: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '8px 18px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            flexWrap: 'wrap',
+            gap: 8,
+            fontSize: 11,
+            color: '#475569',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Lock size={16} color="#94a3b8" />
-            </div>
-            <div>
-              <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '0.02em' }}>
-                TERM GRADES CONCEALED BY SCHOOL ADMINISTRATION
-              </div>
-              <div style={{ fontSize: 11, opacity: 0.85 }}>
-                In accordance with institutional review policy, academic term ratings are temporarily concealed until formal grade finalization and approval.
-              </div>
-            </div>
-          </div>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              padding: '2px 8px',
-              borderRadius: 4,
-              background: '#f1f5f9',
-              color: '#475569',
-              textTransform: 'uppercase',
-            }}
-          >
-            Pre-Release Template
-          </span>
+          <Info size={14} color="#0284c7" />
+          <span>Original Form 138 document renderer is temporarily unavailable. Displaying digital progress summary.</span>
         </div>
       )}
+
+      {/* ── View Body ── */}
+      {!isReleased && !isTeacherPreview && viewMode === 'workbook-pdf' && !rendererUnavailable ? (
+        <div>
+          {isLoadingPreviewPdf ? (
+            <div style={{ padding: 60, textAlign: 'center', background: '#f8fafc' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, color: '#475569', fontSize: 13, fontWeight: 600 }}>
+                <RefreshCw size={18} className="animate-spin text-amber-600" />
+                <span>Rendering authentic Calulut Form 138 preview from master workbook...</span>
+              </div>
+              <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8' }}>
+                Applying published institutional ratings to DepEd SF9 Master Template.
+              </div>
+            </div>
+          ) : previewPdfBlobUrl ? (
+            <div style={{ background: '#525659', padding: 12, minHeight: 850 }}>
+              <object
+                data={`${previewPdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                type="application/pdf"
+                id="authentic-sf9-pdf-object"
+                style={{
+                  width: '100%',
+                  height: 850,
+                  borderRadius: 8,
+                  border: '1px solid #334155',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  display: 'block',
+                }}
+              >
+                <iframe
+                  src={`${previewPdfBlobUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
+                  title="Calulut SF9 Workbook PDF Preview"
+                  style={{
+                    width: '100%',
+                    height: 850,
+                    border: 'none',
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ padding: 32, textAlign: 'center', color: '#ffffff', background: '#1e293b' }}>
+                    <p style={{ fontSize: 13, marginBottom: 12 }}>Your browser preview is not displaying the embedded PDF directly.</p>
+                    <button
+                      onClick={handleDownloadUnofficialPdf}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#b45309',
+                        color: '#ffffff',
+                        borderRadius: 6,
+                        fontWeight: 700,
+                        fontSize: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Download Calulut SF9 Preview
+                    </button>
+                  </div>
+                </iframe>
+              </object>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <>
 
       {/* ── View Controls Bar ── */}
       <div
@@ -1178,6 +1370,8 @@ export function DigitalAuthenticSf9ProgressCard({
           </div>
         )}
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
