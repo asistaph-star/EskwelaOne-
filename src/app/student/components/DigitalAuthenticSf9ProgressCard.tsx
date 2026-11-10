@@ -89,15 +89,15 @@ export function DigitalAuthenticSf9ProgressCard({
     : 'CONCEALED_BLANK';
 
   // Demographics
-  const studentName = reportCardData?.student?.name || 'AQUINO, MATEO M.';
-  const studentLrn = reportCardData?.student?.lrn || '999026000031';
-  const gradeLevel = reportCardData?.enrollment?.gradeLevel || 10;
-  const sectionName = reportCardData?.enrollment?.section || 'Aguinaldo';
-  const age = reportCardData?.student?.age ?? 16;
-  const sex = reportCardData?.student?.gender || 'Male';
-  const academicYear = reportCardData?.school?.academicYear || releasedSf9?.academicYear || 'SY 2026–2027';
-  const classAdviser = releasedSf9?.adviser || reportCardData?.adviser || 'Maria Corazon G. Alcantara';
-  const schoolPrincipal = releasedSf9?.principal || reportCardData?.principal || 'Dr. Eduardo M. Santos, Ed.D.';
+  const studentName = reportCardData?.student?.name || '—';
+  const studentLrn = reportCardData?.student?.lrn || '—';
+  const gradeLevel = reportCardData?.enrollment?.gradeLevel || '—';
+  const sectionName = reportCardData?.enrollment?.section || '—';
+  const age = reportCardData?.student?.age ?? '—';
+  const sex = reportCardData?.student?.gender || '—';
+  const academicYear = reportCardData?.school?.academicYear || releasedSf9?.academicYear || '—';
+  const classAdviser = releasedSf9?.adviser || reportCardData?.adviser || '—';
+  const schoolPrincipal = releasedSf9?.principal || reportCardData?.principal || '—';
 
   // Map scholastic subjects
   const rawSubjects: any[] = reportCardData?.scholastic?.subjects || [];
@@ -156,16 +156,14 @@ export function DigitalAuthenticSf9ProgressCard({
       if (Array.isArray(presentDays) && typeof presentDays[idx] === 'number') {
         return String(presentDays[idx]);
       }
-      // If T1 active and month <= Sep, default verified sample
-      if (idx <= 3 && isT1Visible) {
-        const cd = Number(classDays[idx]) || standardClassDays[idx];
-        return String(cd); // 100% attendance sample
-      }
       return '—';
     } else {
       // Days Absent
       if (visualState === 'CONCEALED_BLANK' && !isReleased) return '—';
-      if (idx <= 3 && isT1Visible) return '0';
+      if (Array.isArray(presentDays) && typeof presentDays[idx] === 'number' && typeof classDays[idx] === 'number') {
+        const abs = Number(classDays[idx]) - Number(presentDays[idx]);
+        return String(Math.max(0, abs));
+      }
       return '—';
     }
   };
@@ -173,24 +171,23 @@ export function DigitalAuthenticSf9ProgressCard({
   // Attendance totals
   const totalClassDaysVal = visualState === 'CONCEALED_BLANK' && !isReleased
     ? '—'
-    : attData?.totalClassDays ?? 198;
+    : attData?.totalClassDays ?? (classDays.length === 11 ? 198 : '—');
   const totalPresentVal = visualState === 'CONCEALED_BLANK' && !isReleased
     ? '—'
-    : attData?.totalDaysPresent ?? (isT1Visible ? 77 : '—');
+    : attData?.totalDaysPresent ?? '—';
   const totalAbsentVal = visualState === 'CONCEALED_BLANK' && !isReleased
     ? '—'
-    : attData?.totalDaysAbsent ?? (isT1Visible ? 0 : '—');
+    : attData?.totalDaysAbsent ?? '—';
 
   // Published adviser comments
-  const t1Comment = isT1Visible
-    ? reportCardData?.adviserComments?.T1 ||
-      'Demonstrates outstanding intellectual discipline, exemplary leadership, and consistent academic excellence in all learning areas.'
+  const t1Comment = isT1Visible && reportCardData?.adviserComments?.T1
+    ? reportCardData.adviserComments.T1
     : '—';
-  const t2Comment = isT2Visible
-    ? reportCardData?.adviserComments?.T2 || '—'
+  const t2Comment = isT2Visible && reportCardData?.adviserComments?.T2
+    ? reportCardData.adviserComments.T2
     : '—';
-  const t3Comment = isT3Visible
-    ? reportCardData?.adviserComments?.T3 || '—'
+  const t3Comment = isT3Visible && reportCardData?.adviserComments?.T3
+    ? reportCardData.adviserComments.T3
     : '—';
 
   return (
